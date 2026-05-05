@@ -5,13 +5,21 @@ using MediatR;
 
 namespace Identity.API.Endpoints;
 
+/// <summary>
+/// Registers the authentication-related endpoints for the Minimal API.
+/// </summary>
 public static class AuthEndpoints
 {
+    /// <summary>
+    /// Maps the authentication endpoints.
+    /// Rationale: Groups all auth routes under a common prefix and tag. Endpoints delegate business logic
+    /// completely to MediatR, keeping the API layer thin.
+    /// </summary>
+    /// <param name="app">The route builder instance.</param>
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/identity/auth")
-            .WithTags("Authentication")
-            .WithOpenApi();
+            .WithTags("Authentication");
 
         group.MapPost("/register", async (
             RegisterUserCommand command,
@@ -19,6 +27,7 @@ public static class AuthEndpoints
             CancellationToken ct) =>
         {
             var result = await sender.Send(command, ct);
+            // Rationale: Return 201 Created on success, including the location of the newly created resource.
             return result.IsSuccess
                 ? Results.Created($"/api/identity/users/{result.Value!.Email}", result.Value)
                 : Results.BadRequest(new { result.Error, result.ErrorCode });
@@ -33,6 +42,7 @@ public static class AuthEndpoints
             CancellationToken ct) =>
         {
             var result = await sender.Send(command, ct);
+            // Rationale: Return 401 Unauthorized for bad credentials rather than 400 Bad Request
             return result.IsSuccess
                 ? Results.Ok(result.Value)
                 : Results.Unauthorized();
