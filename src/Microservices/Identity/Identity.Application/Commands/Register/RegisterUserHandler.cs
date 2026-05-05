@@ -8,6 +8,9 @@ using MediatR;
 
 namespace Identity.Application.Commands.Register;
 
+/// <summary>
+/// Handles the registration of a new user.
+/// </summary>
 public sealed class RegisterUserHandler(
     IUserRepository userRepository,
     IUnitOfWork unitOfWork,
@@ -15,29 +18,37 @@ public sealed class RegisterUserHandler(
     IJwtTokenGenerator jwtGenerator)
     : IRequestHandler<RegisterUserCommand, Result<AuthResponse>>
 {
+    /// <summary>
+    /// Processes the register user command.
+    /// Rationale: Registration requires ensuring the email is unique, creating the User aggregate, securely hashing the password, and establishing an initial auth session.
+    /// </summary>
+    /// <param name="command">The registration command containing user details.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A Result containing the authentication response with access and refresh tokens if successful.</returns>
     public async Task<Result<AuthResponse>> Handle(
-        RegisterUserCommand request,
+        RegisterUserCommand command,
         CancellationToken cancellationToken)
     {
-        // Check for duplicate email
-        if (await userRepository.ExistsAsync(request.Email, cancellationToken))
+        // Check for duplicate email to maintain invariants
+        if (await userRepository.ExistsAsync(command.Email, cancellationToken))
             return Result<AuthResponse>.Failure("Email already registered", "DUPLICATE_EMAIL");
 
-        // Create user aggregate
-        var hashedPassword = passwordHasher.Hash(request.Password);
+        // Rationale: Hash the password using the infrastructure service before saving
+        var hashedPassword = passwordHasher.Hash(command.Password);
         var user = User.Create(
-            request.Email,
+            command.Email,
             hashedPassword,
-            request.FirstName,
-            request.LastName);
+            command.FirstName,
+            command.LastName);
 
-        // Generate tokens
+        // Generate an initial set of tokens for immediate login post-registration
         var accessToken = jwtGenerator.GenerateAccessToken(user);
         var refreshTokenStr = jwtGenerator.GenerateRefreshToken();
         var refreshToken = Identity.Domain.ValueObjects.RefreshToken.Create(refreshTokenStr, TimeSpan.FromDays(7));
+
         user.SetRefreshToken(refreshToken);
 
-        // Persist
+        // Persist the new user
         userRepository.Add(user);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

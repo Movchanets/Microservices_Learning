@@ -8,6 +8,13 @@ namespace ApiGateway.Middleware;
 /// </summary>
 public sealed class CookieToBearerMiddleware(RequestDelegate next)
 {
+    /// <summary>
+    /// Processes a request to transform the cookie-based session into a Bearer token header.
+    /// Rationale: Implements the Backend-For-Frontend (BFF) pattern. The Angular SPA securely uses HttpOnly cookies
+    /// to authenticate. This middleware extracts the stored JWT and appends it to the Authorization header
+    /// so downstream microservices (which expect JWT Bearer auth) can process the request normally.
+    /// </summary>
+    /// <param name="context">The HttpContext for the current request.</param>
     public async Task InvokeAsync(HttpContext context)
     {
         if (context.User.Identity?.IsAuthenticated == true)
