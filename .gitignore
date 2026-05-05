@@ -6,12 +6,7 @@
 # dotenv files
 .env
 
-#plan files
-plans/
-implementation_plan/
-# agent files
-.agents/
-AGENTS.md
+
 # User-specific files
 *.rsuser
 *.suo
