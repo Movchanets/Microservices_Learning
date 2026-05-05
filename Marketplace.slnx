@@ -11,4 +11,14 @@
   <Folder Name="/src/BuildingBlocks/SharedContracts/">
     <Project Path="src/BuildingBlocks/SharedContracts/BuildingBlocks.SharedContracts.csproj" />
   </Folder>
+  <Folder Name="/src/Gateways/">
+    <Project Path="src/Gateways/ApiGateway/ApiGateway.csproj" />
+  </Folder>
+  <Folder Name="/src/Microservices/" />
+  <Folder Name="/src/Microservices/Identity/">
+    <Project Path="src/Microservices/Identity/Identity.API/Identity.API.csproj" />
+    <Project Path="src/Microservices/Identity/Identity.Application/Identity.Application.csproj" />
+    <Project Path="src/Microservices/Identity/Identity.Domain/Identity.Domain.csproj" />
+    <Project Path="src/Microservices/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj" />
+  </Folder>
 </Solution>

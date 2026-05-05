@@ -15,4 +15,9 @@
     <PackageReference Include="Aspire.Hosting.Redis" Version="13.2.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microservices\Identity\Identity.API\Identity.API.csproj" />
+    <ProjectReference Include="..\..\Gateways\ApiGateway\ApiGateway.csproj" />
+  </ItemGroup>
+
 </Project>

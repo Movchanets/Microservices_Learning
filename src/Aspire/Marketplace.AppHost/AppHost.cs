@@ -28,7 +28,15 @@ var messaging = builder.AddRabbitMQ("messaging")
 // ──────────────────────────────────────────────
 
 // Phase 1: Identity.API  → .WithReference(identityDb).WithReference(messaging)
+var identityApi = builder.AddProject<Projects.Identity_API>("identity-api")
+    .WithReference(identityDb)
+    .WithReference(messaging);
+
 // Phase 1: ApiGateway    → .WithReference(redis)
+var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
+    .WithReference(identityApi)
+    .WithReference(redis)
+    .WithExternalHttpEndpoints();
 // Phase 2: Catalog.API   → .WithReference(catalogDb).WithReference(messaging)
 // Phase 2: Search.API    → .WithReference(messaging)
 // Phase 3: Inventory.API → .WithReference(inventoryDb).WithReference(messaging)
