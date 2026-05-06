@@ -11,4 +11,8 @@
   <Folder Name="/src/BuildingBlocks/SharedContracts/">
     <Project Path="src/BuildingBlocks/SharedContracts/BuildingBlocks.SharedContracts.csproj" />
   </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/BuildingBlocks/">
+    <Project Path="tests/BuildingBlocks/BuildingBlocks.Infrastructure.UnitTests/BuildingBlocks.Infrastructure.UnitTests.csproj" />
+  </Folder>
 </Solution>
