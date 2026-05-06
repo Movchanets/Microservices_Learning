@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace BuildingBlocks.SharedContracts.Abstractions;
 
 /// <summary>
@@ -6,8 +8,14 @@ namespace BuildingBlocks.SharedContracts.Abstractions;
 public abstract class AggregateRoot : Entity
 {
 	private readonly List<IDomainEvent> _domainEvents = [];
+	private readonly ReadOnlyCollection<IDomainEvent> _readonlyDomainEvents;
 
-	public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+	protected AggregateRoot()
+	{
+		_readonlyDomainEvents = _domainEvents.AsReadOnly();
+	}
+
+	public IReadOnlyList<IDomainEvent> DomainEvents => _readonlyDomainEvents;
 
 	protected void AddDomainEvent(IDomainEvent domainEvent) =>
 		_domainEvents.Add(domainEvent);
