@@ -117,11 +117,24 @@ app.MapReverseProxy();
 app.Run();
 
 // ── Extension methods for middleware registration ───────
+/// <summary>
+/// Extension methods for registering custom middleware in the application pipeline.
+/// </summary>
 public static class MiddlewareExtensions
 {
+    /// <summary>
+    /// Registers the <see cref="CookieToBearerMiddleware"/> in the pipeline.
+    /// </summary>
+    /// <param name="app">The application builder.</param>
+    /// <returns>The application builder with the middleware registered.</returns>
     public static IApplicationBuilder UseCookieToBearer(this IApplicationBuilder app) =>
         app.UseMiddleware<CookieToBearerMiddleware>();
 
+    /// <summary>
+    /// Registers the <see cref="CsrfValidationMiddleware"/> in the pipeline.
+    /// </summary>
+    /// <param name="app">The application builder.</param>
+    /// <returns>The application builder with the middleware registered.</returns>
     public static IApplicationBuilder UseCsrfValidation(this IApplicationBuilder app) =>
         app.UseMiddleware<CsrfValidationMiddleware>();
 }
