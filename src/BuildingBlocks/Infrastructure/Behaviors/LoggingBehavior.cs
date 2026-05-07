@@ -12,6 +12,16 @@ public sealed class LoggingBehavior<TRequest, TResponse>(
 	: IPipelineBehavior<TRequest, TResponse>
 	where TRequest : notnull
 {
+	/// <summary>
+	/// Intercepts the MediatR request to log the start, end, and execution time of the handler.
+	/// Rationale: Implements a cross-cutting concern (logging) using the Decorator/Pipeline pattern.
+	/// This keeps command and query handlers clean and focused on business logic while
+	/// providing consistent observability and performance monitoring (slow request warnings) out of the box.
+	/// </summary>
+	/// <param name="request">The incoming request.</param>
+	/// <param name="next">The delegate to call the next behavior or the handler itself.</param>
+	/// <param name="cancellationToken">The cancellation token.</param>
+	/// <returns>The response from the next behavior or handler.</returns>
 	public async Task<TResponse> Handle(
 		TRequest request,
 		RequestHandlerDelegate<TResponse> next,
