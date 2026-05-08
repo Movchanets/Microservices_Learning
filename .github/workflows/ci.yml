@@ -53,21 +53,28 @@ jobs:
           filters: |
             buildingblocks_unit:
               - 'src/BuildingBlocks/**'
-              - 'tests/BuildingBlocks/**'
+              - 'tests/UnitTests/BuildingBlocks.Infrastructure.UnitTests/**'
+            identity_unit:
+              - 'src/Microservices/Identity/**'
+              - 'tests/UnitTests/Identity.UnitTests/**'
             identity_integration:
               - 'src/Microservices/Identity/**'
               - 'tests/IntegrationTests/Identity.IntegrationTests/**'
               - 'tests/IntegrationTests/Shared/**'
+            api_gateway_tests:
+              - 'src/Gateways/ApiGateway/**'
+              - 'tests/UnitTests/ApiGateway.UnitTests/**'
+              - 'tests/IntegrationTests/ApiGateway.IntegrationTests/**'
             unit_tests:
               - 'tests/UnitTests/**'
-            integration_tests:
-              - 'tests/IntegrationTests/**'
 
-      - name: Run affected unit tests
+            source_changes:
+              - 'src/**'
+
+      - name: Run affected tests
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s globstar nullglob
 
           declare -A projects=()
 
@@ -79,29 +86,47 @@ jobs:
           }
 
           if [ "${{ steps.filters.outputs.buildingblocks_unit }}" = "true" ]; then
-            add_project "tests/BuildingBlocks/BuildingBlocks.Infrastructure.UnitTests/BuildingBlocks.Infrastructure.UnitTests.csproj"
+            add_project "tests/UnitTests/BuildingBlocks.Infrastructure.UnitTests/BuildingBlocks.Infrastructure.UnitTests.csproj"
+          fi
+
+          if [ "${{ steps.filters.outputs.identity_unit }}" = "true" ]; then
+            add_project "tests/UnitTests/Identity.UnitTests/Identity.UnitTests.csproj"
           fi
 
           if [ "${{ steps.filters.outputs.unit_tests }}" = "true" ]; then
-            for project in tests/UnitTests/**/*.csproj; do
+            while IFS= read -r project; do
               add_project "$project"
-            done
+            done < <(find tests/UnitTests -type f -name '*.csproj')
           fi
 
           if [ "${{ steps.filters.outputs.identity_integration }}" = "true" ]; then
             add_project "tests/IntegrationTests/Identity.IntegrationTests/Identity.IntegrationTests.csproj"
           fi
 
+          if [ "${{ steps.filters.outputs.api_gateway_tests }}" = "true" ]; then
+            add_project "tests/UnitTests/ApiGateway.UnitTests/ApiGateway.UnitTests.csproj"
+            add_project "tests/IntegrationTests/ApiGateway.IntegrationTests/ApiGateway.IntegrationTests.csproj"
+          fi
+
           if [ "${{ steps.filters.outputs.integration_tests }}" = "true" ]; then
-            for project in tests/IntegrationTests/**/*.csproj; do
+            while IFS= read -r project; do
               add_project "$project"
-            done
+            done < <(find tests/IntegrationTests -type f -name '*.csproj')
+          fi
+
+          if [ "${{ steps.filters.outputs.source_changes }}" = "true" ]; then
+            while IFS= read -r project; do
+              add_project "$project"
+            done < <(find tests/IntegrationTests -type f -name '*.csproj')
           fi
 
           if [ "${#projects[@]}" -eq 0 ]; then
             echo "No affected test projects found."
             exit 0
           fi
+
+          echo "Detected test projects:"
+          printf '%s\n' "${!projects[@]}" | sort
 
           for project in "${!projects[@]}"; do
             if [[ "$project" == tests/IntegrationTests/Shared/* ]]; then
@@ -135,18 +160,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s globstar nullglob
-          for project in tests/UnitTests/**/*.csproj tests/BuildingBlocks/**/*.csproj; do
+          while IFS= read -r project; do
             echo "Running unit tests for $project"
             dotnet test "$project" -c Release
-          done
+          done < <(find tests/UnitTests -type f -name '*.csproj' | sort)
 
       - name: Run integration tests
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s globstar nullglob
-          for project in tests/IntegrationTests/**/*.csproj; do
+          while IFS= read -r project; do
             if [[ "$project" == tests/IntegrationTests/Shared/* ]]; then
               echo "Skipping shared helper project $project"
               continue
@@ -154,4 +177,4 @@ jobs:
 
             echo "Running integration tests for $project"
             dotnet test "$project" -c Release
-          done
+          done < <(find tests/IntegrationTests -type f -name '*.csproj' | sort)
