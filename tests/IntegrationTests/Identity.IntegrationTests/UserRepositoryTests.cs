@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Identity.Domain.Aggregates;
 using Identity.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
 
 namespace Identity.IntegrationTests;
 
@@ -36,18 +35,18 @@ public sealed class UserRepositoryTests(IdentityPostgresFixture fixture)
         await using var context = CreateDbContext();
         var repository = CreateRepository(context);
 
-        var email = $"bob-{Guid.NewGuid():N}@example.com";
-        var user = User.Create(email, "hashed-password", "Bob", "Builder", UserRole.Admin);
+        var email = $"repo-user-{Guid.NewGuid():N}@example.com";
+        var user = User.Create(email, "hashed-password", "Repo", "Tester", UserRole.Admin);
 
         repository.Add(user);
         await context.SaveChangesAsync();
 
-        var persisted = await repository.GetByEmailAsync(email);
+        var loadedUser = await repository.GetByEmailAsync(email);
 
-        persisted.Should().NotBeNull();
-        persisted!.Id.Should().Be(user.Id);
-        persisted.Email.Value.Should().Be(email);
-        persisted.Role.Should().Be(UserRole.Admin);
+        loadedUser.Should().NotBeNull();
+        loadedUser!.Id.Should().Be(user.Id);
+        loadedUser.Email.Value.Should().Be(email);
+        loadedUser.Role.Should().Be(UserRole.Admin);
     }
 
     [Fact]
@@ -61,5 +60,21 @@ public sealed class UserRepositoryTests(IdentityPostgresFixture fixture)
         var exists = await repository.ExistsAsync(missingEmail);
 
         exists.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Exists_WhenUserExists_ReturnsTrue()
+    {
+        var email = $"exists-user-{Guid.NewGuid():N}@example.com";
+        var user = User.Create(email, "hashed-password", "Repo", "Tester", UserRole.Seller);
+
+        await using var context = CreateDbContext();
+        var repository = CreateRepository(context);
+        repository.Add(user);
+        await context.SaveChangesAsync();
+
+        var exists = await repository.ExistsAsync(email);
+
+        exists.Should().BeTrue();
     }
 }
