@@ -47,5 +47,9 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
 // Phase 6: StoreMgmt.API → .WithReference(storeDb).WithReference(messaging)
 // Phase 6: Media.API     → blob storage reference
 // Phase 7: Angular       → builder.AddNpmApp(...)
+var frontend = builder.AddNpmApp("angular", "../../web", "start")
+    .WithReference(gateway)
+    .WithEnvironment("PORT", "4200")
+    .WithHttpEndpoint(env: "PORT", port: 4200);
 
 builder.Build().Run();
