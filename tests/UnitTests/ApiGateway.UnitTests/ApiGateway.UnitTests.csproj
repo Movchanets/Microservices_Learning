@@ -24,9 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Shared\IntegrationTests.Shared.csproj" />
-    <ProjectReference Include="..\..\..\src\Microservices\Identity\Identity.Domain\Identity.Domain.csproj" />
-    <ProjectReference Include="..\..\..\src\Microservices\Identity\Identity.Infrastructure\Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Gateways\ApiGateway\ApiGateway.csproj" />
   </ItemGroup>
 
 </Project>

@@ -22,15 +22,14 @@
     <Project Path="src/Microservices/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/" />
-  <Folder Name="/tests/BuildingBlocks/">
-    <Project Path="tests/BuildingBlocks/BuildingBlocks.Infrastructure.UnitTests/BuildingBlocks.Infrastructure.UnitTests.csproj" />
-  </Folder>
   <Folder Name="/tests/IntegrationTests/">
-    <Folder Name="/tests/IntegrationTests/Shared/">
-      <Project Path="tests/IntegrationTests/Shared/IntegrationTests.Shared.csproj" />
-    </Folder>
-    <Folder Name="/tests/IntegrationTests/Identity.IntegrationTests/">
-      <Project Path="tests/IntegrationTests/Identity.IntegrationTests/Identity.IntegrationTests.csproj" />
-    </Folder>
+    <Project Path="tests\IntegrationTests\ApiGateway.IntegrationTests\ApiGateway.IntegrationTests.csproj" Type="Classic C#" />
+    <Project Path="tests\IntegrationTests\Identity.IntegrationTests\Identity.IntegrationTests.csproj" Type="Classic C#" />
+    <Project Path="tests\IntegrationTests\Shared\IntegrationTests.Shared.csproj" Type="Classic C#" />
+  </Folder>
+  <Folder Name="/tests/UnitTests/">
+    <Project Path="tests/UnitTests/ApiGateway.UnitTests/ApiGateway.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/BuildingBlocks.Infrastructure.UnitTests/BuildingBlocks.Infrastructure.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/Identity.UnitTests/Identity.UnitTests.csproj" />
   </Folder>
 </Solution>
