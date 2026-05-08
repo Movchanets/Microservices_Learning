@@ -1,69 +1,96 @@
-# Marketplace Frontend Design Guide
+# Marketplace Design System & Frontend Guide
 
-This document outlines the core design philosophy, theming, and internationalization guidelines for the Angular 21 frontend of the Marketplace project. **All developers and agents MUST consult this file before creating or modifying UI components.**
+This document defines the **visual identity, design system, and frontend engineering standards** for the Marketplace project. All developers and agents MUST adhere to these guidelines to ensure a premium, enterprise-grade user experience.
 
-## Tech Stack
-- **Framework**: Angular 21 (Standalone Components, Signals)
-- **CSS Framework**: Tailwind CSS v4
-- **UI Components**: `@spartan-ng` (Headless UI for Angular + Tailwind)
-- **Package Manager**: `pnpm`
+---
 
-## 1. Theming (Light/Dark Mode)
+## 1. Design Philosophy: "Enterprise Gateway"
 
-The application supports both light and dark modes natively. We rely on Tailwind CSS's dark mode capabilities combined with CSS variables managed by `@spartan-ng`.
+Our design focuses on **high integrity, trust, and fluid efficiency**. We use the **Liquid Glass** aesthetic to provide a modern, premium feel while maintaining the robustness required for an enterprise B2B/B2C marketplace.
 
-### Guidelines:
-- **Use Semantic Colors**: Always use semantic Tailwind classes provided by the theme configuration rather than hardcoding colors (e.g., use `bg-background` and `text-foreground` instead of `bg-white` and `text-black`).
-- **Dark Mode Strategy**: Configure Tailwind to use the `class` strategy for dark mode.
-- **Theme Toggle Component**: The user's theme preference should be stored in `localStorage` (or via the BFF session if authenticated) and applied to the root `<html>` element as the `dark` class.
-- **System Preference Fallback**: On first load, if no user preference exists, respect the system's `prefers-color-scheme`.
+### Core Principles:
+- **Premium Aesthetics**: Use subtle gradients, backdrop blurs (glassmorphism), and refined typography to "WOW" the user.
+- **High Agency**: Provide clear paths for different user roles (Buyer, Seller, Admin) with prominent trust signals.
+- **Micro-interactions**: Every click and hover should feel alive with smooth, purposeful animations.
+- **Zero Placeholder Policy**: Use real-looking data and generated assets for all demonstrations.
 
-### Example (Tailwind classes):
-```html
-<div class="bg-card text-card-foreground p-6 rounded-lg shadow-sm border border-border">
-  <h2 class="text-xl font-bold">Product Title</h2>
-  <p class="text-muted-foreground">Product description goes here.</p>
-</div>
+---
+
+## 2. Visual Language
+
+### 2.1 Color Palette (Corporate Trust)
+| Role | Hex | Tailwind Class | Purpose |
+|:---:|:---:|:---:|:---|
+| **Primary** | `#7C3AED` | `bg-primary` | Brand identity, primary actions (Trust Purple) |
+| **Secondary** | `#A78BFA` | `bg-secondary` | Muted actions, accents |
+| **Success** | `#22C55E` | `bg-success` | Confirmations, "Buy" buttons (Transaction Green) |
+| **Background**| `#FAF5FF` | `bg-background` | Main canvas (Soft Purple tint) |
+| **Foreground**| `#4C1D95` | `text-foreground`| Primary text (Deep Purple) |
+| **Muted** | `#6B7280` | `text-muted` | Secondary text, descriptions |
+
+### 2.2 Typography
+- **Headings**: `Lexend` — Professional, clean, and highly readable for enterprise contexts.
+- **Body**: `Source Sans 3` — Optimized for long-form reading and data-heavy interfaces.
+
+**Google Fonts Import:**
+```css
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 ```
 
-## 2. Internationalization (i18n)
+### 2.3 Key Visual Effects (Liquid Glass)
+- **Glassmorphism**: Use `backdrop-blur-md` and `bg-white/70` (light) or `bg-slate-900/70` (dark) for cards and navbars.
+- **Soft Shadows**: Use multi-layered shadows for depth (`shadow-xl` with subtle purple tinting).
+- **Smooth Curves**: All interactive elements should use `rounded-xl` or `rounded-2xl`.
 
-The marketplace is a global platform and must support multiple languages. We use Angular's built-in `@angular/localize` package.
+---
 
-### Guidelines:
-- **No Hardcoded Strings**: Never hardcode user-visible text in templates or TypeScript files.
-- **Template i18n**: Use the `i18n` attribute in HTML templates.
-  ```html
-  <h1 i18n="@@home.welcome">Welcome to the Marketplace</h1>
-  ```
-- **Code i18n**: Use the `$localize` function for text dynamically generated in TypeScript.
-  ```typescript
-  const errorMessage = $localize`:@@error.generic:An unexpected error occurred.`;
-  ```
-- **Date and Currency Formatting**: Use Angular's built-in `DatePipe` and `CurrencyPipe`, which automatically adapt to the user's current locale.
-  ```html
-  <span>{{ product.price | currency }}</span>
-  <span>{{ order.date | date:'short' }}</span>
-  ```
+## 3. Tech Stack & Implementation
 
-## 3. UI Component Construction (@spartan-ng)
+- **Framework**: Angular 21+ (Standalone, Signals, Zoneless ready)
+- **CSS**: Tailwind CSS v4 (using the `@theme` directive)
+- **UI Components**: `@spartan-ng` (Headless primitives for maximum flexibility)
+- **State**: NgRx SignalStore (State-of-the-art signal-based state management)
+- **Icons**: `Lucide Angular` (Consistent, clean SVG icons)
 
-We use `@spartan-ng` to construct accessible, unstyled components that we then style with Tailwind CSS.
+### 3.1 Theming Strategy
+The application supports native Light and Dark modes using the `class` strategy in Tailwind.
 
-### Guidelines:
-- **Do not invent new interactive primitives**: If you need a dropdown, dialog, accordion, or tabs, look for the `@spartan-ng` equivalent first before attempting to build one from scratch or importing a heavy third-party library.
-- **Keep styles localized**: Combine Tailwind utility classes using tools like `clsx` and `tailwind-merge` (typically integrated via `@spartan-ng` utils) to handle conditional class application.
+- **Light Mode**: High contrast, crisp borders (`border-border`), and purple-tinted backgrounds.
+- **Dark Mode**: Deep navy/slate palette (`#0F172A`), glowing primary accents, and refined transparency.
 
-## 4. State Management and Data Binding
+### 3.2 Spartan/UI Guidelines
+- **Don't reinvent the wheel**: Use Spartan's `brn-` primitives for Dialogs, Popovers, Tabs, and Selects.
+- **Customization**: Style Spartan components using the design tokens defined in `tailwind.config.js`.
 
-- **Signals First**: Use Angular Signals for all synchronous reactive state within components.
-- **NgRx SignalStore**: Use SignalStore for complex, multi-component feature states (e.g., shopping cart, product catalog).
-- **Control Flow**: Use Angular's new control flow syntax (`@if`, `@for`, `@switch`) exclusively over structural directives (`*ngIf`, `*ngFor`).
+---
 
-```html
-@if (user()) {
-  <div>Welcome back, {{ user().name }}!</div>
-} @else {
-  <button (click)="login()">Log In</button>
-}
-```
+## 4. Interaction & Motion
+
+### 4.1 Animation Specs
+- **Hover States**: 200ms `ease-in-out`. Use subtle scale (`scale-[1.02]`) and shadow enhancement.
+- **Page Transitions**: 400ms `cubic-bezier(0.4, 0, 0.2, 1)`.
+- **Loading States**: Use refined skeletons that mirror the final component structure.
+
+### 4.2 Interaction Rules
+- **Cursor**: Always use `cursor-pointer` on all clickable cards and buttons.
+- **Feedback**: Provide immediate visual feedback on all interactions (ripple effects or color shifts).
+- **Accessibility**: Ensure `focus-visible` rings are prominent for keyboard navigation.
+
+---
+
+## 5. Internationalization (i18n)
+
+We use Angular's native `@angular/localize` system.
+
+- **No Hardcoded Strings**: All text must be wrapped in `i18n` attributes or `$localize`.
+- **Dynamic Data**: Use Angular pipes (`currency`, `date`, `number`) for locale-aware formatting.
+- **RTL Support**: Design layouts to be direction-agnostic where possible.
+
+---
+
+## 6. Pre-Delivery Checklist (QA)
+- [ ] **Accessibility**: Contrast ratio >= 4.5:1 for all text.
+- [ ] **Icons**: No emojis. Only Lucide SVG icons.
+- [ ] **Performance**: Images optimized/lazy-loaded. Components use `OnPush`.
+- [ ] **Responsive**: Verified at 375px (Mobile), 768px (Tablet), 1440px (Desktop).
+- [ ] **Motion**: `prefers-reduced-motion` media query respected.
