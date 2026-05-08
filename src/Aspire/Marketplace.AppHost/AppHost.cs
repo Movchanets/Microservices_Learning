@@ -8,12 +8,12 @@ var builder = DistributedApplication.CreateBuilder(args);
 var postgres = builder.AddPostgres("postgres")
     .WithPgAdmin();
 
-var identityDb  = postgres.AddDatabase("identity-db");
-var catalogDb   = postgres.AddDatabase("catalog-db");
-var orderingDb  = postgres.AddDatabase("ordering-db");
+var identityDb = postgres.AddDatabase("identity-db");
+var catalogDb = postgres.AddDatabase("catalog-db");
+var orderingDb = postgres.AddDatabase("ordering-db");
 var inventoryDb = postgres.AddDatabase("inventory-db");
-var paymentDb   = postgres.AddDatabase("payment-db");
-var storeDb     = postgres.AddDatabase("store-db");
+var paymentDb = postgres.AddDatabase("payment-db");
+var storeDb = postgres.AddDatabase("store-db");
 
 // Redis — used by Cart.API, Notification.Worker (SignalR backplane)
 var redis = builder.AddRedis("redis")
@@ -30,12 +30,19 @@ var messaging = builder.AddRabbitMQ("messaging")
 // Phase 1: Identity.API  → .WithReference(identityDb).WithReference(messaging)
 var identityApi = builder.AddProject<Projects.Identity_API>("identity-api")
     .WithReference(identityDb)
-    .WithReference(messaging);
+    .WithReference(messaging)
+    // Provide JWT configuration / secrets for local development
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 1: ApiGateway    → .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(identityApi)
     .WithReference(redis)
+    // Provide BFF client secret and identity authority for OIDC (dev)
+    .WithEnvironment("Identity__ClientSecret", "bff-secret")
+    .WithEnvironment("Identity__Authority", "http://identity-api")
     .WithExternalHttpEndpoints();
 // Phase 2: Catalog.API   → .WithReference(catalogDb).WithReference(messaging)
 // Phase 2: Search.API    → .WithReference(messaging)
@@ -47,9 +54,10 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
 // Phase 6: StoreMgmt.API → .WithReference(storeDb).WithReference(messaging)
 // Phase 6: Media.API     → blob storage reference
 // Phase 7: Angular       → builder.AddNpmApp(...)
-var frontend = builder.AddNpmApp("angular", "../../web", "start")
+var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
     .WithReference(gateway)
-    .WithEnvironment("PORT", "4200")
-    .WithHttpEndpoint(env: "PORT", port: 4200);
-
+    // targetPort: 4200 tells Aspire to expect Angular on 4200.
+    // port: 4201 exposes the Aspire proxy on localhost:4201 so they don't clash.
+    .WithHttpEndpoint(targetPort: 4200, port: 4201, name: "http")
+    .WithExternalHttpEndpoints();
 builder.Build().Run();

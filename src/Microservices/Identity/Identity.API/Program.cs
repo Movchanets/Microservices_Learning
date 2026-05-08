@@ -3,6 +3,7 @@ using BuildingBlocks.Infrastructure.Middleware;
 using FluentValidation;
 using Identity.API.Endpoints;
 using Identity.Infrastructure;
+using Identity.Infrastructure.Persistence;
 using Marketplace.ServiceDefaults;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -58,6 +59,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+app.ApplyMigrations();
 
 // ── Middleware pipeline ─────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();

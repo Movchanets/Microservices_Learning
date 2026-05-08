@@ -483,3 +483,4 @@ $RECYCLE.BIN/
 *.swp
 Мікросервісна Архітектура Маркетплейсу_ Проектування.md
 skills-lock.json
+src/Microservices/Identity/Identity.API/appsettings.Development.json

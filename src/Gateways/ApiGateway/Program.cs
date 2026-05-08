@@ -22,7 +22,9 @@ builder.Services.AddAuthentication(options =>
 {
     options.Cookie.Name = "Marketplace.Session";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.None
+        : CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
@@ -36,7 +38,7 @@ builder.Services.AddAuthentication(options =>
     options.ResponseType = "code";
     options.SaveTokens = true; // Store tokens server-side in session
     options.GetClaimsFromUserInfoEndpoint = true;
-
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment(); // For development with HTTP
     options.Scope.Clear();
     options.Scope.Add("openid");
     options.Scope.Add("profile");
@@ -104,7 +106,7 @@ app.MapGet("/bff/csrf", (HttpContext ctx) =>
     ctx.Response.Cookies.Append("XSRF-TOKEN", token, new CookieOptions
     {
         HttpOnly = false, // Angular must read this
-        Secure = true,
+        Secure = !builder.Environment.IsDevelopment(),
         SameSite = SameSiteMode.Strict,
         Path = "/"
     });

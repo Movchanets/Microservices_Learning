@@ -25,4 +25,12 @@
   <Folder Name="/tests/BuildingBlocks/">
     <Project Path="tests/BuildingBlocks/BuildingBlocks.Infrastructure.UnitTests/BuildingBlocks.Infrastructure.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/tests/IntegrationTests/">
+    <Folder Name="/tests/IntegrationTests/Shared/">
+      <Project Path="tests/IntegrationTests/Shared/IntegrationTests.Shared.csproj" />
+    </Folder>
+    <Folder Name="/tests/IntegrationTests/Identity.IntegrationTests/">
+      <Project Path="tests/IntegrationTests/Identity.IntegrationTests/Identity.IntegrationTests.csproj" />
+    </Folder>
+  </Folder>
 </Solution>
