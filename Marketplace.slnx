@@ -11,4 +11,26 @@
   <Folder Name="/src/BuildingBlocks/SharedContracts/">
     <Project Path="src/BuildingBlocks/SharedContracts/BuildingBlocks.SharedContracts.csproj" />
   </Folder>
+  <Folder Name="/src/Gateways/">
+    <Project Path="src/Gateways/ApiGateway/ApiGateway.csproj" />
+  </Folder>
+  <Folder Name="/src/Microservices/" />
+  <Folder Name="/src/Microservices/Identity/">
+    <Project Path="src/Microservices/Identity/Identity.API/Identity.API.csproj" />
+    <Project Path="src/Microservices/Identity/Identity.Application/Identity.Application.csproj" />
+    <Project Path="src/Microservices/Identity/Identity.Domain/Identity.Domain.csproj" />
+    <Project Path="src/Microservices/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/BuildingBlocks/">
+    <Project Path="tests/BuildingBlocks/BuildingBlocks.Infrastructure.UnitTests/BuildingBlocks.Infrastructure.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/IntegrationTests/">
+    <Folder Name="/tests/IntegrationTests/Shared/">
+      <Project Path="tests/IntegrationTests/Shared/IntegrationTests.Shared.csproj" />
+    </Folder>
+    <Folder Name="/tests/IntegrationTests/Identity.IntegrationTests/">
+      <Project Path="tests/IntegrationTests/Identity.IntegrationTests/Identity.IntegrationTests.csproj" />
+    </Folder>
+  </Folder>
 </Solution>

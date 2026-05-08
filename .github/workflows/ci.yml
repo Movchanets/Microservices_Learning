@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore Marketplace.slnx
+
+      - name: Build
+        run: dotnet build Marketplace.slnx --no-restore -c Release
+
+  changed-tests:
+    runs-on: ubuntu-latest
+    needs: build
+    if: >
+      (github.event_name == 'push' && github.ref_name != 'main' && github.ref_name != 'master') ||
+      (github.event_name == 'pull_request' && github.base_ref != 'main' && github.base_ref != 'master')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Detect affected test areas
+        id: filters
+        uses: dorny/paths-filter@v3
+        with:
+          list-files: shell
+          filters: |
+            buildingblocks_unit:
+              - 'src/BuildingBlocks/**'
+              - 'tests/BuildingBlocks/**'
+            identity_integration:
+              - 'src/Microservices/Identity/**'
+              - 'tests/IntegrationTests/Identity.IntegrationTests/**'
+              - 'tests/IntegrationTests/Shared/**'
+            unit_tests:
+              - 'tests/UnitTests/**'
+            integration_tests:
+              - 'tests/IntegrationTests/**'
+
+      - name: Run affected unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+
+          declare -A projects=()
+
+          add_project() {
+            local project="$1"
+            if [ -f "$project" ]; then
+              projects["$project"]=1
+            fi
+          }
+
+          if [ "${{ steps.filters.outputs.buildingblocks_unit }}" = "true" ]; then
+            add_project "tests/BuildingBlocks/BuildingBlocks.Infrastructure.UnitTests/BuildingBlocks.Infrastructure.UnitTests.csproj"
+          fi
+
+          if [ "${{ steps.filters.outputs.unit_tests }}" = "true" ]; then
+            for project in tests/UnitTests/**/*.csproj; do
+              add_project "$project"
+            done
+          fi
+
+          if [ "${{ steps.filters.outputs.identity_integration }}" = "true" ]; then
+            add_project "tests/IntegrationTests/Identity.IntegrationTests/Identity.IntegrationTests.csproj"
+          fi
+
+          if [ "${{ steps.filters.outputs.integration_tests }}" = "true" ]; then
+            for project in tests/IntegrationTests/**/*.csproj; do
+              add_project "$project"
+            done
+          fi
+
+          if [ "${#projects[@]}" -eq 0 ]; then
+            echo "No affected test projects found."
+            exit 0
+          fi
+
+          for project in "${!projects[@]}"; do
+            if [[ "$project" == tests/IntegrationTests/Shared/* ]]; then
+              echo "Skipping shared helper project $project"
+              continue
+            fi
+
+            echo "Running tests for $project"
+            dotnet test "$project" -c Release
+          done
+
+  full-tests:
+    runs-on: ubuntu-latest
+    needs: build
+    if: >
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'master'))
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          for project in tests/UnitTests/**/*.csproj tests/BuildingBlocks/**/*.csproj; do
+            echo "Running unit tests for $project"
+            dotnet test "$project" -c Release
+          done
+
+      - name: Run integration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          for project in tests/IntegrationTests/**/*.csproj; do
+            if [[ "$project" == tests/IntegrationTests/Shared/* ]]; then
+              echo "Skipping shared helper project $project"
+              continue
+            fi
+
+            echo "Running integration tests for $project"
+            dotnet test "$project" -c Release
+          done
