@@ -1,7 +1,7 @@
 using System.Net;
-using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace BuildingBlocks.Infrastructure.Middleware;
@@ -12,8 +12,16 @@ namespace BuildingBlocks.Infrastructure.Middleware;
 /// </summary>
 public sealed class GlobalExceptionMiddleware(
 	RequestDelegate next,
-	ILogger<GlobalExceptionMiddleware> logger)
+	ILogger<GlobalExceptionMiddleware> logger,
+	IHostEnvironment env)
 {
+	/// <summary>
+	/// Processes an incoming HTTP request, catching any unhandled exceptions
+	/// and transforming them into a standard ProblemDetails response.
+	/// Rationale: Centralizing error handling here ensures consistent API error shapes
+	/// (RFC 7807 ProblemDetails) across all microservices without duplicating try-catch blocks in endpoints.
+	/// </summary>
+	/// <param name="context">The HTTP context.</param>
 	public async Task InvokeAsync(HttpContext context)
 	{
 		try
@@ -27,7 +35,14 @@ public sealed class GlobalExceptionMiddleware(
 		}
 	}
 
-	private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
+	/// <summary>
+	/// Formats the caught exception into an HTTP response using ProblemDetails.
+	/// Rationale: Maps common exception types to appropriate HTTP status codes,
+	/// abstracting technical exceptions into standard HTTP semantics for API consumers.
+	/// </summary>
+	/// <param name="context">The HTTP context.</param>
+	/// <param name="exception">The caught exception.</param>
+	private async Task HandleExceptionAsync(HttpContext context, Exception exception)
 	{
 		var (statusCode, title) = exception switch
 		{
@@ -42,7 +57,7 @@ public sealed class GlobalExceptionMiddleware(
 		{
 			Status = (int)statusCode,
 			Title = title,
-			Detail = exception.Message,
+			Detail = env.IsDevelopment() ? exception.Message : "An unexpected error occurred.",
 			Instance = context.Request.Path
 		};
 

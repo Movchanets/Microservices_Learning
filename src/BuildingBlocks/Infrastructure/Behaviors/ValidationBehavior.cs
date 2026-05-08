@@ -12,6 +12,17 @@ public sealed class ValidationBehavior<TRequest, TResponse>(
 	: IPipelineBehavior<TRequest, TResponse>
 	where TRequest : notnull
 {
+	/// <summary>
+	/// Intercepts the MediatR request to perform validation before the handler logic executes.
+	/// Rationale: Adheres to the Fail-Fast principle. By executing all registered FluentValidation rules
+	/// in the pipeline, we guarantee that handlers only receive valid data, avoiding
+	/// redundant validation checks within the core business logic.
+	/// </summary>
+	/// <param name="request">The incoming request to validate.</param>
+	/// <param name="next">The delegate to call the next behavior or the handler itself.</param>
+	/// <param name="cancellationToken">The cancellation token.</param>
+	/// <returns>The response from the next behavior or handler.</returns>
+	/// <exception cref="ValidationException">Thrown if any validation failures occur.</exception>
 	public async Task<TResponse> Handle(
 		TRequest request,
 		RequestHandlerDelegate<TResponse> next,
