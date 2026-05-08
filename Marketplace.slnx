@@ -24,6 +24,7 @@
   <Folder Name="/tests/" />
   <Folder Name="/tests/BuildingBlocks/">
     <Project Path="tests/BuildingBlocks/BuildingBlocks.Infrastructure.UnitTests/BuildingBlocks.Infrastructure.UnitTests.csproj" />
+    <Project Path="tests/BuildingBlocks/BuildingBlocks.SharedContracts.UnitTests/BuildingBlocks.SharedContracts.UnitTests.csproj" />
   </Folder>
   <Folder Name="/tests/IntegrationTests/">
     <Folder Name="/tests/IntegrationTests/Shared/">
