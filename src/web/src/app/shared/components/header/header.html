@@ -1,0 +1,28 @@
+<header class="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl transition-all duration-300">
+  <div class="container mx-auto flex h-20 items-center justify-between px-6">
+    <a routerLink="/" class="flex items-center gap-3 group" aria-label="Go to homepage">
+      <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+        <span class="text-white font-bold text-2xl">M</span>
+      </div>
+      <span class="text-2xl font-bold tracking-tight text-foreground font-lexend">Marketplace</span>
+    </a>
+    
+    <nav class="hidden md:flex gap-8">
+      <a routerLink="/catalog" class="text-sm font-medium text-muted hover:text-primary transition-colors relative group">
+        Catalog
+        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+      </a>
+      <a routerLink="/seller-dashboard" class="text-sm font-medium text-muted hover:text-primary transition-colors relative group">
+        Sell
+        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+      </a>
+    </nav>
+    
+    <div class="flex items-center gap-4">
+      <a routerLink="/auth/login" class="text-sm font-medium text-muted hover:text-foreground transition-colors">Sign in</a>
+      <a routerLink="/auth/register" class="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 py-2 text-sm font-medium text-white shadow-xl shadow-primary/20 transition-all hover:scale-[1.05] hover:shadow-primary/40 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none">
+        Get Started
+      </a>
+    </div>
+  </div>
+</header>
