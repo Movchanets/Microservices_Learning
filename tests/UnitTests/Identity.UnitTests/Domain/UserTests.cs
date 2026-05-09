@@ -6,8 +6,16 @@ using Identity.Domain.ValueObjects;
 
 namespace Identity.UnitTests.Domain;
 
+/// <summary>
+/// Unit tests for the <see cref="User"/> domain aggregate.
+/// Rationale: Ensures that domain invariants, validation rules, and event generation logic operate correctly.
+/// </summary>
 public sealed class UserTests
 {
+    /// <summary>
+    /// Tests the happy path for creating a <see cref="User"/>, validating that fields are normalized
+    /// and the <see cref="UserRegisteredEvent"/> is properly raised.
+    /// </summary>
     [Fact]
     public void Create_ShouldNormalizeAndTrimFields_AndRaiseUserRegisteredEvent()
     {
@@ -26,6 +34,78 @@ public sealed class UserTests
         registeredEvent.Role.Should().Be(nameof(UserRole.Buyer));
     }
 
+    /// <summary>
+    /// Tests that an <see cref="ArgumentException"/> is thrown when attempting to create a user with an invalid first name.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    public void Create_WhenFirstNameIsNullOrWhiteSpace_ShouldThrowArgumentException(string? invalidFirstName)
+    {
+        var action = () => User.Create("buyer@example.com", "hashed-password", invalidFirstName!, "Doe");
+
+        action.Should().Throw<ArgumentException>()
+            .WithParameterName("firstName");
+    }
+
+    /// <summary>
+    /// Tests that an <see cref="ArgumentException"/> is thrown when attempting to create a user with an invalid last name.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    public void Create_WhenLastNameIsNullOrWhiteSpace_ShouldThrowArgumentException(string? invalidLastName)
+    {
+        var action = () => User.Create("buyer@example.com", "hashed-password", "Jane", invalidLastName!);
+
+        action.Should().Throw<ArgumentException>()
+            .WithParameterName("lastName");
+    }
+
+
+
+    /// <summary>
+    /// Tests that an <see cref="ArgumentException"/> is thrown when attempting to create a user with an invalid email address.
+    /// Rationale: Although email validation happens inside the <see cref="Email.Create"/> method, the static factory method <see cref="User.Create"/>
+    /// propagates this exception. Testing this ensures the aggregate factory method bubbles up the error correctly.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("invalid-email")]
+    public void Create_WhenEmailIsInvalid_ShouldThrowArgumentException(string? invalidEmail)
+    {
+        var action = () => User.Create(invalidEmail!, "hashed-password", "Jane", "Doe");
+
+        action.Should().Throw<ArgumentException>()
+            .WithParameterName("email");
+    }
+
+
+    /// <summary>
+    /// Tests that an <see cref="ArgumentException"/> is thrown when attempting to create a user with an invalid password hash.
+    /// Rationale: Validates that the <see cref="PasswordHash.Create"/> validation bubbles up correctly.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Create_WhenPasswordHashIsNullOrWhiteSpace_ShouldThrowArgumentException(string? invalidPasswordHash)
+    {
+        var action = () => User.Create("buyer@example.com", invalidPasswordHash!, "Jane", "Doe");
+
+        action.Should().Throw<ArgumentException>()
+            .WithParameterName("hash");
+    }
+
+    /// <summary>
+    /// Tests that a <see cref="UserRoleChangedEvent"/> is raised when the user's role is successfully changed.
+    /// </summary>
     [Fact]
     public void ChangeRole_WhenRoleChanges_ShouldRaiseUserRoleChangedEvent()
     {
@@ -44,6 +124,9 @@ public sealed class UserTests
         roleChangedEvent.NewRole.Should().Be(nameof(UserRole.Seller));
     }
 
+    /// <summary>
+    /// Tests the lifecycle of setting and revoking a refresh token on a <see cref="User"/> entity.
+    /// </summary>
     [Fact]
     public void RefreshTokenLifecycle_ShouldSetAndRevokeCurrentRefreshToken()
     {
