@@ -30,7 +30,7 @@ Build an enterprise-grade marketplace platform on .NET 10 / C# 14.1 that handles
 ### Frontend
 - **Framework**: Angular 19+ (Standalone Components)
 - **State**: NgRx SignalStore (Signals-based)
-- **UI Components**: Spartan/UI
+- **UI Components**: Zard UI
 - **Styling**: Tailwind CSS
 
 ### Infrastructure

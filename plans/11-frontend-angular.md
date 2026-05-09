@@ -6,7 +6,7 @@
 |:---|:---|
 | Framework | Angular 19+ (Standalone Components) |
 | State Management | NgRx SignalStore (Signals-based) |
-| UI Components | Spartan/UI |
+| UI Components | Zard UI |
 | Styling | Tailwind CSS |
 | Real-time | SignalR client (`@microsoft/signalr`) |
 | Build/Dev | .NET Aspire AppHost (`AddNpmApp`) |
