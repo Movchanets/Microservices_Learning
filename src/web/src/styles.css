@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
-
+@source ".";
 @theme {
   --color-primary: #7C3AED;
   --color-secondary: #A78BFA;
@@ -8,6 +8,7 @@
   --color-background: #FAF5FF;
   --color-foreground: #4C1D95;
   --color-muted: #6B7280;
+  --color-border: #E5E7EB;
 
   --font-lexend: "Lexend", sans-serif;
   --font-source-sans: "Source Sans 3", sans-serif;
@@ -21,6 +22,7 @@
     --secondary: var(--color-secondary);
     --success: var(--color-success);
     --muted: var(--color-muted);
+    --border: var(--color-border);
   }
 
   .dark {
@@ -28,6 +30,7 @@
     --foreground: #FAF5FF;
     --primary: #8B5CF6;
     --secondary: #6366F1;
+    --border: #334155;
   }
 
   body {

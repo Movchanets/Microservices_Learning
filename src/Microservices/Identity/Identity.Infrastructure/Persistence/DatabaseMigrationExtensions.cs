@@ -23,22 +23,9 @@ public static class DatabaseMigrationExtensions
 
         try
         {
-            var assembly = typeof(Identity.Infrastructure.DependencyInjection).Assembly;
-            var dbContextType = assembly.GetType("Identity.Infrastructure.Persistence.IdentityDbContext")
-                ?? throw new InvalidOperationException("Could not locate IdentityDbContext type.");
-
-            var dbContext = scope.ServiceProvider.GetRequiredService(dbContextType);
+            var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
             logger.LogInformation("Applying Identity database migrations...");
-
-            var databaseProperty = dbContextType.GetProperty("Database")
-                ?? throw new InvalidOperationException("Could not locate Database property on IdentityDbContext.");
-            var database = databaseProperty.GetValue(dbContext)
-                ?? throw new InvalidOperationException("Could not resolve IdentityDbContext.Database.");
-
-            var migrateMethod = database.GetType().GetMethod("Migrate", Type.EmptyTypes)
-                ?? throw new InvalidOperationException("Could not locate Migrate method on IdentityDbContext.Database.");
-
-            migrateMethod.Invoke(database, null);
+            dbContext.Database.Migrate();
             logger.LogInformation("Identity database migrations applied successfully.");
         }
         catch (Exception ex)

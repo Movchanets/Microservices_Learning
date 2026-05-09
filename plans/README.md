@@ -16,7 +16,7 @@ This directory contains the complete architectural documentation for the Enterpr
 | [08-security.md](./08-security.md) | Authentication, authorization, Zero Trust, Managed Identities |
 | [09-infrastructure-deployment.md](./09-infrastructure-deployment.md) | .NET Aspire, Aspirate, Terraform, Azure Container Apps |
 | [10-testing-strategy.md](./10-testing-strategy.md) | Unit, Integration (Testcontainers), E2E (Playwright) |
-| [11-frontend-angular.md](./11-frontend-angular.md) | Angular 19+, Signals, NgRx SignalStore, Spartan/UI |
+| [11-frontend-angular.md](./11-frontend-angular.md) | Angular 19+, Signals, NgRx SignalStore, Zard UI |
 | [12-c4-diagrams.md](./12-c4-diagrams.md) | C4 architecture diagrams (Context, Container, Component) |
 
 ## Architecture Principles
@@ -33,7 +33,7 @@ This directory contains the complete architectural documentation for the Enterpr
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Frontend:  Angular 19+ │ Signals │ Spartan/UI      │
+│  Frontend:  Angular 19+ │ Signals │ Zard UI         │
 │  Gateway:   YARP (BFF) │ Cookie-to-Bearer           │
 │  Backend:   .NET 10 │ C# 14.1 │ Minimal APIs        │
 │  Patterns:  Clean Architecture │ DDD │ CQRS(MediatR) │

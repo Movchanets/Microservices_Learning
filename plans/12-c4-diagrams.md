@@ -33,7 +33,7 @@ graph TB
 ```mermaid
 graph TB
     subgraph "Client"
-        SPA["Angular SPA<br/>Spartan/UI + Tailwind<br/>TypeScript"]
+        SPA["Angular SPA<br/>Zard UI + Tailwind<br/>TypeScript"]
     end
 
     subgraph "Edge"
