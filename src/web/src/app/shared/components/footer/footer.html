@@ -17,7 +17,7 @@
     <div class="flex flex-wrap items-center gap-4">
       <!-- Theme Selector -->
       <div class="relative">
-        <button (click)="toggleTheme()" 
+        <button (click)="toggleTheme()" data-testid="theme-toggle-btn"
           class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[120px] justify-between">
           <div class="flex items-center gap-2">
             <lucide-icon [name]="themeService.theme() === 'dark' ? 'moon' : 'sun'" class="w-4 h-4 text-primary"></lucide-icon>
@@ -41,7 +41,7 @@
 
       <!-- Language Selector -->
       <div class="relative">
-        <button (click)="toggleLang()" 
+        <button (click)="toggleLang()" data-testid="lang-toggle-btn"
           class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[140px] justify-between">
           <div class="flex items-center gap-2">
             <!-- Current Flag -->

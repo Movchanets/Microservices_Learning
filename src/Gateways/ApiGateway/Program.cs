@@ -1,6 +1,9 @@
 using ApiGateway.Middleware;
 using Marketplace.ServiceDefaults;
 using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,11 +15,10 @@ builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
     .AddServiceDiscoveryDestinationResolver();
 
-// ── Authentication (Cookie session + OIDC) ──────────────
+// ── Authentication (Cookie session) ─────────────────────
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = "Cookies";
-    options.DefaultChallengeScheme = "oidc";
 })
 .AddCookie("Cookies", options =>
 {
@@ -28,25 +30,13 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
-})
-.AddOpenIdConnect("oidc", options =>
-{
-    // These will be configured via Aspire service discovery
-    options.Authority = builder.Configuration["Identity:Authority"] ?? "http://identity-api";
-    options.ClientId = "marketplace-bff";
-    options.ClientSecret = builder.Configuration["Identity:ClientSecret"] ?? "bff-secret";
-    options.ResponseType = "code";
-    options.SaveTokens = true; // Store tokens server-side in session
-    options.GetClaimsFromUserInfoEndpoint = true;
-    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment(); // For development with HTTP
-    options.Scope.Clear();
-    options.Scope.Add("openid");
-    options.Scope.Add("profile");
-    options.Scope.Add("email");
-    options.Scope.Add("offline_access"); // Refresh tokens
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpClient("identity-api", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Identity:ApiBaseUrl"] ?? "http://identity-api");
+});
 
 // ── CORS (for Angular SPA) ──────────────────────────────
 builder.Services.AddCors(options =>
@@ -55,7 +45,7 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                ?? ["http://localhost:4200"])
+                ?? ["http://localhost:4200", "http://localhost:4201"])
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
@@ -72,71 +62,211 @@ app.UseCookieToBearer();   // Cookie → Bearer transform
 app.UseAuthorization();
 
 // ── BFF endpoints ───────────────────────────────────────
-app.MapGet("/bff/login", () => Results.Challenge(
-    new() { RedirectUri = "/" },
-    ["oidc"]))
-    .ExcludeFromDescription();
+app.MapPost("/bff/auth/login", async (
+    LoginRequest request,
+    IHttpClientFactory httpClientFactory,
+    HttpContext ctx,
+    CancellationToken ct) =>
+{
+    var http = httpClientFactory.CreateClient("identity-api");
+    var response = await http.PostAsJsonAsync("/api/identity/auth/login", request, ct);
 
-app.MapGet("/bff/logout", async (HttpContext ctx) =>
+    if (!response.IsSuccessStatusCode)
+    {
+        return await ToProblemResultAsync(response, ct);
+    }
+
+    var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>(cancellationToken: ct);
+    if (authResponse is null)
+    {
+        return Results.Problem("Identity service returned an empty response.", statusCode: StatusCodes.Status502BadGateway);
+    }
+
+    await SignInAsync(ctx, authResponse);
+    IssueCsrfCookie(ctx);
+
+    return Results.NoContent();
+})
+.AllowAnonymous()
+.ExcludeFromDescription();
+
+app.MapPost("/bff/auth/register", async (
+    RegisterRequest request,
+    IHttpClientFactory httpClientFactory,
+    HttpContext ctx,
+    CancellationToken ct) =>
+{
+    var http = httpClientFactory.CreateClient("identity-api");
+    var response = await http.PostAsJsonAsync("/api/identity/auth/register", request, ct);
+
+    if (!response.IsSuccessStatusCode)
+    {
+        return await ToProblemResultAsync(response, ct);
+    }
+
+    var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>(cancellationToken: ct);
+    if (authResponse is null)
+    {
+        return Results.Problem("Identity service returned an empty response.", statusCode: StatusCodes.Status502BadGateway);
+    }
+
+    await SignInAsync(ctx, authResponse);
+    IssueCsrfCookie(ctx);
+
+    return Results.NoContent();
+})
+.AllowAnonymous()
+.ExcludeFromDescription();
+
+app.MapPost("/bff/auth/logout", async (HttpContext ctx) =>
 {
     await ctx.SignOutAsync("Cookies");
-    await ctx.SignOutAsync("oidc");
-    return Results.Redirect("/");
+    ctx.Response.Cookies.Delete("XSRF-TOKEN", new CookieOptions
+    {
+        Path = "/",
+        SameSite = SameSiteMode.Strict,
+        Secure = !app.Environment.IsDevelopment()
+    });
+
+    return Results.NoContent();
 })
+.RequireAuthorization()
 .ExcludeFromDescription();
 
 app.MapGet("/bff/user", (HttpContext ctx) =>
 {
     if (ctx.User.Identity?.IsAuthenticated != true)
+    {
         return Results.Unauthorized();
+    }
 
     return Results.Ok(new
     {
-        email = ctx.User.FindFirst("email")?.Value,
-        name = ctx.User.Identity.Name,
-        role = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+        id = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? ctx.User.FindFirstValue("sub"),
+        email = ctx.User.FindFirstValue("email") ?? ctx.User.FindFirstValue(ClaimTypes.Email),
+        firstName = ctx.User.FindFirstValue("firstName"),
+        lastName = ctx.User.FindFirstValue("lastName"),
+        role = ctx.User.FindFirstValue(ClaimTypes.Role)
     });
 })
+.RequireAuthorization()
 .ExcludeFromDescription();
 
 // ── CSRF token endpoint ─────────────────────────────────
 app.MapGet("/bff/csrf", (HttpContext ctx) =>
 {
-    var token = Guid.NewGuid().ToString("N");
-    ctx.Response.Cookies.Append("XSRF-TOKEN", token, new CookieOptions
-    {
-        HttpOnly = false, // Angular must read this
-        Secure = !builder.Environment.IsDevelopment(),
-        SameSite = SameSiteMode.Strict,
-        Path = "/"
-    });
+    IssueCsrfCookie(ctx);
     return Results.Ok();
-});
+})
+.AllowAnonymous()
+.ExcludeFromDescription();
 
 // ── YARP Proxy ──────────────────────────────────────────
 app.MapReverseProxy();
 
 app.Run();
 
+static async Task SignInAsync(HttpContext context, AuthResponse authResponse)
+{
+    var payload = ReadJwtPayload(authResponse.AccessToken);
+    var claims = new List<Claim>();
+
+    AddClaimIfPresent(claims, ClaimTypes.NameIdentifier, GetPayloadValue(payload, "sub"));
+    AddClaimIfPresent(claims, "sub", GetPayloadValue(payload, "sub"));
+    AddClaimIfPresent(claims, ClaimTypes.Email, GetPayloadValue(payload, "email"));
+    AddClaimIfPresent(claims, "email", GetPayloadValue(payload, "email"));
+    AddClaimIfPresent(claims, ClaimTypes.Role, GetPayloadValue(payload, ClaimTypes.Role));
+    AddClaimIfPresent(claims, "firstName", GetPayloadValue(payload, "firstName"));
+    AddClaimIfPresent(claims, "lastName", GetPayloadValue(payload, "lastName"));
+
+    var identity = new ClaimsIdentity(claims, "Cookies");
+    var principal = new ClaimsPrincipal(identity);
+    var properties = new AuthenticationProperties
+    {
+        IsPersistent = true,
+        ExpiresUtc = authResponse.ExpiresAt
+    };
+
+    properties.StoreTokens(
+    [
+        new AuthenticationToken { Name = "access_token", Value = authResponse.AccessToken },
+        new AuthenticationToken { Name = "refresh_token", Value = authResponse.RefreshToken },
+        new AuthenticationToken { Name = "expires_at", Value = authResponse.ExpiresAt.ToString("O") }
+    ]);
+
+    await context.SignInAsync("Cookies", principal, properties);
+}
+
+static void IssueCsrfCookie(HttpContext context)
+{
+    context.Response.Cookies.Append("XSRF-TOKEN", Guid.NewGuid().ToString("N"), new CookieOptions
+    {
+        HttpOnly = false,
+        Secure = !context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment(),
+        SameSite = SameSiteMode.Strict,
+        Path = "/"
+    });
+}
+
+static void AddClaimIfPresent(List<Claim> claims, string claimType, string? value)
+{
+    if (!string.IsNullOrWhiteSpace(value))
+    {
+        claims.Add(new Claim(claimType, value));
+    }
+}
+
+static async Task<IResult> ToProblemResultAsync(HttpResponseMessage response, CancellationToken ct)
+{
+    var payload = await response.Content.ReadAsStringAsync(ct);
+    return Results.Text(payload, "application/json", statusCode: (int)response.StatusCode);
+}
+
+static JsonElement ReadJwtPayload(string token)
+{
+    var segments = token.Split('.');
+    if (segments.Length < 2)
+    {
+        throw new InvalidOperationException("Invalid JWT token format.");
+    }
+
+    var json = Encoding.UTF8.GetString(Base64UrlDecode(segments[1]));
+    using var document = JsonDocument.Parse(json);
+    return document.RootElement.Clone();
+}
+
+static byte[] Base64UrlDecode(string value)
+{
+    var normalized = value.Replace('-', '+').Replace('_', '/');
+    var padding = 4 - normalized.Length % 4;
+    if (padding is > 0 and < 4)
+    {
+        normalized = normalized.PadRight(normalized.Length + padding, '=');
+    }
+
+    return Convert.FromBase64String(normalized);
+}
+
+static string? GetPayloadValue(JsonElement payload, string claimName)
+{
+    if (!payload.TryGetProperty(claimName, out var value))
+    {
+        return null;
+    }
+
+    return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
+}
+
 // ── Extension methods for middleware registration ───────
-/// <summary>
-/// Extension methods for registering custom middleware in the application pipeline.
-/// </summary>
 public static class MiddlewareExtensions
 {
-    /// <summary>
-    /// Registers the <see cref="CookieToBearerMiddleware"/> in the pipeline.
-    /// </summary>
-    /// <param name="app">The application builder.</param>
-    /// <returns>The application builder with the middleware registered.</returns>
     public static IApplicationBuilder UseCookieToBearer(this IApplicationBuilder app) =>
         app.UseMiddleware<CookieToBearerMiddleware>();
 
-    /// <summary>
-    /// Registers the <see cref="CsrfValidationMiddleware"/> in the pipeline.
-    /// </summary>
-    /// <param name="app">The application builder.</param>
-    /// <returns>The application builder with the middleware registered.</returns>
     public static IApplicationBuilder UseCsrfValidation(this IApplicationBuilder app) =>
         app.UseMiddleware<CsrfValidationMiddleware>();
 }
+
+sealed record LoginRequest(string Email, string Password);
+sealed record RegisterRequest(string Email, string Password, string FirstName, string LastName);
+sealed record AuthResponse(string AccessToken, string RefreshToken, DateTime ExpiresAt, string Email, string Role);

@@ -24,6 +24,7 @@ export const AuthStore = signalStore(
       patchState(store, { loading: true, error: null });
       try {
         await authService.login(credentials);
+        await authService.ensureCsrf();
         const user = await authService.getUser();
         patchState(store, { user, loading: false });
         router.navigate(['/']);
@@ -35,6 +36,7 @@ export const AuthStore = signalStore(
       patchState(store, { loading: true, error: null });
       try {
         await authService.register(credentials);
+        await authService.ensureCsrf();
         const user = await authService.getUser();
         patchState(store, { user, loading: false });
         router.navigate(['/']);
@@ -45,6 +47,7 @@ export const AuthStore = signalStore(
     async logout() {
       patchState(store, { loading: true });
       try {
+        await authService.ensureCsrf();
         await authService.logout();
         patchState(store, { user: null, loading: false });
         router.navigate(['/login']);
@@ -56,6 +59,7 @@ export const AuthStore = signalStore(
     async checkAuth() {
       patchState(store, { loading: true });
       try {
+        await authService.ensureCsrf();
         const user = await authService.getUser();
         patchState(store, { user, loading: false });
       } catch {
