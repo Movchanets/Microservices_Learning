@@ -1,3 +1,5 @@
+using Scalar.Aspire;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 // ──────────────────────────────────────────────
@@ -55,6 +57,29 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
 // Phase 5: Notification  → .WithReference(redis).WithReference(messaging)
 // Phase 6: StoreMgmt.API → .WithReference(storeDb).WithReference(messaging)
 // Phase 6: Media.API     → blob storage reference
+
+// ──────────────────────────────────────────────
+// Scalar API Reference — unified docs for all services
+// ──────────────────────────────────────────────
+var scalar = builder.AddScalarApiReference(options =>
+{
+    options.WithTheme(ScalarTheme.Purple);
+});
+
+// Register implemented services (add new services here as they come online)
+scalar
+    .WithApiReference(identityApi)
+    .WithApiReference(gateway);
+// Phase 2: .WithApiReference(catalogApi)
+// Phase 2: .WithApiReference(searchApi)
+// Phase 3: .WithApiReference(inventoryApi)
+// Phase 3: .WithApiReference(cartApi)
+// Phase 4: .WithApiReference(orderingApi)
+// Phase 4: .WithApiReference(paymentApi)
+// Phase 5: .WithApiReference(notificationWorker)
+// Phase 6: .WithApiReference(storeApi)
+// Phase 6: .WithApiReference(mediaApi)
+
 // Phase 7: Angular       → builder.AddNpmApp(...)
 var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
     .WithReference(gateway)
