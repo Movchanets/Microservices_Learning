@@ -1,10 +1,12 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, PLATFORM_ID, inject, provideAppInitializer, provideBrowserGlobalErrorListeners, importProvidersFrom } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
 import { LucideAngularModule, Globe, Moon, Sun, User, LogIn, Github, Mail, Lock, ChevronDown, Monitor, Eye, EyeOff } from 'lucide-angular';
 
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { AuthStore } from './core/auth/auth.store';
 import { apiInterceptor } from './core/http/api.interceptor';
 
 export const appConfig: ApplicationConfig = {
@@ -12,7 +14,17 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes), 
     provideClientHydration(withEventReplay()),
-    provideHttpClient(withInterceptors([apiInterceptor])),
+    provideHttpClient(
+      withFetch(),
+      withInterceptors([apiInterceptor]),
+      withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' })
+    ),
+    provideAppInitializer(() => {
+      if (isPlatformBrowser(inject(PLATFORM_ID))) {
+        // Run auth bootstrap in the background so UI hydration/form bindings are not blocked.
+        void inject(AuthStore).checkAuth();
+      }
+    }),
     importProvidersFrom(LucideAngularModule.pick({ Globe, Moon, Sun, User, LogIn, Github, Mail, Lock, ChevronDown, Monitor, Eye, EyeOff }))
   ]
 };

@@ -1,0 +1,12 @@
+{
+  "queries": [
+    {
+      "keyword": "laptop",
+      "expectedMinResults": 1
+    },
+    {
+      "keyword": "nonexistentproduct123",
+      "expectedMinResults": 0
+    }
+  ]
+}

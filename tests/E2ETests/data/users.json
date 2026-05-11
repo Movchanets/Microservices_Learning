@@ -1,0 +1,15 @@
+{
+  "validUser": {
+    "email": "buyer@test.com",
+    "password": "P@ssw0rd",
+    "name": "Test Buyer"
+  },
+  "invalidUser": {
+    "email": "wrong@test.com",
+    "password": "wrongpassword"
+  },
+  "blockedUser": {
+    "email": "blocked@test.com",
+    "password": "P@ssw0rd"
+  }
+}

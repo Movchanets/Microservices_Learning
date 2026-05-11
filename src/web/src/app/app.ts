@@ -10,12 +10,10 @@ import { RouterOutlet } from '@angular/router';
   template: `
     <app-header></app-header>
     
-    <main>
-      <router-outlet></router-outlet> <!-- Тут будуть ваші сторінки (login, register тощо) -->
+    <main class="container mx-auto p-4">
+      <router-outlet></router-outlet>
     </main>
     
     <app-footer></app-footer>`
 })
-export class App {
-  protected readonly title = signal('web-frontend');
-}
+export class App {}

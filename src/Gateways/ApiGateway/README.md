@@ -1,53 +1,89 @@
 # API Gateway (YARP + BFF)
 
 ## Overview
-The API Gateway is the single entry point for external clients (like the Angular SPA) to communicate with the microservices backend. It leverages **YARP (Yet Another Reverse Proxy)** to route HTTP traffic to the appropriate downstream microservice. Furthermore, it implements the **Backend-For-Frontend (BFF)** pattern, providing secure, cookie-based session management and CSRF protection, completely insulating the frontend from handling raw JWTs.
+The gateway is the only browser-facing backend in this solution. Angular must talk to it through `/bff/*`, `/api/*`, and `/hubs/*`. The browser never stores JWTs. The gateway stores them in the encrypted `Marketplace.Session` cookie and forwards them to downstream microservices as Bearer tokens.
 
-## Architecture
-- **Reverse Proxy (YARP)**: Routes requests based on URL paths (e.g., `/api/catalog/**` goes to the Catalog service). Configuration is dynamically loaded or statically defined in `appsettings.json`.
-- **BFF Authentication**: The gateway authenticates users via OpenID Connect (communicating with the Identity service). It stores the resulting JWTs securely in an encrypted, HttpOnly session cookie.
-- **Cookie-to-Bearer Transformation**: A custom middleware intercepts requests bound for downstream services, extracts the access token from the secure cookie, and attaches it as a standard `Authorization: Bearer <token>` header.
-- **CSRF Protection**: A custom middleware validates state-changing requests (POST, PUT, DELETE, PATCH) using the Double Submit Cookie pattern.
+## What Goes Where
+- `/bff/auth/login` and `/bff/auth/register`: browser calls the gateway, gateway calls `Identity.API`, receives JWTs, signs in the cookie session, and returns `204 No Content`.
+- `/bff/auth/logout`: browser clears the auth session through the gateway.
+- `/bff/user`: browser asks the gateway for the current authenticated user profile derived from cookie claims.
+- `/bff/csrf`: browser requests a fresh `XSRF-TOKEN` cookie. Angular then sends it back as `X-XSRF-TOKEN` on mutating requests.
+- `/api/...`: browser calls a service route through the gateway. YARP routes the request to the correct microservice.
+- `/hubs/...`: browser connects to SignalR through the gateway.
 
-## Data Flow
+## Required Frontend Rules
+- Always use relative URLs such as `/bff/auth/login` or `/api/catalog/products`.
+- Always send cookies. The Angular interceptor already sets `withCredentials: true`.
+- Never put access tokens or refresh tokens in `localStorage`, `sessionStorage`, or JS memory.
+- Before authenticated mutating requests, ensure the `XSRF-TOKEN` cookie exists. Angular is configured to send the `X-XSRF-TOKEN` header automatically.
+- In local development, the Angular dev server must proxy `/bff`, `/api`, and `/hubs` to the gateway. This repo now does that via [proxy.conf.mjs](</D:/code/Microservices/src/web/proxy.conf.mjs:1>).
+
+## Auth Flow
 ```mermaid
 sequenceDiagram
     participant Browser
-    participant API_Gateway
-    participant Identity_Service
-    participant Downstream_Service
+    participant Angular
+    participant Gateway as ApiGateway BFF
+    participant Identity as Identity.API
 
-    %% Login Flow
-    Browser->>API_Gateway: GET /bff/login
-    API_Gateway->>Identity_Service: Redirect to OIDC Auth
-    Identity_Service-->>API_Gateway: Callback with Auth Code
-    API_Gateway->>Identity_Service: Exchange Code for Tokens
-    Identity_Service-->>API_Gateway: Access & Refresh Tokens
-    API_Gateway-->>Browser: Set-Cookie (HttpOnly, Secure) + Redirect /
+    Angular->>Gateway: POST /bff/auth/login
+    Gateway->>Identity: POST /api/identity/auth/login
+    Identity-->>Gateway: AuthResponse { accessToken, refreshToken, ... }
+    Gateway->>Gateway: Create cookie session + store tokens
+    Gateway-->>Browser: Set-Cookie Marketplace.Session
+    Gateway-->>Browser: Set-Cookie XSRF-TOKEN
 
-    %% API Request Flow
-    Browser->>API_Gateway: POST /api/orders (includes Session Cookie & CSRF Header)
-    API_Gateway->>API_Gateway: Validate CSRF Header == CSRF Cookie
-    API_Gateway->>API_Gateway: Extract Token from Session Cookie
-    API_Gateway->>API_Gateway: Add "Authorization: Bearer <token>"
-    API_Gateway->>Downstream_Service: Reverse Proxy Request
-    Downstream_Service-->>API_Gateway: 201 Created
-    API_Gateway-->>Browser: 201 Created
+    Angular->>Gateway: GET /bff/user
+    Gateway-->>Angular: { id, email, firstName, lastName, role }
 ```
 
-## Quick Start
+## Business API Flow
+```mermaid
+sequenceDiagram
+    participant Angular
+    participant Gateway as ApiGateway YARP
+    participant Service as Downstream Service
 
-### Prerequisites
-- .NET 10 SDK
-- The Identity service and Aspire AppHost should be configured to run alongside the gateway.
-
-### Build the Gateway
-```bash
-dotnet build src/Gateways/ApiGateway/ApiGateway.csproj
+    Angular->>Gateway: POST /api/orders (cookie + X-XSRF-TOKEN)
+    Gateway->>Gateway: Validate CSRF token
+    Gateway->>Gateway: Read access_token from auth cookie
+    Gateway->>Gateway: Add Authorization: Bearer <token>
+    Gateway->>Service: Forward request
+    Service-->>Gateway: Response
+    Gateway-->>Angular: Response
 ```
 
-### Run the Gateway
-It is highly recommended to run the gateway via the Aspire AppHost to ensure all dependent services are available and service discovery works.
-```bash
-dotnet run --project src/Aspire/Marketplace.AppHost/Marketplace.AppHost.csproj
+## Route Map
+- `/api/identity/*` -> `identity-api`
+- `/api/catalog/*` -> `catalog-api`
+- `/api/orders/*` -> `ordering-api`
+- `/api/inventory/*` -> `inventory-api`
+- `/api/cart/*` -> `cart-api`
+- `/api/search/*` -> `search-api`
+- `/api/stores/*` -> `store-api`
+- `/api/media/*` -> `media-api`
+- `/api/payments/*` -> `payment-api`
+- `/hubs/*` -> `notification-worker`
+
+The route definitions live in [appsettings.json](</D:/code/Microservices/src/Gateways/ApiGateway/appsettings.json:9>).
+
+## Frontend Examples
+```typescript
+await http.post('/bff/auth/login', credentials);
+const me = await http.get<User>('/bff/user');
+const products = await http.get<Product[]>('/api/catalog/products');
+await http.post('/api/orders', orderPayload);
+await http.post('/bff/auth/logout', {});
 ```
+
+## Local Development
+1. Start the stack through Aspire: `dotnet run --project src/Aspire/Marketplace.AppHost/Marketplace.AppHost.csproj`
+2. Open the Angular app on `http://localhost:4201`
+3. Angular proxies `/bff`, `/api`, and `/hubs` to the gateway
+4. The gateway proxies service calls internally through service discovery
+
+## Debug Checklist
+- `Cannot POST /api/...` usually means the Angular dev server proxy is missing or misconfigured.
+- `401 Unauthorized` on `/bff/user` means there is no valid `Marketplace.Session` cookie.
+- `403 CSRF validation failed` means the `XSRF-TOKEN` cookie or `X-XSRF-TOKEN` header is missing.
+- A successful login should create both `Marketplace.Session` and `XSRF-TOKEN` cookies.
