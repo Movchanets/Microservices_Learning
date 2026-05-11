@@ -19,9 +19,10 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([apiInterceptor]),
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' })
     ),
-    provideAppInitializer(async () => {
+    provideAppInitializer(() => {
       if (isPlatformBrowser(inject(PLATFORM_ID))) {
-        await inject(AuthStore).checkAuth();
+        // Run auth bootstrap in the background so UI hydration/form bindings are not blocked.
+        void inject(AuthStore).checkAuth();
       }
     }),
     importProvidersFrom(LucideAngularModule.pick({ Globe, Moon, Sun, User, LogIn, Github, Mail, Lock, ChevronDown, Monitor, Eye, EyeOff }))

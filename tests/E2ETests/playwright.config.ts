@@ -20,26 +20,13 @@ export default defineConfig({
     trace: "on-first-retry",
   },
 
+  globalSetup: require.resolve("./globalSetup"),
+  globalTeardown: require.resolve("./globalTeardown"),
+
   projects: [
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    // Start the .NET Aspire AppHost which spins up the ApiGateway, Identity API, and Angular frontend
-    command:
-      "dotnet run --project ../../src/Aspire/Marketplace.AppHost/Marketplace.AppHost.csproj",
-    url: "http://localhost:4200",
-    reuseExistingServer: !process.env.CI,
-    timeout: 300 * 1000,
-    env: {
-      // Set to testing environment so the backend knows to provision test data if needed
-      ASPNETCORE_ENVIRONMENT: "Testing",
-      TEST_USER_EMAIL: "buyer@test.com",
-      TEST_USER_PASSWORD: "P@ssw0rd",
-    },
-  },
 });

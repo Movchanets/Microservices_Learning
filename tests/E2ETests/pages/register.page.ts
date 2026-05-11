@@ -17,11 +17,35 @@ export class RegisterPage extends BasePage {
     this.registerSubmitBtn = page.getByTestId('register-submit-btn');
   }
 
+  private async fillStable(input: Locator, value: string) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await input.fill(value);
+      await expect(input).toHaveValue(value);
+
+      if ((await input.inputValue()) === value) {
+        return;
+      }
+
+      await this.page.waitForTimeout(100);
+    }
+  }
+
   async register(firstName: string, lastName: string, email: string, password: string) {
-    await this.firstNameInput.fill(firstName);
-    await this.lastNameInput.fill(lastName);
-    await this.emailInput.fill(email);
-    await this.passwordInput.fill(password);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await this.fillStable(this.firstNameInput, firstName);
+      await this.fillStable(this.lastNameInput, lastName);
+      await this.fillStable(this.emailInput, email);
+      await this.fillStable(this.passwordInput, password);
+
+      if (await this.registerSubmitBtn.isEnabled()) {
+        await this.registerSubmitBtn.click();
+        return;
+      }
+
+      await this.page.waitForTimeout(150);
+    }
+
+    await expect(this.registerSubmitBtn).toBeEnabled();
     await this.registerSubmitBtn.click();
   }
 }

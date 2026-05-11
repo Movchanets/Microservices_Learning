@@ -15,9 +15,33 @@ export class LoginPage extends BasePage {
     this.errorMessage = page.locator('role=alert');
   }
 
+  private async fillStable(input: Locator, value: string) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await input.fill(value);
+      await expect(input).toHaveValue(value);
+
+      if ((await input.inputValue()) === value) {
+        return;
+      }
+
+      await this.page.waitForTimeout(100);
+    }
+  }
+
   async login(email: string, password: string) {
-    await this.emailInput.fill(email);
-    await this.passwordInput.fill(password);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await this.fillStable(this.emailInput, email);
+      await this.fillStable(this.passwordInput, password);
+
+      if (await this.loginSubmitBtn.isEnabled()) {
+        await this.loginSubmitBtn.click();
+        return;
+      }
+
+      await this.page.waitForTimeout(150);
+    }
+
+    await expect(this.loginSubmitBtn).toBeEnabled();
     await this.loginSubmitBtn.click();
   }
 

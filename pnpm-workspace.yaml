@@ -1,0 +1,3 @@
+packages:
+  - "src/web"
+  - "tests/E2ETests"

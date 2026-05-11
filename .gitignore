@@ -486,3 +486,18 @@ skills-lock.json
 src/Microservices/Identity/Identity.API/appsettings.Development.json
 # Ignore any local appsettings.Development files
 appsettings.Development.json
+
+.nx/installation
+.nx/cache
+.nx/workspace-data
+.nx/self-healing
+.nx/polygraph
+.claude/worktrees
+.claude/settings.local.json
+
+# Local tooling/test artifacts
+.nx/
+playwright-report/
+tests/E2ETests/playwright-report/
+tests/E2ETests/server.pid
+output.json

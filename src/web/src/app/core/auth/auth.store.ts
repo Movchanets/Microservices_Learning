@@ -27,7 +27,7 @@ export const AuthStore = signalStore(
         await authService.ensureCsrf();
         const user = await authService.getUser();
         patchState(store, { user, loading: false });
-        router.navigate(['/']);
+        router.navigate(['/catalog']);
       } catch (err: any) {
         patchState(store, { error: err.error?.error || 'Invalid credentials', loading: false });
       }
@@ -39,7 +39,7 @@ export const AuthStore = signalStore(
         await authService.ensureCsrf();
         const user = await authService.getUser();
         patchState(store, { user, loading: false });
-        router.navigate(['/']);
+        router.navigate(['/catalog']);
       } catch (err: any) {
         patchState(store, { error: err.error?.error || 'Registration failed', loading: false });
       }
@@ -50,10 +50,10 @@ export const AuthStore = signalStore(
         await authService.ensureCsrf();
         await authService.logout();
         patchState(store, { user: null, loading: false });
-        router.navigate(['/login']);
+        router.navigate(['/auth/login']);
       } catch {
         patchState(store, { user: null, loading: false });
-        router.navigate(['/login']);
+        router.navigate(['/auth/login']);
       }
     },
     async checkAuth() {

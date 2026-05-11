@@ -161,6 +161,32 @@ app.MapGet("/bff/csrf", (HttpContext ctx) =>
 .AllowAnonymous()
 .ExcludeFromDescription();
 
+app.MapGet("/bff/health", async (IHttpClientFactory httpClientFactory, CancellationToken ct) =>
+{
+    try
+    {
+        var http = httpClientFactory.CreateClient("identity-api");
+        var probeResponse = await http.PostAsJsonAsync(
+            "/api/identity/auth/login",
+            new LoginRequest("healthcheck-probe@test.local", "InvalidPassword123!"),
+            ct);
+
+        var statusCode = (int)probeResponse.StatusCode;
+        var isReady = statusCode < StatusCodes.Status500InternalServerError
+            && statusCode != StatusCodes.Status404NotFound;
+
+        return isReady
+            ? Results.Ok(new { status = "Healthy" })
+            : Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (HttpRequestException)
+    {
+        return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    }
+})
+.AllowAnonymous()
+.ExcludeFromDescription();
+
 // ── YARP Proxy ──────────────────────────────────────────
 app.MapReverseProxy();
 

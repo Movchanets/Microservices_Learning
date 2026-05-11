@@ -7,11 +7,14 @@ import { CatalogPage } from '../pages/catalog.page';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
 
+import { ProfilePage } from '../pages/profile.page';
+
 type MyFixtures = {
   loginPage: LoginPage;
   registerPage: RegisterPage;
   forgotPasswordPage: ForgotPasswordPage;
   catalogPage: CatalogPage;
+  profilePage: ProfilePage;
  // checkoutPage: CheckoutPage;
   header: HeaderComponent;
   footer: FooterComponent;
@@ -29,6 +32,9 @@ export const test = base.extend<MyFixtures>({
   },
   catalogPage: async ({ page }, use) => {
     await use(new CatalogPage(page));
+  },
+  profilePage: async ({ page }, use) => {
+    await use(new ProfilePage(page));
   },
   // checkoutPage: async ({ page }, use) => {
   //   await use(new CheckoutPage(page));

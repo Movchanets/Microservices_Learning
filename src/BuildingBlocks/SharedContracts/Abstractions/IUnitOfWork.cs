@@ -7,10 +7,10 @@ namespace BuildingBlocks.SharedContracts.Abstractions;
 /// </summary>
 public interface IUnitOfWork
 {
-	/// <summary>
-	/// Commits all pending changes to the underlying data store asynchronously.
-	/// </summary>
-	/// <param name="ct">The cancellation token.</param>
-	/// <returns>The number of state entries written to the underlying data store.</returns>
-	Task<int> SaveChangesAsync(CancellationToken ct = default);
+    /// <summary>
+    /// Commits all pending changes to the underlying data store asynchronously.
+    /// </summary>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The number of state entries written to the underlying data store.</returns>
+    Task<int> SaveChangesAsync(CancellationToken ct = default);
 }
