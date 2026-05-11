@@ -17,7 +17,7 @@
     <div class="flex flex-wrap items-center gap-4">
       <!-- Theme Selector -->
       <div class="relative">
-        <button (click)="toggleTheme()" 
+        <button (click)="toggleTheme()" data-testid="theme-toggle-btn"
           class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[120px] justify-between">
           <div class="flex items-center gap-2">
             <lucide-icon [name]="themeService.theme() === 'dark' ? 'moon' : 'sun'" class="w-4 h-4 text-primary"></lucide-icon>
@@ -26,22 +26,22 @@
           <lucide-icon name="chevron-down" class="w-4 h-4 text-muted transition-transform duration-300" [class.rotate-180]="isThemeOpen()"></lucide-icon>
         </button>
         
-        <div *ngIf="isThemeOpen()" class="absolute bottom-full mb-2 left-0 w-full glass-card rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div *ngIf="isThemeOpen()" class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl">
           <button (click)="setTheme('light')" class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors">
-            <lucide-icon name="sun" class="w-4 h-4 text-muted"></lucide-icon> Light
+            <lucide-icon name="sun" class="w-4 h-4 text-muted-foreground"></lucide-icon> Light
           </button>
           <button (click)="setTheme('dark')" class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors">
-            <lucide-icon name="moon" class="w-4 h-4 text-muted"></lucide-icon> Dark
+            <lucide-icon name="moon" class="w-4 h-4 text-muted-foreground"></lucide-icon> Dark
           </button>
           <button (click)="setTheme('system')" class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors">
-            <lucide-icon name="monitor" class="w-4 h-4 text-muted"></lucide-icon> System
+            <lucide-icon name="monitor" class="w-4 h-4 text-muted-foreground"></lucide-icon> System
           </button>
         </div>
       </div>
 
       <!-- Language Selector -->
       <div class="relative">
-        <button (click)="toggleLang()" 
+        <button (click)="toggleLang()" data-testid="lang-toggle-btn"
           class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[140px] justify-between">
           <div class="flex items-center gap-2">
             <!-- Current Flag -->
@@ -58,10 +58,10 @@
             </div>
             <span class="text-sm font-semibold text-foreground">{{ currentLangName }}</span>
           </div>
-          <lucide-icon name="chevron-down" class="w-4 h-4 text-muted transition-transform duration-300" [class.rotate-180]="isLangOpen()"></lucide-icon>
+          <lucide-icon name="chevron-down" class="w-4 h-4 text-muted-foreground transition-transform duration-300" [class.rotate-180]="isLangOpen()"></lucide-icon>
         </button>
 
-        <div *ngIf="isLangOpen()" class="absolute bottom-full mb-2 left-0 w-full glass-card rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div *ngIf="isLangOpen()" class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl">
           <button (click)="setLang('en')" class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors">
             <div class="w-5 h-3.5 rounded-sm overflow-hidden shadow-sm flex-shrink-0">
                <div class="bg-[#00247D] h-full relative overflow-hidden flex items-center justify-center">

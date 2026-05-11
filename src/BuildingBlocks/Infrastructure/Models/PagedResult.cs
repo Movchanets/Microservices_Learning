@@ -9,23 +9,23 @@ namespace BuildingBlocks.Infrastructure.Models;
 /// <param name="Page">The current page number.</param>
 /// <param name="PageSize">The number of items per page.</param>
 public sealed record PagedResult<T>(
-	IReadOnlyList<T> Items,
-	int TotalCount,
-	int Page,
-	int PageSize)
+    IReadOnlyList<T> Items,
+    int TotalCount,
+    int Page,
+    int PageSize)
 {
-	/// <summary>
-	/// Gets the total number of pages based on the <see cref="TotalCount"/> and <see cref="PageSize"/>.
-	/// </summary>
-	public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+    /// <summary>
+    /// Gets the total number of pages based on the <see cref="TotalCount"/> and <see cref="PageSize"/>.
+    /// </summary>
+    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
 
-	/// <summary>
-	/// Indicates whether there is a previous page available.
-	/// </summary>
-	public bool HasPrevious => Page > 1;
+    /// <summary>
+    /// Indicates whether there is a previous page available.
+    /// </summary>
+    public bool HasPrevious => Page > 1;
 
-	/// <summary>
-	/// Indicates whether there is a next page available.
-	/// </summary>
-	public bool HasNext => Page < TotalPages;
+    /// <summary>
+    /// Indicates whether there is a next page available.
+    /// </summary>
+    public bool HasNext => Page < TotalPages;
 }

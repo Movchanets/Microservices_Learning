@@ -1,0 +1,14 @@
+{
+  "name": "marketplace-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "nx": "nx"
+  },
+  "devDependencies": {
+    "nx": "22.7.1",
+    "@nx/workspace": "22.7.1",
+    "@nx-dotnet/core": "^3.0.2"
+  }
+}

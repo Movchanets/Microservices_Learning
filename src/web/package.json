@@ -1,5 +1,5 @@
 {
-  "name": "web-frontend",
+  "name": "web",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -8,6 +8,13 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr:web-frontend": "node dist/web-frontend/server/server.mjs"
+  },
+  "nx": {
+    "targets": {
+      "start": {
+        "continuous": true
+      }
+    }
   },
   "private": true,
   "packageManager": "pnpm@10.0.0",

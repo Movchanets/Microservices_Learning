@@ -13,7 +13,7 @@ namespace Marketplace.ServiceDefaults;
 
 public static class Extensions
 {
-    private const string HealthEndpointPath  = "/health";
+    private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
 
     /// <summary>
