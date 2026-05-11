@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -126,13 +127,21 @@ public static class Extensions
         if (app.Environment.IsDevelopment())
         {
             // Readiness probe — all checks must pass
-            app.MapHealthChecks(HealthEndpointPath);
+            app.MapHealthChecks(HealthEndpointPath)
+                .WithMetadata(new TagsAttribute("Health"))
+                .WithMetadata(new EndpointSummaryAttribute("Readiness probe"))
+                .WithMetadata(new EndpointDescriptionAttribute(
+                    "Returns 200 when all health checks pass. Used by orchestrators to decide whether to send traffic."));
 
             // Liveness probe — only "live"-tagged checks
             app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
             {
                 Predicate = r => r.Tags.Contains("live")
-            });
+            })
+                .WithMetadata(new TagsAttribute("Health"))
+                .WithMetadata(new EndpointSummaryAttribute("Liveness probe"))
+                .WithMetadata(new EndpointDescriptionAttribute(
+                    "Returns 200 when the process is alive. Fails only if the service needs to be restarted."));
         }
 
         return app;
