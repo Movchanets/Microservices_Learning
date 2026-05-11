@@ -66,8 +66,6 @@ public sealed class UserTests
             .WithParameterName("lastName");
     }
 
-
-
     /// <summary>
     /// Tests that an <see cref="ArgumentException"/> is thrown when attempting to create a user with an invalid email address.
     /// Rationale: Although email validation happens inside the <see cref="Email.Create"/> method, the static factory method <see cref="User.Create"/>
@@ -85,7 +83,6 @@ public sealed class UserTests
         action.Should().Throw<ArgumentException>()
             .WithParameterName("email");
     }
-
 
     /// <summary>
     /// Tests that an <see cref="ArgumentException"/> is thrown when attempting to create a user with an invalid password hash.
@@ -139,5 +136,34 @@ public sealed class UserTests
 
         user.RevokeRefreshToken();
         user.CurrentRefreshToken.Should().BeNull();
+    }
+
+    [Fact]
+    public void Deactivate_ShouldSetIsActiveToFalse()
+    {
+        var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
+
+        user.Deactivate();
+
+        user.IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Activate_WhenUserIsDeactivated_ShouldSetIsActiveToTrue()
+    {
+        var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
+        user.Deactivate();
+
+        user.Activate();
+
+        user.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public void FullName_ShouldReturnFirstNameAndLastNameWithSpace()
+    {
+        var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
+
+        user.FullName.Should().Be("Jane Doe");
     }
 }
