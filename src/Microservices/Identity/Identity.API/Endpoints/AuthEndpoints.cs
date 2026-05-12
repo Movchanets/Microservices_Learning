@@ -1,6 +1,7 @@
 using Identity.Application.Commands.Login;
 using Identity.Application.Commands.Register;
 using Identity.Application.Commands.RefreshToken;
+using Identity.Application.Commands.ForgotPassword;
 using MediatR;
 
 namespace Identity.API.Endpoints;
@@ -64,5 +65,18 @@ public static class AuthEndpoints
         .WithName("RefreshToken")
         .Produces<Identity.Application.DTOs.AuthResponse>()
         .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/forgot-password", async (
+            ForgotPasswordCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            // Rationale: Always return Ok to prevent email enumeration
+            return Results.Ok();
+        })
+        .WithName("ForgotPassword")
+        .Produces(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
     }
 }

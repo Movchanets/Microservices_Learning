@@ -28,4 +28,8 @@ export class AuthService {
   ensureCsrf(): Promise<void> {
     return firstValueFrom(this.http.get<void>(`${this.baseUrl}/csrf`));
   }
+
+  forgotPassword(email: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.authBaseUrl}/forgot-password`, { email }));
+  }
 }
