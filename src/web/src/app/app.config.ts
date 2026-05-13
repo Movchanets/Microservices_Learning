@@ -2,7 +2,7 @@ import { ApplicationConfig, PLATFORM_ID, inject, provideAppInitializer, provideB
 import { isPlatformBrowser } from '@angular/common';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
-import { LucideAngularModule, Globe, Moon, Sun, User, LogIn, Github, Mail, Lock, ChevronDown, Monitor, Eye, EyeOff } from 'lucide-angular';
+import { LucideAngularModule, Globe, Moon, Sun, User, LogIn, Github, Mail, Lock, ChevronDown, Monitor, Eye, EyeOff, Search, ShoppingCart, SlidersHorizontal, ChevronLeft, ChevronRight, Tag, DollarSign, Package } from 'lucide-angular';
 
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
@@ -12,7 +12,7 @@ import { apiInterceptor } from './core/http/api.interceptor';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes), 
+    provideRouter(routes),
     provideClientHydration(withEventReplay()),
     provideHttpClient(
       withFetch(),
@@ -25,6 +25,6 @@ export const appConfig: ApplicationConfig = {
         void inject(AuthStore).checkAuth();
       }
     }),
-    importProvidersFrom(LucideAngularModule.pick({ Globe, Moon, Sun, User, LogIn, Github, Mail, Lock, ChevronDown, Monitor, Eye, EyeOff }))
+    importProvidersFrom(LucideAngularModule.pick({ Globe, Moon, Sun, User, LogIn, Github, Mail, Lock, ChevronDown, Monitor, Eye, EyeOff, Search, ShoppingCart, SlidersHorizontal, ChevronLeft, ChevronRight, Tag, DollarSign, Package }))
   ]
 };
