@@ -1,7 +1,6 @@
-using System.Security.Cryptography;
 using Identity.Application.Interfaces;
-using Microsoft.AspNetCore.Identity;
 using Identity.Domain.Aggregates;
+using Microsoft.AspNetCore.Identity;
 
 namespace Identity.Infrastructure.Services;
 
@@ -29,6 +28,5 @@ public sealed class PasswordHasherService : IPasswordHasher
     /// <param name="hashedPassword">The hashed password to compare against.</param>
     /// <returns>True if the password matches the hash; otherwise, false.</returns>
     public bool Verify(string password, string hashedPassword) =>
-        _hasher.VerifyHashedPassword(null!, hashedPassword, password)
-            != PasswordVerificationResult.Failed;
+        _hasher.VerifyHashedPassword(null!, hashedPassword, password) != PasswordVerificationResult.Failed;
 }
