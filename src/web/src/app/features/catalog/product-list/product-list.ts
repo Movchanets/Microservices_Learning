@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { computed } from '@angular/core';
 import { CatalogStore } from '../catalog.store';
+import { CartStore } from '../../cart/cart.store';
 import { ProductCardComponent } from '../components/product-card/product-card';
 import { CategorySidebarComponent } from '../components/category-sidebar/category-sidebar';
 import { PaginationComponent } from '../components/pagination/pagination';
@@ -132,6 +133,7 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
 })
 export class ProductListComponent implements OnInit {
   store = inject(CatalogStore);
+  cartStore = inject(CartStore);
   readonly skeletons = Array.from({ length: 6 }, (_, i) => i);
 
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -160,8 +162,10 @@ export class ProductListComponent implements OnInit {
   }
 
   onAddToCart(productId: string): void {
-    // TODO: Phase 7.3 — Cart integration
-    console.log('Add to cart:', productId);
+    const product = this.store.products().find(p => p.id === productId);
+    if (product) {
+      this.cartStore.addToCart(product.sku, 1);
+    }
   }
 
   searchCategoryFacets = computed(() => {
