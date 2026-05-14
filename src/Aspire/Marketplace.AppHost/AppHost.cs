@@ -107,6 +107,7 @@ scalar
 
 // Phase 7: Angular       → builder.AddNpmApp(...)
 var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
+    .WaitFor(scalar)
     .WithReference(gateway)
     // targetPort: 4200 tells Aspire to expect Angular on 4200.
     // port: 4201 exposes the Aspire proxy on localhost:4201 so they don't clash.
