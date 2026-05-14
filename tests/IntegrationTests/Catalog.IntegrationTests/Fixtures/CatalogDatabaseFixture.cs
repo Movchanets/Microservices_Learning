@@ -32,10 +32,6 @@ public class CatalogDatabaseFixture : IAsyncLifetime
                 npgsql => npgsql.MigrationsAssembly(typeof(CatalogDbContext).Assembly.FullName))
             .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
-        // Mock IPublishEndpoint to avoid actual MassTransit connection but allow Outbox functionality
-        var mockPublishEndpoint = new Mock<IPublishEndpoint>();
-        services.AddScoped(_ => mockPublishEndpoint.Object);
-
         // Add MediatR and the handlers
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Catalog.Infrastructure.EventPublishing.ProductCreatedDomainEventHandler).Assembly));
 
@@ -46,13 +42,18 @@ public class CatalogDatabaseFixture : IAsyncLifetime
         // Logging
         services.AddLogging();
 
-        // Setup MassTransit Outbox to write directly to EF
+        // Setup MassTransit Outbox to write directly to EF using InMemory transport for testing
         services.AddMassTransit(x =>
         {
             x.AddEntityFrameworkOutbox<CatalogDbContext>(o =>
             {
                 o.UsePostgres();
                 o.UseBusOutbox();
+            });
+
+            x.UsingInMemory((context, cfg) =>
+            {
+                cfg.ConfigureEndpoints(context);
             });
         });
 
