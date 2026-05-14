@@ -45,22 +45,21 @@ var identityApi = builder.AddProject<Projects.Identity_API>("identity-api")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
-// Phase 2: Search.API must come up before Catalog dev seeding publishes events.
-var searchApi = builder.AddProject<Projects.Search_API>("search-api")
-    .WithReference(elasticsearch)
-    .WaitFor(elasticsearch)
-    .WithReference(messaging)
-    .WaitFor(messaging);
-
+// Phase 2: Catalog.API & Search.API
 var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
     .WithReference(catalogDb)
     .WaitFor(catalogDb)
     .WithReference(messaging)
     .WaitFor(messaging)
-    .WaitFor(searchApi)
     .WithEnvironment("Jwt__Issuer", "marketplace-identity")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+
+var searchApi = builder.AddProject<Projects.Search_API>("search-api")
+    .WithReference(elasticsearch)
+    .WaitFor(elasticsearch)
+    .WithReference(messaging)
+    .WaitFor(messaging);
 
 // Phase 1: ApiGateway    → .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")

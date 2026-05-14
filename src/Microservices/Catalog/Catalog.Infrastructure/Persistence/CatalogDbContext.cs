@@ -28,47 +28,39 @@ public sealed class CatalogDbContext(
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        if (Database.CurrentTransaction is not null)
-        {
-            return await SaveChangesAndPublishDomainEventsAsync(cancellationToken);
-        }
+        using var transaction = await Database.BeginTransactionAsync(cancellationToken);
 
-        var strategy = Database.CreateExecutionStrategy();
-
-        return await strategy.ExecuteAsync(async () =>
+        try
         {
-            await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
-            var result = await SaveChangesAndPublishDomainEventsAsync(cancellationToken);
+            var result = await base.SaveChangesAsync(cancellationToken);
+
+            var domainEntities = ChangeTracker
+                .Entries<AggregateRoot>()
+                .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any());
+
+            var domainEvents = domainEntities
+                .SelectMany(x => x.Entity.DomainEvents)
+                .ToList();
+
+            domainEntities.ToList()
+                .ForEach(entity => entity.Entity.ClearDomainEvents());
+
+            // Dispatch domain events (which will write to the MT Outbox within the same transaction)
+            foreach (var domainEvent in domainEvents)
+            {
+                await publisher.Publish(domainEvent, cancellationToken);
+            }
+
+            // Save outbox messages written by MT during domain event publishing
+            await base.SaveChangesAsync(cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
             return result;
-        });
-    }
-
-    private async Task<int> SaveChangesAndPublishDomainEventsAsync(CancellationToken cancellationToken)
-    {
-        var result = await base.SaveChangesAsync(cancellationToken);
-
-        var domainEntities = ChangeTracker
-            .Entries<AggregateRoot>()
-            .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any());
-
-        var domainEvents = domainEntities
-            .SelectMany(x => x.Entity.DomainEvents)
-            .ToList();
-
-        domainEntities.ToList()
-            .ForEach(entity => entity.Entity.ClearDomainEvents());
-
-        // Dispatch domain events (which will write to the MT Outbox within the same transaction)
-        foreach (var domainEvent in domainEvents)
-        {
-            await publisher.Publish(domainEvent, cancellationToken);
         }
-
-        // Save outbox messages written by MT during domain event publishing
-        await base.SaveChangesAsync(cancellationToken);
-
-        return result;
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 }

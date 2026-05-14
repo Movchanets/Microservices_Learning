@@ -7,6 +7,7 @@ using FluentValidation;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,19 +17,28 @@ builder.AddServiceDefaults();
 // ── Catalog Infrastructure (repos, services) ────────────
 builder.Services.AddCatalogInfrastructure(builder.Configuration);
 
+// ── Aspire PostgreSQL integration ───────────────────────
+builder.AddNpgsqlDbContext<CatalogDbContext>("catalog-db", configureDbContextOptions: dbContextOptionsBuilder =>
+{
+    dbContextOptionsBuilder.UseNpgsql(builder.Configuration.GetConnectionString("catalog-db"), npgsql =>
+        npgsql.MigrationsAssembly(typeof(CatalogDbContext).Assembly.FullName));
+});
+
 // ── MediatR + pipeline behaviors ────────────────────────
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.Lifetime = ServiceLifetime.Scoped;
-    cfg.RegisterServicesFromAssemblyContaining<Catalog.Application.Commands.CreateProduct.CreateProductCommand>();
-    cfg.RegisterServicesFromAssemblyContaining<Catalog.Infrastructure.EventPublishing.ProductCreatedDomainEventHandler>();
+    cfg.RegisterServicesFromAssembly(
+        typeof(Catalog.Application.Commands.CreateProduct.CreateProductCommand).Assembly);
+    cfg.RegisterServicesFromAssembly(
+        typeof(Catalog.Infrastructure.EventPublishing.ProductCreatedDomainEventHandler).Assembly);
 });
 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
 // ── FluentValidation ────────────────────────────────────
-builder.Services.AddValidatorsFromAssemblyContaining<Catalog.Application.Commands.CreateProduct.CreateProductValidator>();
+builder.Services.AddValidatorsFromAssembly(
+    typeof(Catalog.Application.Commands.CreateProduct.CreateProductValidator).Assembly);
 
 // ── MassTransit + Outbox ────────────────────────────────
 builder.Services.AddMassTransit(x =>
@@ -73,13 +83,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
-
-app.ApplyMigrations();
-
-if (app.Environment.IsDevelopment())
-{
-    app.SeedData();
-}
 
 // ── Middleware pipeline ─────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
