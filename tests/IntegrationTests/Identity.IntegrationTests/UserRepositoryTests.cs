@@ -5,7 +5,7 @@ using Identity.Domain.Enums;
 namespace Identity.IntegrationTests;
 
 [Collection(IdentityIntegrationCollection.Name)]
-public sealed class UserRepositoryTests(IdentityPostgresFixture fixture)
+public sealed class UserRepositoryTests(IdentityDatabaseFixture fixture)
     : IdentityIntegrationTestBase(fixture)
 {
     [Fact]
@@ -30,6 +30,28 @@ public sealed class UserRepositoryTests(IdentityPostgresFixture fixture)
     }
 
     [Fact]
+    public async Task Add_DuplicateEmail_ThrowsDbUpdateException()
+    {
+        await using var context1 = CreateDbContext();
+        var repository1 = CreateRepository(context1);
+
+        var email = $"duplicate-{Guid.NewGuid():N}@example.com";
+        var user1 = User.Create(email, "password", "First", "User", UserRole.Buyer);
+
+        repository1.Add(user1);
+        await context1.SaveChangesAsync();
+
+        await using var context2 = CreateDbContext();
+        var repository2 = CreateRepository(context2);
+
+        var user2 = User.Create(email, "password", "Second", "User", UserRole.Buyer);
+        repository2.Add(user2);
+
+        var action = async () => await context2.SaveChangesAsync();
+        await action.Should().ThrowAsync<Microsoft.EntityFrameworkCore.DbUpdateException>();
+    }
+
+    [Fact]
     public async Task GetByEmail_WhenUserExists_ReturnsUser()
     {
         await using var context = CreateDbContext();
@@ -47,6 +69,19 @@ public sealed class UserRepositoryTests(IdentityPostgresFixture fixture)
         loadedUser!.Id.Should().Be(user.Id);
         loadedUser.Email.Value.Should().Be(email);
         loadedUser.Role.Should().Be(UserRole.Admin);
+    }
+
+    [Fact]
+    public async Task GetByEmailAsync_WhenUserMissing_ReturnsNull()
+    {
+        await using var context = CreateDbContext();
+        var repository = CreateRepository(context);
+
+        var missingEmail = $"missing-user-{Guid.NewGuid():N}@example.com";
+
+        var loadedUser = await repository.GetByEmailAsync(missingEmail);
+
+        loadedUser.Should().BeNull();
     }
 
     [Fact]
