@@ -138,6 +138,9 @@ public sealed class UserTests
         user.CurrentRefreshToken.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that deactivating a user correctly updates the IsActive flag to false.
+    /// </summary>
     [Fact]
     public void Deactivate_ShouldSetIsActiveToFalse()
     {
@@ -148,6 +151,9 @@ public sealed class UserTests
         user.IsActive.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that activating a deactivated user correctly updates the IsActive flag back to true.
+    /// </summary>
     [Fact]
     public void Activate_WhenUserIsDeactivated_ShouldSetIsActiveToTrue()
     {
@@ -159,11 +165,65 @@ public sealed class UserTests
         user.IsActive.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that the FullName property computes correctly by concatenating FirstName and LastName.
+    /// </summary>
     [Fact]
     public void FullName_ShouldReturnFirstNameAndLastNameWithSpace()
     {
         var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
 
         user.FullName.Should().Be("Jane Doe");
+    }
+
+    /// <summary>
+    /// Tests that updating the user's profile successfully updates the name fields
+    /// and preserves the aggregate's identity (Id remains unchanged).
+    /// </summary>
+    [Fact]
+    public void UpdateProfile_WithValidData_ShouldUpdateNamesAndPreserveIdentity()
+    {
+        var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
+        var originalId = user.Id;
+
+        user.UpdateProfile("  John ", "Smith  ");
+
+        user.Id.Should().Be(originalId);
+        user.FirstName.Should().Be("John");
+        user.LastName.Should().Be("Smith");
+    }
+
+    /// <summary>
+    /// Tests that updating a user's profile with invalid first name throws an ArgumentException.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void UpdateProfile_WhenFirstNameIsInvalid_ShouldThrowArgumentException(string? invalidFirstName)
+    {
+        var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
+
+        var action = () => user.UpdateProfile(invalidFirstName!, "Smith");
+
+        action.Should().Throw<ArgumentException>()
+            .WithParameterName("firstName");
+    }
+
+    /// <summary>
+    /// Tests that updating a user's profile with invalid last name throws an ArgumentException.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void UpdateProfile_WhenLastNameIsInvalid_ShouldThrowArgumentException(string? invalidLastName)
+    {
+        var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
+
+        var action = () => user.UpdateProfile("John", invalidLastName!);
+
+        action.Should().Throw<ArgumentException>()
+            .WithParameterName("lastName");
     }
 }
