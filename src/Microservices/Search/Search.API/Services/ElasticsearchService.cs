@@ -4,34 +4,55 @@ using Search.API.Models;
 
 namespace Search.API.Services;
 
-public sealed class ElasticsearchService(
-    ElasticsearchClient elasticClient,
-    ILogger<ElasticsearchService> logger)
-    : ISearchService
+public sealed class ElasticsearchService : ISearchService
 {
+    private readonly ElasticsearchClient _client;
+    private readonly ILogger<ElasticsearchService> _logger;
     private const string IndexName = "marketplace-products";
+
+    public ElasticsearchService(
+        ElasticsearchClient client,
+        ILogger<ElasticsearchService> logger)
+    {
+        _client = client;
+        _logger = logger;
+
+        EnsureIndexAsync().GetAwaiter().GetResult();
+    }
+
+    private async Task EnsureIndexAsync(CancellationToken ct = default)
+    {
+        var existsResponse = await _client.Indices.ExistsAsync(IndexName, ct);
+        if (existsResponse.Exists)
+            return;
+
+        var createResponse = await _client.Indices.CreateAsync(IndexName, ct);
+        if (!createResponse.IsValidResponse)
+            _logger.LogError("Failed to create Elasticsearch index {Index}: {Error}", IndexName, createResponse.DebugInformation);
+    }
 
     public async Task IndexProductAsync(ProductSearchDocument product, CancellationToken ct = default)
     {
-        var response = await elasticClient.IndexAsync(product, IndexName, ct);
-        if (!response.IsValidResponse)
-            logger.LogError("Failed to index product {ProductId}: {Error}", product.Id, response.DebugInformation);
-    }
-
-    public async Task UpdateProductAsync(ProductSearchDocument product, CancellationToken ct = default)
-    {
-        var response = await elasticClient.UpdateAsync<ProductSearchDocument, ProductSearchDocument>(
-            IndexName, product.Id.ToString(), u => u.Doc(product), ct);
+        var response = await _client.IndexAsync(product, i => i
+            .Index(IndexName)
+            .Id(product.Id.ToString()), ct);
 
         if (!response.IsValidResponse)
-            logger.LogError("Failed to update product {ProductId}: {Error}", product.Id, response.DebugInformation);
+            _logger.LogError("Failed to index product {ProductId}: {Error}", product.Id, response.DebugInformation);
     }
+
+    public async Task UpdateProductAsync(ProductSearchDocument product, CancellationToken ct = default) =>
+        await IndexProductAsync(product, ct);
 
     public async Task DeleteProductAsync(Guid productId, CancellationToken ct = default)
     {
-        var response = await elasticClient.DeleteAsync<ProductSearchDocument>(productId.ToString(), d => d.Index(IndexName), ct);
+        var response = await _client.DeleteAsync<ProductSearchDocument>(
+            productId.ToString(),
+            d => d.Index(IndexName),
+            ct);
+
         if (!response.IsValidResponse)
-            logger.LogError("Failed to delete product {ProductId}: {Error}", productId, response.DebugInformation);
+            _logger.LogWarning("Failed to delete product {ProductId}: {Error}", productId, response.DebugInformation);
     }
 
     public async Task<SearchResult<ProductSearchDocument>> SearchAsync(
@@ -44,7 +65,7 @@ public sealed class ElasticsearchService(
         int pageSize,
         CancellationToken ct = default)
     {
-        var response = await elasticClient.SearchAsync<ProductSearchDocument>(s => s
+        var response = await _client.SearchAsync<ProductSearchDocument>(s => s
             .Indices(IndexName)
             .From((page - 1) * pageSize)
             .Size(pageSize)
@@ -112,7 +133,7 @@ public sealed class ElasticsearchService(
 
         if (!response.IsValidResponse)
         {
-            logger.LogError("Search failed: {Error}", response.DebugInformation);
+            _logger.LogError("Search failed: {Error}", response.DebugInformation);
             return new SearchResult<ProductSearchDocument>([], 0, page, pageSize);
         }
 
