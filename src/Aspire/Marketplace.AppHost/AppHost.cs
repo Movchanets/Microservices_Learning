@@ -26,6 +26,11 @@ var messaging = builder.AddRabbitMQ("messaging")
     .WithManagementPlugin();
 
 // ──────────────────────────────────────────────
+// Elasticsearch — used by Search.API
+// ──────────────────────────────────────────────
+var elasticsearch = builder.AddElasticsearch("elasticsearch");
+
+// ──────────────────────────────────────────────
 // Microservices (to be added in later phases)
 // ──────────────────────────────────────────────
 
@@ -40,16 +45,35 @@ var identityApi = builder.AddProject<Projects.Identity_API>("identity-api")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
+// Phase 2: Catalog.API & Search.API
+var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
+    .WithReference(catalogDb)
+    .WaitFor(catalogDb)
+    .WithReference(messaging)
+    .WaitFor(messaging)
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+
+var searchApi = builder.AddProject<Projects.Search_API>("search-api")
+    .WithReference(elasticsearch)
+    .WaitFor(elasticsearch)
+    .WithReference(messaging)
+    .WaitFor(messaging);
+
 // Phase 1: ApiGateway    → .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(identityApi)
     .WaitFor(identityApi)
+    .WithReference(catalogApi)
+    .WaitFor(catalogApi)
+    .WithReference(searchApi)
+    .WaitFor(searchApi)
     .WithReference(redis)
     .WaitFor(redis)
     .WithEnvironment("Identity__ApiBaseUrl", "http://identity-api")
     .WithExternalHttpEndpoints();
-// Phase 2: Catalog.API   → .WithReference(catalogDb).WithReference(messaging)
-// Phase 2: Search.API    → .WithReference(messaging)
+
 // Phase 3: Inventory.API → .WithReference(inventoryDb).WithReference(messaging)
 // Phase 3: Cart.API      → .WithReference(redis).WithReference(messaging)
 // Phase 4: Ordering.API  → .WithReference(orderingDb).WithReference(messaging)
@@ -69,9 +93,9 @@ var scalar = builder.AddScalarApiReference(options =>
 // Register implemented services (add new services here as they come online)
 scalar
     .WithApiReference(identityApi)
-    .WithApiReference(gateway);
-// Phase 2: .WithApiReference(catalogApi)
-// Phase 2: .WithApiReference(searchApi)
+    .WithApiReference(gateway)
+    .WithApiReference(catalogApi)
+    .WithApiReference(searchApi);
 // Phase 3: .WithApiReference(inventoryApi)
 // Phase 3: .WithApiReference(cartApi)
 // Phase 4: .WithApiReference(orderingApi)
