@@ -7,8 +7,15 @@ using Moq;
 
 namespace Identity.UnitTests.Application;
 
+/// <summary>
+/// Unit tests for <see cref="RegisterUserHandler"/>.
+/// </summary>
 public sealed class RegisterUserHandlerTests
 {
+    /// <summary>
+    /// Tests that the handler returns a failure result when the email is already registered.
+    /// Rationale: Validates the domain rule that prevents duplicate email registration.
+    /// </summary>
     [Fact]
     public async Task Handle_WhenEmailAlreadyExists_ShouldReturnDuplicateEmailFailure()
     {
@@ -37,6 +44,10 @@ public sealed class RegisterUserHandlerTests
         jwtGenerator.Verify(x => x.GenerateAccessToken(It.IsAny<User>()), Times.Never);
     }
 
+    /// <summary>
+    /// Tests the happy path where a valid command correctly registers the user, hashes the password, and issues tokens.
+    /// Rationale: Ensures all dependent infrastructure services are coordinated correctly during successful registration.
+    /// </summary>
     [Fact]
     public async Task Handle_WithValidCommand_ShouldPersistUserAndReturnAuthResponse()
     {

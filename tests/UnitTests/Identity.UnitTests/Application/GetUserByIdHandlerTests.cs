@@ -5,8 +5,15 @@ using Moq;
 
 namespace Identity.UnitTests.Application;
 
+/// <summary>
+/// Unit tests for <see cref="GetUserByIdHandler"/>.
+/// </summary>
 public sealed class GetUserByIdHandlerTests
 {
+    /// <summary>
+    /// Tests that the handler returns null when the user does not exist.
+    /// Rationale: Validates correct missing resource handling.
+    /// </summary>
     [Fact]
     public async Task Handle_WhenUserDoesNotExist_ShouldReturnNull()
     {
@@ -22,6 +29,10 @@ public sealed class GetUserByIdHandlerTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the handler returns a correctly mapped DTO when the user exists.
+    /// Rationale: Validates that domain aggregate fields are successfully mapped to the application query result.
+    /// </summary>
     [Fact]
     public async Task Handle_WhenUserExists_ShouldReturnMappedDto()
     {
