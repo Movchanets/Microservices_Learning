@@ -35,6 +35,19 @@ export class ThemeService {
     this.theme.set(theme);
   }
 
+  toggleTheme() {
+    const current = this.theme();
+    if (current === 'light') {
+      this.setTheme('dark');
+    } else if (current === 'dark') {
+      this.setTheme('light');
+    } else {
+      // If system, switch to the opposite of what system currently is
+      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      this.setTheme(isSystemDark ? 'light' : 'dark');
+    }
+  }
+
   private getInitialTheme(): Theme {
     if (!this.isBrowser) return 'system';
     return (localStorage.getItem('theme') as Theme) || 'system';
