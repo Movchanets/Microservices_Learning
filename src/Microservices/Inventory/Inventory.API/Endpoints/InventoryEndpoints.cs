@@ -40,7 +40,7 @@ public static class InventoryEndpoints
             await uow.SaveChangesAsync(ct);
             return Results.Ok();
         });
-        
+
         group.MapGet("/items/{sku}", async (
             string sku,
             [FromServices] IInventoryItemRepository repository,

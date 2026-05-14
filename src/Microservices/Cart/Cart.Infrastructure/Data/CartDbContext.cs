@@ -20,7 +20,7 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
              .HasForeignKey("ShoppingCartBuyerId") // Shadow foreign key
              .OnDelete(DeleteBehavior.Cascade);
         });
-        
+
         builder.Entity<CartItem>(b =>
         {
             b.HasKey(x => x.Id);

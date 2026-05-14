@@ -25,11 +25,12 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
   template: `
     <div class="min-h-screen bg-background p-6 pt-10">
       <div class="container mx-auto">
-
         <!-- Header -->
         <header class="mb-10">
-          <h1 class="text-4xl font-bold text-foreground font-lexend mb-2"
-              data-testid="catalog-title">
+          <h1
+            class="text-4xl font-bold text-foreground font-lexend mb-2"
+            data-testid="catalog-title"
+          >
             Explore Catalog
           </h1>
           <p class="text-muted text-lg max-w-2xl">
@@ -39,22 +40,25 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
 
         <!-- Search bar -->
         <div class="relative max-w-xl mb-8">
-          <lucide-icon name="Search"
-                       class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
+          <lucide-icon
+            name="Search"
+            class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
+          >
           </lucide-icon>
-          <input type="text"
-                 [ngModel]="store.searchQuery()"
-                 (ngModelChange)="onSearch($event)"
-                 placeholder="Search products..."
-                 class="w-full pl-12 pr-4 py-3 rounded-xl border border-border
+          <input
+            type="text"
+            [ngModel]="store.searchQuery()"
+            (ngModelChange)="onSearch($event)"
+            placeholder="Search products..."
+            class="w-full pl-12 pr-4 py-3 rounded-xl border border-border
                         focus:ring-2 focus:ring-primary focus:border-transparent outline-none
                         bg-card/60 backdrop-blur-sm text-foreground placeholder:text-muted"
-                 data-testid="search-input" />
+            data-testid="search-input"
+          />
         </div>
 
         <!-- Content: sidebar + grid -->
         <div class="flex flex-col lg:flex-row gap-8">
-
           <!-- Sidebar: Categories (browse mode) or Search Facets (search mode) -->
           <div class="lg:w-64 shrink-0 space-y-4">
             @if (store.isSearchMode()) {
@@ -64,12 +68,14 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
                 [priceMax]="store.priceMax()"
                 (priceRangeChange)="onPriceRangeChange($event)"
                 (categoryClicked)="onFacetCategoryClick($event)"
-                (clearFilters)="onClearFilters()" />
+                (clearFilters)="onClearFilters()"
+              />
             } @else {
               <app-category-sidebar
                 [categories]="store.categories()"
                 [selectedId]="store.selectedCategoryId()"
-                (categorySelected)="onCategorySelect($event)" />
+                (categorySelected)="onCategorySelect($event)"
+              />
             }
           </div>
 
@@ -79,7 +85,9 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
               <!-- Skeleton grid -->
               <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 @for (i of skeletons; track i) {
-                  <div class="bg-card/40 backdrop-blur-sm border border-border rounded-2xl p-6 shadow-sm animate-pulse">
+                  <div
+                    class="bg-card/40 backdrop-blur-sm border border-border rounded-2xl p-6 shadow-sm animate-pulse"
+                  >
                     <div class="w-full aspect-square bg-muted/20 rounded-xl mb-4"></div>
                     <div class="h-3 bg-muted/20 rounded-md w-1/3 mb-3"></div>
                     <div class="h-5 bg-muted/20 rounded-md w-3/4 mb-6"></div>
@@ -90,8 +98,10 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
             } @else if (store.error()) {
               <div class="py-16 text-center">
                 <p class="text-lg text-red-400 mb-4">{{ store.error() }}</p>
-                <button (click)="store.refresh()"
-                        class="px-6 py-2 bg-primary text-white rounded-xl hover:bg-secondary transition-colors">
+                <button
+                  (click)="store.refresh()"
+                  class="px-6 py-2 bg-primary text-white rounded-xl hover:bg-secondary transition-colors"
+                >
                   Try Again
                 </button>
               </div>
@@ -103,12 +113,13 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
 
               <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 @for (product of store.products(); track product.id) {
-                  <app-product-card
-                    [product]="product"
-                    (addToCart)="onAddToCart($event)" />
+                  <app-product-card [product]="product" (addToCart)="onAddToCart($event)" />
                 } @empty {
                   <div class="col-span-full py-16 text-center text-muted">
-                    <lucide-icon name="Package" class="w-16 h-16 mx-auto mb-4 opacity-30"></lucide-icon>
+                    <lucide-icon
+                      name="Package"
+                      class="w-16 h-16 mx-auto mb-4 opacity-30"
+                    ></lucide-icon>
                     <p class="text-lg">No products found.</p>
                     @if (store.searchQuery()) {
                       <p class="text-sm mt-2">Try adjusting your search or filters.</p>
@@ -123,13 +134,14 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
                 [totalPages]="store.totalPages()"
                 [hasPrevious]="store.hasPrevious()"
                 [hasNext]="store.hasNext()"
-                (pageChange)="onPageChange($event)" />
+                (pageChange)="onPageChange($event)"
+              />
             }
           </div>
         </div>
       </div>
     </div>
-  `
+  `,
 })
 export class ProductListComponent implements OnInit {
   store = inject(CatalogStore);
@@ -162,7 +174,7 @@ export class ProductListComponent implements OnInit {
   }
 
   onAddToCart(productId: string): void {
-    const product = this.store.products().find(p => p.id === productId);
+    const product = this.store.products().find((p) => p.id === productId);
     if (product) {
       this.cartStore.addToCart(product.sku, 1);
     }

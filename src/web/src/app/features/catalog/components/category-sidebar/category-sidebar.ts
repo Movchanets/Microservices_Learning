@@ -15,28 +15,32 @@ import { Category } from '../../catalog.models';
       </h3>
 
       <div class="space-y-1">
-        <button (click)="categorySelected.emit(null)"
-                class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
-                [class.bg-primary]="!selectedId()"
-                [class.text-white]="!selectedId()"
-                [class.text-muted]="selectedId()"
-                [class.hover:bg-muted/20]="selectedId()">
+        <button
+          (click)="categorySelected.emit(null)"
+          class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          [class.bg-primary]="!selectedId()"
+          [class.text-white]="!selectedId()"
+          [class.text-muted]="selectedId()"
+          [class.hover:bg-muted/20]="selectedId()"
+        >
           All Products
         </button>
 
         @for (cat of categories(); track cat.id) {
-          <button (click)="categorySelected.emit(cat.id)"
-                  class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
-                  [class.bg-primary]="selectedId() === cat.id"
-                  [class.text-white]="selectedId() === cat.id"
-                  [class.text-muted]="selectedId() !== cat.id"
-                  [class.hover:bg-muted/20]="selectedId() !== cat.id">
+          <button
+            (click)="categorySelected.emit(cat.id)"
+            class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+            [class.bg-primary]="selectedId() === cat.id"
+            [class.text-white]="selectedId() === cat.id"
+            [class.text-muted]="selectedId() !== cat.id"
+            [class.hover:bg-muted/20]="selectedId() !== cat.id"
+          >
             {{ cat.name }}
           </button>
         }
       </div>
     </div>
-  `
+  `,
 })
 export class CategorySidebarComponent {
   categories = input.required<Category[]>();

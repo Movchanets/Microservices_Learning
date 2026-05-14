@@ -41,7 +41,7 @@ builder.Services.AddMassTransit(x =>
     {
         var configuration = context.GetRequiredService<IConfiguration>();
         var connectionString = configuration.GetConnectionString("messaging");
-        
+
         if (!string.IsNullOrEmpty(connectionString))
         {
             cfg.Host(connectionString);

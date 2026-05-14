@@ -14,7 +14,7 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(InventoryDbContext).Assembly);
-        
+
         // Add MassTransit Outbox configuration
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();

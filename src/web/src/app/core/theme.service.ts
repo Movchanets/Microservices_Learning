@@ -4,12 +4,12 @@ import { isPlatformBrowser } from '@angular/common';
 export type Theme = 'light' | 'dark' | 'system';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ThemeService {
   private platformId = inject(PLATFORM_ID);
   private isBrowser = isPlatformBrowser(this.platformId);
-  
+
   theme = signal<Theme>(this.getInitialTheme());
 
   constructor() {
