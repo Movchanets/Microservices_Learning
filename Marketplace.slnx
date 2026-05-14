@@ -15,11 +15,20 @@
     <Project Path="src/Gateways/ApiGateway/ApiGateway.csproj" />
   </Folder>
   <Folder Name="/src/Microservices/" />
+  <Folder Name="/src/Microservices/Catalog/">
+    <Project Path="src/Microservices/Catalog/Catalog.API/Catalog.API.csproj" />
+    <Project Path="src/Microservices/Catalog/Catalog.Application/Catalog.Application.csproj" />
+    <Project Path="src/Microservices/Catalog/Catalog.Domain/Catalog.Domain.csproj" />
+    <Project Path="src/Microservices/Catalog/Catalog.Infrastructure/Catalog.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/src/Microservices/Identity/">
     <Project Path="src/Microservices/Identity/Identity.API/Identity.API.csproj" />
     <Project Path="src/Microservices/Identity/Identity.Application/Identity.Application.csproj" />
     <Project Path="src/Microservices/Identity/Identity.Domain/Identity.Domain.csproj" />
     <Project Path="src/Microservices/Identity/Identity.Infrastructure/Identity.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Microservices/Search/">
+    <Project Path="src/Microservices/Search/Search.API/Search.API.csproj" />
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/BuildingBlocks/">
