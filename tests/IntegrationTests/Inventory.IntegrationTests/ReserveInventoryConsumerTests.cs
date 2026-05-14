@@ -47,8 +47,9 @@ public class ReserveInventoryConsumerTests
         await harness.Bus.Publish(message);
 
         // Assert
+        var consumerHarness = harness.GetConsumerHarness<ReserveInventoryConsumer>();
         (await harness.Consumed.Any<ReserveInventoryCommand>()).Should().BeTrue();
-        (await harness.GetConsumerHarness<ReserveInventoryConsumer>().Consumed.Any<ReserveInventoryCommand>()).Should().BeTrue();
+        (await consumerHarness.Consumed.Any<ReserveInventoryCommand>()).Should().BeTrue();
 
         (await harness.Published.Any<InventoryReservedEvent>()).Should().BeTrue();
     }
@@ -84,8 +85,9 @@ public class ReserveInventoryConsumerTests
         await harness.Bus.Publish(message);
 
         // Assert
+        var consumerHarness = harness.GetConsumerHarness<ReserveInventoryConsumer>();
         (await harness.Consumed.Any<ReserveInventoryCommand>()).Should().BeTrue();
-        (await harness.GetConsumerHarness<ReserveInventoryConsumer>().Consumed.Any<ReserveInventoryCommand>()).Should().BeTrue();
+        (await consumerHarness.Consumed.Any<ReserveInventoryCommand>()).Should().BeTrue();
 
         (await harness.Published.Any<InventoryReservationFailedEvent>()).Should().BeTrue();
     }
