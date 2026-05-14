@@ -27,15 +27,18 @@ builder.AddNpgsqlDbContext<CatalogDbContext>("catalog-db", configureDbContextOpt
 // ── MediatR + pipeline behaviors ────────────────────────
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.RegisterServicesFromAssemblyContaining<Catalog.Application.Commands.CreateProduct.CreateProductCommand>();
-    cfg.RegisterServicesFromAssemblyContaining<Catalog.Infrastructure.EventPublishing.ProductCreatedDomainEventHandler>();
+    cfg.RegisterServicesFromAssembly(
+        typeof(Catalog.Application.Commands.CreateProduct.CreateProductCommand).Assembly);
+    cfg.RegisterServicesFromAssembly(
+        typeof(Catalog.Infrastructure.EventPublishing.ProductCreatedDomainEventHandler).Assembly);
 });
 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
 // ── FluentValidation ────────────────────────────────────
-builder.Services.AddValidatorsFromAssemblyContaining<Catalog.Application.Commands.CreateProduct.CreateProductValidator>();
+builder.Services.AddValidatorsFromAssembly(
+    typeof(Catalog.Application.Commands.CreateProduct.CreateProductValidator).Assembly);
 
 // ── MassTransit + Outbox ────────────────────────────────
 builder.Services.AddMassTransit(x =>
@@ -80,8 +83,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
-
-app.ApplyMigrations();
 
 // ── Middleware pipeline ─────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();

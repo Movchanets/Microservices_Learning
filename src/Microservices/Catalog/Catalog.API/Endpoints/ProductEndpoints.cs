@@ -1,4 +1,3 @@
-using BuildingBlocks.Infrastructure.Models;
 using Catalog.Application.Commands.ChangePrice;
 using Catalog.Application.Commands.CreateProduct;
 using Catalog.Application.Commands.DeleteProduct;
@@ -36,7 +35,7 @@ public static class ProductEndpoints
             return Results.Ok(result);
         })
         .WithName("ListProducts")
-        .Produces<PagedResult<ProductListDto>>();
+        .Produces<BuildingBlocks.Infrastructure.Models.PagedResult<ProductListDto>>();
 
         // Public: get product by ID
         group.MapGet("/{id:guid}", async (
