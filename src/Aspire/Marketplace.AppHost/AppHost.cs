@@ -16,6 +16,7 @@ var orderingDb = postgres.AddDatabase("ordering-db");
 var inventoryDb = postgres.AddDatabase("inventory-db");
 var paymentDb = postgres.AddDatabase("payment-db");
 var storeDb = postgres.AddDatabase("store-db");
+var cartDb = postgres.AddDatabase("cart-db");
 
 // Redis — used by Cart.API, Notification.Worker (SignalR backplane)
 var redis = builder.AddRedis("redis")
@@ -62,6 +63,22 @@ var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
+// Phase 3: Inventory.API
+var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api")
+    .WithReference(inventoryDb)
+    .WaitFor(inventoryDb)
+    .WithReference(messaging)
+    .WaitFor(messaging);
+
+// Phase 3: Cart.API
+var cartApi = builder.AddProject<Projects.Cart_API>("cart-api")
+    .WithReference(cartDb)
+    .WaitFor(cartDb)
+    .WithReference(redis)
+    .WaitFor(redis)
+    .WithReference(messaging)
+    .WaitFor(messaging);
+
 // Phase 1: ApiGateway    → .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(identityApi)
@@ -70,13 +87,15 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WaitFor(catalogApi)
     .WithReference(searchApi)
     .WaitFor(searchApi)
+    .WithReference(inventoryApi)
+    .WaitFor(inventoryApi)
+    .WithReference(cartApi)
+    .WaitFor(cartApi)
     .WithReference(redis)
     .WaitFor(redis)
     .WithEnvironment("Identity__ApiBaseUrl", "http://identity-api")
     .WithExternalHttpEndpoints();
 
-// Phase 3: Inventory.API → .WithReference(inventoryDb).WithReference(messaging)
-// Phase 3: Cart.API      → .WithReference(redis).WithReference(messaging)
 // Phase 4: Ordering.API  → .WithReference(orderingDb).WithReference(messaging)
 // Phase 4: Payment.API   → .WithReference(paymentDb).WithReference(messaging)
 // Phase 5: Notification  → .WithReference(redis).WithReference(messaging)
@@ -97,12 +116,15 @@ scalar
     .WithApiReference(gateway)
     .WithApiReference(catalogApi)
     .WithApiReference(searchApi)
+    .WithApiReference(inventoryApi)
+    .WithApiReference(cartApi)
     .WaitFor(identityApi)
     .WaitFor(gateway)
     .WaitFor(catalogApi)
-    .WaitFor(searchApi);
-// Phase 3: .WithApiReference(inventoryApi)
-// Phase 3: .WithApiReference(cartApi)
+    .WaitFor(searchApi)
+    .WaitFor(inventoryApi)
+    .WaitFor(cartApi);
+
 // Phase 4: .WithApiReference(orderingApi)
 // Phase 4: .WithApiReference(paymentApi)
 // Phase 5: .WithApiReference(notificationWorker)
@@ -117,4 +139,5 @@ var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
     // port: 4201 exposes the Aspire proxy on localhost:4201 so they don't clash.
     .WithHttpEndpoint(targetPort: 4200, port: 4201, name: "http")
     .WithExternalHttpEndpoints();
+
 builder.Build().Run();

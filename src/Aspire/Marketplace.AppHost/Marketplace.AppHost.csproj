@@ -23,6 +23,8 @@
     <ProjectReference Include="..\..\Gateways\ApiGateway\ApiGateway.csproj" />
     <ProjectReference Include="..\..\Microservices\Catalog\Catalog.API\Catalog.API.csproj" />
     <ProjectReference Include="..\..\Microservices\Search\Search.API\Search.API.csproj" />
+    <ProjectReference Include="..\..\Microservices\Inventory\Inventory.API\Inventory.API.csproj" />
+    <ProjectReference Include="..\..\Microservices\Cart\Cart.API\Cart.API.csproj" />
   </ItemGroup>
 
 </Project>
