@@ -114,21 +114,23 @@ public sealed class ElasticsearchService : ISearchService
             // Aggregations for facets
             .Aggregations(aggs => aggs
                 .Add("categories", a => a.Terms(t => t
-                    .Field(f => f.CategoryName)
+                    .Field("categoryName.keyword")
                     .Size(50)))
                 .Add("price_ranges", a => a.Range(r => r
                     .Field(f => f.Price)
                     .Ranges(
-                        new Elastic.Clients.Elasticsearch.Aggregations.AggregationRange { To = 25 },
-                        new Elastic.Clients.Elasticsearch.Aggregations.AggregationRange { From = 25, To = 50 },
-                        new Elastic.Clients.Elasticsearch.Aggregations.AggregationRange { From = 50, To = 100 },
-                        new Elastic.Clients.Elasticsearch.Aggregations.AggregationRange { From = 100, To = 500 },
-                        new Elastic.Clients.Elasticsearch.Aggregations.AggregationRange { From = 500 }
+                        rr => rr.To(25),
+                        rr => rr.From(25).To(50),
+                        rr => rr.From(50).To(100),
+                        rr => rr.From(100).To(500),
+                        rr => rr.From(500)
                     )))
             )
             .Sort(so => so
                 .Score(sc => sc.Order(SortOrder.Desc))
-                .Field(f => f.CreatedAt, fs => fs.Order(SortOrder.Desc))),
+                .Field(f => f.CreatedAt, fs => fs
+                    .Order(SortOrder.Desc)
+                    .UnmappedType(Elastic.Clients.Elasticsearch.Mapping.FieldType.Date))),
             ct);
 
         if (!response.IsValidResponse)
