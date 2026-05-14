@@ -56,13 +56,15 @@ public sealed class User : AggregateRoot
         string passwordHash,
         string firstName,
         string lastName,
-        UserRole role = UserRole.Buyer)
+        UserRole role = UserRole.Buyer,
+        Guid? userId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(firstName);
         ArgumentException.ThrowIfNullOrWhiteSpace(lastName);
 
         var user = new User
         {
+            Id = userId ?? Guid.NewGuid(),
             Email = Email.Create(email),
             PasswordHash = PasswordHash.Create(passwordHash),
             FirstName = firstName.Trim(),

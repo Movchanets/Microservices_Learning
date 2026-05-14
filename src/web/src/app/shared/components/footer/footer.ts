@@ -7,7 +7,7 @@ import { LucideAngularModule } from 'lucide-angular';
 @Component({
   selector: 'app-footer',
   imports: [CommonModule, LucideAngularModule],
-  standalone: true, 
+  standalone: true,
   templateUrl: './footer.html',
   styleUrl: './footer.css',
 })
@@ -19,12 +19,12 @@ export class Footer {
   isLangOpen = signal(false);
 
   toggleTheme() {
-    this.isThemeOpen.update(v => !v);
+    this.isThemeOpen.update((v) => !v);
     this.isLangOpen.set(false);
   }
 
   toggleLang() {
-    this.isLangOpen.update(v => !v);
+    this.isLangOpen.update((v) => !v);
     this.isThemeOpen.set(false);
   }
 

@@ -17,6 +17,9 @@ async function globalSetup(config: FullConfig) {
     stdio: 'pipe'
   });
 
+  // Unref so Node.js can exit cleanly without waiting for the child
+  child.unref();
+
   // Save PID to a file for teardown
   fs.writeFileSync(path.join(__dirname, 'server.pid'), child.pid?.toString() || '');
 

@@ -37,6 +37,24 @@ public static class BffEndpoints
         .AllowAnonymous()
         .ExcludeFromDescription();
 
+        app.MapPost("/bff/auth/forgot-password", async (
+            ForgotPasswordRequest request,
+            IHttpClientFactory httpClientFactory,
+            CancellationToken ct) =>
+        {
+            var http = httpClientFactory.CreateClient("identity-api");
+            var response = await http.PostAsJsonAsync("/api/identity/auth/forgot-password", request, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return await BffAuthHelpers.ToProblemResultAsync(response, ct);
+            }
+
+            return Results.NoContent();
+        })
+        .AllowAnonymous()
+        .ExcludeFromDescription();
+
         app.MapPost("/bff/auth/register", async (
             RegisterRequest request,
             IHttpClientFactory httpClientFactory,

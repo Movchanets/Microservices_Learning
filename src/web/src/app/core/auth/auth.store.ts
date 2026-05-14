@@ -65,6 +65,6 @@ export const AuthStore = signalStore(
       } catch {
         patchState(store, { user: null, loading: false });
       }
-    }
-  }))
+    },
+  })),
 );

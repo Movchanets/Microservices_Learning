@@ -1,39 +1,65 @@
-<footer class="w-full border-t border-border bg-background py-12 mt-auto transition-colors duration-300">
+<footer
+  class="w-full border-t border-border bg-background py-12 mt-auto transition-colors duration-300"
+>
   <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
     <div class="flex flex-col gap-4">
       <a routerLink="/" class="flex items-center gap-3 group">
-        <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+        <div
+          class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform"
+        >
           <span class="text-white font-bold text-2xl">M</span>
         </div>
-        <span class="text-2xl font-bold tracking-tight text-foreground font-lexend">Marketplace</span>
+        <span class="text-2xl font-bold tracking-tight text-foreground font-lexend"
+          >Marketplace</span
+        >
       </a>
       <p class="text-muted text-sm max-w-sm leading-relaxed">
         The ultimate enterprise platform for digital trade. Secure, fast, and transparent.
       </p>
-      <div class="text-muted/60 text-xs mt-2">
-        &copy; 2026 Marketplace. All rights reserved.
-      </div>
+      <div class="text-muted/60 text-xs mt-2">&copy; 2026 Marketplace. All rights reserved.</div>
     </div>
     <div class="flex flex-wrap items-center gap-4">
       <!-- Theme Selector -->
       <div class="relative">
-        <button (click)="toggleTheme()" data-testid="theme-toggle-btn"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[120px] justify-between">
+        <button
+          (click)="toggleTheme()"
+          data-testid="theme-toggle-btn"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[120px] justify-between"
+        >
           <div class="flex items-center gap-2">
-            <lucide-icon [name]="themeService.theme() === 'dark' ? 'moon' : 'sun'" class="w-4 h-4 text-primary"></lucide-icon>
+            <lucide-icon
+              [name]="themeService.theme() === 'dark' ? 'moon' : 'sun'"
+              class="w-4 h-4 text-primary"
+            ></lucide-icon>
             <span class="text-sm font-semibold text-foreground">{{ currentThemeName }}</span>
           </div>
-          <lucide-icon name="chevron-down" class="w-4 h-4 text-muted transition-transform duration-300" [class.rotate-180]="isThemeOpen()"></lucide-icon>
+          <lucide-icon
+            name="chevron-down"
+            class="w-4 h-4 text-muted transition-transform duration-300"
+            [class.rotate-180]="isThemeOpen()"
+          ></lucide-icon>
         </button>
-        
-        <div *ngIf="isThemeOpen()" class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl">
-          <button (click)="setTheme('light')" class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors">
+
+        <div
+          *ngIf="isThemeOpen()"
+          class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl"
+        >
+          <button
+            (click)="setTheme('light')"
+            class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors"
+          >
             <lucide-icon name="sun" class="w-4 h-4 text-muted-foreground"></lucide-icon> Light
           </button>
-          <button (click)="setTheme('dark')" class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors">
+          <button
+            (click)="setTheme('dark')"
+            class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors"
+          >
             <lucide-icon name="moon" class="w-4 h-4 text-muted-foreground"></lucide-icon> Dark
           </button>
-          <button (click)="setTheme('system')" class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors">
+          <button
+            (click)="setTheme('system')"
+            class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors"
+          >
             <lucide-icon name="monitor" class="w-4 h-4 text-muted-foreground"></lucide-icon> System
           </button>
         </div>
@@ -41,14 +67,21 @@
 
       <!-- Language Selector -->
       <div class="relative">
-        <button (click)="toggleLang()" data-testid="lang-toggle-btn"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[140px] justify-between">
+        <button
+          (click)="toggleLang()"
+          data-testid="lang-toggle-btn"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[140px] justify-between"
+        >
           <div class="flex items-center gap-2">
             <!-- Current Flag -->
             <div class="w-5 h-3.5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
               <div *ngIf="langService.currentLocale() === 'en'" class="flex flex-col h-full">
                 <div class="bg-[#00247D] h-full relative overflow-hidden">
-                  <div class="absolute inset-0 flex items-center justify-center text-[4px] text-white font-bold">🇬🇧</div>
+                  <div
+                    class="absolute inset-0 flex items-center justify-center text-[4px] text-white font-bold"
+                  >
+                    🇬🇧
+                  </div>
                 </div>
               </div>
               <div *ngIf="langService.currentLocale() === 'uk'" class="flex flex-col h-full">
@@ -58,19 +91,34 @@
             </div>
             <span class="text-sm font-semibold text-foreground">{{ currentLangName }}</span>
           </div>
-          <lucide-icon name="chevron-down" class="w-4 h-4 text-muted-foreground transition-transform duration-300" [class.rotate-180]="isLangOpen()"></lucide-icon>
+          <lucide-icon
+            name="chevron-down"
+            class="w-4 h-4 text-muted-foreground transition-transform duration-300"
+            [class.rotate-180]="isLangOpen()"
+          ></lucide-icon>
         </button>
 
-        <div *ngIf="isLangOpen()" class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl">
-          <button (click)="setLang('en')" class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors">
+        <div
+          *ngIf="isLangOpen()"
+          class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl"
+        >
+          <button
+            (click)="setLang('en')"
+            class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors"
+          >
             <div class="w-5 h-3.5 rounded-sm overflow-hidden shadow-sm flex-shrink-0">
-               <div class="bg-[#00247D] h-full relative overflow-hidden flex items-center justify-center">
-                 <span class="text-[8px]">🇬🇧</span>
-               </div>
+              <div
+                class="bg-[#00247D] h-full relative overflow-hidden flex items-center justify-center"
+              >
+                <span class="text-[8px]">🇬🇧</span>
+              </div>
             </div>
             English
           </button>
-          <button (click)="setLang('uk')" class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors">
+          <button
+            (click)="setLang('uk')"
+            class="w-full flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-sm text-foreground transition-colors"
+          >
             <div class="w-5 h-3.5 rounded-sm overflow-hidden shadow-sm flex-shrink-0 flex flex-col">
               <div class="bg-[#0057B7] h-1/2 w-full"></div>
               <div class="bg-[#FFD700] h-1/2 w-full"></div>
