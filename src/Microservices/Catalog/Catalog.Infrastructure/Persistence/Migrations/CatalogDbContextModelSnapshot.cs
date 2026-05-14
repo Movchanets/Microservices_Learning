@@ -261,6 +261,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BusName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
@@ -281,6 +285,8 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                     b.HasKey("OutboxId");
 
                     b.HasIndex("Created");
+
+                    b.HasIndex("BusName", "Created");
 
                     b.ToTable("OutboxState");
                 });
