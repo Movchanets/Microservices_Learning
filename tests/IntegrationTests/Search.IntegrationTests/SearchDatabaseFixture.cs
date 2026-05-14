@@ -11,6 +11,7 @@ public class SearchDatabaseFixture : IAsyncLifetime
         new ElasticsearchBuilder()
             .WithImage("docker.elastic.co/elasticsearch/elasticsearch:8.11.3")
             .WithEnvironment("xpack.security.enabled", "false")
+            .WithEnvironment("ES_JAVA_OPTS", "-Xms512m -Xmx512m")
             .Build();
 
     public ElasticsearchClient Client { get; private set; } = null!;
