@@ -84,6 +84,8 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+app.ApplyMigrations();
+
 // ── Middleware pipeline ─────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.MapDefaultEndpoints(); // health checks
