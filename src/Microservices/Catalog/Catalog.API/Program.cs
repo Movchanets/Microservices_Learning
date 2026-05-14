@@ -27,18 +27,15 @@ builder.AddNpgsqlDbContext<CatalogDbContext>("catalog-db", configureDbContextOpt
 // ── MediatR + pipeline behaviors ────────────────────────
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.RegisterServicesFromAssembly(
-        typeof(Catalog.Application.Commands.CreateProduct.CreateProductCommand).Assembly);
-    cfg.RegisterServicesFromAssembly(
-        typeof(Catalog.Infrastructure.EventPublishing.ProductCreatedDomainEventHandler).Assembly);
+    cfg.RegisterServicesFromAssemblyContaining<Catalog.Application.Commands.CreateProduct.CreateProductCommand>();
+    cfg.RegisterServicesFromAssemblyContaining<Catalog.Infrastructure.EventPublishing.ProductCreatedDomainEventHandler>();
 });
 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
 // ── FluentValidation ────────────────────────────────────
-builder.Services.AddValidatorsFromAssembly(
-    typeof(Catalog.Application.Commands.CreateProduct.CreateProductValidator).Assembly);
+builder.Services.AddValidatorsFromAssemblyContaining<Catalog.Application.Commands.CreateProduct.CreateProductValidator>();
 
 // ── MassTransit + Outbox ────────────────────────────────
 builder.Services.AddMassTransit(x =>
