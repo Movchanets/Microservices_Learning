@@ -20,13 +20,13 @@ async function globalTeardown(config: FullConfig) {
     if (pid) {
       // Step 1: Graceful shutdown — no /F flag, gives Aspire time to stop containers
       console.log(`Sending graceful shutdown to PID ${pid}...`);
-      execSafe(`taskkill /pid ${pid} /T`);
+      execSafe(`kill -15 ${pid}`);
 
       // Step 2: Wait up to 10s for the process to exit cleanly
       let alive = true;
       for (let i = 0; i < 10; i++) {
         await new Promise(r => setTimeout(r, 1000));
-        const check = execSafe(`tasklist /FI "PID eq ${pid}" /NH`);
+        const check = execSafe(`ps -p ${pid} -o comm=`);
         if (!check.includes('dotnet')) {
           alive = false;
           break;
@@ -36,7 +36,7 @@ async function globalTeardown(config: FullConfig) {
       // Step 3: Force kill if still alive
       if (alive) {
         console.warn(`Process ${pid} did not exit gracefully, force killing...`);
-        execSafe(`taskkill /pid ${pid} /T /F`);
+        execSafe(`kill -9 ${pid}`);
       }
 
       console.log(`Stopped process ${pid}.`);
