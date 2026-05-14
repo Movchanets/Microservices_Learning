@@ -96,7 +96,11 @@ scalar
     .WithApiReference(identityApi)
     .WithApiReference(gateway)
     .WithApiReference(catalogApi)
-    .WithApiReference(searchApi);
+    .WithApiReference(searchApi)
+    .WaitFor(identityApi)
+    .WaitFor(gateway)
+    .WaitFor(catalogApi)
+    .WaitFor(searchApi);
 // Phase 3: .WithApiReference(inventoryApi)
 // Phase 3: .WithApiReference(cartApi)
 // Phase 4: .WithApiReference(orderingApi)
