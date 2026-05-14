@@ -7,13 +7,13 @@ import { LucideAngularModule, User, LogOut, Settings, ChevronDown } from 'lucide
 @Component({
   selector: 'app-header',
   imports: [RouterLink, CommonModule, LucideAngularModule],
-  standalone: true, 
+  standalone: true,
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
 export class Header {
   private authStore = inject(AuthStore);
-  
+
   user = this.authStore.user;
   isMenuOpen = signal(false);
 
@@ -23,7 +23,7 @@ export class Header {
   readonly ChevronIcon = ChevronDown;
 
   toggleMenu() {
-    this.isMenuOpen.update(v => !v);
+    this.isMenuOpen.update((v) => !v);
   }
 
   logout() {

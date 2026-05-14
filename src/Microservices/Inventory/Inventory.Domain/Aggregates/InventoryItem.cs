@@ -42,7 +42,7 @@ public sealed class InventoryItem : AggregateRoot
             throw new OutOfStockException(Sku, quantity, AvailableQuantity);
 
         AvailableQuantity -= quantity;
-        
+
         AddDomainEvent(new StockReservedDomainEvent(Id, Sku, quantity));
     }
 
@@ -52,7 +52,7 @@ public sealed class InventoryItem : AggregateRoot
             throw new ArgumentException("Quantity to release must be positive", nameof(quantity));
 
         AvailableQuantity += quantity;
-        
+
         AddDomainEvent(new StockReleasedDomainEvent(Id, Sku, quantity));
     }
 }

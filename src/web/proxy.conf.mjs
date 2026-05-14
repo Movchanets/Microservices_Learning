@@ -10,19 +10,19 @@ export default {
     target: gatewayUrl,
     changeOrigin: true,
     secure: false,
-    xfwd: true
+    xfwd: true,
   },
   '/bff': {
     target: gatewayUrl,
     changeOrigin: true,
     secure: false,
-    xfwd: true
+    xfwd: true,
   },
   '/hubs': {
     target: gatewayUrl,
     changeOrigin: true,
     secure: false,
     xfwd: true,
-    ws: true
-  }
+    ws: true,
+  },
 };

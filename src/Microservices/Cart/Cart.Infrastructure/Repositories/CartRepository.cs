@@ -61,7 +61,8 @@ public class CartRepository(IDistributedCache cache, CartDbContext dbContext) : 
             dbContext.Entry(existing).CurrentValues.SetValues(cart);
             // Sync items (EF Core handles collections if configured properly, but usually manual sync is needed)
             existing.Clear();
-            foreach(var item in cart.Items) {
+            foreach (var item in cart.Items)
+            {
                 existing.AddItem(item.Sku, item.Quantity);
             }
         }
@@ -80,7 +81,7 @@ public class CartRepository(IDistributedCache cache, CartDbContext dbContext) : 
             dbContext.ShoppingCarts.Remove(cart);
             await dbContext.SaveChangesAsync(ct);
         }
-        
+
         await cache.RemoveAsync(buyerId, ct);
     }
 

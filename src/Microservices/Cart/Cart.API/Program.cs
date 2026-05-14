@@ -32,7 +32,7 @@ builder.Services.AddMassTransit(x =>
     {
         var configuration = context.GetRequiredService<IConfiguration>();
         var connectionString = configuration.GetConnectionString("messaging");
-        
+
         if (!string.IsNullOrEmpty(connectionString))
         {
             cfg.Host(connectionString);
@@ -53,7 +53,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    
+
     // Auto-migrate on startup for dev environment
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<CartDbContext>();

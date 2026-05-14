@@ -5,7 +5,7 @@ namespace Cart.Domain.Aggregates;
 public sealed class ShoppingCart : AggregateRoot
 {
     public string BuyerId { get; private set; } = string.Empty;
-    
+
     private readonly List<CartItem> _items = [];
     public IReadOnlyCollection<CartItem> Items => _items.AsReadOnly();
 

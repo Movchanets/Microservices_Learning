@@ -33,22 +33,18 @@ export class CatalogService {
     if (params.search) httpParams = httpParams.set('search', params.search);
 
     return firstValueFrom(
-      this.http.get<PagedResult<ProductListItem>>('/api/catalog/products', { params: httpParams })
+      this.http.get<PagedResult<ProductListItem>>('/api/catalog/products', { params: httpParams }),
     );
   }
 
   getProduct(id: string): Promise<Product> {
-    return firstValueFrom(
-      this.http.get<Product>(`/api/catalog/products/${id}`)
-    );
+    return firstValueFrom(this.http.get<Product>(`/api/catalog/products/${id}`));
   }
 
   // ── Categories (via /api/catalog) ───────────────
 
   getCategories(): Promise<Category[]> {
-    return firstValueFrom(
-      this.http.get<Category[]>('/api/catalog/categories')
-    );
+    return firstValueFrom(this.http.get<Category[]>('/api/catalog/categories'));
   }
 
   // ── Full-text Search (via /api/search) ──────────
@@ -64,7 +60,7 @@ export class CatalogService {
     if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize);
 
     return firstValueFrom(
-      this.http.get<SearchResult<ProductListItem>>('/api/search/products', { params: httpParams })
+      this.http.get<SearchResult<ProductListItem>>('/api/search/products', { params: httpParams }),
     );
   }
 }

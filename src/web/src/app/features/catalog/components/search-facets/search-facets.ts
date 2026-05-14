@@ -22,37 +22,43 @@ import { FacetValue } from '../../catalog.models';
           Price Range
         </h4>
         <div class="flex gap-2 items-center">
-          <input type="number"
-                 [ngModel]="priceMin()"
-                 (ngModelChange)="onPriceChange($event, priceMax())"
-                 placeholder="Min"
-                 min="0"
-                 class="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground"
-                 data-testid="price-min" />
+          <input
+            type="number"
+            [ngModel]="priceMin()"
+            (ngModelChange)="onPriceChange($event, priceMax())"
+            placeholder="Min"
+            min="0"
+            class="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground"
+            data-testid="price-min"
+          />
           <span class="text-muted text-xs">—</span>
-          <input type="number"
-                 [ngModel]="priceMax()"
-                 (ngModelChange)="onPriceChange(priceMin(), $event)"
-                 placeholder="Max"
-                 min="0"
-                 class="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground"
-                 data-testid="price-max" />
+          <input
+            type="number"
+            [ngModel]="priceMax()"
+            (ngModelChange)="onPriceChange(priceMin(), $event)"
+            placeholder="Max"
+            min="0"
+            class="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-sm text-foreground"
+            data-testid="price-max"
+          />
         </div>
       </div>
 
       <!-- Category facets (from Search.API aggregations) -->
       @if (categoryFacets().length > 0) {
         <div>
-          <h4 class="text-sm font-medium text-foreground mb-3">
-            Categories
-          </h4>
+          <h4 class="text-sm font-medium text-foreground mb-3">Categories</h4>
           <ul class="space-y-1.5">
             @for (facet of categoryFacets(); track facet.key) {
               <li>
-                <button (click)="categoryClicked.emit(facet.key)"
-                        class="w-full text-left px-3 py-1.5 rounded-lg hover:bg-muted/10 transition-colors text-sm flex justify-between items-center">
+                <button
+                  (click)="categoryClicked.emit(facet.key)"
+                  class="w-full text-left px-3 py-1.5 rounded-lg hover:bg-muted/10 transition-colors text-sm flex justify-between items-center"
+                >
                   <span class="text-foreground">{{ facet.key }}</span>
-                  <span class="text-xs text-muted bg-muted/10 px-2 py-0.5 rounded-full">{{ facet.count }}</span>
+                  <span class="text-xs text-muted bg-muted/10 px-2 py-0.5 rounded-full">{{
+                    facet.count
+                  }}</span>
                 </button>
               </li>
             }
@@ -61,12 +67,14 @@ import { FacetValue } from '../../catalog.models';
       }
 
       <!-- Clear filters -->
-      <button (click)="clearFilters.emit()"
-              class="w-full text-center text-sm text-primary hover:text-secondary transition-colors py-2">
+      <button
+        (click)="clearFilters.emit()"
+        class="w-full text-center text-sm text-primary hover:text-secondary transition-colors py-2"
+      >
         Clear all filters
       </button>
     </div>
-  `
+  `,
 })
 export class SearchFacetsComponent {
   categoryFacets = input<FacetValue[]>([]);

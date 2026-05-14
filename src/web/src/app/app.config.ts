@@ -1,8 +1,46 @@
-import { ApplicationConfig, PLATFORM_ID, inject, provideAppInitializer, provideBrowserGlobalErrorListeners, importProvidersFrom } from '@angular/core';
+import {
+  ApplicationConfig,
+  PLATFORM_ID,
+  inject,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+  importProvidersFrom,
+} from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient, withFetch, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
-import { LucideAngularModule, Globe, Moon, Sun, User, LogIn, Github, Mail, Lock, ChevronDown, Monitor, Eye, EyeOff, Search, ShoppingCart, SlidersHorizontal, ChevronLeft, ChevronRight, Tag, DollarSign, Package, Minus, Plus, Trash2, CheckCircle2 } from 'lucide-angular';
+import {
+  provideHttpClient,
+  withFetch,
+  withInterceptors,
+  withXsrfConfiguration,
+} from '@angular/common/http';
+import {
+  LucideAngularModule,
+  Globe,
+  Moon,
+  Sun,
+  User,
+  LogIn,
+  Github,
+  Mail,
+  Lock,
+  ChevronDown,
+  Monitor,
+  Eye,
+  EyeOff,
+  Search,
+  ShoppingCart,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  Tag,
+  DollarSign,
+  Package,
+  Minus,
+  Plus,
+  Trash2,
+  CheckCircle2,
+} from 'lucide-angular';
 
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
@@ -12,12 +50,12 @@ import { apiInterceptor } from './core/http/api.interceptor';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes), 
+    provideRouter(routes),
     provideClientHydration(withEventReplay()),
     provideHttpClient(
       withFetch(),
       withInterceptors([apiInterceptor]),
-      withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' })
+      withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
     ),
     provideAppInitializer(() => {
       if (isPlatformBrowser(inject(PLATFORM_ID))) {
@@ -25,6 +63,33 @@ export const appConfig: ApplicationConfig = {
         void inject(AuthStore).checkAuth();
       }
     }),
-    importProvidersFrom(LucideAngularModule.pick({ Globe, Moon, Sun, User, LogIn, Github, Mail, Lock, ChevronDown, Monitor, Eye, EyeOff, Search, ShoppingCart, SlidersHorizontal, ChevronLeft, ChevronRight, Tag, DollarSign, Package, Minus, Plus, Trash2, CheckCircle2 }))
-  ]
+    importProvidersFrom(
+      LucideAngularModule.pick({
+        Globe,
+        Moon,
+        Sun,
+        User,
+        LogIn,
+        Github,
+        Mail,
+        Lock,
+        ChevronDown,
+        Monitor,
+        Eye,
+        EyeOff,
+        Search,
+        ShoppingCart,
+        SlidersHorizontal,
+        ChevronLeft,
+        ChevronRight,
+        Tag,
+        DollarSign,
+        Package,
+        Minus,
+        Plus,
+        Trash2,
+        CheckCircle2,
+      }),
+    ),
+  ],
 };

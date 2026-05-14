@@ -52,7 +52,7 @@ public static class CartEndpoints
             CancellationToken ct) =>
         {
             if (string.IsNullOrEmpty(buyerId)) return Results.BadRequest("Buyer ID required.");
-            
+
             var result = await sender.Send(new CheckoutCartCommand(buyerId), ct);
 
             return result.IsSuccess ? Results.Accepted(value: result.Value) : Results.BadRequest(result.Error);

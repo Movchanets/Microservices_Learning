@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @source ".";
 
@@ -17,8 +17,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-input: var(--input);
 
-  --font-lexend: "Lexend", sans-serif;
-  --font-source-sans: "Source Sans 3", sans-serif;
+  --font-lexend: 'Lexend', sans-serif;
+  --font-source-sans: 'Source Sans 3', sans-serif;
 
   --radius-xl: 0.75rem;
   --radius-2xl: 1rem;
@@ -29,30 +29,30 @@
 
 @layer base {
   :root {
-    --background: #FAF5FF; /* Soft purple tint background */
-    --foreground: #1E1B4B; /* Deep indigo for text */
-    --primary: #7C3AED;
-    --secondary: #A78BFA;
-    --success: #10B981;
-    --muted: #6B7280;
-    --muted-foreground: #6B7280;
-    --border: #E5E7EB;
-    --card: #FFFFFF;
-    --card-foreground: #1E1B4B;
-    --input: #FFFFFF;
+    --background: #faf5ff; /* Soft purple tint background */
+    --foreground: #1e1b4b; /* Deep indigo for text */
+    --primary: #7c3aed;
+    --secondary: #a78bfa;
+    --success: #10b981;
+    --muted: #6b7280;
+    --muted-foreground: #6b7280;
+    --border: #e5e7eb;
+    --card: #ffffff;
+    --card-foreground: #1e1b4b;
+    --input: #ffffff;
   }
 
   .dark {
-    --background: #0F172A; /* Deep slate for canvas */
-    --foreground: #F8FAFC; /* Crisp white-blue for headers */
-    --primary: #8B5CF6;
-    --secondary: #6366F1;
-    --muted: #94A3B8; /* Muted slate for labels */
-    --muted-foreground: #94A3B8;
-    --border: #1E293B; /* Subtle border for dark */
-    --card: #1E293B; /* Slate-800 for cards */
-    --card-foreground: #F8FAFC;
-    --input: #0F172A;
+    --background: #0f172a; /* Deep slate for canvas */
+    --foreground: #f8fafc; /* Crisp white-blue for headers */
+    --primary: #8b5cf6;
+    --secondary: #6366f1;
+    --muted: #94a3b8; /* Muted slate for labels */
+    --muted-foreground: #94a3b8;
+    --border: #1e293b; /* Subtle border for dark */
+    --card: #1e293b; /* Slate-800 for cards */
+    --card-foreground: #f8fafc;
+    --input: #0f172a;
   }
 
   body {
@@ -64,10 +64,17 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    transition: background-color 0.4s ease, color 0.4s ease;
+    transition:
+      background-color 0.4s ease,
+      color 0.4s ease;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-lexend);
     letter-spacing: -0.02em;
   }

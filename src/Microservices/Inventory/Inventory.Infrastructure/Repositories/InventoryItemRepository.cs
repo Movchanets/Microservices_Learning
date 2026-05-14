@@ -33,7 +33,7 @@ public sealed class InventoryItemRepository(InventoryDbContext dbContext) : IInv
     {
         dbContext.InventoryItems.Update(item);
     }
-    
+
     public void Remove(InventoryItem item)
     {
         dbContext.InventoryItems.Remove(item);

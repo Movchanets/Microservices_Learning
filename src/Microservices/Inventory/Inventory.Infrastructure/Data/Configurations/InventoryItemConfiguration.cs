@@ -9,13 +9,13 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
     public void Configure(EntityTypeBuilder<InventoryItem> builder)
     {
         builder.HasKey(x => x.Id);
-        
+
         builder.HasIndex(x => x.Sku).IsUnique();
-        
+
         builder.Property(x => x.Sku)
             .IsRequired()
             .HasMaxLength(50);
-            
+
         builder.Property(x => x.AvailableQuantity)
             .IsRequired();
 

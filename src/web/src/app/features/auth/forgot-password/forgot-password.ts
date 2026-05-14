@@ -10,7 +10,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, LucideAngularModule],
-  templateUrl: './forgot-password.html'
+  templateUrl: './forgot-password.html',
 })
 export class ForgotPassword {
   private fb = inject(FormBuilder);

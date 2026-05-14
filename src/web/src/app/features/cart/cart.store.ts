@@ -1,5 +1,12 @@
 import { computed, inject } from '@angular/core';
-import { patchState, signalStore, withComputed, withMethods, withState, withHooks } from '@ngrx/signals';
+import {
+  patchState,
+  signalStore,
+  withComputed,
+  withMethods,
+  withState,
+  withHooks,
+} from '@ngrx/signals';
 import { CartService } from './cart.service';
 import { CartItem } from './cart.models';
 
@@ -23,11 +30,10 @@ export const CartStore = signalStore(
 
   withComputed((store) => ({
     totalItems: computed(() => store.items().reduce((sum, item) => sum + item.quantity, 0)),
-    isEmpty: computed(() => store.items().length === 0)
+    isEmpty: computed(() => store.items().length === 0),
   })),
 
   withMethods((store, cartService = inject(CartService)) => ({
-    
     async loadCart(): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
@@ -43,8 +49,8 @@ export const CartStore = signalStore(
       try {
         // Optimistic local update
         const currentItems = [...store.items()];
-        const existingItem = currentItems.find(i => i.sku === sku);
-        
+        const existingItem = currentItems.find((i) => i.sku === sku);
+
         if (existingItem) {
           existingItem.quantity += quantity;
         } else {
@@ -53,7 +59,7 @@ export const CartStore = signalStore(
 
         const buyerId = localStorage.getItem('buyerId') || 'guest-user';
         const updatedCart = await cartService.updateCart({ buyerId, items: currentItems });
-        
+
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
         patchState(store, { error: 'Failed to add item to cart', loading: false });
@@ -70,9 +76,9 @@ export const CartStore = signalStore(
 
       patchState(store, { loading: true, error: null });
       try {
-        const currentItems = store.items().map(i => i.sku === sku ? { ...i, quantity } : i);
+        const currentItems = store.items().map((i) => (i.sku === sku ? { ...i, quantity } : i));
         const buyerId = localStorage.getItem('buyerId') || 'guest-user';
-        
+
         const updatedCart = await cartService.updateCart({ buyerId, items: currentItems });
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
@@ -83,9 +89,9 @@ export const CartStore = signalStore(
     async removeFromCart(sku: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const currentItems = store.items().filter(i => i.sku !== sku);
+        const currentItems = store.items().filter((i) => i.sku !== sku);
         const buyerId = localStorage.getItem('buyerId') || 'guest-user';
-        
+
         const updatedCart = await cartService.updateCart({ buyerId, items: currentItems });
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
@@ -97,21 +103,21 @@ export const CartStore = signalStore(
       patchState(store, { loading: true, error: null });
       try {
         const response = await cartService.checkout();
-        patchState(store, { 
-          items: [], 
+        patchState(store, {
+          items: [],
           checkoutCorrelationId: response.correlationId,
-          loading: false 
+          loading: false,
         });
       } catch (err: any) {
         patchState(store, { error: 'Checkout failed', loading: false });
       }
-    }
+    },
   })),
-  
+
   withHooks({
     onInit(store) {
       // Load cart data when the application starts
       store.loadCart();
-    }
-  })
+    },
+  }),
 );

@@ -45,18 +45,14 @@ export const CatalogStore = signalStore(
 
   withComputed((store) => ({
     /** Total pages for paginator */
-    totalPages: computed(() =>
-      Math.ceil(store.totalCount() / store.pageSize())
-    ),
+    totalPages: computed(() => Math.ceil(store.totalCount() / store.pageSize())),
     hasPrevious: computed(() => store.page() > 1),
-    hasNext: computed(() =>
-      store.page() < Math.ceil(store.totalCount() / store.pageSize())
-    ),
+    hasNext: computed(() => store.page() < Math.ceil(store.totalCount() / store.pageSize())),
     /** Whether we're in search mode (use Search.API) vs browse mode (use Catalog.API) */
     isSearchMode: computed(() => store.searchQuery().trim().length > 0),
     /** Active category for UI highlighting */
-    activeCategory: computed(() =>
-      store.categories().find(c => c.id === store.selectedCategoryId()) ?? null
+    activeCategory: computed(
+      () => store.categories().find((c) => c.id === store.selectedCategoryId()) ?? null,
     ),
   })),
 
@@ -156,5 +152,5 @@ export const CatalogStore = signalStore(
     goToPage(page: number): void {
       patchState(store, { page });
     },
-  }))
+  })),
 );

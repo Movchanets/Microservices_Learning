@@ -13,9 +13,11 @@ import { Product } from '../catalog.models';
   template: `
     <div class="min-h-screen bg-background p-6 pt-10">
       <div class="container mx-auto max-w-6xl">
-
         <!-- Back Link -->
-        <a routerLink="/catalog" class="inline-flex items-center text-muted hover:text-primary transition-colors mb-8">
+        <a
+          routerLink="/catalog"
+          class="inline-flex items-center text-muted hover:text-primary transition-colors mb-8"
+        >
           <lucide-icon name="ChevronLeft" class="w-4 h-4 mr-1"></lucide-icon>
           Back to Catalog
         </a>
@@ -42,11 +44,16 @@ import { Product } from '../catalog.models';
           </div>
         } @else if (product(); as p) {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-
             <!-- Left: Image Gallery -->
-            <div class="bg-card/40 backdrop-blur-sm border border-border rounded-3xl p-4 md:p-8 flex items-center justify-center min-h-[400px]">
+            <div
+              class="bg-card/40 backdrop-blur-sm border border-border rounded-3xl p-4 md:p-8 flex items-center justify-center min-h-[400px]"
+            >
               @if (p.imageUrl) {
-                <img [src]="p.imageUrl" [alt]="p.name" class="w-full max-w-md rounded-2xl object-cover shadow-lg" />
+                <img
+                  [src]="p.imageUrl"
+                  [alt]="p.name"
+                  class="w-full max-w-md rounded-2xl object-cover shadow-lg"
+                />
               } @else {
                 <lucide-icon name="Package" class="w-32 h-32 text-muted opacity-30"></lucide-icon>
               }
@@ -65,12 +72,14 @@ import { Product } from '../catalog.models';
                 </span>
               </div>
 
-              <h1 class="text-4xl md:text-5xl font-bold text-foreground font-lexend mb-4 leading-tight">
+              <h1
+                class="text-4xl md:text-5xl font-bold text-foreground font-lexend mb-4 leading-tight"
+              >
                 {{ p.name }}
               </h1>
 
               <div class="text-4xl font-bold text-foreground font-lexend mb-8">
-                {{ p.price | currency:p.currency:'symbol':'1.2-2' }}
+                {{ p.price | currency: p.currency : 'symbol' : '1.2-2' }}
               </div>
 
               <div class="prose prose-invert max-w-none text-muted-foreground mb-8">
@@ -81,7 +90,9 @@ import { Product } from '../catalog.models';
               @if (p.tags && p.tags.length > 0) {
                 <div class="flex flex-wrap gap-2 mb-8">
                   @for (tag of p.tags; track tag) {
-                    <span class="px-3 py-1.5 bg-muted/20 border border-border/50 rounded-lg text-sm text-muted-foreground">
+                    <span
+                      class="px-3 py-1.5 bg-muted/20 border border-border/50 rounded-lg text-sm text-muted-foreground"
+                    >
                       {{ tag }}
                     </span>
                   }
@@ -89,21 +100,22 @@ import { Product } from '../catalog.models';
               }
 
               <div class="mt-auto">
-                <button (click)="onAddToCart(p.id)"
-                        class="w-full md:w-auto px-10 py-4 bg-primary text-white text-lg font-bold rounded-xl
+                <button
+                  (click)="onAddToCart(p.id)"
+                  class="w-full md:w-auto px-10 py-4 bg-primary text-white text-lg font-bold rounded-xl
                                hover:bg-secondary active:scale-[0.98] transition-all
-                               flex items-center justify-center gap-3 shadow-xl shadow-primary/20">
+                               flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
+                >
                   <lucide-icon name="ShoppingCart" class="w-6 h-6"></lucide-icon>
                   Add to Cart
                 </button>
               </div>
-
             </div>
           </div>
         }
       </div>
     </div>
-  `
+  `,
 })
 export class ProductDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
