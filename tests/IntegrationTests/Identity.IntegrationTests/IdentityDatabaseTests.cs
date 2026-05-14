@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Identity.IntegrationTests;
 
 [Collection(IdentityIntegrationCollection.Name)]
-public sealed class IdentityDatabaseTests(IdentityPostgresFixture fixture)
+public sealed class IdentityDatabaseTests(IdentityDatabaseFixture fixture)
     : IdentityIntegrationTestBase(fixture)
 {
     [Fact]

@@ -10,7 +10,7 @@ namespace Identity.IntegrationTests;
 /// Shared PostgreSQL fixture for Identity integration tests.
 /// Starts a real PostgreSQL container and applies the current migrations once.
 /// </summary>
-public sealed class IdentityPostgresFixture : IAsyncLifetime
+public sealed class IdentityDatabaseFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _container = PostgresContainerFactory.Create("identity_integration_tests");
 
