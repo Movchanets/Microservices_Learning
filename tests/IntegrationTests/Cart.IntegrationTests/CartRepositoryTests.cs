@@ -65,7 +65,8 @@ public class CartRepositoryTests : IAsyncLifetime
         var cachedDataAfter = await _cache.GetStringAsync(buyerId);
         cachedDataAfter.Should().NotBeNull();
 
-        var cachedCart = JsonSerializer.Deserialize<ShoppingCart>(cachedDataAfter!);
+        var options = new JsonSerializerOptions { IncludeFields = true };
+        var cachedCart = JsonSerializer.Deserialize<ShoppingCart>(cachedDataAfter!, options);
         cachedCart.Should().NotBeNull();
         cachedCart!.BuyerId.Should().Be(buyerId);
         cachedCart.Items.Should().HaveCount(1);
@@ -79,7 +80,8 @@ public class CartRepositoryTests : IAsyncLifetime
         var cart = new ShoppingCart(buyerId);
         cart.AddItem("SKU-CACHE", 5);
 
-        var serializedCart = JsonSerializer.Serialize(cart);
+        var options = new JsonSerializerOptions { IncludeFields = true };
+        var serializedCart = JsonSerializer.Serialize(cart, options);
         await _cache.SetStringAsync(buyerId, serializedCart);
 
         // DB does NOT have the cart
@@ -123,7 +125,8 @@ public class CartRepositoryTests : IAsyncLifetime
         var cachedData = await _cache.GetStringAsync(buyerId);
         cachedData.Should().NotBeNull();
 
-        var cachedCart = JsonSerializer.Deserialize<ShoppingCart>(cachedData!);
+        var options = new JsonSerializerOptions { IncludeFields = true };
+        var cachedCart = JsonSerializer.Deserialize<ShoppingCart>(cachedData!, options);
         cachedCart.Should().NotBeNull();
         cachedCart!.Items.Should().HaveCount(2);
         cachedCart.Items.Should().Contain(i => i.Sku == "SKU-INITIAL" && i.Quantity == 2);
@@ -140,7 +143,8 @@ public class CartRepositoryTests : IAsyncLifetime
 
         _dbContext.ShoppingCarts.Add(cart);
         await _dbContext.SaveChangesAsync();
-        await _cache.SetStringAsync(buyerId, JsonSerializer.Serialize(cart));
+        var options = new JsonSerializerOptions { IncludeFields = true };
+        await _cache.SetStringAsync(buyerId, JsonSerializer.Serialize(cart, options));
 
         // Act
         await _sut.DeleteCartAsync(buyerId);

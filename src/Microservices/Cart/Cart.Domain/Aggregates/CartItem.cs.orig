@@ -4,12 +4,9 @@ namespace Cart.Domain.Aggregates;
 
 public sealed class CartItem : Entity
 {
-    [System.Text.Json.Serialization.JsonInclude]
     public string Sku { get; private set; } = string.Empty;
-    [System.Text.Json.Serialization.JsonInclude]
     public int Quantity { get; private set; }
 
-    [System.Text.Json.Serialization.JsonConstructor]
     private CartItem() { } // EF Core
 
     internal CartItem(string sku, int quantity)

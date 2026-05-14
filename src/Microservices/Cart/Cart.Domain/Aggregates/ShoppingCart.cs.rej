@@ -1,0 +1,19 @@
+--- src/Microservices/Cart/Cart.Domain/Aggregates/ShoppingCart.cs
++++ src/Microservices/Cart/Cart.Domain/Aggregates/ShoppingCart.cs
+@@ -4,11 +4,16 @@
+
+ public sealed class ShoppingCart : AggregateRoot
+ {
++    [System.Text.Json.Serialization.JsonInclude]
+     public string BuyerId { get; private set; } = string.Empty;
+
++    [System.Text.Json.Serialization.JsonInclude]
++    [System.Text.Json.Serialization.JsonPropertyName("Items")]
+     private readonly List<CartItem> _items = [];
++    [System.Text.Json.Serialization.JsonIgnore]
+     public IReadOnlyCollection<CartItem> Items => _items.AsReadOnly();
+
++    [System.Text.Json.Serialization.JsonConstructor]
+     private ShoppingCart() { } // EF Core
+
+     public ShoppingCart(string buyerId)

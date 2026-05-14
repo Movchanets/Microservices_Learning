@@ -17,11 +17,12 @@ public class CartRepository(IDistributedCache cache, CartDbContext dbContext) : 
 
     public async Task<ShoppingCart> GetCartAsync(string buyerId, CancellationToken ct = default)
     {
+        var jsonOptions = new JsonSerializerOptions { IncludeFields = true };
         // Try getting from cache first
         var data = await cache.GetStringAsync(buyerId, ct);
         if (!string.IsNullOrEmpty(data))
         {
-            return JsonSerializer.Deserialize<ShoppingCart>(data) ?? new ShoppingCart(buyerId);
+            return JsonSerializer.Deserialize<ShoppingCart>(data, jsonOptions) ?? new ShoppingCart(buyerId);
         }
 
         // If not in cache, load from database
@@ -106,7 +107,8 @@ public class CartRepository(IDistributedCache cache, CartDbContext dbContext) : 
         {
             SlidingExpiration = TimeSpan.FromDays(7)
         };
-        var data = JsonSerializer.Serialize(cart);
+        var jsonOptions = new JsonSerializerOptions { IncludeFields = true };
+        var data = JsonSerializer.Serialize(cart, jsonOptions);
         await cache.SetStringAsync(cart.BuyerId, data, options, ct);
     }
 }
