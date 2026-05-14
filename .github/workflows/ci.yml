@@ -64,9 +64,19 @@ jobs:
 
       - uses: nrwl/nx-set-shas@v5
 
-      # Prepend any command with "nx record --" to record its logs to Nx Cloud
-      # - run: pnpm exec nx record -- echo Hello World
-      - run: pnpm exec nx affected -t lint test build
+      # Run affected targets (lint, test, build) with Nx Cloud caching
+      - name: Run affected targets (with Nx Cloud)
+        id: nx-affected
+        run: pnpm exec nx affected -t lint test build
+        continue-on-error: true
+
+      # Fallback: if Nx Cloud fails (e.g. rate limit reached), retry without cloud
+      - name: Run affected targets (without Nx Cloud - fallback)
+        if: steps.nx-affected.outcome == 'failure'
+        env:
+          NX_NO_CLOUD: true
+        run: pnpm exec nx affected -t lint test build --skip-nx-cache
+
       # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
       - run: pnpm exec nx fix-ci
         if: always() && steps.install.outcome == 'success'
