@@ -16,6 +16,7 @@ var orderingDb = postgres.AddDatabase("ordering-db");
 var inventoryDb = postgres.AddDatabase("inventory-db");
 var paymentDb = postgres.AddDatabase("payment-db");
 var storeDb = postgres.AddDatabase("store-db");
+var cartDb = postgres.AddDatabase("cart-db");
 
 // Redis — used by Cart.API, Notification.Worker (SignalR backplane)
 var redis = builder.AddRedis("redis")
@@ -24,6 +25,11 @@ var redis = builder.AddRedis("redis")
 // RabbitMQ — message broker for MassTransit
 var messaging = builder.AddRabbitMQ("messaging")
     .WithManagementPlugin();
+
+// ──────────────────────────────────────────────
+// Elasticsearch — used by Search.API
+// ──────────────────────────────────────────────
+var elasticsearch = builder.AddElasticsearch("elasticsearch");
 
 // ──────────────────────────────────────────────
 // Microservices (to be added in later phases)
@@ -40,18 +46,56 @@ var identityApi = builder.AddProject<Projects.Identity_API>("identity-api")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
+// Phase 2: Search.API must come up before Catalog dev seeding publishes events.
+var searchApi = builder.AddProject<Projects.Search_API>("search-api")
+    .WithReference(elasticsearch)
+    .WaitFor(elasticsearch)
+    .WithReference(messaging)
+    .WaitFor(messaging);
+
+var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
+    .WithReference(catalogDb)
+    .WaitFor(catalogDb)
+    .WithReference(messaging)
+    .WaitFor(messaging)
+    .WaitFor(searchApi)
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+
+// Phase 3: Inventory.API
+var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api")
+    .WithReference(inventoryDb)
+    .WaitFor(inventoryDb)
+    .WithReference(messaging)
+    .WaitFor(messaging);
+
+// Phase 3: Cart.API
+var cartApi = builder.AddProject<Projects.Cart_API>("cart-api")
+    .WithReference(cartDb)
+    .WaitFor(cartDb)
+    .WithReference(redis)
+    .WaitFor(redis)
+    .WithReference(messaging)
+    .WaitFor(messaging);
+
 // Phase 1: ApiGateway    → .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(identityApi)
     .WaitFor(identityApi)
+    .WithReference(catalogApi)
+    .WaitFor(catalogApi)
+    .WithReference(searchApi)
+    .WaitFor(searchApi)
+    .WithReference(inventoryApi)
+    .WaitFor(inventoryApi)
+    .WithReference(cartApi)
+    .WaitFor(cartApi)
     .WithReference(redis)
     .WaitFor(redis)
     .WithEnvironment("Identity__ApiBaseUrl", "http://identity-api")
     .WithExternalHttpEndpoints();
-// Phase 2: Catalog.API   → .WithReference(catalogDb).WithReference(messaging)
-// Phase 2: Search.API    → .WithReference(messaging)
-// Phase 3: Inventory.API → .WithReference(inventoryDb).WithReference(messaging)
-// Phase 3: Cart.API      → .WithReference(redis).WithReference(messaging)
+
 // Phase 4: Ordering.API  → .WithReference(orderingDb).WithReference(messaging)
 // Phase 4: Payment.API   → .WithReference(paymentDb).WithReference(messaging)
 // Phase 5: Notification  → .WithReference(redis).WithReference(messaging)
@@ -69,11 +113,18 @@ var scalar = builder.AddScalarApiReference(options =>
 // Register implemented services (add new services here as they come online)
 scalar
     .WithApiReference(identityApi)
-    .WithApiReference(gateway);
-// Phase 2: .WithApiReference(catalogApi)
-// Phase 2: .WithApiReference(searchApi)
-// Phase 3: .WithApiReference(inventoryApi)
-// Phase 3: .WithApiReference(cartApi)
+    .WithApiReference(gateway)
+    .WithApiReference(catalogApi)
+    .WithApiReference(searchApi)
+    .WithApiReference(inventoryApi)
+    .WithApiReference(cartApi)
+    .WaitFor(identityApi)
+    .WaitFor(gateway)
+    .WaitFor(catalogApi)
+    .WaitFor(searchApi)
+    .WaitFor(inventoryApi)
+    .WaitFor(cartApi);
+
 // Phase 4: .WithApiReference(orderingApi)
 // Phase 4: .WithApiReference(paymentApi)
 // Phase 5: .WithApiReference(notificationWorker)
@@ -82,9 +133,11 @@ scalar
 
 // Phase 7: Angular       → builder.AddNpmApp(...)
 var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
+    .WaitFor(scalar)
     .WithReference(gateway)
     // targetPort: 4200 tells Aspire to expect Angular on 4200.
     // port: 4201 exposes the Aspire proxy on localhost:4201 so they don't clash.
     .WithHttpEndpoint(targetPort: 4200, port: 4201, name: "http")
     .WithExternalHttpEndpoints();
+
 builder.Build().Run();

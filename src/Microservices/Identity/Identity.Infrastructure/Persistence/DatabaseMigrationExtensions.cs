@@ -47,6 +47,9 @@ public static class DatabaseMigrationExtensions
         var context = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Identity.DatabaseSeeding");
         var hasher = scope.ServiceProvider.GetService<Identity.Application.Interfaces.IPasswordHasher>();
+        var adminId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var storeSellerOneId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var storeSellerTwoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
         if (hasher == null)
         {
@@ -62,26 +65,41 @@ public static class DatabaseMigrationExtensions
                 hasher.Hash("P@ssw0rd123!"),
                 "Admin",
                 "User",
-                Identity.Domain.Enums.UserRole.Admin);
+                Identity.Domain.Enums.UserRole.Admin,
+                userId: adminId);
             context.Users.Add(admin);
         }
 
-        if (!context.Users.Any(u => u.Email == Email.Create("buyer@test.com")))
+        if (!context.Users.Any(u => u.Email == Email.Create("store.tech@marketplace.com")))
         {
-            logger.LogInformation("Seeding buyer user...");
-            var buyer = Identity.Domain.Aggregates.User.Create(
-                "buyer@test.com",
-                hasher.Hash("P@ssw0rd"),
-                "Test",
-                "Buyer",
-                Identity.Domain.Enums.UserRole.Buyer);
-            context.Users.Add(buyer);
+            logger.LogInformation("Seeding seller user for Tech Store...");
+            var techStoreSeller = Identity.Domain.Aggregates.User.Create(
+                "store.tech@marketplace.com",
+                hasher.Hash("P@ssw0rd123!"),
+                "Tech",
+                "Store",
+                Identity.Domain.Enums.UserRole.Seller,
+                userId: storeSellerOneId);
+            context.Users.Add(techStoreSeller);
+        }
+
+        if (!context.Users.Any(u => u.Email == Email.Create("store.home@marketplace.com")))
+        {
+            logger.LogInformation("Seeding seller user for Home Store...");
+            var homeStoreSeller = Identity.Domain.Aggregates.User.Create(
+                "store.home@marketplace.com",
+                hasher.Hash("P@ssw0rd123!"),
+                "Home",
+                "Store",
+                Identity.Domain.Enums.UserRole.Seller,
+                userId: storeSellerTwoId);
+            context.Users.Add(homeStoreSeller);
         }
 
         if (context.ChangeTracker.HasChanges())
         {
             context.SaveChanges();
-            logger.LogInformation("Test users seeded.");
+            logger.LogInformation("Seed users created: admin + 2 seller stores.");
         }
 
         return app;

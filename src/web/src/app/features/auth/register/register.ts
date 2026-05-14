@@ -10,24 +10,24 @@ import { LucideAngularModule } from 'lucide-angular';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, LucideAngularModule],
-  templateUrl: './register.html'
+  templateUrl: './register.html',
 })
 export class Register {
   private fb = inject(FormBuilder);
   authStore = inject(AuthStore);
-  
+
   isSubmitting = signal(false);
   showPassword = signal(false);
 
   togglePassword() {
-    this.showPassword.update(v => !v);
+    this.showPassword.update((v) => !v);
   }
 
   registerForm = this.fb.nonNullable.group({
     firstName: ['', Validators.required],
     lastName: ['', Validators.required],
     email: ['', Validators.required],
-    password: ['', Validators.required]
+    password: ['', Validators.required],
   });
 
   async onSubmit() {
@@ -41,4 +41,3 @@ export class Register {
     }
   }
 }
-

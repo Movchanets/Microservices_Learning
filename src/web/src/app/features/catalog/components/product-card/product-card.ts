@@ -1,0 +1,95 @@
+import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
+import { CurrencyPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
+import { ProductListItem } from '../../catalog.models';
+
+@Component({
+  selector: 'app-product-card',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CurrencyPipe, RouterLink, LucideAngularModule],
+  template: `
+    <div
+      class="group flex flex-col bg-card/40 backdrop-blur-sm border border-border
+                rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-primary/40
+                transition-all duration-300 h-full"
+    >
+      <!-- Image with defer -->
+      <a
+        [routerLink]="[product().id]"
+        class="block relative w-full aspect-square rounded-xl overflow-hidden mb-5 bg-muted/10"
+      >
+        @if (product().imageUrl) {
+          @defer (on viewport) {
+            <img
+              [src]="product().imageUrl"
+              [alt]="product().name"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+          } @placeholder {
+            <div class="w-full h-full flex items-center justify-center text-muted">
+              <lucide-icon name="Package" class="w-12 h-12 opacity-30"></lucide-icon>
+            </div>
+          }
+        } @else {
+          <div class="w-full h-full flex items-center justify-center text-muted">
+            <lucide-icon name="Package" class="w-12 h-12 opacity-30"></lucide-icon>
+          </div>
+        }
+
+        <!-- Category Badge -->
+        <span
+          class="absolute top-3 left-3 px-3 py-1 bg-background/80 backdrop-blur-md
+                     rounded-full text-xs font-medium text-foreground shadow-sm"
+        >
+          {{ product().categoryName }}
+        </span>
+      </a>
+
+      <!-- Content -->
+      <div class="flex flex-col flex-1">
+        <h3
+          class="text-xl font-bold text-foreground font-lexend mb-1 line-clamp-2
+                   group-hover:text-primary transition-colors"
+        >
+          <a [routerLink]="[product().id]">{{ product().name }}</a>
+        </h3>
+
+        <!-- SKU -->
+        <p class="text-xs text-muted mb-4 font-mono">
+          <lucide-icon name="Tag" class="w-3 h-3 inline mr-1"></lucide-icon>
+          {{ product().sku }}
+        </p>
+
+        <!-- Spacer pushes price to bottom -->
+        <div class="flex-1"></div>
+
+        <!-- Footer: Price & Add to Cart -->
+        <div class="flex items-center justify-between mt-4">
+          <div class="flex flex-col">
+            <span class="text-2xl font-bold text-foreground font-lexend">
+              {{ product().price | currency: product().currency : 'symbol' : '1.2-2' }}
+            </span>
+          </div>
+
+          <button
+            (click)="addToCart.emit(product().id)"
+            class="flex items-center justify-center w-12 h-12 rounded-xl
+                         bg-primary text-white hover:bg-secondary
+                         active:scale-95 transition-all shadow-md shadow-primary/20"
+            aria-label="Add to cart"
+            data-testid="add-to-cart-btn"
+          >
+            <lucide-icon name="ShoppingCart" class="w-5 h-5"></lucide-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  `,
+})
+export class ProductCardComponent {
+  product = input.required<ProductListItem>();
+  addToCart = output<string>();
+}
