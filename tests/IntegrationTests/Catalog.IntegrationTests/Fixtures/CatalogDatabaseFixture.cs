@@ -3,7 +3,6 @@ using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -31,10 +30,6 @@ public class CatalogDatabaseFixture : IAsyncLifetime
                 _dbContainer.GetConnectionString(),
                 npgsql => npgsql.MigrationsAssembly(typeof(CatalogDbContext).Assembly.FullName)));
 
-        // Mock IPublishEndpoint to avoid actual MassTransit connection but allow Outbox functionality
-        var mockPublishEndpoint = new Mock<IPublishEndpoint>();
-        services.AddScoped(_ => mockPublishEndpoint.Object);
-
         // Add MediatR and the handlers
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Catalog.Infrastructure.EventPublishing.ProductCreatedDomainEventHandler).Assembly));
 
@@ -45,13 +40,21 @@ public class CatalogDatabaseFixture : IAsyncLifetime
         // Logging
         services.AddLogging();
 
-        // Setup MassTransit Outbox to write directly to EF
+        // Setup MassTransit with an InMemory transport and EF Core Outbox so that
+        // IPublishEndpoint is MassTransit's outbox-backed implementation (not a mock).
+        // Messages published by domain event handlers are captured in OutboxMessage
+        // within the same EF transaction; no real broker is required.
         services.AddMassTransit(x =>
         {
             x.AddEntityFrameworkOutbox<CatalogDbContext>(o =>
             {
                 o.UsePostgres();
                 o.UseBusOutbox();
+            });
+
+            x.UsingInMemory((ctx, cfg) =>
+            {
+                cfg.ConfigureEndpoints(ctx);
             });
         });
 
