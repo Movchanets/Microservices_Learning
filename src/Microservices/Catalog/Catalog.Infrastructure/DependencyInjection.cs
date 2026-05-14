@@ -16,7 +16,11 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // EF Core with PostgreSQL is added by Aspire AddNpgsqlDbContext
+        // EF Core with PostgreSQL (non-pooled, required because DbContext uses scoped IPublisher)
+        services.AddDbContext<CatalogDbContext>(options =>
+            options.UseNpgsql(
+                configuration.GetConnectionString("catalog-db"),
+                npgsql => npgsql.MigrationsAssembly(typeof(CatalogDbContext).Assembly.FullName)));
 
         // Repositories
         services.AddScoped<IProductRepository, ProductRepository>();
