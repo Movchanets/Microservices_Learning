@@ -9,9 +9,9 @@ namespace Identity.IntegrationTests;
 /// Base class for Identity integration tests.
 /// Provides access to a real PostgreSQL-backed DbContext and repository.
 /// </summary>
-public abstract class IdentityIntegrationTestBase(IdentityPostgresFixture fixture)
+public abstract class IdentityIntegrationTestBase(IdentityDatabaseFixture fixture)
 {
-    protected IdentityPostgresFixture Fixture { get; } = fixture;
+    protected IdentityDatabaseFixture Fixture { get; } = fixture;
 
     protected IdentityDbContext CreateDbContext()
     {
