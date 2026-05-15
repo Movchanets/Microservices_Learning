@@ -7,6 +7,7 @@ using MediatR;
 using Ordering.API.Endpoints;
 using Ordering.API.Saga;
 using Ordering.Application.Commands.CreateOrder;
+using Ordering.Infrastructure.Messaging.Consumers;
 using Ordering.Infrastructure;
 using Ordering.Infrastructure.Persistence;
 
@@ -38,6 +39,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderValidator>();
 builder.Services.AddMassTransit(x =>
 {
     x.SetKebabCaseEndpointNameFormatter();
+
+    // Consumer that creates Order entity from OrderSubmittedEvent
+    x.AddConsumer<OrderSubmittedConsumer>();
 
     // Saga state machine with EF Core persistence
     x.AddSagaStateMachine<OrderStateMachine, OrderState>()

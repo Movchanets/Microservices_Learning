@@ -1,0 +1,217 @@
+using FluentAssertions;
+using Ordering.Domain.Aggregates;
+using Ordering.Domain.Enumerations;
+using Ordering.Domain.Events;
+using Ordering.Domain.Exceptions;
+
+namespace Ordering.UnitTests.Domain;
+
+public class OrderTests
+{
+    // ── Create ─────────────────────────────────────────────
+
+    [Fact]
+    public void Create_WithValidBuyerId_InitializesCorrectly()
+    {
+        var order = Order.Create("buyer-1");
+
+        order.BuyerId.Should().Be("buyer-1");
+        order.Status.Should().Be(OrderStatus.Submitted);
+        order.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        order.Items.Should().BeEmpty();
+        order.TotalAmount.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void Create_WithInvalidBuyerId_ThrowsDomainException(string? buyerId)
+    {
+        var act = () => Order.Create(buyerId!);
+
+        act.Should().Throw<DomainException>()
+            .WithMessage("*BuyerId*");
+    }
+
+    // ── AddItem ────────────────────────────────────────────
+
+    [Fact]
+    public void AddItem_InSubmittedStatus_AddsItem()
+    {
+        var order = Order.Create("buyer-1");
+        order.AddItem("SKU-1", "Product 1", 10.50m, 2);
+
+        order.Items.Should().HaveCount(1);
+        order.Items[0].Sku.Should().Be("SKU-1");
+        order.Items[0].UnitPrice.Should().Be(10.50m);
+        order.Items[0].Quantity.Should().Be(2);
+        order.TotalAmount.Should().Be(21.00m);
+    }
+
+    [Fact]
+    public void AddItem_WithDuplicateSku_ReplacesExistingItem()
+    {
+        var order = Order.Create("buyer-1");
+        order.AddItem("SKU-1", "Product 1", 10m, 2);
+        order.AddItem("SKU-1", "Product 1 Updated", 15m, 3);
+
+        order.Items.Should().HaveCount(1);
+        order.Items[0].UnitPrice.Should().Be(15m);
+        order.Items[0].Quantity.Should().Be(3);
+    }
+
+    [Fact]
+    public void AddItem_WhenNotSubmitted_ThrowsDomainException()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkInventoryReserved();
+
+        var act = () => order.AddItem("SKU-1", "Product 1", 10m, 1);
+
+        act.Should().Throw<DomainException>()
+            .WithMessage("*Submitted*");
+    }
+
+    // ── State Transitions ──────────────────────────────────
+
+    [Fact]
+    public void MarkInventoryReserved_FromSubmitted_Succeeds()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkInventoryReserved();
+
+        order.Status.Should().Be(OrderStatus.InventoryReserved);
+    }
+
+    [Fact]
+    public void MarkInventoryReserved_FromNonSubmitted_Throws()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkInventoryReserved();
+
+        var act = () => order.MarkInventoryReserved();
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void MarkPaymentProcessing_FromInventoryReserved_Succeeds()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkInventoryReserved();
+        order.MarkPaymentProcessing();
+
+        order.Status.Should().Be(OrderStatus.PaymentProcessing);
+    }
+
+    [Fact]
+    public void MarkPaymentProcessing_FromSubmitted_Throws()
+    {
+        var order = Order.Create("buyer-1");
+
+        var act = () => order.MarkPaymentProcessing();
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void MarkCompleted_FromPaymentProcessing_SucceedsAndRaisesEvent()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkInventoryReserved();
+        order.MarkPaymentProcessing();
+        order.MarkCompleted();
+
+        order.Status.Should().Be(OrderStatus.Completed);
+        order.CompletedAt.Should().NotBeNull();
+        order.DomainEvents.Should().ContainSingle(e => e is OrderCompletedDomainEvent);
+    }
+
+    [Fact]
+    public void MarkCompleted_FromInventoryReserved_Throws()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkInventoryReserved();
+
+        var act = () => order.MarkCompleted();
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void MarkCancelled_FromSubmitted_SucceedsAndRaisesEvent()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkCancelled("user requested");
+
+        order.Status.Should().Be(OrderStatus.Cancelled);
+        order.CancellationReason.Should().Be("user requested");
+        order.DomainEvents.Should().ContainSingle(e => e is OrderCancelledDomainEvent);
+    }
+
+    [Fact]
+    public void MarkCancelled_FromCompleted_Throws()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkInventoryReserved();
+        order.MarkPaymentProcessing();
+        order.MarkCompleted();
+
+        var act = () => order.MarkCancelled("too late");
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void MarkCancelled_FromCancelled_Throws()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkCancelled("first");
+
+        var act = () => order.MarkCancelled("second");
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void MarkFaulted_SetsStatusAndReason()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkFaulted("system error");
+
+        order.Status.Should().Be(OrderStatus.Faulted);
+        order.CancellationReason.Should().Be("system error");
+    }
+
+    // ── Full Lifecycle ─────────────────────────────────────
+
+    [Fact]
+    public void FullLifecycle_SubmittedToCompleted()
+    {
+        var order = Order.Create("buyer-1");
+        order.AddItem("SKU-1", "Widget", 25m, 2);
+
+        order.MarkInventoryReserved();
+        order.MarkPaymentProcessing();
+        order.MarkCompleted();
+
+        order.Status.Should().Be(OrderStatus.Completed);
+        order.TotalAmount.Should().Be(50m);
+        order.CompletedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void FullLifecycle_PaymentFailedCompensation()
+    {
+        var order = Order.Create("buyer-1");
+        order.AddItem("SKU-1", "Widget", 25m, 2);
+
+        order.MarkInventoryReserved();
+        order.MarkPaymentProcessing();
+        order.MarkCancelled("payment declined");
+
+        order.Status.Should().Be(OrderStatus.Cancelled);
+        order.CancellationReason.Should().Be("payment declined");
+    }
+}

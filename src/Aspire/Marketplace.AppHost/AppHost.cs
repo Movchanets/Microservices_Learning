@@ -93,6 +93,13 @@ var paymentApi = builder.AddProject<Projects.Payment_API>("payment-api")
     .WithReference(messaging)
     .WaitFor(messaging);
 
+// Phase 5: Notification.Worker
+var notificationWorker = builder.AddProject<Projects.Notification_Worker>("notification-api")
+    .WithReference(redis)
+    .WaitFor(redis)
+    .WithReference(messaging)
+    .WaitFor(messaging);
+
 // Phase 1: ApiGateway    → .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(identityApi)
@@ -109,12 +116,13 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WaitFor(orderingApi)
     .WithReference(paymentApi)
     .WaitFor(paymentApi)
+    .WithReference(notificationWorker)
+    .WaitFor(notificationWorker)
     .WithReference(redis)
     .WaitFor(redis)
     .WithEnvironment("Identity__ApiBaseUrl", "http://identity-api")
     .WithExternalHttpEndpoints();
 
-// Phase 5: Notification  → .WithReference(redis).WithReference(messaging)
 // Phase 6: StoreMgmt.API → .WithReference(storeDb).WithReference(messaging)
 // Phase 6: Media.API     → blob storage reference
 
@@ -136,6 +144,7 @@ scalar
     .WithApiReference(cartApi)
     .WithApiReference(orderingApi)
     .WithApiReference(paymentApi)
+    .WithApiReference(notificationWorker)
     .WaitFor(identityApi)
     .WaitFor(gateway)
     .WaitFor(catalogApi)
@@ -143,8 +152,8 @@ scalar
     .WaitFor(inventoryApi)
     .WaitFor(cartApi)
     .WaitFor(orderingApi)
-    .WaitFor(paymentApi);
-// Phase 5: .WithApiReference(notificationWorker)
+    .WaitFor(paymentApi)
+    .WaitFor(notificationWorker);
 // Phase 6: .WithApiReference(storeApi)
 // Phase 6: .WithApiReference(mediaApi)
 

@@ -15,7 +15,7 @@ public sealed class OrderItem : Entity
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sku);
         ArgumentException.ThrowIfNullOrWhiteSpace(productName);
-        if (unitPrice <= 0) throw new ArgumentException("Unit price must be positive", nameof(unitPrice));
+        if (unitPrice < 0) throw new ArgumentException("Unit price cannot be negative", nameof(unitPrice));
         if (quantity <= 0) throw new ArgumentException("Quantity must be positive", nameof(quantity));
 
         Sku = sku;
