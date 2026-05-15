@@ -1,0 +1,86 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "Go to homepage" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e8]: M
+        - generic [ref=e9]: Marketplace
+      - navigation [ref=e10]:
+        - link "Catalog" [ref=e11] [cursor=pointer]:
+          - /url: /catalog
+          - text: Catalog
+        - link "Sell" [ref=e12] [cursor=pointer]:
+          - /url: /seller-dashboard
+          - text: Sell
+      - generic [ref=e13]:
+        - link "Sign in" [ref=e14] [cursor=pointer]:
+          - /url: /auth/login
+        - link "Get Started" [active] [ref=e15] [cursor=pointer]:
+          - /url: /auth/register
+  - main [ref=e16]:
+    - generic [ref=e430]:
+      - generic [ref=e431]:
+        - generic [ref=e433]: M
+        - heading "Create account" [level=1] [ref=e434]
+        - paragraph [ref=e435]: Join the enterprise digital marketplace
+      - generic [ref=e436]:
+        - generic [ref=e437]:
+          - generic [ref=e438]:
+            - generic [ref=e439]: First name
+            - generic [ref=e440]:
+              - generic:
+                - generic:
+                  - img
+              - textbox "First name" [ref=e441]:
+                - /placeholder: John
+          - generic [ref=e442]:
+            - generic [ref=e443]: Last name
+            - generic [ref=e444]:
+              - generic:
+                - generic:
+                  - img
+              - textbox "Last name" [ref=e445]:
+                - /placeholder: Doe
+        - generic [ref=e446]:
+          - generic [ref=e447]: Email address
+          - generic [ref=e448]:
+            - generic:
+              - generic:
+                - img
+            - textbox "Email address" [ref=e449]:
+              - /placeholder: name@company.com
+        - generic [ref=e450]:
+          - generic [ref=e451]: Password
+          - generic [ref=e452]:
+            - generic:
+              - generic:
+                - img
+            - textbox "Password" [ref=e453]:
+              - /placeholder: ••••••••
+            - button [ref=e454]:
+              - img [ref=e456]
+        - button "Create Account" [disabled] [ref=e459]:
+          - generic [ref=e460]: Create Account
+      - paragraph [ref=e462]:
+        - text: Already have an account?
+        - link "Sign in" [ref=e463] [cursor=pointer]:
+          - /url: /auth/login
+  - contentinfo [ref=e387]:
+    - generic [ref=e388]:
+      - generic [ref=e389]:
+        - generic [ref=e390]:
+          - generic [ref=e392]: M
+          - generic [ref=e393]: Marketplace
+        - paragraph [ref=e394]: The ultimate enterprise platform for digital trade. Secure, fast, and transparent.
+        - generic [ref=e395]: © 2026 Marketplace. All rights reserved.
+      - generic [ref=e396]:
+        - button "System" [ref=e398]:
+          - generic [ref=e399]:
+            - img [ref=e401]
+            - generic [ref=e407]: System
+          - img [ref=e409]
+        - button "🇬🇧 English" [ref=e412]:
+          - generic [ref=e413]:
+            - generic [ref=e417]: 🇬🇧
+            - generic [ref=e418]: English
+          - img [ref=e420]

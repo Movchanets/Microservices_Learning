@@ -21,7 +21,8 @@ public sealed class InventoryItem : AggregateRoot
         return new InventoryItem
         {
             Sku = sku.Trim().ToUpperInvariant(),
-            AvailableQuantity = initialQuantity
+            AvailableQuantity = initialQuantity,
+            Version = []
         };
     }
 

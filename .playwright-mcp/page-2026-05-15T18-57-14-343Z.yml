@@ -1,0 +1,270 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "Go to homepage" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e8]: M
+        - generic [ref=e9]: Marketplace
+      - navigation [ref=e10]:
+        - link "Catalog" [ref=e11] [cursor=pointer]:
+          - /url: /catalog
+          - text: Catalog
+        - link "Sell" [ref=e12] [cursor=pointer]:
+          - /url: /seller-dashboard
+          - text: Sell
+      - generic [ref=e13]:
+        - link "Sign in" [ref=e14] [cursor=pointer]:
+          - /url: /auth/login
+        - link "Get Started" [ref=e15] [cursor=pointer]:
+          - /url: /auth/register
+  - main [ref=e16]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - heading "Explore Catalog" [level=1] [ref=e21]
+        - paragraph [ref=e22]: Discover premium products from verified sellers.
+      - generic [ref=e23]:
+        - generic:
+          - img
+        - textbox "Search products..." [ref=e24]
+      - generic [ref=e25]:
+        - generic [ref=e28]:
+          - heading "Categories" [level=3] [ref=e29]:
+            - img [ref=e31]
+            - text: Categories
+          - generic [ref=e32]:
+            - button "All Products" [ref=e33]
+            - button "Electronics" [ref=e34]
+            - button "Home & Kitchen" [ref=e35]
+            - button "Clothing" [ref=e36]
+            - button "Sports & Outdoors" [ref=e37]
+            - button "Books" [ref=e38]
+        - generic [ref=e39]:
+          - paragraph [ref=e40]: 13 products found
+          - generic [ref=e41]:
+            - generic [ref=e43]:
+              - link "Books" [ref=e44] [cursor=pointer]:
+                - /url: /catalog/5bdd2f06-d1c8-4e7e-8b02-db6099633af4
+                - img [ref=e47]
+                - generic [ref=e51]: Books
+              - generic [ref=e52]:
+                - heading "Designing Data-Intensive Applications" [level=3] [ref=e53]:
+                  - link "Designing Data-Intensive Applications" [ref=e54] [cursor=pointer]:
+                    - /url: /catalog/5bdd2f06-d1c8-4e7e-8b02-db6099633af4
+                - paragraph [ref=e55]:
+                  - img [ref=e57]
+                  - text: BOOK-DDIA
+                - generic [ref=e60]:
+                  - generic [ref=e62]: $42.00
+                  - button "Add to cart" [ref=e63]:
+                    - img [ref=e65]
+            - generic [ref=e70]:
+              - link "Books" [ref=e71] [cursor=pointer]:
+                - /url: /catalog/b374f6f6-fd64-40c9-9f03-e44f69030922
+                - img [ref=e74]
+                - generic [ref=e78]: Books
+              - generic [ref=e79]:
+                - heading "Clean Code" [level=3] [ref=e80]:
+                  - link "Clean Code" [ref=e81] [cursor=pointer]:
+                    - /url: /catalog/b374f6f6-fd64-40c9-9f03-e44f69030922
+                - paragraph [ref=e82]:
+                  - img [ref=e84]
+                  - text: BOOK-CLEANCODE
+                - generic [ref=e88]:
+                  - generic [ref=e90]: $39.00
+                  - button "Add to cart" [ref=e91]:
+                    - img [ref=e93]
+            - generic [ref=e98]:
+              - link "Sports & Outdoors" [ref=e99] [cursor=pointer]:
+                - /url: /catalog/9a2f1cd3-37f1-4442-9f01-5262349b8517
+                - img [ref=e102]
+                - generic [ref=e106]: Sports & Outdoors
+              - generic [ref=e107]:
+                - heading "Hydro Flask 32oz" [level=3] [ref=e108]:
+                  - link "Hydro Flask 32oz" [ref=e109] [cursor=pointer]:
+                    - /url: /catalog/9a2f1cd3-37f1-4442-9f01-5262349b8517
+                - paragraph [ref=e110]:
+                  - img [ref=e112]
+                  - text: SPORT-HYDROFLASK-32
+                - generic [ref=e116]:
+                  - generic [ref=e118]: $44.00
+                  - button "Add to cart" [ref=e119]:
+                    - img [ref=e121]
+            - generic [ref=e126]:
+              - link "Sports & Outdoors" [ref=e127] [cursor=pointer]:
+                - /url: /catalog/1144898e-33e9-43b8-a713-3948f4ccd24c
+                - img [ref=e130]
+                - generic [ref=e134]: Sports & Outdoors
+              - generic [ref=e135]:
+                - heading "Yoga Mat Premium" [level=3] [ref=e136]:
+                  - link "Yoga Mat Premium" [ref=e137] [cursor=pointer]:
+                    - /url: /catalog/1144898e-33e9-43b8-a713-3948f4ccd24c
+                - paragraph [ref=e138]:
+                  - img [ref=e140]
+                  - text: SPORT-YOGAMAT-6MM
+                - generic [ref=e144]:
+                  - generic [ref=e146]: $45.00
+                  - button "Add to cart" [ref=e147]:
+                    - img [ref=e149]
+            - generic [ref=e154]:
+              - link "Clothing" [ref=e155] [cursor=pointer]:
+                - /url: /catalog/6b5ecb8c-829c-422e-b7c7-d28edc12b00e
+                - img [ref=e158]
+                - generic [ref=e162]: Clothing
+              - generic [ref=e163]:
+                - heading "Levi's 501 Original Jeans" [level=3] [ref=e164]:
+                  - link "Levi's 501 Original Jeans" [ref=e165] [cursor=pointer]:
+                    - /url: /catalog/6b5ecb8c-829c-422e-b7c7-d28edc12b00e
+                - paragraph [ref=e166]:
+                  - img [ref=e168]
+                  - text: PANTS-LEVIS-501
+                - generic [ref=e172]:
+                  - generic [ref=e174]: $69.00
+                  - button "Add to cart" [ref=e175]:
+                    - img [ref=e177]
+            - generic [ref=e182]:
+              - link "Clothing" [ref=e183] [cursor=pointer]:
+                - /url: /catalog/7fda0142-51c4-4f8e-9e38-dd3565b2e79c
+                - img [ref=e186]
+                - generic [ref=e190]: Clothing
+              - generic [ref=e191]:
+                - heading "Nike Air Max 270" [level=3] [ref=e192]:
+                  - link "Nike Air Max 270" [ref=e193] [cursor=pointer]:
+                    - /url: /catalog/7fda0142-51c4-4f8e-9e38-dd3565b2e79c
+                - paragraph [ref=e194]:
+                  - img [ref=e196]
+                  - text: SHOE-NIKE-AMAX270
+                - generic [ref=e199]:
+                  - generic [ref=e201]: $150.00
+                  - button "Add to cart" [ref=e202]:
+                    - img [ref=e204]
+            - generic [ref=e209]:
+              - link "Home & Kitchen" [ref=e210] [cursor=pointer]:
+                - /url: /catalog/ec6487cb-9d85-44db-a95b-2a0d0371b02b
+                - img [ref=e213]
+                - generic [ref=e217]: Home & Kitchen
+              - generic [ref=e218]:
+                - heading "Le Creuset Dutch Oven" [level=3] [ref=e219]:
+                  - link "Le Creuset Dutch Oven" [ref=e220] [cursor=pointer]:
+                    - /url: /catalog/ec6487cb-9d85-44db-a95b-2a0d0371b02b
+                - paragraph [ref=e221]:
+                  - img [ref=e223]
+                  - text: HOME-LECREUSET-DO55
+                - generic [ref=e227]:
+                  - generic [ref=e229]: $399.00
+                  - button "Add to cart" [ref=e230]:
+                    - img [ref=e232]
+            - generic [ref=e237]:
+              - link "Home & Kitchen" [ref=e238] [cursor=pointer]:
+                - /url: /catalog/da1ba6c3-d810-47ff-8dc3-c74af2f0c365
+                - img [ref=e241]
+                - generic [ref=e245]: Home & Kitchen
+              - generic [ref=e246]:
+                - heading "Dyson V15 Detect" [level=3] [ref=e247]:
+                  - link "Dyson V15 Detect" [ref=e248] [cursor=pointer]:
+                    - /url: /catalog/da1ba6c3-d810-47ff-8dc3-c74af2f0c365
+                - paragraph [ref=e249]:
+                  - img [ref=e251]
+                  - text: HOME-DYSON-V15
+                - generic [ref=e255]:
+                  - generic [ref=e257]: $749.00
+                  - button "Add to cart" [ref=e258]:
+                    - img [ref=e260]
+            - generic [ref=e265]:
+              - link "Home & Kitchen" [ref=e266] [cursor=pointer]:
+                - /url: /catalog/479375ce-7f17-40f2-94ad-37d0447863f2
+                - img [ref=e269]
+                - generic [ref=e273]: Home & Kitchen
+              - generic [ref=e274]:
+                - heading "Ninja Air Fryer" [level=3] [ref=e275]:
+                  - link "Ninja Air Fryer" [ref=e276] [cursor=pointer]:
+                    - /url: /catalog/479375ce-7f17-40f2-94ad-37d0447863f2
+                - paragraph [ref=e277]:
+                  - img [ref=e279]
+                  - text: HOME-NINJA-AIR-FRYER
+                - generic [ref=e282]:
+                  - generic [ref=e284]: $149.00
+                  - button "Add to cart" [ref=e285]:
+                    - img [ref=e287]
+            - generic [ref=e292]:
+              - link "Electronics" [ref=e293] [cursor=pointer]:
+                - /url: /catalog/434db9a8-b8f9-4b01-8ebc-46f10e904233
+                - img [ref=e296]
+                - generic [ref=e300]: Electronics
+              - generic [ref=e301]:
+                - heading "Logitech MX Master 3S" [level=3] [ref=e302]:
+                  - link "Logitech MX Master 3S" [ref=e303] [cursor=pointer]:
+                    - /url: /catalog/434db9a8-b8f9-4b01-8ebc-46f10e904233
+                - paragraph [ref=e304]:
+                  - img [ref=e306]
+                  - text: PERIPH-LOGI-MXM3S
+                - generic [ref=e310]:
+                  - generic [ref=e312]: $99.00
+                  - button "Add to cart" [ref=e313]:
+                    - img [ref=e315]
+            - generic [ref=e320]:
+              - link "Electronics" [ref=e321] [cursor=pointer]:
+                - /url: /catalog/b9cedd68-ae32-4630-b370-5a1b60c2c949
+                - img [ref=e324]
+                - generic [ref=e328]: Electronics
+              - generic [ref=e329]:
+                - heading "Samsung 65\" OLED 4K TV" [level=3] [ref=e330]:
+                  - link "Samsung 65\" OLED 4K TV" [ref=e331] [cursor=pointer]:
+                    - /url: /catalog/b9cedd68-ae32-4630-b370-5a1b60c2c949
+                - paragraph [ref=e332]:
+                  - img [ref=e334]
+                  - text: TV-SAMSUNG-OLED-65
+                - generic [ref=e338]:
+                  - generic [ref=e340]: $1,799.00
+                  - button "Add to cart" [ref=e341]:
+                    - img [ref=e343]
+            - generic [ref=e348]:
+              - link "Electronics" [ref=e349] [cursor=pointer]:
+                - /url: /catalog/0c6664cb-5bf5-457b-9a0e-41b05a8c58a4
+                - img [ref=e352]
+                - generic [ref=e356]: Electronics
+              - generic [ref=e357]:
+                - heading "Sony WH-1000XM5" [level=3] [ref=e358]:
+                  - link "Sony WH-1000XM5" [ref=e359] [cursor=pointer]:
+                    - /url: /catalog/0c6664cb-5bf5-457b-9a0e-41b05a8c58a4
+                - paragraph [ref=e360]:
+                  - img [ref=e362]
+                  - text: AUDIO-SONY-WH1000XM5
+                - generic [ref=e365]:
+                  - generic [ref=e367]: $399.00
+                  - button "Add to cart" [ref=e368]:
+                    - img [ref=e370]
+            - generic [ref=e375]:
+              - link "Electronics" [ref=e376] [cursor=pointer]:
+                - /url: /catalog/e5a22174-18df-4ebc-aea8-8f2bf6296955
+                - img [ref=e379]
+                - generic [ref=e383]: Electronics
+              - generic [ref=e384]:
+                - heading "iPhone 15 Pro" [level=3] [ref=e385]:
+                  - link "iPhone 15 Pro" [ref=e386] [cursor=pointer]:
+                    - /url: /catalog/e5a22174-18df-4ebc-aea8-8f2bf6296955
+                - paragraph [ref=e387]:
+                  - img [ref=e389]
+                  - text: PHONE-IPHONE-15-PRO
+                - generic [ref=e392]:
+                  - generic [ref=e394]: $1,199.00
+                  - button "Add to cart" [ref=e395]:
+                    - img [ref=e397]
+  - contentinfo [ref=e402]:
+    - generic [ref=e403]:
+      - generic [ref=e404]:
+        - generic [ref=e405]:
+          - generic [ref=e407]: M
+          - generic [ref=e408]: Marketplace
+        - paragraph [ref=e409]: The ultimate enterprise platform for digital trade. Secure, fast, and transparent.
+        - generic [ref=e410]: © 2026 Marketplace. All rights reserved.
+      - generic [ref=e411]:
+        - button "System" [ref=e413]:
+          - generic [ref=e414]:
+            - img [ref=e416]
+            - generic [ref=e422]: System
+          - img [ref=e424]
+        - button "🇬🇧 English" [ref=e427]:
+          - generic [ref=e428]:
+            - generic [ref=e432]: 🇬🇧
+            - generic [ref=e433]: English
+          - img [ref=e435]

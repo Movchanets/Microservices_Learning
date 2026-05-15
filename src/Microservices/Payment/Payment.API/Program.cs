@@ -6,6 +6,7 @@ using MediatR;
 using Payment.API.Endpoints;
 using Payment.Application.Commands.ProcessPayment;
 using Payment.Infrastructure;
+using Payment.Infrastructure.Data;
 using Payment.Infrastructure.Messaging;
 using Payment.Infrastructure.Persistence;
 
@@ -62,5 +63,10 @@ app.MapOpenApi();
 
 // ── Endpoints ───────────────────────────────────────────
 app.MapPaymentEndpoints();
+
+if (app.Environment.IsDevelopment())
+{
+    app.ApplyMigrations();
+}
 
 app.Run();

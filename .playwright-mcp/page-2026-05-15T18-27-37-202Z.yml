@@ -1,0 +1,55 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "Go to homepage" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e8]: M
+        - generic [ref=e9]: Marketplace
+      - navigation [ref=e10]:
+        - link "Catalog" [ref=e11] [cursor=pointer]:
+          - /url: /catalog
+          - text: Catalog
+        - link "Sell" [ref=e12] [cursor=pointer]:
+          - /url: /seller-dashboard
+          - text: Sell
+      - button "Test" [ref=e90]:
+        - img [ref=e93]
+        - generic [ref=e96]: Test
+        - img [ref=e98]
+  - main [ref=e16]:
+    - generic [ref=e102]:
+      - generic [ref=e103]:
+        - heading "Explore Catalog" [level=1] [ref=e104]
+        - paragraph [ref=e105]: Discover premium products from verified sellers.
+      - generic [ref=e106]:
+        - generic:
+          - img
+        - textbox "Search products..." [ref=e107]
+      - generic [ref=e108]:
+        - generic [ref=e111]:
+          - heading "Categories" [level=3] [ref=e112]:
+            - img [ref=e114]
+            - text: Categories
+          - button "All Products" [ref=e116]
+        - generic [ref=e118]:
+          - paragraph [ref=e119]: Failed to load products
+          - button "Try Again" [ref=e120]
+  - contentinfo [ref=e54]:
+    - generic [ref=e55]:
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e59]: M
+          - generic [ref=e60]: Marketplace
+        - paragraph [ref=e61]: The ultimate enterprise platform for digital trade. Secure, fast, and transparent.
+        - generic [ref=e62]: © 2026 Marketplace. All rights reserved.
+      - generic [ref=e63]:
+        - button "System" [ref=e65]:
+          - generic [ref=e66]:
+            - img [ref=e68]
+            - generic [ref=e74]: System
+          - img [ref=e76]
+        - button "🇬🇧 English" [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e84]: 🇬🇧
+            - generic [ref=e85]: English
+          - img [ref=e87]

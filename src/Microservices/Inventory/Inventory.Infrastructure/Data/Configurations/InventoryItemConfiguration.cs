@@ -20,6 +20,7 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
             .IsRequired();
 
         builder.Property(x => x.Version)
-            .IsRowVersion();
+            .IsRowVersion()
+            .HasDefaultValueSql("gen_random_uuid()::text::bytea");
     }
 }

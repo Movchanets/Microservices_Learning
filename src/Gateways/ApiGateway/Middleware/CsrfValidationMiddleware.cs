@@ -20,7 +20,8 @@ public sealed class CsrfValidationMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext context)
     {
         if (MutatingMethods.Contains(context.Request.Method) &&
-            context.User.Identity?.IsAuthenticated == true)
+            context.User.Identity?.IsAuthenticated == true &&
+            !context.Request.Path.StartsWithSegments("/hubs"))
         {
             var cookieToken = context.Request.Cookies["XSRF-TOKEN"];
             var headerToken = context.Request.Headers["X-XSRF-TOKEN"].FirstOrDefault();

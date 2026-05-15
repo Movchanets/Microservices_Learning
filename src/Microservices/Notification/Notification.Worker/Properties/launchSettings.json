@@ -4,6 +4,7 @@
     "Notification.Worker": {
       "commandName": "Project",
       "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5000",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }

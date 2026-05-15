@@ -98,7 +98,8 @@ var notificationWorker = builder.AddProject<Projects.Notification_Worker>("notif
     .WithReference(redis)
     .WaitFor(redis)
     .WithReference(messaging)
-    .WaitFor(messaging);
+    .WaitFor(messaging)
+    .WithExternalHttpEndpoints();
 
 // Phase 1: ApiGateway    → .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
@@ -144,7 +145,6 @@ scalar
     .WithApiReference(cartApi)
     .WithApiReference(orderingApi)
     .WithApiReference(paymentApi)
-    .WithApiReference(notificationWorker)
     .WaitFor(identityApi)
     .WaitFor(gateway)
     .WaitFor(catalogApi)
@@ -152,8 +152,7 @@ scalar
     .WaitFor(inventoryApi)
     .WaitFor(cartApi)
     .WaitFor(orderingApi)
-    .WaitFor(paymentApi)
-    .WaitFor(notificationWorker);
+    .WaitFor(paymentApi);
 // Phase 6: .WithApiReference(storeApi)
 // Phase 6: .WithApiReference(mediaApi)
 

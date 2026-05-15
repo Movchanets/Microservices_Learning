@@ -9,6 +9,7 @@ using Ordering.API.Saga;
 using Ordering.Application.Commands.CreateOrder;
 using Ordering.Infrastructure.Messaging.Consumers;
 using Ordering.Infrastructure;
+using Ordering.Infrastructure.Data;
 using Ordering.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -77,5 +78,10 @@ app.MapOpenApi();
 
 // ── Endpoints ───────────────────────────────────────────
 app.MapOrderEndpoints();
+
+if (app.Environment.IsDevelopment())
+{
+    app.ApplyMigrations();
+}
 
 app.Run();

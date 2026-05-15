@@ -66,4 +66,10 @@ if (app.Environment.IsDevelopment())
 
 app.MapInventoryEndpoints();
 
+if (app.Environment.IsDevelopment())
+{
+    app.ApplyMigrations();
+    app.SeedData();
+}
+
 app.Run();
