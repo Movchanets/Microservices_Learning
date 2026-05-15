@@ -31,6 +31,7 @@ export const CartStore = signalStore(
   withComputed((store) => ({
     totalItems: computed(() => store.items().reduce((sum, item) => sum + item.quantity, 0)),
     isEmpty: computed(() => store.items().length === 0),
+    totalPrice: computed(() => store.items().reduce((sum, item) => sum + (item.quantity * (item.unitPrice || 0)), 0))
   })),
 
   withMethods((store, cartService = inject(CartService)) => ({
@@ -44,7 +45,7 @@ export const CartStore = signalStore(
       }
     },
 
-    async addToCart(sku: string, quantity: number = 1): Promise<void> {
+    async addToCart(sku: string, quantity: number = 1, unitPrice?: number): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         // Optimistic local update
@@ -53,8 +54,9 @@ export const CartStore = signalStore(
 
         if (existingItem) {
           existingItem.quantity += quantity;
+          if (unitPrice !== undefined) existingItem.unitPrice = unitPrice;
         } else {
-          currentItems.push({ sku, quantity });
+          currentItems.push({ sku, quantity, unitPrice });
         }
 
         const buyerId = localStorage.getItem('buyerId') || 'guest-user';
