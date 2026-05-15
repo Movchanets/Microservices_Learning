@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cart.Domain.Aggregates;
 using Cart.Infrastructure.Data;
+using Cart.Infrastructure.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -8,6 +9,10 @@ namespace Cart.Infrastructure.Repositories;
 
 public class CartRepository(IDistributedCache cache, CartDbContext dbContext) : ICartRepository
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        Converters = { new ShoppingCartJsonConverter() }
+    };
     public async Task<ShoppingCart?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await dbContext.ShoppingCarts
@@ -21,7 +26,7 @@ public class CartRepository(IDistributedCache cache, CartDbContext dbContext) : 
         var data = await cache.GetStringAsync(buyerId, ct);
         if (!string.IsNullOrEmpty(data))
         {
-            return JsonSerializer.Deserialize<ShoppingCart>(data) ?? new ShoppingCart(buyerId);
+            return JsonSerializer.Deserialize<ShoppingCart>(data, JsonOptions) ?? new ShoppingCart(buyerId);
         }
 
         // If not in cache, load from database
@@ -106,7 +111,7 @@ public class CartRepository(IDistributedCache cache, CartDbContext dbContext) : 
         {
             SlidingExpiration = TimeSpan.FromDays(7)
         };
-        var data = JsonSerializer.Serialize(cart);
+        var data = JsonSerializer.Serialize(cart, JsonOptions);
         await cache.SetStringAsync(cart.BuyerId, data, options, ct);
     }
 }

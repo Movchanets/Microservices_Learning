@@ -88,7 +88,7 @@ public sealed class ElasticsearchService : ISearchService
                 // Category filter
                 if (categoryId.HasValue)
                 {
-                    mustQueries.Add(mq => mq.Term(t => t.Field(f => f.CategoryId).Value(categoryId.Value.ToString())));
+                    mustQueries.Add(mq => mq.Term(t => t.Field("categoryId.keyword").Value(categoryId.Value.ToString())));
                 }
 
                 // Price range filter

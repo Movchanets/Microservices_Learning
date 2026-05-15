@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.7" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.2.0" />
+    <PackageReference Include="Testcontainers.Redis" Version="4.2.0" />
   </ItemGroup>
 
 </Project>
