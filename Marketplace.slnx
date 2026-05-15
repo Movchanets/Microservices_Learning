@@ -39,6 +39,18 @@
     <Project Path="src/Microservices/Inventory/Inventory.Domain/Inventory.Domain.csproj" />
     <Project Path="src/Microservices/Inventory/Inventory.Infrastructure/Inventory.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Microservices/Ordering/">
+    <Project Path="src/Microservices/Ordering/Ordering.API/Ordering.API.csproj" />
+    <Project Path="src/Microservices/Ordering/Ordering.Application/Ordering.Application.csproj" />
+    <Project Path="src/Microservices/Ordering/Ordering.Domain/Ordering.Domain.csproj" />
+    <Project Path="src/Microservices/Ordering/Ordering.Infrastructure/Ordering.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Microservices/Payment/">
+    <Project Path="src/Microservices/Payment/Payment.API/Payment.API.csproj" />
+    <Project Path="src/Microservices/Payment/Payment.Application/Payment.Application.csproj" />
+    <Project Path="src/Microservices/Payment/Payment.Domain/Payment.Domain.csproj" />
+    <Project Path="src/Microservices/Payment/Payment.Infrastructure/Payment.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/src/Microservices/Search/">
     <Project Path="src/Microservices/Search/Search.API/Search.API.csproj" />
   </Folder>

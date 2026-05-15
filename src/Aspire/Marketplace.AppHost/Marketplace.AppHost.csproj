@@ -25,6 +25,8 @@
     <ProjectReference Include="..\..\Microservices\Search\Search.API\Search.API.csproj" />
     <ProjectReference Include="..\..\Microservices\Inventory\Inventory.API\Inventory.API.csproj" />
     <ProjectReference Include="..\..\Microservices\Cart\Cart.API\Cart.API.csproj" />
+    <ProjectReference Include="..\..\Microservices\Ordering\Ordering.API\Ordering.API.csproj" />
+    <ProjectReference Include="..\..\Microservices\Payment\Payment.API\Payment.API.csproj" />
   </ItemGroup>
 
 </Project>

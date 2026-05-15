@@ -79,6 +79,20 @@ var cartApi = builder.AddProject<Projects.Cart_API>("cart-api")
     .WithReference(messaging)
     .WaitFor(messaging);
 
+// Phase 4: Ordering.API
+var orderingApi = builder.AddProject<Projects.Ordering_API>("ordering-api")
+    .WithReference(orderingDb)
+    .WaitFor(orderingDb)
+    .WithReference(messaging)
+    .WaitFor(messaging);
+
+// Phase 4: Payment.API
+var paymentApi = builder.AddProject<Projects.Payment_API>("payment-api")
+    .WithReference(paymentDb)
+    .WaitFor(paymentDb)
+    .WithReference(messaging)
+    .WaitFor(messaging);
+
 // Phase 1: ApiGateway    → .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(identityApi)
@@ -91,13 +105,15 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WaitFor(inventoryApi)
     .WithReference(cartApi)
     .WaitFor(cartApi)
+    .WithReference(orderingApi)
+    .WaitFor(orderingApi)
+    .WithReference(paymentApi)
+    .WaitFor(paymentApi)
     .WithReference(redis)
     .WaitFor(redis)
     .WithEnvironment("Identity__ApiBaseUrl", "http://identity-api")
     .WithExternalHttpEndpoints();
 
-// Phase 4: Ordering.API  → .WithReference(orderingDb).WithReference(messaging)
-// Phase 4: Payment.API   → .WithReference(paymentDb).WithReference(messaging)
 // Phase 5: Notification  → .WithReference(redis).WithReference(messaging)
 // Phase 6: StoreMgmt.API → .WithReference(storeDb).WithReference(messaging)
 // Phase 6: Media.API     → blob storage reference
@@ -118,15 +134,16 @@ scalar
     .WithApiReference(searchApi)
     .WithApiReference(inventoryApi)
     .WithApiReference(cartApi)
+    .WithApiReference(orderingApi)
+    .WithApiReference(paymentApi)
     .WaitFor(identityApi)
     .WaitFor(gateway)
     .WaitFor(catalogApi)
     .WaitFor(searchApi)
     .WaitFor(inventoryApi)
-    .WaitFor(cartApi);
-
-// Phase 4: .WithApiReference(orderingApi)
-// Phase 4: .WithApiReference(paymentApi)
+    .WaitFor(cartApi)
+    .WaitFor(orderingApi)
+    .WaitFor(paymentApi);
 // Phase 5: .WithApiReference(notificationWorker)
 // Phase 6: .WithApiReference(storeApi)
 // Phase 6: .WithApiReference(mediaApi)
