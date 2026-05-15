@@ -40,6 +40,11 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
+  Clock,
+  XCircle,
+  AlertTriangle,
+  PackageCheck,
+  CreditCard,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -89,6 +94,11 @@ export const appConfig: ApplicationConfig = {
         Plus,
         Trash2,
         CheckCircle2,
+        Clock,
+        XCircle,
+        AlertTriangle,
+        PackageCheck,
+        CreditCard,
       }),
     ),
   ],

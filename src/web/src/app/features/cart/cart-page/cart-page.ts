@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { CartStore } from '../cart.store';
 
@@ -98,27 +98,16 @@ import { CartStore } from '../cart.store';
             </div>
           </div>
 
-          @if (store.checkoutCorrelationId()) {
-            <div class="mt-8 p-6 bg-green-500/10 border border-green-500/20 rounded-2xl">
-              <h3 class="text-green-500 font-bold mb-2 flex items-center gap-2">
-                <lucide-icon name="CheckCircle2" class="w-5 h-5"></lucide-icon>
-                Order Submitted!
-              </h3>
-              <p class="text-green-600/80">
-                Your correlation ID is:
-                <span class="font-mono">{{ store.checkoutCorrelationId() }}</span>
-              </p>
-            </div>
-          }
         }
       </div>
     </div>
   `,
 })
 export class CartPageComponent {
-  store = inject(CartStore);
+  private readonly router = inject(Router);
+  readonly store = inject(CartStore);
 
   onCheckout() {
-    this.store.checkout();
+    this.router.navigate(['/checkout']);
   }
 }

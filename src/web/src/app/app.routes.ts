@@ -36,4 +36,12 @@ export const routes: Routes = [
     path: 'cart',
     loadChildren: () => import('./features/cart/cart.routes'),
   },
+  {
+    path: 'checkout',
+    loadChildren: () => import('./features/checkout/checkout.routes'),
+  },
+  {
+    path: 'orders',
+    loadChildren: () => import('./features/orders/orders.routes'),
+  },
 ];
