@@ -1,6 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
 import { DatePipe, SlicePipe, DecimalPipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthStore } from '../../../core/auth/auth.store';
@@ -10,7 +9,7 @@ import { Order } from '../../checkout/checkout.models';
   selector: 'app-seller-orders',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, SlicePipe, DecimalPipe, RouterLink, LucideAngularModule],
+  imports: [DatePipe, SlicePipe, DecimalPipe, LucideAngularModule],
   template: `
     <div class="space-y-6">
       <div class="flex items-center justify-between">

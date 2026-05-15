@@ -3,7 +3,6 @@ import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { AuthService } from './auth.service';
 import { User, LoginCredentials, RegisterCredentials } from './auth.models';
 import { Router } from '@angular/router';
-import { NotificationService } from '../signalr/notification.service';
 
 type AuthState = {
   user: User | null;
@@ -50,7 +49,6 @@ export const AuthStore = signalStore(
     async logout() {
       patchState(store, { loading: true });
       try {
-        inject(NotificationService).stop();
         localStorage.removeItem('buyerId');
         await authService.ensureCsrf();
         await authService.logout();

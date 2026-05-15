@@ -1,5 +1,4 @@
 import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { Order, OrderStatus } from '../../checkout/checkout.models';
 
@@ -15,7 +14,7 @@ interface TimelineStep {
   selector: 'app-order-timeline',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, LucideAngularModule],
+  imports: [LucideAngularModule],
   template: `
     <div class="bg-card/60 backdrop-blur-sm rounded-2xl border border-border p-5">
       <h3 class="text-sm font-semibold text-foreground mb-4">Order Progress</h3>

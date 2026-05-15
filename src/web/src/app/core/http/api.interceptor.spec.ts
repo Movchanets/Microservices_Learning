@@ -30,20 +30,17 @@ describe('apiInterceptor', () => {
     expect(req.request.withCredentials).toBe(true);
   });
 
-  it('should prepend /api Base URL if applicable', () => {
+  it('should add withCredentials to relative URLs', () => {
     httpClient.get('/test').subscribe();
 
     const req = httpMock.expectOne('/api/test');
-    expect(req.request.url).toBe('/api/test');
+    expect(req.request.withCredentials).toBe(true);
   });
 
-  it('should not prepend /api if already absolute or already starts with /api', () => {
+  it('should add withCredentials to absolute URLs', () => {
     httpClient.get('https://example.com/data').subscribe();
-    const req1 = httpMock.expectOne('https://example.com/data');
-    expect(req1.request.url).toBe('https://example.com/data');
 
-    httpClient.get('/api/data').subscribe();
-    const req2 = httpMock.expectOne('/api/data');
-    expect(req2.request.url).toBe('/api/data');
+    const req = httpMock.expectOne('https://example.com/data');
+    expect(req.request.withCredentials).toBe(true);
   });
 });

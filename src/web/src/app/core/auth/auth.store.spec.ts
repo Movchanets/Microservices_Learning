@@ -3,10 +3,12 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AuthStore } from './auth.store';
 import { AuthService } from './auth.service';
+import { NotificationService } from '../signalr/notification.service';
 
 describe('AuthStore', () => {
   let authServiceMock: any;
   let routerMock: any;
+  let notificationServiceMock: any;
 
   beforeEach(() => {
     authServiceMock = {
@@ -21,10 +23,16 @@ describe('AuthStore', () => {
       navigate: vi.fn(),
     };
 
+    notificationServiceMock = {
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn(),
+    };
+
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: authServiceMock },
         { provide: Router, useValue: routerMock },
+        { provide: NotificationService, useValue: notificationServiceMock },
       ],
     });
   });

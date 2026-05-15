@@ -1,6 +1,9 @@
 using ApiGateway.Endpoints;
 using ApiGateway.Extensions;
+using ApiGateway.Middleware;
 using Marketplace.ServiceDefaults;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +66,20 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
+// ── Rate Limiting ───────────────────────────────────────
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("fixed", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 10;
+    });
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 // ── OpenAPI (for Scalar — exposes Gateway/Health endpoints) ───
 builder.Services.AddOpenApi("v1", options =>
 {
@@ -79,7 +96,9 @@ var app = builder.Build();
 
 // ── Middleware pipeline ─────────────────────────────────
 app.MapDefaultEndpoints(); // health checks
+app.UseRateLimiter();
 app.UseCors();
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseAuthentication();
 app.UseCsrfValidation();   // Custom CSRF check
 app.UseCookieToBearer();   // Cookie → Bearer transform
