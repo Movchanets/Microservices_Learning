@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/auth/auth.guard';
+import { roleGuard } from './core/auth/role.guard';
 
 export const routes: Routes = [
   {
@@ -8,6 +10,7 @@ export const routes: Routes = [
   },
   {
     path: 'profile',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/auth/profile/profile').then((m) => m.ProfileComponent),
   },
   {
@@ -34,22 +37,27 @@ export const routes: Routes = [
   },
   {
     path: 'cart',
+    canActivate: [authGuard],
     loadChildren: () => import('./features/cart/cart.routes'),
   },
   {
     path: 'checkout',
+    canActivate: [authGuard],
     loadChildren: () => import('./features/checkout/checkout.routes'),
   },
   {
     path: 'orders',
+    canActivate: [authGuard],
     loadChildren: () => import('./features/orders/orders.routes'),
   },
   {
     path: 'seller',
+    canActivate: [authGuard, roleGuard('Seller', 'Admin')],
     loadChildren: () => import('./features/seller-dashboard/seller.routes'),
   },
   {
     path: 'admin',
+    canActivate: [authGuard, roleGuard('Admin')],
     loadChildren: () => import('./features/admin/admin.routes'),
   },
 ];

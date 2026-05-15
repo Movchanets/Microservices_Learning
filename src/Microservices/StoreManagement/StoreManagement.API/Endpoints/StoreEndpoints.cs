@@ -31,7 +31,7 @@ public static class StoreEndpoints
                 : Results.BadRequest(new { result.Error, result.ErrorCode });
         })
         .WithName("CreateStore")
-        .RequireAuthorization()
+        .RequireAuthorization("Seller")
         .Produces<StoreDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
@@ -91,7 +91,7 @@ public static class StoreEndpoints
                 : Results.BadRequest(new { result.Error, result.ErrorCode });
         })
         .WithName("UpdateStore")
-        .RequireAuthorization()
+        .RequireAuthorization("Seller")
         .Produces<StoreDto>()
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
@@ -109,7 +109,7 @@ public static class StoreEndpoints
                 : Results.BadRequest(new { result.Error, result.ErrorCode });
         })
         .WithName("VerifySeller")
-        .RequireAuthorization()
+        .RequireAuthorization("Admin")
         .Produces(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 

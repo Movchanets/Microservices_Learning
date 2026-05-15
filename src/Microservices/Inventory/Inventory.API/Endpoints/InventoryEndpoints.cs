@@ -23,7 +23,8 @@ public static class InventoryEndpoints
             repository.Add(item);
             await uow.SaveChangesAsync(ct);
             return Results.Created($"/api/inventory/items/{item.Id}", item.Id);
-        });
+        })
+        .RequireAuthorization();
 
         group.MapPost("/items/{sku}/add-stock", async (
             string sku,
@@ -39,7 +40,8 @@ public static class InventoryEndpoints
             repository.Update(item);
             await uow.SaveChangesAsync(ct);
             return Results.Ok();
-        });
+        })
+        .RequireAuthorization();
 
         group.MapGet("/items/{sku}", async (
             string sku,

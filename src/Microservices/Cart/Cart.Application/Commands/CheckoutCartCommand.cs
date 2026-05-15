@@ -24,7 +24,7 @@ public sealed class CheckoutCartCommandHandler(
         }
 
         var correlationId = Guid.NewGuid();
-        var itemsContract = cart.Items.Select(i => new OrderItemContract(i.Sku, i.Quantity)).ToList();
+        var itemsContract = cart.Items.Select(i => new OrderItemContract(i.Sku, i.Quantity, i.Price)).ToList();
 
         var orderSubmittedEvent = new OrderSubmittedEvent(
             correlationId,

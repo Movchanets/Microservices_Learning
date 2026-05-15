@@ -17,7 +17,7 @@ public sealed class ShoppingCart : AggregateRoot
         BuyerId = buyerId;
     }
 
-    public void AddItem(string sku, int quantity)
+    public void AddItem(string sku, int quantity, decimal price = 0m)
     {
         if (string.IsNullOrWhiteSpace(sku))
             throw new ArgumentException("SKU cannot be empty", nameof(sku));
@@ -31,7 +31,7 @@ public sealed class ShoppingCart : AggregateRoot
         }
         else
         {
-            _items.Add(new CartItem(sku, quantity));
+            _items.Add(new CartItem(sku, quantity, price));
         }
     }
 

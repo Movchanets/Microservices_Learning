@@ -1,3 +1,4 @@
+using System.Text;
 using BuildingBlocks.SharedContracts.Abstractions;
 using Inventory.Application.Commands;
 using Inventory.Domain.Aggregates;
@@ -7,6 +8,8 @@ using Inventory.Infrastructure.Repositories;
 using Inventory.API.Endpoints;
 using MassTransit;
 using Marketplace.ServiceDefaults;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +54,25 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
+// ── Authentication (JWT Bearer) ─────────────────────────
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -63,6 +85,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapInventoryEndpoints();
 

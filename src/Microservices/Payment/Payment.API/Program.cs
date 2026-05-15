@@ -1,8 +1,11 @@
+using System.Text;
 using BuildingBlocks.Infrastructure.Behaviors;
 using BuildingBlocks.Infrastructure.Middleware;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Payment.API.Endpoints;
 using Payment.Application.Commands.ProcessPayment;
 using Payment.Infrastructure;
@@ -51,6 +54,25 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
+// ── Authentication (JWT Bearer) ─────────────────────────
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 // ── OpenAPI ─────────────────────────────────────────────
 builder.Services.AddOpenApi();
 
@@ -59,6 +81,8 @@ var app = builder.Build();
 // ── Middleware pipeline ─────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.MapDefaultEndpoints(); // health checks
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapOpenApi();
 
 // ── Endpoints ───────────────────────────────────────────

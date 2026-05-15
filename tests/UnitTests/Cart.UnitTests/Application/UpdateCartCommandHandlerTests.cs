@@ -29,8 +29,8 @@ public class UpdateCartCommandHandlerTests
 
         var newItems = new List<CartItemDto>
         {
-            new CartItemDto("new-sku-1", 2),
-            new CartItemDto("new-sku-2", 3)
+            new CartItemDto("new-sku-1", 2, 10m),
+            new CartItemDto("new-sku-2", 3, 20m)
         };
         var command = new UpdateCartCommand(buyerId, newItems);
 

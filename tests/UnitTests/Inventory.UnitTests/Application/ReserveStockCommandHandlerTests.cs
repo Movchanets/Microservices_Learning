@@ -34,8 +34,8 @@ public class ReserveStockCommandHandlerTests
 
         var command = new ReserveStockCommand(Guid.NewGuid(), new List<OrderItemContract>
         {
-            new OrderItemContract(sku1, 2),
-            new OrderItemContract(sku2, 3)
+            new OrderItemContract(sku1, 2, 10m),
+            new OrderItemContract(sku2, 3, 20m)
         });
 
         // Act
@@ -63,7 +63,7 @@ public class ReserveStockCommandHandlerTests
 
         var command = new ReserveStockCommand(Guid.NewGuid(), new List<OrderItemContract>
         {
-            new OrderItemContract(sku1, 2)
+            new OrderItemContract(sku1, 2, 10m)
         });
 
         // Act
@@ -89,7 +89,7 @@ public class ReserveStockCommandHandlerTests
 
         var command = new ReserveStockCommand(Guid.NewGuid(), new List<OrderItemContract>
         {
-            new OrderItemContract(sku1, 2) // Attempt to reserve 2
+            new OrderItemContract(sku1, 2, 10m) // Attempt to reserve 2
         });
 
         // Act

@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Cart.Application.Commands;
 
-public record CartItemDto(string Sku, int Quantity);
+public record CartItemDto(string Sku, int Quantity, decimal Price);
 public record UpdateCartCommand(string BuyerId, List<CartItemDto> Items) : IRequest<Result<ShoppingCart>>;
 
 public sealed class UpdateCartCommandHandler(ICartRepository repository) : IRequestHandler<UpdateCartCommand, Result<ShoppingCart>>
@@ -15,7 +15,7 @@ public sealed class UpdateCartCommandHandler(ICartRepository repository) : IRequ
         cart.Clear();
         foreach (var item in request.Items)
         {
-            cart.AddItem(item.Sku, item.Quantity);
+            cart.AddItem(item.Sku, item.Quantity, item.Price);
         }
 
         await repository.UpdateCartAsync(cart, cancellationToken);

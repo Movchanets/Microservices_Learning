@@ -34,9 +34,9 @@ public class ReleaseStockCommandHandlerTests
 
         var command = new ReleaseStockCommand(Guid.NewGuid(), new List<OrderItemContract>
         {
-            new OrderItemContract(sku1, 2),
-            new OrderItemContract(sku2, 3),
-            new OrderItemContract("SKU-3", 1) // Item not found, should be ignored
+            new OrderItemContract(sku1, 2, 10m),
+            new OrderItemContract(sku2, 3, 20m),
+            new OrderItemContract("SKU-3", 1, 5m) // Item not found, should be ignored
         });
 
         // Act

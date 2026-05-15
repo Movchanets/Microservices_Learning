@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Ordering.Application.Commands.CreateOrder;
@@ -13,14 +14,18 @@ public static class OrderEndpoints
     {
         var group = app.MapGroup("/api/orders")
             .WithTags("Orders")
-            .WithOpenApi();
+            .WithOpenApi()
+            .RequireAuthorization();
 
         group.MapPost("/", async (
+            ClaimsPrincipal user,
             [FromBody] CreateOrderRequest request,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
-            var cmd = new CreateOrderCommand(request.BuyerId, request.Items);
+            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
+            var cmd = new CreateOrderCommand(buyerId, request.Items);
             var result = await sender.Send(cmd, ct);
             return result.IsSuccess
                 ? Results.Created($"/api/orders/{result.Value}", result.Value)
@@ -50,5 +55,4 @@ public static class OrderEndpoints
 }
 
 public sealed record CreateOrderRequest(
-    string BuyerId,
     List<CreateOrderItemDto> Items);

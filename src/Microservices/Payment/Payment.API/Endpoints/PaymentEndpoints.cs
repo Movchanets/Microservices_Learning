@@ -9,7 +9,8 @@ public static class PaymentEndpoints
     {
         var group = app.MapGroup("/api/payments")
             .WithTags("Payments")
-            .WithOpenApi();
+            .WithOpenApi()
+            .RequireAuthorization();
 
         group.MapGet("/order/{orderId:guid}", async (
             Guid orderId,

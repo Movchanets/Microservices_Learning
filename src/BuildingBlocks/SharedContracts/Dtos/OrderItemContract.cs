@@ -2,4 +2,5 @@ namespace BuildingBlocks.SharedContracts.Dtos;
 
 public record OrderItemContract(
     string Sku,
-    int Quantity);
+    int Quantity,
+    decimal Price);
