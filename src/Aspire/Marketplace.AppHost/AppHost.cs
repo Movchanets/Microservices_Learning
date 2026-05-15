@@ -101,6 +101,30 @@ var notificationWorker = builder.AddProject<Projects.Notification_Worker>("notif
     .WaitFor(messaging)
     .WithExternalHttpEndpoints();
 
+// Phase 6: Azure Blob Storage (Azurite emulator locally)
+var storage = builder.AddAzureStorage("storage").RunAsEmulator();
+var blobs = storage.AddBlobs("blobs");
+
+// Phase 6: StoreManagement.API
+var storeApi = builder.AddProject<Projects.StoreManagement_API>("store-api")
+    .WithReference(storeDb)
+    .WaitFor(storeDb)
+    .WithReference(messaging)
+    .WaitFor(messaging)
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+
+// Phase 6: Media.API
+var mediaApi = builder.AddProject<Projects.Media_API>("media-api")
+    .WithReference(blobs)
+    .WaitFor(blobs)
+    .WithReference(messaging)
+    .WaitFor(messaging)
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+
 // Phase 1: ApiGateway    → .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(identityApi)
@@ -119,13 +143,14 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WaitFor(paymentApi)
     .WithReference(notificationWorker)
     .WaitFor(notificationWorker)
+    .WithReference(storeApi)
+    .WaitFor(storeApi)
+    .WithReference(mediaApi)
+    .WaitFor(mediaApi)
     .WithReference(redis)
     .WaitFor(redis)
     .WithEnvironment("Identity__ApiBaseUrl", "http://identity-api")
     .WithExternalHttpEndpoints();
-
-// Phase 6: StoreMgmt.API → .WithReference(storeDb).WithReference(messaging)
-// Phase 6: Media.API     → blob storage reference
 
 // ──────────────────────────────────────────────
 // Scalar API Reference — unified docs for all services
@@ -145,6 +170,8 @@ scalar
     .WithApiReference(cartApi)
     .WithApiReference(orderingApi)
     .WithApiReference(paymentApi)
+    .WithApiReference(storeApi)
+    .WithApiReference(mediaApi)
     .WaitFor(identityApi)
     .WaitFor(gateway)
     .WaitFor(catalogApi)
@@ -152,9 +179,9 @@ scalar
     .WaitFor(inventoryApi)
     .WaitFor(cartApi)
     .WaitFor(orderingApi)
-    .WaitFor(paymentApi);
-// Phase 6: .WithApiReference(storeApi)
-// Phase 6: .WithApiReference(mediaApi)
+    .WaitFor(paymentApi)
+    .WaitFor(storeApi)
+    .WaitFor(mediaApi);
 
 // Phase 7: Angular       → builder.AddNpmApp(...)
 var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")

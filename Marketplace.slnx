@@ -39,6 +39,9 @@
     <Project Path="src/Microservices/Inventory/Inventory.Domain/Inventory.Domain.csproj" />
     <Project Path="src/Microservices/Inventory/Inventory.Infrastructure/Inventory.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Microservices/Media/">
+    <Project Path="src/Microservices/Media/Media.API/Media.API.csproj" />
+  </Folder>
   <Folder Name="/src/Microservices/Notification/">
     <Project Path="src/Microservices/Notification/Notification.Worker/Notification.Worker.csproj" />
   </Folder>
@@ -56,6 +59,12 @@
   </Folder>
   <Folder Name="/src/Microservices/Search/">
     <Project Path="src/Microservices/Search/Search.API/Search.API.csproj" />
+  </Folder>
+  <Folder Name="/src/Microservices/StoreManagement/">
+    <Project Path="src/Microservices/StoreManagement/StoreManagement.API/StoreManagement.API.csproj" />
+    <Project Path="src/Microservices/StoreManagement/StoreManagement.Application/StoreManagement.Application.csproj" />
+    <Project Path="src/Microservices/StoreManagement/StoreManagement.Domain/StoreManagement.Domain.csproj" />
+    <Project Path="src/Microservices/StoreManagement/StoreManagement.Infrastructure/StoreManagement.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/BuildingBlocks/">
@@ -81,5 +90,6 @@
     <Project Path="tests/UnitTests/Ordering.UnitTests/Ordering.UnitTests.csproj" />
     <Project Path="tests/UnitTests/Payment.UnitTests/Payment.UnitTests.csproj" />
     <Project Path="tests/UnitTests/Search.UnitTests/Search.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/StoreManagement.UnitTests/StoreManagement.UnitTests.csproj" />
   </Folder>
 </Solution>

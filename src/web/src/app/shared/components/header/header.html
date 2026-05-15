@@ -37,6 +37,18 @@
           class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"
         ></span>
       </a>
+      @if (user()?.role === 'Admin') {
+        <a
+          routerLink="/admin"
+          class="text-sm font-medium text-muted hover:text-primary transition-colors relative group"
+          data-testid="nav-admin"
+        >
+          Admin
+          <span
+            class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"
+          ></span>
+        </a>
+      }
     </nav>
 
     <div class="flex items-center gap-4">
@@ -106,6 +118,16 @@
                 <lucide-icon [name]="SettingsIcon" class="w-4 h-4"></lucide-icon>
                 Dashboard
               </a>
+              @if (user()?.role === 'Admin') {
+                <a
+                  routerLink="/admin"
+                  class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"
+                  data-testid="nav-admin"
+                >
+                  <lucide-icon name="Shield" class="w-4 h-4"></lucide-icon>
+                  Admin Panel
+                </a>
+              }
             </div>
 
             <div class="p-2 border-t border-border/50">
