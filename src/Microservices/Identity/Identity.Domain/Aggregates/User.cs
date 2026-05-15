@@ -120,6 +120,22 @@ public sealed class User : AggregateRoot
     public void Activate() => IsActive = true;
 
     /// <summary>
+    /// Updates the user's profile.
+    /// Rationale: Domain method to safely encapsulate modifications to user identity elements.
+    /// </summary>
+    /// <param name="firstName">The new first name.</param>
+    /// <param name="lastName">The new last name.</param>
+    /// <exception cref="ArgumentException">Thrown when firstName or lastName are null/whitespace.</exception>
+    public void UpdateProfile(string firstName, string lastName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(firstName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(lastName);
+
+        FirstName = firstName.Trim();
+        LastName = lastName.Trim();
+    }
+
+    /// <summary>
     /// Gets the full name of the user.
     /// </summary>
     public string FullName => $"{FirstName} {LastName}";

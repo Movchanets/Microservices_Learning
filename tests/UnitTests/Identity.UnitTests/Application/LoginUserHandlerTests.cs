@@ -7,8 +7,15 @@ using Moq;
 
 namespace Identity.UnitTests.Application;
 
+/// <summary>
+/// Unit tests for <see cref="LoginUserHandler"/>.
+/// </summary>
 public sealed class LoginUserHandlerTests
 {
+    /// <summary>
+    /// Tests that the handler returns a failure result when the user is not found.
+    /// Rationale: Validates that non-existent users receive a generic failure message to prevent enumeration.
+    /// </summary>
     [Fact]
     public async Task Handle_WhenUserDoesNotExist_ShouldReturnInvalidCredentialsFailure()
     {
@@ -35,6 +42,10 @@ public sealed class LoginUserHandlerTests
         unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// Tests that the handler returns a failure result when the provided password does not match the hash.
+    /// Rationale: Validates the core authentication check.
+    /// </summary>
     [Fact]
     public async Task Handle_WhenPasswordIsInvalid_ShouldReturnInvalidCredentialsFailure()
     {
@@ -64,6 +75,10 @@ public sealed class LoginUserHandlerTests
         unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// Tests the happy path where valid credentials result in new auth tokens.
+    /// Rationale: Ensures that tokens are generated and the new refresh token is persisted via UnitOfWork.
+    /// </summary>
     [Fact]
     public async Task Handle_WhenCredentialsAreValid_ShouldReturnAuthResponseAndPersistRefreshToken()
     {
