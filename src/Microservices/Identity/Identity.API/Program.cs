@@ -3,7 +3,9 @@ using BuildingBlocks.Infrastructure.Middleware;
 using FluentValidation;
 using Identity.API.Endpoints;
 using Identity.Infrastructure;
+using Identity.Infrastructure.Messaging.Consumers;
 using Identity.Infrastructure.Persistence;
+using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +35,26 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavi
 // ── FluentValidation ────────────────────────────────────
 builder.Services.AddValidatorsFromAssembly(
     typeof(Identity.Application.Commands.Register.RegisterUserValidator).Assembly);
+
+// ── MassTransit v8 + Outbox ─────────────────────────────
+builder.Services.AddMassTransit(x =>
+{
+    x.SetKebabCaseEndpointNameFormatter();
+
+    x.AddConsumer<StoreVerifiedConsumer>();
+
+    x.AddEntityFrameworkOutbox<IdentityDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration.GetConnectionString("messaging"));
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 // ── Authentication (JWT Bearer) ─────────────────────────
 builder.Services.AddAuthentication("Bearer")

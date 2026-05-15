@@ -1,5 +1,6 @@
 using BuildingBlocks.SharedContracts.Abstractions;
 using Identity.Domain.Aggregates;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Identity.Infrastructure.Persistence;
@@ -24,6 +25,12 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdentityDbContext).Assembly);
+
+        // MassTransit Outbox tables
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
+
         base.OnModelCreating(modelBuilder);
     }
 }

@@ -76,6 +76,8 @@ public sealed class User : AggregateRoot
         user.AddDomainEvent(new UserRegisteredEvent(
             user.Id,
             user.Email.Value,
+            user.FirstName,
+            user.LastName,
             user.Role.ToString()));
 
         return user;

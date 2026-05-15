@@ -68,10 +68,10 @@ export const appConfig: ApplicationConfig = {
     ),
     provideAppInitializer(() => {
       if (isPlatformBrowser(inject(PLATFORM_ID))) {
-        // Run auth bootstrap in the background so UI hydration/form bindings are not blocked.
-        void inject(AuthStore).checkAuth();
-        // Connect to SignalR notification hub
-        void inject(NotificationService).start();
+        // Auth must complete before SignalR connects (needs buyerId)
+        void inject(AuthStore).checkAuth().then(() => {
+          void inject(NotificationService).start();
+        });
       }
     }),
     importProvidersFrom(

@@ -3,6 +3,7 @@ import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { AuthService } from './auth.service';
 import { User, LoginCredentials, RegisterCredentials } from './auth.models';
 import { Router } from '@angular/router';
+import { NotificationService } from '../signalr/notification.service';
 
 type AuthState = {
   user: User | null;
@@ -26,6 +27,7 @@ export const AuthStore = signalStore(
         await authService.login(credentials);
         await authService.ensureCsrf();
         const user = await authService.getUser();
+        if (user) localStorage.setItem('buyerId', user.id);
         patchState(store, { user, loading: false });
         router.navigate(['/catalog']);
       } catch (err: any) {
@@ -38,6 +40,7 @@ export const AuthStore = signalStore(
         await authService.register(credentials);
         await authService.ensureCsrf();
         const user = await authService.getUser();
+        if (user) localStorage.setItem('buyerId', user.id);
         patchState(store, { user, loading: false });
         router.navigate(['/catalog']);
       } catch (err: any) {
@@ -47,11 +50,14 @@ export const AuthStore = signalStore(
     async logout() {
       patchState(store, { loading: true });
       try {
+        inject(NotificationService).stop();
+        localStorage.removeItem('buyerId');
         await authService.ensureCsrf();
         await authService.logout();
         patchState(store, { user: null, loading: false });
         router.navigate(['/auth/login']);
       } catch {
+        localStorage.removeItem('buyerId');
         patchState(store, { user: null, loading: false });
         router.navigate(['/auth/login']);
       }
@@ -61,8 +67,10 @@ export const AuthStore = signalStore(
       try {
         await authService.ensureCsrf();
         const user = await authService.getUser();
+        if (user) localStorage.setItem('buyerId', user.id);
         patchState(store, { user, loading: false });
       } catch {
+        localStorage.removeItem('buyerId');
         patchState(store, { user: null, loading: false });
       }
     },
