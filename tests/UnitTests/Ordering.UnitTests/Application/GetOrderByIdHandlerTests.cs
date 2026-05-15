@@ -1,3 +1,7 @@
+// GetOrderByIdHandler unit tests.
+// Verifies the query handler returns an OrderDto when the order exists,
+// and returns failure when the order is not found.
+
 using FluentAssertions;
 using Moq;
 using Ordering.Application.Queries.GetOrderById;

@@ -1,3 +1,7 @@
+// CreateOrderHandler unit tests.
+// Verifies the CQRS handler creates an Order aggregate, adds items from the command,
+// persists via repository and UnitOfWork, and returns the new order ID.
+
 using FluentAssertions;
 using Moq;
 using BuildingBlocks.SharedContracts.Abstractions;

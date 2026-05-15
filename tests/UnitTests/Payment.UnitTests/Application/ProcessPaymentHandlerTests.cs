@@ -1,3 +1,7 @@
+// ProcessPaymentHandler unit tests.
+// Verifies the handler creates a PaymentTransaction, persists it, and marks it as Completed
+// with a mock gateway transaction ID. Tests correct field mapping from command to aggregate.
+
 using FluentAssertions;
 using Moq;
 using BuildingBlocks.SharedContracts.Abstractions;

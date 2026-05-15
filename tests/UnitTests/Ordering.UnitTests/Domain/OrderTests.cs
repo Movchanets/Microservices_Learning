@@ -1,3 +1,9 @@
+// Order aggregate unit tests.
+// Tests the core domain logic of the Order entity: creation, item management,
+// state machine transitions (Submitted -> InventoryReserved -> PaymentProcessing -> Completed/Cancelled/Faulted),
+// domain event raising, and invariant enforcement. These tests ensure the Order aggregate
+// correctly enforces business rules without any infrastructure dependencies.
+
 using FluentAssertions;
 using Ordering.Domain.Aggregates;
 using Ordering.Domain.Enumerations;

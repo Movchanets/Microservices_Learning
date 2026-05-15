@@ -1,3 +1,7 @@
+// Login component unit tests.
+// Verifies the login form renders correctly, handles user input,
+// submits credentials to AuthStore, and displays validation errors.
+
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Login } from './login';

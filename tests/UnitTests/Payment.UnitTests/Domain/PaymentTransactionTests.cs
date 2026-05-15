@@ -1,3 +1,7 @@
+// PaymentTransaction aggregate unit tests.
+// Tests creation with valid/invalid data, MarkCompleted and MarkFailed state transitions,
+// and guard clauses for Amount > 0 and non-empty BuyerId.
+
 using FluentAssertions;
 using Payment.Domain.Aggregates;
 using Payment.Domain.Enumerations;

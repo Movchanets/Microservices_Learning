@@ -1,3 +1,7 @@
+// CancelOrderHandler unit tests.
+// Tests order cancellation via MediatR handler: successful cancellation marks the order
+// as Cancelled and persists, while cancelling a non-existent order returns failure.
+
 using FluentAssertions;
 using Moq;
 using BuildingBlocks.SharedContracts.Abstractions;

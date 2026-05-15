@@ -1,3 +1,8 @@
+// OrderItem entity unit tests.
+// Validates constructor guard clauses (SKU, ProductName, UnitPrice, Quantity),
+// the computed TotalPrice property, and edge cases like zero-priced items
+// (allowed for saga-created orders where price is enriched later).
+
 using FluentAssertions;
 using Ordering.Domain.Aggregates.Entities;
 

@@ -1,3 +1,7 @@
+// BuyerIdUserIdProvider unit tests.
+// Validates the SignalR IUserIdProvider implementation that maps the x-buyer-id
+// HTTP header to SignalR's user concept for targeted message delivery.
+
 using FluentAssertions;
 using Notification.Worker.Hubs;
 

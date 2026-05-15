@@ -1,3 +1,8 @@
+// MockPaymentGateway unit tests.
+// Validates the mock gateway always returns success with a txn_ prefixed transaction ID.
+// This gateway is used for local development — real gateway tests will replace these
+// when Stripe/PayPal integration is added.
+
 using FluentAssertions;
 using Payment.Infrastructure.External;
 

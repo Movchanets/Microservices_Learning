@@ -1,3 +1,7 @@
+// OrderCancelledConsumer unit tests.
+// Verifies the consumer sends a "Cancelled" OrderUpdate with the cancellation reason
+// to the specific buyer via SignalR user targeting.
+
 using BuildingBlocks.SharedContracts.Events.Ordering;
 using FluentAssertions;
 using MassTransit;

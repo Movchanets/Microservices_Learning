@@ -1,3 +1,7 @@
+// MiniCartComponent unit tests.
+// Verifies the mini-cart dropdown renders cart items, shows total count,
+// handles empty state, and navigates to cart page.
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { RouterTestingModule } from '@angular/router/testing';

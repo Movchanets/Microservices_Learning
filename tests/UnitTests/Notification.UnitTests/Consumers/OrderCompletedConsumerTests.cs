@@ -1,3 +1,7 @@
+// OrderCompletedConsumer unit tests.
+// Verifies the MassTransit consumer sends an OrderUpdate message to the specific buyer
+// via SignalR IHubContext.Clients.User(buyerId) when an OrderCompletedEvent is consumed.
+
 using BuildingBlocks.SharedContracts.Events.Ordering;
 using FluentAssertions;
 using MassTransit;

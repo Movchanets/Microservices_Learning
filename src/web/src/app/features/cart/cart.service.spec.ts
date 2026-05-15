@@ -1,3 +1,8 @@
+// CartService unit tests.
+// Verifies HTTP calls to the BFF gateway: GET /api/cart, POST /api/cart,
+// DELETE /api/cart, and POST /api/cart/checkout.
+// Uses HttpClientTestingModule to assert correct URLs, methods, and headers.
+
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { CartService } from './cart.service';

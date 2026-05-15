@@ -1,3 +1,7 @@
+// Register component unit tests.
+// Verifies the registration form renders correctly, handles user input,
+// submits registration data to AuthStore, and displays validation errors.
+
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Register } from './register';

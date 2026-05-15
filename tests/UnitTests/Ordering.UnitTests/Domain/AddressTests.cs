@@ -1,3 +1,7 @@
+// Address value object unit tests.
+// Verifies constructor validation for required fields (Street, City, Country, ZipCode),
+// and structural equality semantics inherited from ValueObject base class.
+
 using FluentAssertions;
 using Ordering.Domain.ValueObjects;
 

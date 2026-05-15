@@ -1,3 +1,8 @@
+// CartStore unit tests.
+// Verifies the NgRx SignalStore for cart functionality: loadCart, addToCart,
+// updateQuantity, removeFromCart, checkout, and computed signals (totalItems,
+// isEmpty, totalPrice). Uses mocked CartService.
+
 import { TestBed } from '@angular/core/testing';
 import { CartStore } from './cart.store';
 import { CartService } from './cart.service';
