@@ -37,7 +37,7 @@
       "!{projectRoot}/tsconfig.spec.json",
       "!{projectRoot}/.eslintrc.json"
     ],
-    "sharedGlobals": ["{workspaceRoot}/.github/workflows/ci.yml"]
+    "sharedGlobals": []
   },
   "plugins": [
     {
