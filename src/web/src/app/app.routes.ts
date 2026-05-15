@@ -44,4 +44,8 @@ export const routes: Routes = [
     path: 'orders',
     loadChildren: () => import('./features/orders/orders.routes'),
   },
+  {
+    path: 'seller',
+    loadChildren: () => import('./features/seller-dashboard/seller.routes'),
+  },
 ];

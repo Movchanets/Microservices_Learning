@@ -1,7 +1,8 @@
-import { computed, inject } from '@angular/core';
+import { computed, effect, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { OrderService } from './order.service';
 import { Order, OrderStatus } from '../checkout/checkout.models';
+import { NotificationService } from '../../core/signalr/notification.service';
 
 interface OrderState {
   orders: Order[];

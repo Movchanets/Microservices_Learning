@@ -45,11 +45,15 @@ import {
   AlertTriangle,
   PackageCheck,
   CreditCard,
+  ShoppingBag,
+  Pencil,
+  Settings,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { AuthStore } from './core/auth/auth.store';
+import { NotificationService } from './core/signalr/notification.service';
 import { apiInterceptor } from './core/http/api.interceptor';
 
 export const appConfig: ApplicationConfig = {
@@ -66,6 +70,8 @@ export const appConfig: ApplicationConfig = {
       if (isPlatformBrowser(inject(PLATFORM_ID))) {
         // Run auth bootstrap in the background so UI hydration/form bindings are not blocked.
         void inject(AuthStore).checkAuth();
+        // Connect to SignalR notification hub
+        void inject(NotificationService).start();
       }
     }),
     importProvidersFrom(
@@ -99,6 +105,9 @@ export const appConfig: ApplicationConfig = {
         AlertTriangle,
         PackageCheck,
         CreditCard,
+        ShoppingBag,
+        Pencil,
+        Settings,
       }),
     ),
   ],
