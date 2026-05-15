@@ -69,9 +69,11 @@ export const appConfig: ApplicationConfig = {
     ),
     provideAppInitializer(() => {
       if (isPlatformBrowser(inject(PLATFORM_ID))) {
+        const authStore = inject(AuthStore);
+        const notificationService = inject(NotificationService);
         // Auth must complete before SignalR connects (needs buyerId)
-        void inject(AuthStore).checkAuth().then(() => {
-          void inject(NotificationService).start();
+        void authStore.checkAuth().then(() => {
+          void notificationService.start();
         });
       }
     }),
