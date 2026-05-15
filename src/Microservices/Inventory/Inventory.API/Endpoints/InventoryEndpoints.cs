@@ -51,6 +51,15 @@ public static class InventoryEndpoints
             var item = await repository.GetBySkuAsync(sku, ct);
             return item == null ? Results.NotFound() : Results.Ok(new { item.Sku, item.AvailableQuantity });
         });
+
+        group.MapGet("/items", async (
+            [FromServices] IInventoryItemRepository repository,
+            CancellationToken ct) =>
+        {
+            var items = await repository.GetAllAsync(ct);
+            return Results.Ok(items.Select(i => new { i.Id, i.Sku, i.AvailableQuantity }));
+        })
+        .RequireAuthorization();
     }
 }
 

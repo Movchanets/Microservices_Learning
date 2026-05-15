@@ -1,9 +1,12 @@
+using System.Text;
 using BuildingBlocks.Infrastructure.Behaviors;
 using BuildingBlocks.Infrastructure.Middleware;
 using FluentValidation;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Ordering.API.Endpoints;
 using Ordering.API.Saga;
 using Ordering.Application.Commands.CreateOrder;
@@ -66,6 +69,28 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
+// ── Authentication (JWT Bearer) ─────────────────────────
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Seller", policy => policy.RequireRole("Seller", "Admin"));
+});
+
 // ── OpenAPI ─────────────────────────────────────────────
 builder.Services.AddOpenApi();
 
@@ -74,6 +99,8 @@ var app = builder.Build();
 // ── Middleware pipeline ─────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.MapDefaultEndpoints(); // health checks
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapOpenApi();
 
 // ── Endpoints ───────────────────────────────────────────

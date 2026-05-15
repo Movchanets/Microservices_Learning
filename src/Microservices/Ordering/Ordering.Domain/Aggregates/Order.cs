@@ -39,7 +39,7 @@ public sealed class Order : AggregateRoot
         };
     }
 
-    public void AddItem(string sku, string productName, decimal unitPrice, int quantity)
+    public void AddItem(string sku, string productName, decimal unitPrice, int quantity, string? sellerId = null)
     {
         if (Status != OrderStatus.Submitted)
             throw new DomainException("Cannot add items to an order that is not in Submitted status");
@@ -50,7 +50,7 @@ public sealed class Order : AggregateRoot
             _items.Remove(existingItem);
         }
 
-        _items.Add(new OrderItem(sku, productName, unitPrice, quantity));
+        _items.Add(new OrderItem(sku, productName, unitPrice, quantity, sellerId));
     }
 
     public void MarkInventoryReserved()

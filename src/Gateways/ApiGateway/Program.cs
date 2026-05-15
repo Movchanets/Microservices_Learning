@@ -29,7 +29,12 @@ builder.Services.AddAuthentication(options =>
     options.SlidingExpiration = true;
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Authenticated", policy => policy.RequireAuthenticatedUser());
+    options.AddPolicy("Seller", policy => policy.RequireRole("Seller", "Admin"));
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+});
 // ── Named HTTP clients for BFF + health probing ─────────
 builder.Services.AddHttpClient("identity-api", client =>
 {

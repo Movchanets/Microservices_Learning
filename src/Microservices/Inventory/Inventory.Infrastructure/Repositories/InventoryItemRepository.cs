@@ -24,6 +24,11 @@ public sealed class InventoryItemRepository(InventoryDbContext dbContext) : IInv
             .ToListAsync(ct);
     }
 
+    public async Task<List<InventoryItem>> GetAllAsync(CancellationToken ct = default)
+    {
+        return await dbContext.InventoryItems.ToListAsync(ct);
+    }
+
     public void Add(InventoryItem item)
     {
         dbContext.InventoryItems.Add(item);

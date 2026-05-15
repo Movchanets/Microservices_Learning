@@ -8,10 +8,11 @@ public sealed class OrderItem : Entity
     public string ProductName { get; private set; } = string.Empty;
     public decimal UnitPrice { get; private set; }
     public int Quantity { get; private set; }
+    public string? SellerId { get; private set; }
 
     private OrderItem() { }
 
-    internal OrderItem(string sku, string productName, decimal unitPrice, int quantity)
+    internal OrderItem(string sku, string productName, decimal unitPrice, int quantity, string? sellerId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sku);
         ArgumentException.ThrowIfNullOrWhiteSpace(productName);
@@ -22,6 +23,7 @@ public sealed class OrderItem : Entity
         ProductName = productName;
         UnitPrice = unitPrice;
         Quantity = quantity;
+        SellerId = sellerId;
     }
 
     public decimal TotalPrice => UnitPrice * Quantity;

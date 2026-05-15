@@ -105,6 +105,32 @@ public static class MediaEndpoints
         .Produces(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status404NotFound);
 
+        // List files
+        group.MapGet("/", async (
+            [FromServices] BlobServiceClient blobClient,
+            CancellationToken ct) =>
+        {
+            var containerClient = blobClient.GetBlobContainerClient("media");
+            var items = new List<object>();
+            await foreach (var blobItem in containerClient.GetBlobsAsync(cancellationToken: ct))
+            {
+                if (!blobItem.Name.StartsWith("thumb_"))
+                {
+                    items.Add(new
+                    {
+                        blobItem.Name,
+                        Size = blobItem.Properties.ContentLength ?? 0,
+                        ContentType = blobItem.Properties.ContentType,
+                        LastModified = blobItem.Properties.LastModified
+                    });
+                }
+            }
+            return Results.Ok(items);
+        })
+        .WithName("ListMedia")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status200OK);
+
         // Delete file
         group.MapDelete("/{blobName}", async (
             string blobName,

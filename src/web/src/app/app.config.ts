@@ -55,6 +55,7 @@ import { provideClientHydration, withEventReplay } from '@angular/platform-brows
 import { AuthStore } from './core/auth/auth.store';
 import { NotificationService } from './core/signalr/notification.service';
 import { apiInterceptor } from './core/http/api.interceptor';
+import { errorInterceptor } from './core/http/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -63,7 +64,7 @@ export const appConfig: ApplicationConfig = {
     provideClientHydration(withEventReplay()),
     provideHttpClient(
       withFetch(),
-      withInterceptors([apiInterceptor]),
+      withInterceptors([apiInterceptor, errorInterceptor]),
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
     ),
     provideAppInitializer(() => {

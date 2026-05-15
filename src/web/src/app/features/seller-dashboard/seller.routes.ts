@@ -26,6 +26,10 @@ export default [
         loadComponent: () => import('./product-form/product-form').then(c => c.ProductFormComponent),
       },
       {
+        path: 'orders',
+        loadComponent: () => import('./seller-orders/seller-orders').then(c => c.SellerOrdersComponent),
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./store-settings/store-settings').then(c => c.StoreSettingsComponent),
       },

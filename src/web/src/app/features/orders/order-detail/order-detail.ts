@@ -4,12 +4,13 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { OrderStore } from '../order.store';
 import { StatusBadgeComponent } from '../components/status-badge/status-badge';
+import { OrderTimelineComponent } from '../order-timeline/order-timeline';
 
 @Component({
   selector: 'app-order-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, CurrencyPipe, DatePipe, LucideAngularModule, StatusBadgeComponent],
+  imports: [RouterLink, CurrencyPipe, DatePipe, LucideAngularModule, StatusBadgeComponent, OrderTimelineComponent],
   template: `
     <div class="min-h-screen bg-background p-6 pt-10">
       <div class="container mx-auto max-w-3xl">
@@ -31,6 +32,8 @@ import { StatusBadgeComponent } from '../components/status-badge/status-badge';
               </div>
               <app-status-badge [status]="order.status" />
             </div>
+
+            <app-order-timeline [order]="order" class="mb-4" />
 
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>

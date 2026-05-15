@@ -5,6 +5,7 @@ using Ordering.Application.Commands.CreateOrder;
 using Ordering.Application.DTOs;
 using Ordering.Application.Queries.GetOrderById;
 using Ordering.Application.Queries.ListOrdersByBuyer;
+using Ordering.Application.Queries.ListOrdersBySeller;
 
 namespace Ordering.API.Endpoints;
 
@@ -51,6 +52,16 @@ public static class OrderEndpoints
             var result = await sender.Send(new ListOrdersByBuyerQuery(buyerId), ct);
             return Results.Ok(result.Value);
         });
+
+        group.MapGet("/seller/{sellerId}", async (
+            string sellerId,
+            [FromServices] ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new ListOrdersBySellerQuery(sellerId), ct);
+            return Results.Ok(result.Value);
+        })
+        .RequireAuthorization("Seller");
     }
 }
 

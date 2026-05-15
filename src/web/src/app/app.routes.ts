@@ -60,4 +60,8 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard('Admin')],
     loadChildren: () => import('./features/admin/admin.routes'),
   },
+  {
+    path: '**',
+    loadComponent: () => import('./shared/pages/not-found/not-found').then(m => m.NotFoundComponent),
+  },
 ];
