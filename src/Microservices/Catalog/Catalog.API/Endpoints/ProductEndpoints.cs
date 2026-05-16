@@ -106,6 +106,18 @@ public static class ProductEndpoints
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
+        // Public: get product recommendations (same category)
+        group.MapGet("/{id:guid}/recommendations", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetProductRecommendationsQuery(id), ct);
+            return Results.Ok(result);
+        })
+        .WithName("GetProductRecommendations")
+        .Produces<List<ProductListDto>>();
+
         // Authorized: soft-delete product
         group.MapDelete("/{id:guid}", async (
             Guid id,

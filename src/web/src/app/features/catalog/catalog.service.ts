@@ -41,6 +41,12 @@ export class CatalogService {
     return firstValueFrom(this.http.get<Product>(`/api/catalog/products/${id}`));
   }
 
+  getRecommendations(productId: string): Promise<ProductListItem[]> {
+    return firstValueFrom(
+      this.http.get<ProductListItem[]>(`/api/catalog/products/${productId}/recommendations`),
+    );
+  }
+
   // ── Categories (via /api/catalog) ───────────────
 
   getCategories(): Promise<Category[]> {

@@ -1,24 +1,12 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { CurrencyPipe } from '@angular/common';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { CatalogService } from '../catalog.service';
-import { Product } from '../catalog.models';
-import { CartStore } from '../../cart/cart.store';
-// TODO: Create InventoryService to check stock availability before adding to cart.
-//       Ref: src/Microservices/Inventory/Inventory.API/Endpoints/InventoryEndpoints.cs
-
-// TODO: Add "Sticky Buy Box" — keep Add to Cart button pinned when scrolling.
-//       Ref: plans/future_design/product_details.md — "Sticky Buy Box" section
-
-// TODO: Add "Frequently Bought Together" section below product details.
-//       Shows 2-3 complementary items with "Add all to Cart" button.
-//       Ref: plans/future_design/product_details.md — "Frequently Bought Together" section
-
-// TODO: Add stock availability check before adding to cart.
-//       Call Inventory.API to check available quantity.
-//       Show "Only X left in stock" warning when low.
-//       Ref: src/Microservices/Inventory/Inventory.API/Endpoints/InventoryEndpoints.cs
+import { Product, ProductListItem } from '../catalog.models';
+import { InventoryService } from '../../../core/services/inventory.service';
+import { BuyBoxComponent } from '../components/buy-box/buy-box';
+import { FrequentlyBoughtTogetherComponent } from '../components/frequently-bought-together/frequently-bought-together';
+import { StockIndicatorComponent } from '../../../shared/components/stock-indicator/stock-indicator';
 
 // TODO: Add product variant selector (color, size) when Catalog supports variants.
 //       Ref: plans/future_design/product_details.md — "Advanced Product Variations Selector"
@@ -28,9 +16,14 @@ import { CartStore } from '../../cart/cart.store';
 
 @Component({
   selector: 'app-product-detail',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyPipe, RouterLink, LucideAngularModule],
+  imports: [
+    RouterLink,
+    LucideAngularModule,
+    BuyBoxComponent,
+    FrequentlyBoughtTogetherComponent,
+    StockIndicatorComponent,
+  ],
   template: `
     <div class="min-h-screen bg-background p-6 pt-10">
       <div class="container mx-auto max-w-6xl">
@@ -64,74 +57,89 @@ import { CartStore } from '../../cart/cart.store';
             <a routerLink="/catalog" class="text-primary hover:underline">Return to Catalog</a>
           </div>
         } @else if (product(); as p) {
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-            <!-- Left: Image Gallery -->
-            <div
-              class="bg-card/40 backdrop-blur-sm border border-border rounded-3xl p-4 md:p-8 flex items-center justify-center min-h-[400px]"
-            >
-              @if (p.imageUrl) {
-                <img
-                  [src]="p.imageUrl"
-                  [alt]="p.name"
-                  class="w-full max-w-md rounded-2xl object-cover shadow-lg"
-                />
-              } @else {
-                <lucide-icon name="Package" class="w-32 h-32 text-muted opacity-30"></lucide-icon>
-              }
-            </div>
-
-            <!-- Right: Details -->
-            <div class="flex flex-col pt-2 md:pt-8">
-              <!-- Breadcrumb / Category -->
-              <div class="flex items-center gap-2 mb-4">
-                <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                  {{ p.categoryName }}
-                </span>
-                <span class="text-muted text-sm font-mono flex items-center">
-                  <lucide-icon name="Tag" class="w-3 h-3 mr-1"></lucide-icon>
-                  {{ p.sku }}
-                </span>
-              </div>
-
-              <h1
-                class="text-4xl md:text-5xl font-bold text-foreground font-lexend mb-4 leading-tight"
+          <div class="grid grid-cols-1 lg:grid-cols-[1fr,400px] gap-8 lg:gap-12">
+            <!-- Left: Image + Description -->
+            <div>
+              <!-- Image Gallery -->
+              <div
+                class="bg-card/40 backdrop-blur-sm border border-border rounded-3xl p-4 md:p-8 flex items-center justify-center min-h-[400px]"
               >
-                {{ p.name }}
-              </h1>
-
-              <div class="text-4xl font-bold text-foreground font-lexend mb-8">
-                {{ p.price | currency: p.currency : 'symbol' : '1.2-2' }}
+                @if (p.imageUrl) {
+                  <img
+                    [src]="p.imageUrl"
+                    [alt]="p.name"
+                    class="w-full max-w-md rounded-2xl object-cover shadow-lg"
+                  />
+                } @else {
+                  <lucide-icon name="Package" class="w-32 h-32 text-muted opacity-30"></lucide-icon>
+                }
               </div>
 
-              <div class="prose prose-invert max-w-none text-muted-foreground mb-8">
-                <p class="text-lg leading-relaxed">{{ p.description }}</p>
-              </div>
-
-              <!-- Tags -->
-              @if (p.tags && p.tags.length > 0) {
-                <div class="flex flex-wrap gap-2 mb-8">
-                  @for (tag of p.tags; track tag) {
-                    <span
-                      class="px-3 py-1.5 bg-muted/20 border border-border/50 rounded-lg text-sm text-muted-foreground"
-                    >
-                      {{ tag }}
-                    </span>
-                  }
+              <!-- Product Info -->
+              <div class="mt-8">
+                <!-- Breadcrumb / Category -->
+                <div class="flex items-center gap-2 mb-4">
+                  <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                    {{ p.categoryName }}
+                  </span>
+                  <span class="text-muted text-sm font-mono flex items-center">
+                    <lucide-icon name="Tag" class="w-3 h-3 mr-1"></lucide-icon>
+                    {{ p.sku }}
+                  </span>
                 </div>
-              }
 
-              <div class="mt-auto">
-                <button
-                  (click)="onAddToCart(p.id)"
-                  class="w-full md:w-auto px-10 py-4 bg-primary text-white text-lg font-bold rounded-xl
-                               hover:bg-secondary active:scale-[0.98] transition-all
-                               flex items-center justify-center gap-3 shadow-xl shadow-primary/20"
+                <h1
+                  class="text-3xl md:text-4xl font-bold text-foreground font-lexend mb-4 leading-tight"
                 >
-                  <lucide-icon name="ShoppingCart" class="w-6 h-6"></lucide-icon>
-                  Add to Cart
-                </button>
+                  {{ p.name }}
+                </h1>
+
+                <!-- Stock Status (inline for mobile) -->
+                <div class="lg:hidden mb-4">
+                  <app-stock-indicator
+                    [quantity]="stockQuantity()"
+                    [loading]="stockLoading()"
+                  />
+                </div>
+
+                <div class="prose prose-invert max-w-none text-muted-foreground mb-8">
+                  <p class="text-lg leading-relaxed">{{ p.description }}</p>
+                </div>
+
+                <!-- Tags -->
+                @if (p.tags && p.tags.length > 0) {
+                  <div class="flex flex-wrap gap-2">
+                    @for (tag of p.tags; track tag) {
+                      <span
+                        class="px-3 py-1.5 bg-muted/20 border border-border/50 rounded-lg text-sm text-muted-foreground"
+                      >
+                        {{ tag }}
+                      </span>
+                    }
+                  </div>
+                }
               </div>
             </div>
+
+            <!-- Right: Sticky Buy Box -->
+            <div class="lg:sticky lg:top-6 lg:self-start">
+              <app-buy-box
+                [sku]="p.sku"
+                [price]="p.price"
+                [currency]="p.currency"
+                [stockQuantity]="stockQuantity()"
+                [stockLoading]="stockLoading()"
+                (buyNow)="onBuyNow()"
+              />
+            </div>
+          </div>
+
+          <!-- Frequently Bought Together -->
+          <div class="mt-12">
+            <app-frequently-bought-together
+              [products]="recommendations()"
+              [loading]="recommendationsLoading()"
+            />
           </div>
         }
       </div>
@@ -140,12 +148,19 @@ import { CartStore } from '../../cart/cart.store';
 })
 export class ProductDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private catalogService = inject(CatalogService);
-  private cartStore = inject(CartStore);
+  private inventoryService = inject(InventoryService);
 
   product = signal<Product | null>(null);
-  loading = signal<boolean>(true);
+  loading = signal(true);
   error = signal<string | null>(null);
+
+  stockQuantity = signal<number | null>(null);
+  stockLoading = signal(false);
+
+  recommendations = signal<ProductListItem[]>([]);
+  recommendationsLoading = signal(false);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -163,6 +178,10 @@ export class ProductDetailComponent implements OnInit {
     try {
       const p = await this.catalogService.getProduct(id);
       this.product.set(p);
+
+      // Load stock and recommendations in parallel
+      this.loadStock(p.sku);
+      this.loadRecommendations(p.id);
     } catch (err: any) {
       this.error.set(err?.error?.error ?? 'Failed to load product details');
     } finally {
@@ -170,10 +189,33 @@ export class ProductDetailComponent implements OnInit {
     }
   }
 
-  onAddToCart(productId: string): void {
-    const p = this.product();
-    if (p) {
-      this.cartStore.addToCart(p.sku, 1);
+  private async loadStock(sku: string): Promise<void> {
+    this.stockLoading.set(true);
+    try {
+      const item = await this.inventoryService.checkStock(sku);
+      this.stockQuantity.set(item.availableQuantity);
+    } catch {
+      // If inventory check fails, assume unknown (null) — don't block the user
+      this.stockQuantity.set(null);
+    } finally {
+      this.stockLoading.set(false);
     }
+  }
+
+  private async loadRecommendations(productId: string): Promise<void> {
+    this.recommendationsLoading.set(true);
+    try {
+      const items = await this.catalogService.getRecommendations(productId);
+      this.recommendations.set(items);
+    } catch {
+      // Recommendations are non-critical; silently fail
+      this.recommendations.set([]);
+    } finally {
+      this.recommendationsLoading.set(false);
+    }
+  }
+
+  onBuyNow(): void {
+    this.router.navigate(['/checkout']);
   }
 }

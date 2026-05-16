@@ -47,6 +47,16 @@ import { ProductListItem } from '../../catalog.models';
         >
           {{ product().categoryName }}
         </span>
+
+        <!-- In Stock Badge -->
+        @if (product().status === 'Active') {
+          <span
+            class="absolute top-3 right-3 px-2 py-0.5 bg-green-500/10 text-green-500
+                       rounded-full text-xs font-medium border border-green-500/20"
+          >
+            In Stock
+          </span>
+        }
       </a>
 
       <!-- Content -->

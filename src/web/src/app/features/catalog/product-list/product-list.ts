@@ -180,7 +180,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
   onAddToCart(productId: string): void {
     const product = this.store.products().find((p) => p.id === productId);
     if (product) {
-      this.cartStore.addToCart(product.sku, 1, product.price);
+      this.cartStore.addToCart(product.sku, 1);
     }
   }
 
