@@ -127,14 +127,27 @@ public sealed class User : AggregateRoot
     /// </summary>
     /// <param name="firstName">The new first name.</param>
     /// <param name="lastName">The new last name.</param>
-    /// <exception cref="ArgumentException">Thrown when firstName or lastName are null/whitespace.</exception>
-    public void UpdateProfile(string firstName, string lastName)
+    /// <param name="email">The new email address.</param>
+    /// <exception cref="ArgumentException">Thrown when firstName, lastName, or email are null/whitespace.</exception>
+    public void UpdateProfile(string firstName, string lastName, string email)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(firstName);
         ArgumentException.ThrowIfNullOrWhiteSpace(lastName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
 
         FirstName = firstName.Trim();
         LastName = lastName.Trim();
+        Email = Email.Create(email.Trim());
+    }
+
+    /// <summary>
+    /// Changes the user's password.
+    /// </summary>
+    /// <param name="newPasswordHash">The new hashed password.</param>
+    public void ChangePassword(string newPasswordHash)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPasswordHash);
+        PasswordHash = PasswordHash.Create(newPasswordHash);
     }
 
     /// <summary>

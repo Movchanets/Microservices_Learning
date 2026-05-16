@@ -1,4 +1,4 @@
-# Plan 01: Global Header & Catalog Mega-Menu
+# Plan 01: Global Header & Catalog Mega-Menu — ✅ COMPLETE (2026-05-16)
 
 ## Goal
 Transform the current basic header into a Rozetka/Prom-style global header with a prominent Catalog button that opens a mega-menu overlay. Replace the persistent left sidebar category navigation.

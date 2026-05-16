@@ -10,8 +10,8 @@
 
 | # | Plan | Scope | Dependencies | Priority |
 |---|------|-------|--------------|----------|
-| 01 | [Global Header & Mega-Menu](01-global-header-mega-menu.md) | Frontend + Catalog.API tree endpoint | None | P1 |
-| 02 | [User Profile Hub](02-user-profile-hub.md) | Identity.API + Frontend profile | None | P1 |
+| 01 | [Global Header & Mega-Menu](01-global-header-mega-menu.md) | Frontend + Catalog.API tree endpoint | None | P1 ✅ |
+| 02 | [User Profile Hub](02-user-profile-hub.md) | Identity.API + Frontend profile | None | P1 ✅ verified |
 | 03 | [Cart & Checkout Optimization](03-cart-checkout-optimization.md) | Cart.API + Ordering.API + Frontend | None | P1 |
 | 04 | [Product Detail Enhancements](04-product-detail-enhancements.md) | Catalog.API + Inventory + Frontend | None | P1 |
 | 05 | [Reviews & Ratings](05-reviews-ratings.md) | Catalog.API + Media.API + Frontend | None | P2 |
@@ -36,7 +36,7 @@ These can all run simultaneously:
 - **Plan 09** — Order Cancellation & Status
 
 ### Parallel Group 2 (After Group 1)
-- **Plan 06** — Homepage Content Blocks (depends on Plan 01 for category tree)
+- **Plan 06** — Homepage Content Blocks (~~depends on Plan 01~~ Plan 01 done — can run now)
 
 ---
 

@@ -186,7 +186,7 @@ public sealed class UserTests
         var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
         var originalId = user.Id;
 
-        user.UpdateProfile("  John ", "Smith  ");
+        user.UpdateProfile("  John ", "Smith  ", "buyer@example.com");
 
         user.Id.Should().Be(originalId);
         user.FirstName.Should().Be("John");
@@ -204,7 +204,7 @@ public sealed class UserTests
     {
         var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
 
-        var action = () => user.UpdateProfile(invalidFirstName!, "Smith");
+        var action = () => user.UpdateProfile(invalidFirstName!, "Smith", "buyer@example.com");
 
         action.Should().Throw<ArgumentException>()
             .WithParameterName("firstName");
@@ -221,7 +221,7 @@ public sealed class UserTests
     {
         var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
 
-        var action = () => user.UpdateProfile("John", invalidLastName!);
+        var action = () => user.UpdateProfile("John", invalidLastName!, "buyer@example.com");
 
         action.Should().Throw<ArgumentException>()
             .WithParameterName("lastName");

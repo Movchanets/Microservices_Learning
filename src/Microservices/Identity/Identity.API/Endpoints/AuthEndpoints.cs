@@ -2,7 +2,9 @@ using Identity.Application.Commands.Login;
 using Identity.Application.Commands.Register;
 using Identity.Application.Commands.RefreshToken;
 using Identity.Application.Commands.ForgotPassword;
+using Identity.Application.Commands.ChangePassword;
 using MediatR;
+using System.Security.Claims;
 
 namespace Identity.API.Endpoints;
 
@@ -79,16 +81,21 @@ public static class AuthEndpoints
         .Produces(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // TODO: Add change-password endpoint (POST /api/identity/auth/change-password).
-        //       Needs: ChangePasswordCommand { UserId, OldPassword, NewPassword }
-        //       Handler: Verify old password hash, update to new hash.
-        //       Ref: src/Microservices/Identity/Identity.Domain/Aggregates/User.cs — PasswordHash property
-
-        // TODO: Add update-profile endpoint (PUT /api/identity/users/{id}).
-        //       Needs: UpdateProfileCommand { UserId, FirstName, LastName, Email, PhoneNumber }
-        //       Handler: Update user properties, publish UserUpdatedEvent.
-        //       Ref: src/Microservices/Identity/Identity.Domain/Aggregates/User.cs
-        //       Frontend: Edit form in profile page.
-        //       Ref: src/web/src/app/features/auth/profile/profile.ts
+        group.MapPost("/change-password", async (
+            ChangePasswordCommand command,
+            ClaimsPrincipal user,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await sender.Send(command with { UserId = Guid.Parse(userId!) }, ct);
+            return result.IsSuccess 
+                ? Results.Ok() 
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("ChangePassword")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
     }
 }

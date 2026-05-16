@@ -32,4 +32,12 @@ export class AuthService {
   forgotPassword(email: string): Promise<void> {
     return firstValueFrom(this.http.post<void>(`${this.authBaseUrl}/forgot-password`, { email }));
   }
+
+  updateProfile(id: string, request: Partial<import('./auth.models').UpdateProfileRequest>): Promise<void> {
+    return firstValueFrom(this.http.put<void>(`/api/identity/users/${id}/profile`, request));
+  }
+
+  changePassword(request: import('./auth.models').ChangePasswordRequest): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`/api/identity/auth/change-password`, request));
+  }
 }
