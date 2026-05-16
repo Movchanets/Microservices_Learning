@@ -23,6 +23,18 @@ public static class ProductEndpoints
             .WithTags("Products")
             .WithOpenApi();
 
+        // Public: featured products (for homepage)
+        group.MapGet("/featured", async (
+            [FromQuery] string? tag,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetFeaturedProductsQuery(tag), ct);
+            return Results.Ok(result);
+        })
+        .WithName("GetFeaturedProducts")
+        .Produces<List<ProductListDto>>();
+
         // Public: list products
         group.MapGet("/", async (
             [FromQuery] int page,

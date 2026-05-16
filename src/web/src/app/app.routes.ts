@@ -5,8 +5,12 @@ import { roleGuard } from './core/auth/role.guard';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'catalog',
+    redirectTo: 'home',
     pathMatch: 'full',
+  },
+  {
+    path: 'home',
+    loadChildren: () => import('./features/home/home.routes').then((m) => m.HOME_ROUTES),
   },
   {
     path: 'profile',

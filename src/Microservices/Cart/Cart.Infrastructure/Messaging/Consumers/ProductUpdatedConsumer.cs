@@ -4,7 +4,6 @@ using Cart.Infrastructure.Data;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Cart.Infrastructure.Messaging.Consumers;
 
@@ -30,20 +29,33 @@ public sealed class ProductUpdatedConsumer(
 
         logger.LogWarning("ProductPrice {ProductId} not found, creating from update event", evt.ProductId);
 
+        // Check by SKU before adding to avoid duplicate
+        var existingBySku = await dbContext.ProductPrices
+            .FirstOrDefaultAsync(p => p.Sku == evt.Sku, context.CancellationToken);
+
+        if (existingBySku is not null)
+        {
+            existingBySku.UpdateDetails(evt.Name, evt.Price, existingBySku.Currency);
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+            return;
+        }
+
+        dbContext.ProductPrices.Add(
+            ProductPrice.Create(evt.ProductId, evt.Sku, evt.Name, evt.Price, "USD"));
+
         try
         {
-            dbContext.ProductPrices.Add(
-                ProductPrice.Create(evt.ProductId, evt.Sku, evt.Name, evt.Price, "USD"));
             await dbContext.SaveChangesAsync(context.CancellationToken);
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "23505" })
+        catch (DbUpdateException)
         {
+            // Race condition: clear tracker and retry as update
             dbContext.ChangeTracker.Clear();
-            var existingAfterRace = await dbContext.ProductPrices
-                .FirstOrDefaultAsync(p => p.Id == evt.ProductId, context.CancellationToken);
-            if (existingAfterRace is not null)
+            var retry = await dbContext.ProductPrices
+                .FirstOrDefaultAsync(p => p.Id == evt.ProductId || p.Sku == evt.Sku, context.CancellationToken);
+            if (retry is not null)
             {
-                existingAfterRace.UpdateDetails(evt.Name, evt.Price, existingAfterRace.Currency);
+                retry.UpdateDetails(evt.Name, evt.Price, retry.Currency);
                 await dbContext.SaveChangesAsync(context.CancellationToken);
             }
         }

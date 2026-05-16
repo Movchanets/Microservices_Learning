@@ -4,7 +4,6 @@ using Cart.Infrastructure.Data;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Cart.Infrastructure.Messaging.Consumers;
 
@@ -24,25 +23,38 @@ public sealed class ProductCreatedConsumer(
         if (existing is not null)
         {
             existing.UpdateDetails(evt.Name, evt.Price, evt.Currency);
-            await dbContext.SaveChangesAsync(context.CancellationToken);
-            return;
+        }
+        else
+        {
+            // Check by SKU as well — handles the case where a different ProductId maps to the same SKU
+            var existingBySku = await dbContext.ProductPrices
+                .FirstOrDefaultAsync(p => p.Sku == evt.Sku, context.CancellationToken);
+
+            if (existingBySku is not null)
+            {
+                existingBySku.UpdateDetails(evt.Name, evt.Price, evt.Currency);
+            }
+            else
+            {
+                dbContext.ProductPrices.Add(
+                    ProductPrice.Create(evt.ProductId, evt.Sku, evt.Name, evt.Price, evt.Currency));
+            }
         }
 
         try
         {
-            dbContext.ProductPrices.Add(
-                ProductPrice.Create(evt.ProductId, evt.Sku, evt.Name, evt.Price, evt.Currency));
             await dbContext.SaveChangesAsync(context.CancellationToken);
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "23505" })
+        catch (DbUpdateException) when (
+            dbContext.ChangeTracker.Entries<ProductPrice>().Any(e => e.State == EntityState.Added))
         {
-            // Race condition: another message already inserted this product — update instead
+            // Race condition: clear tracker and retry as update
             dbContext.ChangeTracker.Clear();
-            var existingAfterRace = await dbContext.ProductPrices
-                .FirstOrDefaultAsync(p => p.Id == evt.ProductId, context.CancellationToken);
-            if (existingAfterRace is not null)
+            var retry = await dbContext.ProductPrices
+                .FirstOrDefaultAsync(p => p.Id == evt.ProductId || p.Sku == evt.Sku, context.CancellationToken);
+            if (retry is not null)
             {
-                existingAfterRace.UpdateDetails(evt.Name, evt.Price, evt.Currency);
+                retry.UpdateDetails(evt.Name, evt.Price, evt.Currency);
                 await dbContext.SaveChangesAsync(context.CancellationToken);
             }
         }

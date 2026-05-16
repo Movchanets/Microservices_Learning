@@ -53,6 +53,13 @@ export class CatalogService {
     return firstValueFrom(this.http.get<Category[]>('/api/catalog/categories'));
   }
 
+  getFeatured(tag?: string): Promise<ProductListItem[]> {
+    const params: any = tag ? { tag } : {};
+    return firstValueFrom(
+      this.http.get<ProductListItem[]>('/api/catalog/products/featured', { params }),
+    );
+  }
+
   // ── Full-text Search (via /api/search) ──────────
 
   searchProducts(params: ProductSearchParams = {}): Promise<SearchResult<ProductListItem>> {

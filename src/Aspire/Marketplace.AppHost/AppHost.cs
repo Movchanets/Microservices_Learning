@@ -9,7 +9,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 // PostgreSQL server + per-service databases
 var postgres = builder.AddPostgres("postgres")
     .WithPgAdmin()
-    .WithHostPort(5432);
+    .WithHostPort(55555);
 
 var identityDb = postgres.AddDatabase("identity-db");
 var catalogDb = postgres.AddDatabase("catalog-db");
@@ -26,8 +26,8 @@ var redis = builder.AddRedis("redis")
 
 // RabbitMQ — message broker for MassTransit
 var messaging = builder.AddRabbitMQ("messaging")
-    .WithManagementPlugin()
-    .WithEndpoint(port: 5672, name: "rabbitmq");
+    .WithManagementPlugin();
+    
 
 // ──────────────────────────────────────────────
 // Elasticsearch — used by Search.API

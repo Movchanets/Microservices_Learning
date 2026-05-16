@@ -4,6 +4,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { CatalogService } from '../catalog.service';
 import { Product, ProductListItem, CreateReviewRequest } from '../catalog.models';
 import { InventoryService } from '../../../core/services/inventory.service';
+import { RecentlyViewedService } from '../../../core/services/recently-viewed.service';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ReviewStore } from '../review.store';
 import { BuyBoxComponent } from '../components/buy-box/buy-box';
@@ -215,6 +216,7 @@ export class ProductDetailComponent implements OnInit {
   private router = inject(Router);
   private catalogService = inject(CatalogService);
   private inventoryService = inject(InventoryService);
+  private recentlyViewedService = inject(RecentlyViewedService);
   protected authStore = inject(AuthStore);
 
   protected reviewStore = inject(ReviewStore);
@@ -248,6 +250,7 @@ export class ProductDetailComponent implements OnInit {
     try {
       const p = await this.catalogService.getProduct(id);
       this.product.set(p);
+      this.recentlyViewedService.trackView(p.id);
 
       // Load stock, recommendations, and reviews in parallel
       this.loadStock(p.sku);
