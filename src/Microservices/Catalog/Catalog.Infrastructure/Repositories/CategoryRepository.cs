@@ -15,6 +15,13 @@ public sealed class CategoryRepository(CatalogDbContext context) : ICategoryRepo
             .ThenBy(c => c.Name)
             .ToListAsync(ct);
 
+    public async Task<List<Category>> GetActiveAsync(CancellationToken ct = default) =>
+        await context.Categories
+            .Where(c => c.IsActive)
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.Name)
+            .ToListAsync(ct);
+
     public async Task<bool> ExistsAsync(Guid id, CancellationToken ct = default) =>
         await context.Categories.AnyAsync(c => c.Id == id, ct);
 

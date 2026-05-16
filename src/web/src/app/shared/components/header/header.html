@@ -1,71 +1,74 @@
 <header
-  class="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl transition-all duration-300"
+  class="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl transition-all duration-300 relative"
 >
-  <div class="container mx-auto flex h-20 items-center justify-between px-6">
-    <a
-      routerLink="/"
-      class="flex items-center gap-3 group"
-      aria-label="Go to homepage"
-      data-testid="header-logo"
-    >
-      <div
-        class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform"
-      >
-        <span class="text-white font-bold text-2xl">M</span>
-      </div>
-      <span class="text-2xl font-bold tracking-tight text-foreground font-lexend">Marketplace</span>
-    </a>
-
-    <nav class="hidden md:flex gap-8">
+  <div class="container mx-auto flex h-20 items-center justify-between gap-6 px-6">
+    <!-- Left: Logo & Catalog Button -->
+    <div class="flex items-center gap-6">
       <a
-        routerLink="/catalog"
-        class="text-sm font-medium text-muted hover:text-primary transition-colors relative group"
-        data-testid="nav-catalog"
+        routerLink="/"
+        class="flex items-center gap-3 group"
+        aria-label="Go to homepage"
+        data-testid="header-logo"
       >
-        Catalog
-        <span
-          class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"
-        ></span>
-      </a>
-      <a
-        routerLink="/seller-dashboard"
-        class="text-sm font-medium text-muted hover:text-primary transition-colors relative group"
-        data-testid="nav-sell"
-      >
-        Sell
-        <span
-          class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"
-        ></span>
-      </a>
-      @if (user()?.role === 'Admin') {
-        <a
-          routerLink="/admin"
-          class="text-sm font-medium text-muted hover:text-primary transition-colors relative group"
-          data-testid="nav-admin"
+        <div
+          class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform"
         >
-          Admin
-          <span
-            class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"
-          ></span>
-        </a>
-      }
-    </nav>
+          <span class="text-white font-bold text-2xl">M</span>
+        </div>
+        <span class="text-2xl font-bold tracking-tight text-foreground font-lexend hidden lg:block">Marketplace</span>
+      </a>
 
-    <div class="flex items-center gap-4">
+      <button 
+        (click)="toggleMegaMenu()"
+        class="flex items-center gap-2 h-11 px-5 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium shadow-lg shadow-primary/20 transition-all active:scale-95"
+      >
+        <lucide-icon [name]="MenuIcon" class="w-5 h-5"></lucide-icon>
+        <span class="hidden sm:inline">Catalog</span>
+      </button>
+    </div>
+
+    <!-- Center: Search Bar -->
+    <div class="flex-1 max-w-3xl hidden md:block">
+      <form (submit)="search(searchInput.value); $event.preventDefault()" class="relative flex items-center w-full">
+        <lucide-icon [name]="SearchIcon" class="absolute left-4 w-5 h-5 text-muted-foreground"></lucide-icon>
+        <input 
+          #searchInput
+          type="text" 
+          name="q"
+          placeholder="I am looking for..."
+          class="w-full h-11 pl-12 pr-4 bg-muted/50 border border-transparent hover:border-border focus:border-primary focus:bg-background rounded-xl outline-none transition-all"
+        />
+        <button type="submit" class="absolute right-2 h-7 px-4 rounded-lg bg-primary/10 text-primary font-medium text-sm hover:bg-primary hover:text-white transition-colors">
+          Search
+        </button>
+      </form>
+    </div>
+
+    <!-- Right: Utility Icons -->
+    <div class="flex items-center gap-3 sm:gap-5">
+      <button class="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors h-11 w-11 rounded-xl hover:bg-primary/5 hidden sm:flex">
+        <lucide-icon [name]="GlobeIcon" class="w-5 h-5"></lucide-icon>
+        <span class="text-[10px] font-medium uppercase">EN</span>
+      </button>
+      
+      <button class="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors h-11 w-11 rounded-xl hover:bg-primary/5 hidden lg:flex">
+        <lucide-icon [name]="HeartIcon" class="w-5 h-5"></lucide-icon>
+      </button>
+
+      <!-- Cart Icon -->
+      <a routerLink="/cart" class="relative flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors h-11 w-11 rounded-xl hover:bg-primary/5">
+        <lucide-icon [name]="CartIcon" class="w-5 h-5"></lucide-icon>
+        <!-- Badge could go here -->
+      </a>
+
+      <!-- Profile Section -->
       @if (!user()) {
         <a
           routerLink="/auth/login"
-          class="text-sm font-medium text-muted hover:text-foreground transition-colors"
+          class="text-sm font-medium text-muted hover:text-foreground transition-colors hidden sm:block"
           data-testid="nav-login"
           >Sign in</a
         >
-        <a
-          routerLink="/auth/register"
-          class="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 py-2 text-sm font-medium text-white shadow-xl shadow-primary/20 transition-all hover:scale-[1.05] hover:shadow-primary/40 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-          data-testid="nav-register"
-        >
-          Get Started
-        </a>
       } @else {
         <div class="relative">
           <button
@@ -78,9 +81,6 @@
             >
               <lucide-icon [name]="UserIcon" class="w-4 h-4"></lucide-icon>
             </div>
-            <span class="text-sm font-semibold text-foreground px-1 hidden sm:block">{{
-              user()?.firstName
-            }}</span>
             <lucide-icon
               [name]="ChevronIcon"
               class="w-4 h-4 text-muted transition-transform"
@@ -146,3 +146,7 @@
     </div>
   </div>
 </header>
+
+@if (isMegaMenuOpen()) {
+  <app-mega-menu (closeMenu)="closeMegaMenu()"></app-mega-menu>
+}

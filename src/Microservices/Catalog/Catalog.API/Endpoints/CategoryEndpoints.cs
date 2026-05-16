@@ -15,6 +15,15 @@ public static class CategoryEndpoints
             .WithTags("Categories")
             .WithOpenApi();
 
+        // Public: category tree
+        group.MapGet("/tree", async (ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetCategoryTreeQuery(), ct);
+            return Results.Ok(result);
+        })
+        .WithName("GetCategoryTree")
+        .Produces<List<CategoryTreeDto>>();
+
         // Public: list categories
         group.MapGet("/", async (
             ISender sender,

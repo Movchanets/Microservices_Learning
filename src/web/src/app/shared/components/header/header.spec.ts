@@ -32,26 +32,20 @@ describe('HeaderComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('shows "Login/Register" when user is not authenticated', () => {
+  it('shows "Sign in" when user is not authenticated', () => {
     const authStore = TestBed.inject(AuthStore);
     authStore.user = signal(null) as any;
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     const loginLink = compiled.querySelector('[data-testid="nav-login"]');
-    const registerLink = compiled.querySelector('[data-testid="nav-register"]');
 
     expect(loginLink).toBeTruthy();
     expect(loginLink?.textContent?.trim()).toBe('Sign in');
-    expect(registerLink).toBeTruthy();
-    expect(registerLink?.textContent?.trim()).toBe('Get Started');
   });
 
-  it('shows "Profile/Logout" and user name when authenticated', async () => {
+  it('shows "Profile/Logout" when authenticated', async () => {
     const authStore = TestBed.inject(AuthStore);
-    // Use an unwrapped signal update instead of replacing the entire signal instance
-    // which bypasses Angular's change detection tracking since `component.user`
-    // references `authStore.user`.
     (authStore.user as any).set({ id: '1', firstName: 'John', email: 'john@example.com' });
 
     fixture.detectChanges();
@@ -60,7 +54,6 @@ describe('HeaderComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const userMenuTrigger = compiled.querySelector('[data-testid="user-menu-trigger"]');
     expect(userMenuTrigger).toBeTruthy();
-    expect(userMenuTrigger?.textContent?.trim()).toContain('John');
 
     // Open menu
     component.isMenuOpen.set(true);

@@ -1,11 +1,12 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { computed } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { CatalogStore } from '../catalog.store';
 import { CartStore } from '../../cart/cart.store';
 import { ProductCardComponent } from '../components/product-card/product-card';
-import { CategorySidebarComponent } from '../components/category-sidebar/category-sidebar';
 import { PaginationComponent } from '../components/pagination/pagination';
 import { SearchFacetsComponent } from '../components/search-facets/search-facets';
 
@@ -18,7 +19,6 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
     FormsModule,
     LucideAngularModule,
     ProductCardComponent,
-    CategorySidebarComponent,
     PaginationComponent,
     SearchFacetsComponent,
   ],
@@ -38,7 +38,7 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
           </p>
         </header>
 
-        <!-- Search bar -->
+        <!-- Search bar (local overrides header if used) -->
         <div class="relative max-w-xl mb-8">
           <lucide-icon
             name="Search"
@@ -59,7 +59,7 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
 
         <!-- Content: sidebar + grid -->
         <div class="flex flex-col lg:flex-row gap-8">
-          <!-- Sidebar: Categories (browse mode) or Search Facets (search mode) -->
+          <!-- Sidebar: Search Facets (search mode only, category sidebar removed) -->
           <div class="lg:w-64 shrink-0 space-y-4">
             @if (store.isSearchMode()) {
               <app-search-facets
@@ -69,12 +69,6 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
                 (priceRangeChange)="onPriceRangeChange($event)"
                 (categoryClicked)="onFacetCategoryClick($event)"
                 (clearFilters)="onClearFilters()"
-              />
-            } @else {
-              <app-category-sidebar
-                [categories]="store.categories()"
-                [selectedId]="store.selectedCategoryId()"
-                (categorySelected)="onCategorySelect($event)"
               />
             }
           </div>
@@ -143,28 +137,38 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
     </div>
   `,
 })
-export class ProductListComponent implements OnInit {
+export class ProductListComponent implements OnInit, OnDestroy {
   store = inject(CatalogStore);
   cartStore = inject(CartStore);
+  route = inject(ActivatedRoute);
+  
   readonly skeletons = Array.from({ length: 6 }, (_, i) => i);
-
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private sub: Subscription | null = null;
 
   ngOnInit(): void {
-    this.store.loadCategories();
-    this.store.loadProducts();
+    // Note: We no longer load side-bar categories here since it's global mega-menu now.
+    
+    this.sub = this.route.queryParams.subscribe(params => {
+      const q = params['q'] || '';
+      const categoryId = params['categoryId'] || null;
+      
+      this.store.updateSearchQuery(q);
+      this.store.selectCategory(categoryId);
+      this.store.refresh();
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.sub) {
+      this.sub.unsubscribe();
+    }
   }
 
   onSearch(query: string): void {
     this.store.updateSearchQuery(query);
-    // Debounce search to avoid excessive API calls
     if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     this.searchDebounceTimer = setTimeout(() => this.store.refresh(), 350);
-  }
-
-  onCategorySelect(categoryId: string | null): void {
-    this.store.selectCategory(categoryId);
-    this.store.refresh();
   }
 
   onPageChange(page: number): void {
@@ -191,8 +195,6 @@ export class ProductListComponent implements OnInit {
   }
 
   onFacetCategoryClick(categoryName: string): void {
-    // Search facets return category names, not IDs
-    // Update the search query to include the category name
     const currentQuery = this.store.searchQuery();
     const newQuery = currentQuery.includes(categoryName)
       ? currentQuery

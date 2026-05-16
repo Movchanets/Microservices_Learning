@@ -24,6 +24,9 @@ const initialState: CartState = {
   checkoutCorrelationId: null,
 };
 
+import { isPlatformBrowser } from '@angular/common';
+import { PLATFORM_ID } from '@angular/core';
+
 export const CartStore = signalStore(
   { providedIn: 'root' }, // Global store accessible everywhere
   withState(initialState),
@@ -115,8 +118,11 @@ export const CartStore = signalStore(
 
   withHooks({
     onInit(store) {
-      // Load cart data when the application starts
-      store.loadCart();
+      const platformId = inject(PLATFORM_ID);
+      if (isPlatformBrowser(platformId)) {
+        // Load cart data when the application starts in browser
+        store.loadCart();
+      }
     },
   }),
 );

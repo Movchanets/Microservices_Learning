@@ -1,0 +1,57 @@
+<div class="fixed left-0 top-20 w-full bg-card/95 backdrop-blur-xl border-b border-border shadow-2xl z-[40] animate-in fade-in slide-in-from-top-4 duration-300"
+     (click)="$event.stopPropagation()">
+  <div class="container mx-auto flex h-[600px]">
+    
+    <!-- Left Column: Root Categories -->
+    <div class="w-1/4 border-r border-border/50 py-4 overflow-y-auto">
+      @for (root of tree(); track root.id) {
+        <button 
+          class="w-full flex items-center justify-between px-6 py-3 text-left transition-colors hover:bg-primary/5 group"
+          [class.bg-primary]="activeRoot()?.id === root.id"
+          [class.text-white]="activeRoot()?.id === root.id"
+          [class.text-foreground]="activeRoot()?.id !== root.id"
+          (mouseenter)="activeRoot.set(root)"
+          (click)="onCategoryClick(root)">
+          <span class="font-medium text-sm">{{ root.name }}</span>
+          <lucide-icon name="ChevronRight" class="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
+            [class.opacity-100]="activeRoot()?.id === root.id"></lucide-icon>
+        </button>
+      } @empty {
+        <div class="px-6 py-4 text-muted-foreground text-sm">No categories found</div>
+      }
+    </div>
+
+    <!-- Right Content Area: Subcategories -->
+    <div class="flex-1 p-8 overflow-y-auto">
+      @if (activeRoot()) {
+        <h2 class="text-2xl font-bold font-lexend mb-6">{{ activeRoot()?.name }}</h2>
+        <div class="columns-1 md:columns-2 lg:columns-3 gap-8">
+          @for (child of activeRoot()?.children; track child.id) {
+            <div class="break-inside-avoid mb-8">
+              <button 
+                class="font-bold text-base hover:text-primary transition-colors mb-3 text-left"
+                (click)="onCategoryClick(child)">
+                {{ child.name }}
+              </button>
+              
+              <div class="flex flex-col gap-2">
+                @for (grandchild of child.children; track grandchild.id) {
+                  <button 
+                    class="text-sm text-muted-foreground hover:text-primary transition-colors text-left"
+                    (click)="onCategoryClick(grandchild)">
+                    {{ grandchild.name }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="h-full flex items-center justify-center text-muted-foreground">
+          Hover over a category to see its subcategories
+        </div>
+      }
+    </div>
+
+  </div>
+</div>
