@@ -3,6 +3,34 @@ import { CommonModule } from '@angular/common';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { LucideAngularModule, User, Mail, Shield, LogOut } from 'lucide-angular';
 
+// TODO: Transform into full "Personal Account" hub with sidebar navigation.
+//       Ref: plans/future_design/user_profile.md — "Profile Navigation Sidebar"
+//       Tabs needed:
+//         - Orders (default) — list of current/past orders with status badges
+//         — Messages — buyer-seller communication
+//         — Personal Offers — targeted discounts
+//         — Wishlists — saved items
+//         — Reviews — history of reviews left
+//         — Viewed Products — browsing history
+//         — Wallet/Bonuses — loyalty points
+//         — Settings — address book, payment methods, password reset
+
+// TODO: Add profile edit form — update name, email, phone.
+//       Backend: PUT /api/identity/users/{id} endpoint needs to be created.
+//       Ref: src/Microservices/Identity/Identity.API/Endpoints/UserEndpoints.cs
+//       Ref: src/Microservices/Identity/Identity.Application/ (needs UpdateProfileCommand)
+
+// TODO: Add change password form.
+//       Backend: POST /api/identity/auth/change-password endpoint exists (partially).
+//       Ref: src/Microservices/Identity/Identity.API/Endpoints/AuthEndpoints.cs
+
+// TODO: Add order history tab in profile — reuse OrderListComponent from orders feature.
+//       Ref: src/web/src/app/features/orders/order-list/order-list.ts
+
+// TODO: Add notification badges on sidebar tabs (unread messages, order updates).
+//       Uses SignalR notifications from Notification.Worker.
+//       Ref: src/web/src/app/core/signalr/notification.service.ts
+
 @Component({
   selector: 'app-profile',
   standalone: true,

@@ -48,9 +48,6 @@ namespace Catalog.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<Guid>("SellerId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Sku")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -58,6 +55,9 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uuid");
 
                     b.PrimitiveCollection<string>("Tags")
                         .IsRequired()
@@ -70,10 +70,10 @@ namespace Catalog.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("SellerId");
-
                     b.HasIndex("Sku")
                         .IsUnique();
+
+                    b.HasIndex("StoreId");
 
                     b.ToTable("Products", (string)null);
                 });

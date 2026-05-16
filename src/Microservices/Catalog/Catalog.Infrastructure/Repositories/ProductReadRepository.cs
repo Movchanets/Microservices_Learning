@@ -26,7 +26,7 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
                 p.Category != null ? p.Category.Name : "",
                 p.Status.ToString(),
                 p.ImageUrl,
-                p.SellerId,
+                p.StoreId,
                 p.Tags,
                 p.CreatedAt,
                 p.UpdatedAt))
@@ -36,7 +36,7 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
     public async Task<PagedResult<ProductListDto>> ListAsync(
         int page, int pageSize,
         Guid? categoryId = null,
-        Guid? sellerId = null,
+        Guid? storeId = null,
         string? search = null,
         CancellationToken ct = default)
     {
@@ -48,8 +48,8 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         if (categoryId.HasValue)
             query = query.Where(p => p.CategoryId == categoryId.Value);
 
-        if (sellerId.HasValue)
-            query = query.Where(p => p.SellerId == sellerId.Value);
+        if (storeId.HasValue)
+            query = query.Where(p => p.StoreId == storeId.Value);
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(p =>

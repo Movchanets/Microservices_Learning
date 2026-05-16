@@ -31,7 +31,7 @@ public class ProductRepositoryTests
         await context.SaveChangesAsync();
 
         var productId = Guid.NewGuid();
-        var sellerId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
 
         var product = Product.Create(
             "Test Product",
@@ -40,7 +40,7 @@ public class ProductRepositoryTests
             "USD",
             "SKU-12345",
             category.Id,
-            sellerId,
+            storeId,
             new List<string> { "tag1", "tag2" },
             "http://test.com/image.jpg"
         );
@@ -60,7 +60,7 @@ public class ProductRepositoryTests
         retrievedProduct.Price.Currency.Should().Be("USD");
         retrievedProduct.Sku.Value.Should().Be("SKU-12345");
         retrievedProduct.CategoryId.Should().Be(category.Id);
-        retrievedProduct.SellerId.Should().Be(sellerId);
+        retrievedProduct.StoreId.Should().Be(storeId);
         retrievedProduct.Tags.Should().BeEquivalentTo("tag1", "tag2");
         retrievedProduct.ImageUrl.Should().Be("http://test.com/image.jpg");
     }
@@ -75,7 +75,7 @@ public class ProductRepositoryTests
         context.Categories.Add(category);
         await context.SaveChangesAsync();
 
-        var sellerId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
 
         for (int i = 0; i < 15; i++)
         {
@@ -86,7 +86,7 @@ public class ProductRepositoryTests
                 "USD",
                 $"SKU-F-{i}-{Guid.NewGuid().ToString().Substring(0, 5)}", // Unique sku
                 category.Id,
-                sellerId
+                storeId
             );
             context.Products.Add(product);
         }

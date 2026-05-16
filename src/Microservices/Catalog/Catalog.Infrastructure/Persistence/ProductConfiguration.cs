@@ -15,7 +15,7 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.Name).IsRequired().HasMaxLength(200);
         builder.Property(p => p.Description).IsRequired().HasMaxLength(2000);
         builder.Property(p => p.CategoryId).IsRequired();
-        builder.Property(p => p.SellerId).IsRequired();
+        builder.Property(p => p.StoreId).IsRequired();
         builder.Property(p => p.ImageUrl).HasMaxLength(500);
 
         // Money Value Object (Owned Type)
@@ -50,6 +50,6 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         // Indexes
         builder.HasIndex(p => p.Sku).IsUnique();
         builder.HasIndex(p => p.CategoryId);
-        builder.HasIndex(p => p.SellerId);
+        builder.HasIndex(p => p.StoreId);
     }
 }

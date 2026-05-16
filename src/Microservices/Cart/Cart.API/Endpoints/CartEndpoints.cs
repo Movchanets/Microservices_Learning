@@ -63,6 +63,21 @@ public static class CartEndpoints
 
             return result.IsSuccess ? Results.Accepted(value: result.Value) : Results.BadRequest(result.Error);
         });
+
+        // TODO: Add single-item endpoints for better UX.
+        //       Currently Cart only supports full replacement (POST /api/cart).
+        //       Needed for: "Add to Cart" button on product detail page.
+        //
+        //       POST /api/cart/items — add single item { sku, quantity, price }
+        //       PUT /api/cart/items/{sku} — update quantity
+        //       DELETE /api/cart/items/{sku} — remove single item
+        //
+        //       Backend: Needs AddItemCommand, UpdateItemQuantityCommand, RemoveItemCommand
+        //       Ref: src/Microservices/Cart/Cart.Domain/Aggregates/ShoppingCart.cs — AddItem method
+        //
+        //       Frontend: CartStore.addToCart() calls this instead of full cart replacement.
+        //       Ref: src/web/src/app/features/cart/cart.store.ts — addToCart method
+        //       Ref: plans/future_design/cart_and_checkout.md — "Slide-out Cart Drawer"
     }
 }
 

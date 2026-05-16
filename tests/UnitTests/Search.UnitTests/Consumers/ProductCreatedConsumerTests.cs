@@ -25,7 +25,7 @@ public class ProductCreatedConsumerTests
     {
         // Arrange
         var productId = Guid.NewGuid();
-        var sellerId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
         var categoryId = Guid.NewGuid();
         var createdAt = DateTime.UtcNow;
 
@@ -34,7 +34,7 @@ public class ProductCreatedConsumerTests
             29.99m, "USD", "SKU-001",
             categoryId, "Electronics",
             new List<string> { "gadget", "tech" },
-            "http://img.jpg", sellerId, createdAt);
+            "http://img.jpg", storeId, createdAt);
 
         var consumeContext = new Mock<ConsumeContext<ProductCreatedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
@@ -61,7 +61,7 @@ public class ProductCreatedConsumerTests
         captured.CategoryName.Should().Be("Electronics");
         captured.Tags.Should().BeEquivalentTo("gadget", "tech");
         captured.ImageUrl.Should().Be("http://img.jpg");
-        captured.SellerId.Should().Be(sellerId);
+        captured.StoreId.Should().Be(storeId);
         captured.IsActive.Should().BeTrue();
         captured.CreatedAt.Should().Be(createdAt);
         captured.UpdatedAt.Should().Be(createdAt);

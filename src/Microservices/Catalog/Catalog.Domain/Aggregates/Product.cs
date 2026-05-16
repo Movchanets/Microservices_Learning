@@ -16,7 +16,7 @@ public sealed class Product : AggregateRoot
     public Category? Category { get; private set; }
     public ProductStatus Status { get; private set; } = ProductStatus.Draft;
     public string? ImageUrl { get; private set; }
-    public Guid SellerId { get; private set; }
+    public Guid StoreId { get; private set; }
     public List<string> Tags { get; private set; } = [];
     public DateTime CreatedAt { get; private init; }
     public DateTime? UpdatedAt { get; private set; }
@@ -31,7 +31,7 @@ public sealed class Product : AggregateRoot
         string currency,
         string sku,
         Guid categoryId,
-        Guid sellerId,
+        Guid storeId,
         List<string>? tags = null,
         string? imageUrl = null)
     {
@@ -41,8 +41,8 @@ public sealed class Product : AggregateRoot
         if (categoryId == Guid.Empty)
             throw new ArgumentException("CategoryId is required", nameof(categoryId));
 
-        if (sellerId == Guid.Empty)
-            throw new ArgumentException("SellerId is required", nameof(sellerId));
+        if (storeId == Guid.Empty)
+            throw new ArgumentException("StoreId is required", nameof(storeId));
 
         var product = new Product
         {
@@ -51,7 +51,7 @@ public sealed class Product : AggregateRoot
             Price = Money.Create(price, currency),
             Sku = Sku.Create(sku),
             CategoryId = categoryId,
-            SellerId = sellerId,
+            StoreId = storeId,
             Tags = tags ?? [],
             ImageUrl = imageUrl,
             Status = ProductStatus.Draft,

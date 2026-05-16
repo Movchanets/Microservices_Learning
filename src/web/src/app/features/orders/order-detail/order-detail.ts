@@ -1,5 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, input } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { OrderStore } from '../order.store';
@@ -88,6 +88,14 @@ import { OrderTimelineComponent } from '../order-timeline/order-timeline';
     </div>
   `,
 })
-export class OrderDetailComponent {
+export class OrderDetailComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
   readonly store = inject(OrderStore);
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.store.loadOrderById(id);
+    }
+  }
 }

@@ -31,7 +31,7 @@ public class OutboxIntegrationTests
         context.Categories.Add(category);
         await context.SaveChangesAsync(); // No domain events on Category, so outbox should be empty from this
 
-        var sellerId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
 
         // Product creation adds a ProductCreatedDomainEvent to the entity
         var product = Product.Create(
@@ -41,7 +41,7 @@ public class OutboxIntegrationTests
             "USD",
             $"SKU-OUTBOX-{Guid.NewGuid().ToString().Substring(0, 5)}",
             category.Id,
-            sellerId
+            storeId
         );
 
         repository.Add(product);

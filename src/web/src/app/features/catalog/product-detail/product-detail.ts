@@ -4,6 +4,27 @@ import { CurrencyPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { CatalogService } from '../catalog.service';
 import { Product } from '../catalog.models';
+import { CartStore } from '../../cart/cart.store';
+// TODO: Create InventoryService to check stock availability before adding to cart.
+//       Ref: src/Microservices/Inventory/Inventory.API/Endpoints/InventoryEndpoints.cs
+
+// TODO: Add "Sticky Buy Box" — keep Add to Cart button pinned when scrolling.
+//       Ref: plans/future_design/product_details.md — "Sticky Buy Box" section
+
+// TODO: Add "Frequently Bought Together" section below product details.
+//       Shows 2-3 complementary items with "Add all to Cart" button.
+//       Ref: plans/future_design/product_details.md — "Frequently Bought Together" section
+
+// TODO: Add stock availability check before adding to cart.
+//       Call Inventory.API to check available quantity.
+//       Show "Only X left in stock" warning when low.
+//       Ref: src/Microservices/Inventory/Inventory.API/Endpoints/InventoryEndpoints.cs
+
+// TODO: Add product variant selector (color, size) when Catalog supports variants.
+//       Ref: plans/future_design/product_details.md — "Advanced Product Variations Selector"
+
+// TODO: Add Community Q&A and Reviews section.
+//       Ref: plans/future_design/product_details.md — "Community Q&A and Rich Reviews"
 
 @Component({
   selector: 'app-product-detail',
@@ -148,8 +169,16 @@ export class ProductDetailComponent implements OnInit {
     }
   }
 
+  // TODO: Implement add-to-cart with price from product.
+  //       CartStore.addToCart(sku, quantity, price) — price must be passed from product data.
+  //       After adding, show a slide-out cart drawer instead of redirecting.
+  //       Ref: src/web/src/app/features/cart/cart.store.ts — addToCart method
+  //       Ref: plans/future_design/cart_and_checkout.md — "Slide-out Cart Drawer" section
   onAddToCart(productId: string): void {
-    // TODO: Phase 7.3 — Cart integration
-    console.log('Add to cart:', productId);
+    const p = this.product();
+    if (p) {
+      // this.cartStore.addToCart(p.sku, 1, p.price);
+      console.log('Add to cart:', p.sku, p.price);
+    }
   }
 }

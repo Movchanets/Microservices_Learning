@@ -15,5 +15,5 @@ public sealed record ProductCreatedEvent(
     string CategoryName,
     List<string> Tags,
     string? ImageUrl,
-    Guid SellerId,
+    Guid StoreId,
     DateTime CreatedAt);

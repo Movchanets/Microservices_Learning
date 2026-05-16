@@ -12,7 +12,7 @@ public sealed class ProductSearchDocument
     public string CategoryName { get; init; } = string.Empty;
     public List<string> Tags { get; init; } = [];
     public string? ImageUrl { get; init; }
-    public Guid SellerId { get; init; }
+    public Guid StoreId { get; init; }
     public bool IsActive { get; init; } = true;
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }

@@ -1,3 +1,7 @@
+using System.Security.Claims;
+using Identity.Application.Commands.DeactivateUser;
+using Identity.Application.Commands.UpdateUserRole;
+using Identity.Application.DTOs;
 using Identity.Application.Queries;
 using MediatR;
 
@@ -19,6 +23,19 @@ public static class UserEndpoints
             .WithTags("Users")
             .RequireAuthorization();
 
+        // List all users (admin only)
+        group.MapGet("/", async (
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var users = await sender.Send(new ListUsersQuery(), ct);
+            return Results.Ok(users);
+        })
+        .WithName("ListUsers")
+        .RequireAuthorization("Admin")
+        .Produces<List<UserDto>>();
+
+        // Get user by ID
         group.MapGet("/{id:guid}", async (
             Guid id,
             ISender sender,
@@ -32,5 +49,39 @@ public static class UserEndpoints
         .WithName("GetUserById")
         .Produces<UserDto>()
         .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Update user role (admin only)
+        group.MapPut("/{id:guid}/role", async (
+            Guid id,
+            UpdateUserRoleCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var cmd = command with { UserId = id };
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.Ok(result.Value)
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("UpdateUserRole")
+        .RequireAuthorization("Admin")
+        .Produces<UserDto>()
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // Deactivate user (admin only)
+        group.MapDelete("/{id:guid}", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new DeactivateUserCommand(id), ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("DeactivateUser")
+        .RequireAuthorization("Admin")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
     }
 }

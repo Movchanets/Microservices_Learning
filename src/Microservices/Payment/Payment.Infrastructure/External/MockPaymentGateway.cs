@@ -10,7 +10,7 @@ public sealed class MockPaymentGateway : IPaymentGateway
         Guid orderId, decimal amount, string buyerId, CancellationToken ct = default)
     {
         var result = new PaymentGatewayResult(
-            IsSuccess: true,    
+            IsSuccess: true,
             TransactionId: $"txn_{Guid.NewGuid():N}",
             FailureReason: null);
 

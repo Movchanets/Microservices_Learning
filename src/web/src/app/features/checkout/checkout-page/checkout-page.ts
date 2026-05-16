@@ -7,6 +7,19 @@ import { OrderStore } from '../../orders/order.store';
 import { CheckoutSummaryComponent } from '../checkout-summary/checkout-summary';
 import { CheckoutStatusComponent } from '../checkout-status/checkout-status';
 
+// TODO: Add shipping address form before order confirmation.
+//       OrderSubmittedEvent now expects: ShippingAddress, ShippingCity, ShippingPostalCode, ShippingCountry.
+//       Ref: src/BuildingBlocks/SharedContracts/Events/Cart/OrderSubmittedEvent.cs
+//       Ref: plans/future_design/cart_and_checkout.md — "Single-Page Checkout" section
+//       Implementation: Add address form fields (street, city, postalCode, country) above the confirm button.
+//       Pass address data to checkout store which sends it with the checkout request.
+
+// TODO: Add express checkout options (Apple Pay, Google Pay) above the standard confirm button.
+//       Ref: plans/future_design/cart_and_checkout.md — "Express Checkout Options" section
+
+// TODO: Add free shipping progress bar. Show "Add $X more to unlock free shipping!" message.
+//       Ref: plans/future_design/cart_and_checkout.md — "Slide-out Cart Drawer" section
+
 @Component({
   selector: 'app-checkout-page',
   standalone: true,

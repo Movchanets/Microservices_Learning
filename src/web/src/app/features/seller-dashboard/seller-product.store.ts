@@ -36,8 +36,8 @@ export const SellerProductStore = signalStore(
     async loadProducts(): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const sellerId = localStorage.getItem('buyerId') || 'guest-user';
-        const products = await productService.getMyProducts(sellerId);
+        const storeId = localStorage.getItem('storeId') || '';
+        const products = await productService.getMyProducts(storeId);
         patchState(store, { products, loading: false });
       } catch {
         patchState(store, { error: 'Failed to load products', loading: false });

@@ -9,7 +9,7 @@ public interface IProductReadRepository
     Task<PagedResult<ProductListDto>> ListAsync(
         int page, int pageSize,
         Guid? categoryId = null,
-        Guid? sellerId = null,
+        Guid? storeId = null,
         string? search = null,
         CancellationToken ct = default);
 }

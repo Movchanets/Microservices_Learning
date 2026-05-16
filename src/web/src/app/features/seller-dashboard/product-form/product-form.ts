@@ -6,6 +6,7 @@ import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@ang
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { SellerProductStore } from '../seller-product.store';
+import { StoreSettingsStore } from '../store-settings.store';
 
 @Component({
   selector: 'app-product-form',
@@ -81,6 +82,7 @@ export class ProductFormComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly store = inject(SellerProductStore);
+  private readonly storeSettingsStore = inject(StoreSettingsStore);
 
   isEditing = signal(false);
   productId = signal<string | null>(null);
@@ -91,6 +93,7 @@ export class ProductFormComponent implements OnInit {
   stock = signal(0);
 
   ngOnInit(): void {
+    this.storeSettingsStore.loadSettings();
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'new') {
       this.isEditing.set(true);
@@ -110,6 +113,7 @@ export class ProductFormComponent implements OnInit {
       });
       if (success) this.router.navigate(['/seller/products']);
     } else {
+      const storeId = this.storeSettingsStore.settings()?.storeId || '';
       const success = await this.store.createProduct({
         name: this.name(),
         sku: this.sku(),
@@ -117,7 +121,7 @@ export class ProductFormComponent implements OnInit {
         price: this.price(),
         currency: 'USD',
         categoryId: '',
-        sellerId: localStorage.getItem('buyerId') || 'guest-user',
+        storeId,
       });
       if (success) this.router.navigate(['/seller/products']);
     }

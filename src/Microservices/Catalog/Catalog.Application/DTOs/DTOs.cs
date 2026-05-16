@@ -11,7 +11,7 @@ public sealed record ProductDto(
     string CategoryName,
     string Status,
     string? ImageUrl,
-    Guid SellerId,
+    Guid StoreId,
     List<string> Tags,
     DateTime CreatedAt,
     DateTime? UpdatedAt);
