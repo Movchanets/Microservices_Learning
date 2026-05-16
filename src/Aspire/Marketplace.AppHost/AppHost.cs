@@ -68,7 +68,10 @@ var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api")
     .WithReference(inventoryDb)
     .WaitFor(inventoryDb)
     .WithReference(messaging)
-    .WaitFor(messaging);
+    .WaitFor(messaging)
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 3: Cart.API
 var cartApi = builder.AddProject<Projects.Cart_API>("cart-api")
@@ -77,21 +80,30 @@ var cartApi = builder.AddProject<Projects.Cart_API>("cart-api")
     .WithReference(redis)
     .WaitFor(redis)
     .WithReference(messaging)
-    .WaitFor(messaging);
+    .WaitFor(messaging)
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 4: Ordering.API
 var orderingApi = builder.AddProject<Projects.Ordering_API>("ordering-api")
     .WithReference(orderingDb)
     .WaitFor(orderingDb)
     .WithReference(messaging)
-    .WaitFor(messaging);
+    .WaitFor(messaging)
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 4: Payment.API
 var paymentApi = builder.AddProject<Projects.Payment_API>("payment-api")
     .WithReference(paymentDb)
     .WaitFor(paymentDb)
     .WithReference(messaging)
-    .WaitFor(messaging);
+    .WaitFor(messaging)
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 5: Notification.Worker
 var notificationWorker = builder.AddProject<Projects.Notification_Worker>("notification-api")

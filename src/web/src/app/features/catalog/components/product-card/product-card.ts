@@ -11,6 +11,7 @@ import { ProductListItem } from '../../catalog.models';
   imports: [CurrencyPipe, RouterLink, LucideAngularModule],
   template: `
     <div
+      [attr.data-testid]="'product-card-' + product().id"
       class="group flex flex-col bg-card/40 backdrop-blur-sm border border-border
                 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-primary/40
                 transition-all duration-300 h-full"

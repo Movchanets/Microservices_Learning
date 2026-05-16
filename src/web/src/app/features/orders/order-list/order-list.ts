@@ -4,6 +4,7 @@ import { CurrencyPipe, DatePipe, SlicePipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { OrderStore } from '../order.store';
 import { StatusBadgeComponent } from '../components/status-badge/status-badge';
+import { AuthStore } from '../../../core/auth/auth.store';
 
 @Component({
   selector: 'app-order-list',
@@ -96,9 +97,12 @@ import { StatusBadgeComponent } from '../components/status-badge/status-badge';
 })
 export class OrderListComponent implements OnInit {
   readonly store = inject(OrderStore);
+  private readonly authStore = inject(AuthStore);
 
   ngOnInit(): void {
-    const buyerId = localStorage.getItem('buyerId') || 'guest-user';
-    this.store.loadOrders(buyerId);
+    const buyerId = this.authStore.user()?.id || '';
+    if (buyerId) {
+      this.store.loadOrders(buyerId);
+    }
   }
 }

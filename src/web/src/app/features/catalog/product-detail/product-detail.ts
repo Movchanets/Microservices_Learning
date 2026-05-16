@@ -141,6 +141,7 @@ import { CartStore } from '../../cart/cart.store';
 export class ProductDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private catalogService = inject(CatalogService);
+  private cartStore = inject(CartStore);
 
   product = signal<Product | null>(null);
   loading = signal<boolean>(true);
@@ -169,16 +170,10 @@ export class ProductDetailComponent implements OnInit {
     }
   }
 
-  // TODO: Implement add-to-cart with price from product.
-  //       CartStore.addToCart(sku, quantity, price) — price must be passed from product data.
-  //       After adding, show a slide-out cart drawer instead of redirecting.
-  //       Ref: src/web/src/app/features/cart/cart.store.ts — addToCart method
-  //       Ref: plans/future_design/cart_and_checkout.md — "Slide-out Cart Drawer" section
   onAddToCart(productId: string): void {
     const p = this.product();
     if (p) {
-      // this.cartStore.addToCart(p.sku, 1, p.price);
-      console.log('Add to cart:', p.sku, p.price);
+      this.cartStore.addToCart(p.sku, 1, p.price);
     }
   }
 }

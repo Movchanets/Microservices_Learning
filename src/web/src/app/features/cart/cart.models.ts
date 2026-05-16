@@ -5,7 +5,7 @@ export interface CartItem {
 }
 
 export interface ShoppingCart {
-  buyerId: string;
+  buyerId?: string;
   items: CartItem[];
 }
 

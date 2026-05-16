@@ -4,6 +4,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { CartStore } from '../../cart/cart.store';
 import { CheckoutStore } from '../checkout.store';
 import { OrderStore } from '../../orders/order.store';
+import { AuthStore } from '../../../core/auth/auth.store';
 import { CheckoutSummaryComponent } from '../checkout-summary/checkout-summary';
 import { CheckoutStatusComponent } from '../checkout-status/checkout-status';
 
@@ -94,6 +95,7 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   readonly cartStore = inject(CartStore);
   readonly checkoutStore = inject(CheckoutStore);
   private readonly orderStore = inject(OrderStore);
+  private readonly authStore = inject(AuthStore);
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   submitted = signal(false);
@@ -116,10 +118,12 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   }
 
   private startPolling(): void {
-    const buyerId = localStorage.getItem('buyerId') || 'guest-user';
+    const buyerId = this.authStore.user()?.id || '';
 
     this.pollTimer = setInterval(async () => {
-      await this.orderStore.loadOrders(buyerId);
+      if (buyerId) {
+        await this.orderStore.loadOrders(buyerId);
+      }
       const orders = this.orderStore.orders();
       const correlationId = this.cartStore.checkoutCorrelationId();
 

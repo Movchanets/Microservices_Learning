@@ -2,11 +2,12 @@
 
 **Purpose**: Gap analysis for a basic functional marketplace. Items are grouped by priority (P0 = critical for MVP, P1 = important, P2 = nice-to-have).
 
-**Last updated**: 2026-05-15
+**Last updated**: 2026-05-16
 **P0 Fix Plans**: `implementation_plan/p0-fixes/` (6 sub-plans) — All completed
 **P1 Fix Plans**: `implementation_plan/p1-fixes/` (6 sub-plans) — All completed
 **P2 Fix Plans**: `implementation_plan/p2-fixes/` (5 sub-plans) — Completed (except integration tests)
 **Future Design**: `plans/future_design/` — Design guides for advanced features
+**Project State**: `project_state/2026-05-16/` — Detailed analysis of current implementation
 
 ---
 
@@ -48,6 +49,7 @@
 | 4.1 | **StoreVerifiedEvent not published** | ✅ StoreVerifiedEventHandler publishes integration event |
 | 4.2 | **No consumer for role update** | ✅ StoreVerifiedConsumer updates user role to Seller |
 | 4.3 | **Seller dashboard has no guard** | ✅ `roleGuard('Seller', 'Admin')` applied |
+| 4.4 | **Store creation circular dependency** | ⏳ Need Seller role to create store, but role comes from store verification |
 
 ---
 
@@ -64,6 +66,7 @@
 | 5.5 | **No 404 page** | ✅ NotFoundComponent with catch-all route |
 | 5.6 | **No admin role management UI** | ✅ Admin panel with user list, role dropdown, store verification |
 | 5.7 | **No address form in checkout** | ⏳ TODO — needs address form fields |
+| 5.8 | **No "Add to Cart" button on product detail** | ⏳ TODO — ProductDetailComponent has no cart integration |
 
 ### 6. Backend Endpoint Gaps
 
@@ -76,6 +79,9 @@
 | 6.5 | **No media listing endpoint** | ✅ `GET /api/media` |
 | 6.6 | **No change-password endpoint** | ⏳ TODO — needs ChangePasswordCommand |
 | 6.7 | **Inventory endpoints have no auth** | ✅ JWT Bearer auth on write endpoints |
+| 6.8 | **No order cancel endpoint** | ⏳ CancelOrderCommand exists but no API endpoint |
+| 6.9 | **No order status update endpoint** | ⏳ Sellers can't mark orders as shipped/completed |
+| 6.10 | **No single-item cart endpoints** | ⏳ Only full cart replacement (POST /api/cart) |
 
 ### 7. Gateway & Health
 
@@ -154,10 +160,54 @@
 Current:
   Cart --[OrderSubmittedEvent]--> Ordering Saga --> Inventory --> Payment --> Notification --> SignalR
   Catalog --[ProductCreated/Updated/Deleted]--> Search (ES)
+  StoreManagement --[StoreVerifiedEvent]--> Identity (role update) ✅
 
 Missing:
-  Identity --[UserRegisteredEvent]--> (nothing)
-  StoreManagement --[StoreVerifiedEvent]--> (nothing) --> Identity (role update)
-  Cart checkout --[no Outbox]--> (unreliable)
+  Identity --[UserRegisteredEvent]--> (nothing — no welcome email, no analytics)
   Payment --[PaymentFailedEvent]--> Notification --[broadcast to All]--> (should target user)
+  Ordering --[OrderCancelledEvent]--> (saga handles, but no UI trigger)
 ```
+
+---
+
+## Current State Summary (2026-05-16)
+
+### What's Working ✅
+- All 10 microservices implemented and registered in Aspire
+- Full CQRS with MediatR on all services
+- MassTransit messaging with Outbox pattern
+- Ordering Saga with compensation
+- API Gateway with YARP, auth, CSRF, rate limiting
+- Angular frontend with all major features
+- NgRx SignalStore on all feature modules
+- Guards (auth + role) on all protected routes
+- SignalR real-time notifications
+- Elasticsearch search indexing
+- Unit tests (~186 passing), integration tests, E2E tests (9 specs)
+
+### Remaining Gaps (P1 — 8 items)
+1. Change-password endpoint + UI
+2. Update-profile endpoint + UI
+3. Single-item cart endpoints
+4. Cancel order endpoint + UI
+5. Order status update (seller)
+6. "Add to Cart" button on product detail
+7. Address form in checkout
+8. Inventory management UI
+
+### Remaining Gaps (P2 — 10 items)
+1. Refund endpoint
+2. Email sending (forgot-password)
+3. Email verification
+4. Low-stock alerts
+5. Admin reindex endpoint
+6. Store deletion endpoint
+7. Targeted notifications (not broadcast)
+8. Token refresh in gateway
+9. Slide-out cart drawer
+10. Media upload in product form
+
+### Architecture Issues
+- Store creation has circular dependency (need Seller role → need store verification)
+- Cart uses PostgreSQL instead of Redis (deviates from plan)
+- No CI/CD, Dockerfiles, or IaC

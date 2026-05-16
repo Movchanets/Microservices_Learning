@@ -59,8 +59,7 @@ export const CartStore = signalStore(
           currentItems.push({ sku, quantity, unitPrice });
         }
 
-        const buyerId = localStorage.getItem('buyerId') || 'guest-user';
-        const updatedCart = await cartService.updateCart({ buyerId, items: currentItems });
+        const updatedCart = await cartService.updateCart({ items: currentItems });
 
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
@@ -79,9 +78,8 @@ export const CartStore = signalStore(
       patchState(store, { loading: true, error: null });
       try {
         const currentItems = store.items().map((i) => (i.sku === sku ? { ...i, quantity } : i));
-        const buyerId = localStorage.getItem('buyerId') || 'guest-user';
 
-        const updatedCart = await cartService.updateCart({ buyerId, items: currentItems });
+        const updatedCart = await cartService.updateCart({ items: currentItems });
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
         patchState(store, { error: 'Failed to update quantity', loading: false });
@@ -92,9 +90,8 @@ export const CartStore = signalStore(
       patchState(store, { loading: true, error: null });
       try {
         const currentItems = store.items().filter((i) => i.sku !== sku);
-        const buyerId = localStorage.getItem('buyerId') || 'guest-user';
 
-        const updatedCart = await cartService.updateCart({ buyerId, items: currentItems });
+        const updatedCart = await cartService.updateCart({ items: currentItems });
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
         patchState(store, { error: 'Failed to remove item', loading: false });

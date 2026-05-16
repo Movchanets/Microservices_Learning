@@ -1,11 +1,12 @@
 // Store settings store.
 // NgRx SignalStore managing store settings and sales summary.
-// Currently uses stubbed data until Phase 6 (StoreManagement.API) is built.
+// Uses StoreManagement.API via StoreService.
 
 import { computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { StoreService } from './store.service';
 import { StoreSettings, SalesSummary } from './seller.models';
+import { AuthStore } from '../../core/auth/auth.store';
 
 interface StoreSettingsState {
   settings: StoreSettings | null;
@@ -27,28 +28,61 @@ export const StoreSettingsStore = signalStore(
 
   withComputed((store) => ({
     hasSettings: computed(() => store.settings() !== null),
+    storeId: computed(() => store.settings()?.storeId || null),
   })),
 
-  withMethods((store, storeService = inject(StoreService)) => ({
+  withMethods((store, storeService = inject(StoreService), authStore = inject(AuthStore)) => ({
 
     async loadSettings(): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const settings = await storeService.getStoreSettings();
+        const user = authStore.user();
+        if (!user) {
+          patchState(store, { error: 'Not authenticated', loading: false });
+          return;
+        }
+        const settings = await storeService.getStoreBySellerId(user.id);
         patchState(store, { settings, loading: false });
-      } catch {
-        patchState(store, { error: 'Failed to load store settings', loading: false });
+      } catch (err: any) {
+        // If 404, seller has no store yet — not an error
+        if (err?.status === 404) {
+          patchState(store, { settings: null, loading: false });
+        } else {
+          patchState(store, { error: 'Failed to load store settings', loading: false });
+        }
       }
     },
 
-    async updateSettings(updates: Partial<StoreSettings>): Promise<boolean> {
+    async createStore(name: string, description: string): Promise<boolean> {
       patchState(store, { loading: true, error: null });
       try {
-        const settings = await storeService.updateStoreSettings(updates);
+        const user = authStore.user();
+        if (!user) {
+          patchState(store, { error: 'Not authenticated', loading: false });
+          return false;
+        }
+        const settings = await storeService.createStore(name, description, user.id);
         patchState(store, { settings, loading: false });
         return true;
-      } catch {
-        patchState(store, { error: 'Failed to update store settings', loading: false });
+      } catch (err: any) {
+        patchState(store, { error: err?.error?.error || 'Failed to create store', loading: false });
+        return false;
+      }
+    },
+
+    async updateSettings(name: string, description: string): Promise<boolean> {
+      const currentSettings = store.settings();
+      if (!currentSettings?.storeId) {
+        patchState(store, { error: 'No store found', loading: false });
+        return false;
+      }
+      patchState(store, { loading: true, error: null });
+      try {
+        const settings = await storeService.updateStore(currentSettings.storeId, name, description);
+        patchState(store, { settings, loading: false });
+        return true;
+      } catch (err: any) {
+        patchState(store, { error: err?.error?.error || 'Failed to update store settings', loading: false });
         return false;
       }
     },

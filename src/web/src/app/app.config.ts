@@ -71,11 +71,13 @@ export const appConfig: ApplicationConfig = {
       if (isPlatformBrowser(inject(PLATFORM_ID))) {
         const authStore = inject(AuthStore);
         const notificationService = inject(NotificationService);
-        // Auth must complete before SignalR connects (needs buyerId)
-        void authStore.checkAuth().then(() => {
-          void notificationService.start();
+        // Auth must complete before router starts (guards need user state)
+        return authStore.checkAuth().then(() => {
+          const buyerId = authStore.user()?.id;
+          void notificationService.start(buyerId);
         });
       }
+      return Promise.resolve();
     }),
     importProvidersFrom(
       LucideAngularModule.pick({

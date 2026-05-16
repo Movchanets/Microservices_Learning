@@ -23,14 +23,14 @@ export class NotificationService {
   readonly orderUpdates = signal<OrderUpdate | null>(null);
   readonly connected = signal(false);
 
-  async start(): Promise<void> {
+  async start(buyerId?: string): Promise<void> {
     if (this.hubConnection) return;
 
-    const buyerId = localStorage.getItem('buyerId') || 'guest-user';
+    const userId = buyerId || 'anonymous';
 
     this.hubConnection = new HubConnectionBuilder()
       .withUrl('/hubs/notifications', {
-        headers: { 'x-buyer-id': buyerId },
+        headers: { 'x-buyer-id': userId },
         // Use WebSockets only — skip SSE/LongPolling fallback
         transport: HttpTransportType.WebSockets,
       })

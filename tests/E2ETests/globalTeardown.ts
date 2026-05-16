@@ -12,17 +12,24 @@ function execSafe(cmd: string): string {
 }
 
 async function globalTeardown(config: FullConfig) {
+  const externalHostFile = path.join(__dirname, 'external-host');
+  const isExternal = fs.existsSync(externalHostFile) && fs.readFileSync(externalHostFile, 'utf8').trim() === 'true';
+
+  if (isExternal) {
+    console.log('AppHost was started externally, skipping shutdown.');
+    fs.unlinkSync(externalHostFile);
+    return;
+  }
+
   console.log('Stopping .NET Aspire AppHost...');
 
   const pidFile = path.join(__dirname, 'server.pid');
   if (fs.existsSync(pidFile)) {
     const pid = fs.readFileSync(pidFile, 'utf8').trim();
     if (pid) {
-      // Step 1: Graceful shutdown — no /F flag, gives Aspire time to stop containers
       console.log(`Sending graceful shutdown to PID ${pid}...`);
       execSafe(`taskkill /pid ${pid} /T`);
 
-      // Step 2: Wait up to 10s for the process to exit cleanly
       let alive = true;
       for (let i = 0; i < 10; i++) {
         await new Promise(r => setTimeout(r, 1000));
@@ -33,7 +40,6 @@ async function globalTeardown(config: FullConfig) {
         }
       }
 
-      // Step 3: Force kill if still alive
       if (alive) {
         console.warn(`Process ${pid} did not exit gracefully, force killing...`);
         execSafe(`taskkill /pid ${pid} /T /F`);
@@ -44,17 +50,7 @@ async function globalTeardown(config: FullConfig) {
     fs.unlinkSync(pidFile);
   }
 
-  // Step 4: Safety net — clean up any orphaned Docker containers from this AppHost run.
-  // Aspire containers that survive a hard kill have no parent process to stop them.
-  console.log('Cleaning up orphaned Docker containers...');
-  const aspireContainers = execSafe(
-    'docker ps -q --filter "label=aspire.resource.name"'
-  );
-  if (aspireContainers) {
-    const ids = aspireContainers.split(/\s+/).filter(Boolean);
-    console.log(`Found ${ids.length} orphaned Aspire container(s), removing...`);
-    execSafe(`docker rm -f ${ids.join(' ')}`);
-  }
+  if (fs.existsSync(externalHostFile)) fs.unlinkSync(externalHostFile);
 }
 
 export default globalTeardown;

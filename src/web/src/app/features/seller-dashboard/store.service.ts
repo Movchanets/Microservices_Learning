@@ -1,31 +1,78 @@
-// Store service (stubbed).
-// Provides store settings and sales summary data.
-// Currently returns mock data until Phase 6 (StoreManagement.API) is built.
+// Store service.
+// Calls StoreManagement.API for store settings and sales summary.
 
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { StoreSettings, SalesSummary } from './seller.models';
 
 @Injectable({ providedIn: 'root' })
 export class StoreService {
-  async getStoreSettings(): Promise<StoreSettings> {
-    // Stubbed until Phase 6 (StoreManagement.API) is built
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = '/api/stores';
+
+  async getStoreBySellerId(sellerId: string): Promise<StoreSettings> {
+    const store = await firstValueFrom(
+      this.http.get<any>(`${this.baseUrl}/seller/${sellerId}`)
+    );
     return {
-      storeId: 'store-1',
-      storeName: 'My Store',
-      description: 'A sample store',
-      logoUrl: null,
-      contactEmail: 'seller@example.com',
-      isActive: true,
+      storeId: store.id,
+      storeName: store.name,
+      description: store.description,
+      logoUrl: store.logoUrl,
+      contactEmail: '',
+      isActive: store.verificationStatus === 'Verified',
+      verificationStatus: store.verificationStatus,
     };
   }
 
-  async updateStoreSettings(settings: Partial<StoreSettings>): Promise<StoreSettings> {
-    // Stubbed — will call PUT /api/stores/{storeId} when Phase 6 is ready
-    return this.getStoreSettings();
+  async getStoreById(storeId: string): Promise<StoreSettings> {
+    const store = await firstValueFrom(
+      this.http.get<any>(`${this.baseUrl}/${storeId}`)
+    );
+    return {
+      storeId: store.id,
+      storeName: store.name,
+      description: store.description,
+      logoUrl: store.logoUrl,
+      contactEmail: '',
+      isActive: store.verificationStatus === 'Verified',
+      verificationStatus: store.verificationStatus,
+    };
+  }
+
+  async createStore(name: string, description: string, sellerId: string): Promise<StoreSettings> {
+    const store = await firstValueFrom(
+      this.http.post<any>(this.baseUrl, { sellerId, name, description })
+    );
+    return {
+      storeId: store.id,
+      storeName: store.name,
+      description: store.description,
+      logoUrl: store.logoUrl,
+      contactEmail: '',
+      isActive: false, // New stores start as Pending
+      verificationStatus: store.verificationStatus,
+    };
+  }
+
+  async updateStore(storeId: string, name: string, description: string): Promise<StoreSettings> {
+    const store = await firstValueFrom(
+      this.http.put<any>(`${this.baseUrl}/${storeId}`, { name, description })
+    );
+    return {
+      storeId: store.id,
+      storeName: store.name,
+      description: store.description,
+      logoUrl: store.logoUrl,
+      contactEmail: '',
+      isActive: store.verificationStatus === 'Verified',
+      verificationStatus: store.verificationStatus,
+    };
   }
 
   async getSalesSummary(): Promise<SalesSummary> {
-    // Stubbed — will call GET /api/stores/{storeId}/sales when Phase 6 is ready
+    // TODO: Implement when Ordering.API has a sales summary endpoint
     return {
       totalOrders: 0,
       totalRevenue: 0,

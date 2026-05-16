@@ -47,6 +47,7 @@ export interface StoreSettings {
   logoUrl: string | null;
   contactEmail: string;
   isActive: boolean;
+  verificationStatus?: 'Pending' | 'Verified' | 'Rejected';
 }
 
 export interface SalesSummary {
