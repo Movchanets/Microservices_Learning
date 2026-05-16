@@ -30,6 +30,10 @@ export default [
         loadComponent: () => import('./seller-orders/seller-orders').then(c => c.SellerOrdersComponent),
       },
       {
+        path: 'inventory',
+        loadComponent: () => import('./inventory-list/inventory-list').then(c => c.InventoryListComponent),
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./store-settings/store-settings').then(c => c.StoreSettingsComponent),
       },

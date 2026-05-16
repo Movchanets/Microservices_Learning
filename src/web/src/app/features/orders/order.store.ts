@@ -66,6 +66,23 @@ export const OrderStore = signalStore(
       });
     },
 
+    async cancelOrder(orderId: string, reason?: string): Promise<boolean> {
+      try {
+        await orderService.cancelOrder(orderId, reason);
+        // Update local state
+        patchState(store, {
+          orders: store.orders().map(o => o.id === orderId ? { ...o, status: 'Cancelled' as OrderStatus } : o),
+          selectedOrder: store.selectedOrder()?.id === orderId
+            ? { ...store.selectedOrder()!, status: 'Cancelled' as OrderStatus }
+            : store.selectedOrder(),
+        });
+        return true;
+      } catch {
+        patchState(store, { error: 'Failed to cancel order' });
+        return false;
+      }
+    },
+
     clearSelected(): void {
       patchState(store, { selectedOrder: null });
     },

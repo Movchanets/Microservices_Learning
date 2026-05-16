@@ -96,4 +96,28 @@ public sealed class Order : AggregateRoot
         Status = OrderStatus.Faulted;
         CancellationReason = reason;
     }
+
+    public void UpdateStatus(OrderStatus newStatus, string? notes = null)
+    {
+        var valid = newStatus switch
+        {
+            OrderStatus.Processing when Status == OrderStatus.Submitted => true,
+            OrderStatus.Shipped when Status == OrderStatus.Processing => true,
+            OrderStatus.Delivered when Status == OrderStatus.Shipped => true,
+            _ => false
+        };
+
+        if (!valid)
+            throw new DomainException($"Invalid status transition from {Status} to {newStatus}");
+
+        Status = newStatus;
+
+        if (newStatus == OrderStatus.Delivered)
+        {
+            CompletedAt = DateTime.UtcNow;
+            AddDomainEvent(new OrderCompletedDomainEvent(Id, BuyerId));
+        }
+
+        AddDomainEvent(new OrderStatusChangedDomainEvent(Id, BuyerId, newStatus, notes));
+    }
 }

@@ -4,7 +4,10 @@ export type OrderStatus =
   | 'PaymentProcessing'
   | 'Completed'
   | 'Cancelled'
-  | 'Faulted';
+  | 'Faulted'
+  | 'Processing'
+  | 'Shipped'
+  | 'Delivered';
 
 export interface OrderItem {
   id: string;

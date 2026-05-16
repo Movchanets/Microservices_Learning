@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Ordering.Application.Commands.CancelOrder;
 using Ordering.Application.Commands.CreateOrder;
+using Ordering.Application.Commands.UpdateOrderStatus;
 using Ordering.Application.DTOs;
 using Ordering.Application.Queries.GetOrderById;
 using Ordering.Application.Queries.ListOrdersByBuyer;
@@ -70,6 +72,38 @@ public static class OrderEndpoints
             return Results.Ok(result.Value);
         })
         .RequireAuthorization("Seller");
+
+        // Cancel order (buyer only)
+        group.MapPost("/{id:guid}/cancel", async (
+            Guid id,
+            [FromBody] CancelOrderRequest request,
+            ClaimsPrincipal user,
+            [FromServices] ISender sender,
+            CancellationToken ct) =>
+        {
+            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
+            var cmd = new CancelOrderCommand(id, request.Reason ?? "Cancelled by buyer");
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.Ok()
+                : Results.BadRequest(new { result.Error });
+        });
+
+        // Update order status (seller only)
+        group.MapPut("/{id:guid}/status", async (
+            Guid id,
+            [FromBody] UpdateOrderStatusRequest request,
+            [FromServices] ISender sender,
+            CancellationToken ct) =>
+        {
+            var cmd = new UpdateOrderStatusCommand(id, request.Status, request.Notes);
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.Ok()
+                : Results.BadRequest(new { result.Error });
+        })
+        .RequireAuthorization("Seller");
     }
 }
 
@@ -81,3 +115,7 @@ public sealed record CreateOrderRequest(
     string? ShippingState,
     string? ShippingPostalCode,
     string? ShippingCountry);
+
+public sealed record CancelOrderRequest(string? Reason);
+
+public sealed record UpdateOrderStatusRequest(string Status, string? Notes);

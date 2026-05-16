@@ -38,6 +38,10 @@ import { SalesCardComponent } from '../components/sales-card/sales-card';
              class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-background transition-colors"
              routerLinkActive="bg-background text-foreground shadow-sm"
              i18n>Orders</a>
+          <a routerLink="/seller/inventory"
+             class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-background transition-colors"
+             routerLinkActive="bg-background text-foreground shadow-sm"
+             i18n>Inventory</a>
           <a routerLink="/seller/settings"
              class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-background transition-colors"
              routerLinkActive="bg-background text-foreground shadow-sm"

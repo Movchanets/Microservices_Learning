@@ -30,6 +30,7 @@ builder.Services.AddMassTransit(x =>
 
     x.AddConsumer<OrderCompletedConsumer>();
     x.AddConsumer<OrderCancelledConsumer>();
+    x.AddConsumer<OrderStatusChangedConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {

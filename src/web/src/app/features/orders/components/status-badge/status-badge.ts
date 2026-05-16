@@ -25,6 +25,12 @@ export class StatusBadgeComponent {
         return `${base} bg-orange-500/10 text-orange-500`;
       case 'Completed':
         return `${base} bg-green-500/10 text-green-500`;
+      case 'Processing':
+        return `${base} bg-purple-500/10 text-purple-500`;
+      case 'Shipped':
+        return `${base} bg-indigo-500/10 text-indigo-500`;
+      case 'Delivered':
+        return `${base} bg-green-500/10 text-green-500`;
       case 'Cancelled':
         return `${base} bg-red-500/10 text-red-500`;
       case 'Faulted':

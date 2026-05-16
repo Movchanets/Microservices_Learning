@@ -1,8 +1,10 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CurrencyPipe, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { OrderStore } from '../order.store';
+import { ToastService } from '../../../core/services/toast.service';
 import { StatusBadgeComponent } from '../components/status-badge/status-badge';
 import { OrderTimelineComponent } from '../order-timeline/order-timeline';
 
@@ -10,7 +12,7 @@ import { OrderTimelineComponent } from '../order-timeline/order-timeline';
   selector: 'app-order-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, CurrencyPipe, DatePipe, LucideAngularModule, StatusBadgeComponent, OrderTimelineComponent],
+  imports: [RouterLink, CurrencyPipe, DatePipe, FormsModule, LucideAngularModule, StatusBadgeComponent, OrderTimelineComponent],
   template: `
     <div class="min-h-screen bg-background p-6 pt-10">
       <div class="container mx-auto max-w-3xl">
@@ -30,7 +32,49 @@ import { OrderTimelineComponent } from '../order-timeline/order-timeline';
                 <h1 class="text-2xl font-bold font-lexend">Order Details</h1>
                 <p class="text-sm text-muted font-mono mt-1">{{ order.id }}</p>
               </div>
-              <app-status-badge [status]="order.status" />
+              <div class="flex items-center gap-3">
+                <app-status-badge [status]="order.status" />
+                @if (canCancel(order.status)) {
+                  @if (showCancelConfirm()) {
+                    <div class="flex items-center gap-2">
+                      <input
+                        type="text"
+                        [(ngModel)]="cancelReason"
+                        placeholder="Reason (optional)"
+                        class="px-3 py-1.5 text-sm bg-muted/10 border border-border rounded-lg
+                               focus:outline-none focus:border-primary"
+                      />
+                      <button
+                        (click)="confirmCancel(order.id)"
+                        [disabled]="cancelling()"
+                        class="px-3 py-1.5 bg-red-500/10 text-red-500 text-sm font-medium rounded-lg
+                               hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                      >
+                        @if (cancelling()) {
+                          <lucide-icon name="Loader" class="w-4 h-4 animate-spin"></lucide-icon>
+                        } @else {
+                          Confirm
+                        }
+                      </button>
+                      <button
+                        (click)="showCancelConfirm.set(false)"
+                        class="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  } @else {
+                    <button
+                      (click)="showCancelConfirm.set(true)"
+                      class="px-4 py-2 bg-red-500/10 text-red-500 text-sm font-medium rounded-lg
+                             hover:bg-red-500/20 transition-colors flex items-center gap-1.5"
+                    >
+                      <lucide-icon name="XCircle" class="w-4 h-4"></lucide-icon>
+                      Cancel Order
+                    </button>
+                  }
+                }
+              </div>
             </div>
 
             <app-order-timeline [order]="order" class="mb-4" />
@@ -91,11 +135,33 @@ import { OrderTimelineComponent } from '../order-timeline/order-timeline';
 export class OrderDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   readonly store = inject(OrderStore);
+  private readonly toast = inject(ToastService);
+
+  showCancelConfirm = signal(false);
+  cancelReason = '';
+  cancelling = signal(false);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.store.loadOrderById(id);
     }
+  }
+
+  canCancel(status: string): boolean {
+    return ['Submitted', 'InventoryReserved', 'PaymentProcessing', 'Processing'].includes(status);
+  }
+
+  async confirmCancel(orderId: string): Promise<void> {
+    this.cancelling.set(true);
+    const success = await this.store.cancelOrder(orderId, this.cancelReason || undefined);
+    if (success) {
+      this.toast.success('Order cancelled successfully');
+      this.showCancelConfirm.set(false);
+      this.cancelReason = '';
+    } else {
+      this.toast.error('Failed to cancel order');
+    }
+    this.cancelling.set(false);
   }
 }

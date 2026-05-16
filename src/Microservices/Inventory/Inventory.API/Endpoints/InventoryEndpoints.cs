@@ -60,8 +60,20 @@ public static class InventoryEndpoints
             return Results.Ok(items.Select(i => new { i.Id, i.Sku, i.AvailableQuantity }));
         })
         .RequireAuthorization();
+
+        // Batch lookup by SKUs — for seller inventory dashboard
+        group.MapPost("/items/batch", async (
+            [FromBody] BatchInventoryRequest request,
+            [FromServices] IInventoryItemRepository repository,
+            CancellationToken ct) =>
+        {
+            var items = await repository.GetBySkusAsync(request.Skus, ct);
+            return Results.Ok(items.Select(i => new { i.Id, i.Sku, i.AvailableQuantity }));
+        })
+        .RequireAuthorization();
     }
 }
 
 public record CreateInventoryItemRequest(string Sku, int InitialQuantity);
 public record AddStockRequest(int Quantity);
+public record BatchInventoryRequest(List<string> Skus);
