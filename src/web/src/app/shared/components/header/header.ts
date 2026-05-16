@@ -5,10 +5,11 @@ import { AuthStore } from '../../../core/auth/auth.store';
 import { CartStore } from '../../../features/cart/cart.store';
 import { LucideAngularModule, User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Globe } from 'lucide-angular';
 import { MegaMenu } from '../mega-menu/mega-menu';
+import { SearchBarComponent } from '../search-bar/search-bar';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, CommonModule, LucideAngularModule, MegaMenu],
+  imports: [RouterLink, CommonModule, LucideAngularModule, MegaMenu, SearchBarComponent],
   standalone: true,
   templateUrl: './header.html',
   styleUrl: './header.css',

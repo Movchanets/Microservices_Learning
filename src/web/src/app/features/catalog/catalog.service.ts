@@ -69,6 +69,9 @@ export class CatalogService {
     if (params.priceMin != null) httpParams = httpParams.set('priceMin', params.priceMin);
     if (params.priceMax != null) httpParams = httpParams.set('priceMax', params.priceMax);
     if (params.tags) httpParams = httpParams.set('tags', params.tags);
+    if (params.brand) httpParams = httpParams.set('brand', params.brand);
+    if (params.minRating != null) httpParams = httpParams.set('minRating', params.minRating);
+    if (params.inStock != null) httpParams = httpParams.set('inStock', params.inStock);
     if (params.page) httpParams = httpParams.set('page', params.page);
     if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize);
 

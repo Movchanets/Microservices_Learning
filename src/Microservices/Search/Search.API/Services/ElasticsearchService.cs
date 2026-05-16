@@ -61,6 +61,9 @@ public sealed class ElasticsearchService : ISearchService
         decimal? priceMin,
         decimal? priceMax,
         List<string>? tags,
+        string? brand,
+        double? minRating,
+        bool? inStock,
         int page,
         int pageSize,
         CancellationToken ct = default)
@@ -109,12 +112,36 @@ public sealed class ElasticsearchService : ISearchService
                         .Terms(new TermsQueryField(tags.Select(FieldValue.String).ToArray()))));
                 }
 
+                // Brand filter
+                if (!string.IsNullOrWhiteSpace(brand))
+                {
+                    mustQueries.Add(mq => mq.Term(t => t.Field("brand.keyword").Value(brand)));
+                }
+
+                // Rating filter
+                if (minRating.HasValue)
+                {
+                    mustQueries.Add(mq => mq.Range(r => r
+                        .NumberRange(nr => nr
+                            .Field(f => f.Rating)
+                            .Gte(minRating.Value))));
+                }
+
+                // In-stock filter
+                if (inStock == true)
+                {
+                    mustQueries.Add(mq => mq.Term(t => t.Field(f => f.InStock).Value(true)));
+                }
+
                 b.Must(mustQueries.ToArray());
             }))
             // Aggregations for facets
             .Aggregations(aggs => aggs
                 .Add("categories", a => a.Terms(t => t
                     .Field("categoryName.keyword")
+                    .Size(50)))
+                .Add("brands", a => a.Terms(t => t
+                    .Field("brand.keyword")
                     .Size(50)))
                 .Add("price_ranges", a => a.Range(r => r
                     .Field(f => f.Price)
@@ -148,6 +175,25 @@ public sealed class ElasticsearchService : ISearchService
             {
                 facets["categories"] = categoryAgg.Buckets
                     .Select(b => new FacetValue(b.Key.ToString(), b.DocCount))
+                    .ToList();
+            }
+
+            var brandAgg = response.Aggregations.GetStringTerms("brands");
+            if (brandAgg != null)
+            {
+                facets["brands"] = brandAgg.Buckets
+                    .Where(b => !string.IsNullOrEmpty(b.Key.ToString()))
+                    .Select(b => new FacetValue(b.Key.ToString(), b.DocCount))
+                    .ToList();
+            }
+
+            var priceRangeAgg = response.Aggregations.GetRange("price_ranges");
+            if (priceRangeAgg != null)
+            {
+                facets["price_ranges"] = priceRangeAgg.Buckets
+                    .Select(b => new FacetValue(
+                        b.Key,
+                        b.DocCount))
                     .ToList();
             }
         }

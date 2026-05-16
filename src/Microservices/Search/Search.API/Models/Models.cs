@@ -16,6 +16,13 @@ public sealed class ProductSearchDocument
     public bool IsActive { get; init; } = true;
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
+
+    // New fields for richer faceting
+    public string? Brand { get; init; }
+    public Dictionary<string, string> Attributes { get; init; } = [];
+    public double? Rating { get; init; }
+    public int ReviewCount { get; init; }
+    public bool InStock { get; init; }
 }
 
 public sealed record SearchResult<T>(

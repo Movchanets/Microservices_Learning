@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { importProvidersFrom } from '@angular/core';
 import { Header } from './header';
 import { provideRouter } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { signal } from '@angular/core';
+import { LucideAngularModule, User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Globe, Clock, Package } from 'lucide-angular';
 
 describe('HeaderComponent', () => {
   let component: Header;
@@ -19,7 +21,8 @@ describe('HeaderComponent', () => {
       imports: [Header],
       providers: [
         provideRouter([]),
-        { provide: AuthStore, useValue: mockAuthStore }
+        { provide: AuthStore, useValue: mockAuthStore },
+        importProvidersFrom(LucideAngularModule.pick({ User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Globe, Clock, Package })),
       ],
     }).compileComponents();
 

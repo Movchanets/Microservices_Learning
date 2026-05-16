@@ -29,7 +29,9 @@ public sealed class ProductCreatedConsumer(
             StoreId = msg.StoreId,
             IsActive = true,
             CreatedAt = msg.CreatedAt,
-            UpdatedAt = msg.CreatedAt
+            UpdatedAt = msg.CreatedAt,
+            Brand = msg.Brand,
+            Attributes = msg.Attributes ?? []
         };
 
         await searchService.IndexProductAsync(document, context.CancellationToken);

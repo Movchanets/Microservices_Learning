@@ -16,7 +16,7 @@
 | 04 | [Product Detail Enhancements](04-product-detail-enhancements.md) | Catalog.API + Inventory + Frontend | None | P1 ✅ |
 | 05 | [Reviews & Ratings](05-reviews-ratings.md) | Catalog.API + Media.API + Frontend | None | P2 ✅ |
 | 06 | [Homepage Content Blocks](06-homepage-content-blocks.md) | Catalog.API + Frontend | Plan 01 (category tree) | P2 ✅ |
-| 07 | [Search & Discovery](07-search-discovery.md) | Search.API + Identity + Frontend | None | P2 |
+| 07 | [Search & Discovery](07-search-discovery.md) | Search.API + Identity + Frontend | None | P2 ✅ |
 | 08 | [Inventory Management UI](08-inventory-management-ui.md) | Inventory.API + Frontend | None | P1 |
 | 09 | [Order Cancellation & Status](09-order-cancellation.md) | Ordering.API + Notification + Frontend | None | P1 |
 

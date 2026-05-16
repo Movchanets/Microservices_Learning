@@ -13,6 +13,9 @@ public interface ISearchService
         decimal? priceMin,
         decimal? priceMax,
         List<string>? tags,
+        string? brand,
+        double? minRating,
+        bool? inStock,
         int page,
         int pageSize,
         CancellationToken ct = default);

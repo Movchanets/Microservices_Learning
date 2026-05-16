@@ -99,6 +99,9 @@ export interface ProductSearchParams {
   priceMin?: number;
   priceMax?: number;
   tags?: string;
+  brand?: string;
+  minRating?: number;
+  inStock?: boolean;
   page?: number;
   pageSize?: number;
 }

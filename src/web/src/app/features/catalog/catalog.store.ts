@@ -19,6 +19,9 @@ interface CatalogState {
   selectedCategoryId: string | null;
   priceMin: number | null;
   priceMax: number | null;
+  selectedBrands: string[];
+  minRating: number | null;
+  inStockOnly: boolean;
   /** UI state */
   loading: boolean;
   error: string | null;
@@ -35,6 +38,9 @@ const initialState: CatalogState = {
   selectedCategoryId: null,
   priceMin: null,
   priceMax: null,
+  selectedBrands: [],
+  minRating: null,
+  inStockOnly: false,
   loading: false,
   error: null,
 };
@@ -49,7 +55,12 @@ export const CatalogStore = signalStore(
     hasPrevious: computed(() => store.page() > 1),
     hasNext: computed(() => store.page() < Math.ceil(store.totalCount() / store.pageSize())),
     /** Whether we're in search mode (use Search.API) vs browse mode (use Catalog.API) */
-    isSearchMode: computed(() => store.searchQuery().trim().length > 0),
+    isSearchMode: computed(() =>
+      store.searchQuery().trim().length > 0 ||
+      store.selectedBrands().length > 0 ||
+      store.minRating() !== null ||
+      store.inStockOnly()
+    ),
     /** Active category for UI highlighting */
     activeCategory: computed(
       () => store.categories().find((c) => c.id === store.selectedCategoryId()) ?? null,
@@ -90,11 +101,15 @@ export const CatalogStore = signalStore(
     async searchProducts(): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
+        const brands = store.selectedBrands();
         const result: SearchResult<ProductListItem> = await catalogService.searchProducts({
           q: store.searchQuery(),
           categoryId: store.selectedCategoryId() ?? undefined,
           priceMin: store.priceMin() ?? undefined,
           priceMax: store.priceMax() ?? undefined,
+          brand: brands.length === 1 ? brands[0] : undefined,
+          minRating: store.minRating() ?? undefined,
+          inStock: store.inStockOnly() || undefined,
           page: store.page(),
           pageSize: store.pageSize(),
         });
@@ -147,6 +162,34 @@ export const CatalogStore = signalStore(
 
     setPriceRange(min: number | null, max: number | null): void {
       patchState(store, { priceMin: min, priceMax: max, page: 1 });
+    },
+
+    toggleBrand(brand: string): void {
+      const current = store.selectedBrands();
+      const updated = current.includes(brand)
+        ? current.filter(b => b !== brand)
+        : [...current, brand];
+      patchState(store, { selectedBrands: updated, page: 1 });
+    },
+
+    setMinRating(rating: number | null): void {
+      patchState(store, { minRating: rating, page: 1 });
+    },
+
+    setInStockOnly(inStock: boolean): void {
+      patchState(store, { inStockOnly: inStock, page: 1 });
+    },
+
+    clearFilters(): void {
+      patchState(store, {
+        selectedCategoryId: null,
+        priceMin: null,
+        priceMax: null,
+        selectedBrands: [],
+        minRating: null,
+        inStockOnly: false,
+        page: 1,
+      });
     },
 
     goToPage(page: number): void {

@@ -16,4 +16,6 @@ public sealed record ProductUpdatedEvent(
     List<string> Tags,
     string? ImageUrl,
     bool IsActive,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    string? Brand = null,
+    Dictionary<string, string>? Attributes = null);

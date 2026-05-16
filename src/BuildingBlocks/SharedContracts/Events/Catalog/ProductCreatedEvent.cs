@@ -16,4 +16,6 @@ public sealed record ProductCreatedEvent(
     List<string> Tags,
     string? ImageUrl,
     Guid StoreId,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? Brand = null,
+    Dictionary<string, string>? Attributes = null);

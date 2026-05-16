@@ -15,6 +15,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     /// Gets the collection of Users in the database.
     /// </summary>
     public DbSet<User> Users => Set<User>();
+    public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
 
     /// <summary>
     /// Configures the schema needed for the identity context.

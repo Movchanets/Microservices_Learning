@@ -29,19 +29,7 @@
 
     <!-- Center: Search Bar -->
     <div class="flex-1 max-w-3xl hidden md:block">
-      <form (submit)="search(searchInput.value); $event.preventDefault()" class="relative flex items-center w-full">
-        <lucide-icon [name]="SearchIcon" class="absolute left-4 w-5 h-5 text-muted-foreground"></lucide-icon>
-        <input 
-          #searchInput
-          type="text" 
-          name="q"
-          placeholder="I am looking for..."
-          class="w-full h-11 pl-12 pr-4 bg-muted/50 border border-transparent hover:border-border focus:border-primary focus:bg-background rounded-xl outline-none transition-all"
-        />
-        <button type="submit" class="absolute right-2 h-7 px-4 rounded-lg bg-primary/10 text-primary font-medium text-sm hover:bg-primary hover:text-white transition-colors">
-          Search
-        </button>
-      </form>
+      <app-search-bar (search)="search($event)" />
     </div>
 
     <!-- Right: Utility Icons -->

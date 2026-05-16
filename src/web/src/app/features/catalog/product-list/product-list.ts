@@ -64,10 +64,17 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
             @if (store.isSearchMode()) {
               <app-search-facets
                 [categoryFacets]="searchCategoryFacets()"
+                [brandFacets]="searchBrandFacets()"
                 [priceMin]="store.priceMin()"
                 [priceMax]="store.priceMax()"
+                [selectedBrands]="store.selectedBrands()"
+                [selectedRating]="store.minRating()"
+                [inStockOnly]="store.inStockOnly()"
                 (priceRangeChange)="onPriceRangeChange($event)"
                 (categoryClicked)="onFacetCategoryClick($event)"
+                (brandToggled)="store.toggleBrand($event)"
+                (ratingSelected)="store.setMinRating($event)"
+                (inStockToggle)="store.setInStockOnly($event)"
                 (clearFilters)="onClearFilters()"
               />
             }
@@ -189,6 +196,11 @@ export class ProductListComponent implements OnInit, OnDestroy {
     return facets['categories'] ?? [];
   });
 
+  searchBrandFacets = computed(() => {
+    const facets = this.store.facets();
+    return facets['brands'] ?? [];
+  });
+
   onPriceRangeChange(event: { min: number | null; max: number | null }): void {
     this.store.setPriceRange(event.min, event.max);
     this.store.refresh();
@@ -204,9 +216,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
   }
 
   onClearFilters(): void {
-    this.store.updateSearchQuery('');
-    this.store.selectCategory(null);
-    this.store.setPriceRange(null, null);
+    this.store.clearFilters();
     this.store.refresh();
   }
 }

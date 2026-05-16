@@ -74,7 +74,7 @@ public class SearchQueryTests
 
         // Act
         var result = await _fixture.SearchService.SearchAsync(
-            "bluetooth", null, null, null, null, 1, 10);
+            "bluetooth", null, null, null, null, null, null, null, 1, 10);
 
         // Assert
         result.Items.Should().NotBeEmpty();
@@ -88,12 +88,12 @@ public class SearchQueryTests
         await SeedProductsAsync();
 
         // First get all to find a category ID
-        var all = await _fixture.SearchService.SearchAsync(null, null, null, null, null, 1, 100);
+        var all = await _fixture.SearchService.SearchAsync(null, null, null, null, null, null, null, null, 1, 100);
         var electronicsCategoryId = all.Items.First(p => p.CategoryName == "Electronics").CategoryId;
 
         // Act
         var result = await _fixture.SearchService.SearchAsync(
-            null, electronicsCategoryId, null, null, null, 1, 10);
+            null, electronicsCategoryId, null, null, null, null, null, null, 1, 10);
 
         // Assert
         result.Items.Should().NotBeEmpty();
@@ -107,8 +107,8 @@ public class SearchQueryTests
         await SeedProductsAsync();
 
         // Act
-        var page1 = await _fixture.SearchService.SearchAsync(null, null, null, null, null, 1, 2);
-        var page2 = await _fixture.SearchService.SearchAsync(null, null, null, null, null, 2, 2);
+        var page1 = await _fixture.SearchService.SearchAsync(null, null, null, null, null, null, null, null, 1, 2);
+        var page2 = await _fixture.SearchService.SearchAsync(null, null, null, null, null, null, null, null, 2, 2);
 
         // Assert
         page1.Items.Should().HaveCount(2);
@@ -129,7 +129,7 @@ public class SearchQueryTests
 
         // Act
         var result = await _fixture.SearchService.SearchAsync(
-            null, null, 30m, 60m, null, 1, 100);
+            null, null, 30m, 60m, null, null, null, null, 1, 100);
 
         // Assert
         result.Items.Should().NotBeEmpty();
