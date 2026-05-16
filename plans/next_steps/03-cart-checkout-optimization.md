@@ -1,4 +1,4 @@
-# Plan 03: Cart & Checkout Optimization
+# Plan 03: Cart & Checkout Optimization — ✅ COMPLETE (2026-05-16)
 
 ## Goal
 Add slide-out cart drawer (mini-cart), single-item cart endpoints, address form in checkout, and improve the overall cart/checkout UX.

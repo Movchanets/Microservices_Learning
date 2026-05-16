@@ -8,7 +8,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 // PostgreSQL server + per-service databases
 var postgres = builder.AddPostgres("postgres")
-    .WithPgAdmin();
+    .WithPgAdmin()
+    .WithHostPort(5432);
 
 var identityDb = postgres.AddDatabase("identity-db");
 var catalogDb = postgres.AddDatabase("catalog-db");
@@ -20,16 +21,21 @@ var cartDb = postgres.AddDatabase("cart-db");
 
 // Redis — used by Cart.API, Notification.Worker (SignalR backplane)
 var redis = builder.AddRedis("redis")
-    .WithRedisInsight();
+    .WithRedisInsight()
+    .WithHostPort(6379);
 
 // RabbitMQ — message broker for MassTransit
 var messaging = builder.AddRabbitMQ("messaging")
-    .WithManagementPlugin();
+    .WithManagementPlugin()
+    .WithEndpoint(port: 5672, name: "rabbitmq");
 
 // ──────────────────────────────────────────────
 // Elasticsearch — used by Search.API
 // ──────────────────────────────────────────────
-var elasticsearch = builder.AddElasticsearch("elasticsearch");
+// Elastic.Clients.Elasticsearch 9.4.0 requires ES server 9.x
+var elasticsearch = builder.AddElasticsearch("elasticsearch")
+    .WithImage("elasticsearch")
+    .WithImageTag("9.0.1");
 
 // ──────────────────────────────────────────────
 // Microservices (to be added in later phases)

@@ -1,0 +1,164 @@
+<div class="min-h-screen bg-background p-6 pt-10">
+  <div class="container mx-auto max-w-3xl">
+    <h1 class="text-3xl font-bold text-foreground font-lexend mb-8">Checkout</h1>
+
+    @if (checkoutStore.hasOrder()) {
+      <app-checkout-status
+        [status]="checkoutStore.orderStatus()!"
+        [correlationId]="cartStore.checkoutCorrelationId()" />
+    } @else if (submitted()) {
+      <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-8 text-center">
+        <div class="animate-pulse">
+          <lucide-icon name="Clock" class="w-16 h-16 mx-auto mb-4 text-primary"></lucide-icon>
+          <h2 class="text-2xl font-bold font-lexend mb-2">Order Submitted</h2>
+          <p class="text-muted mb-6">Your order is being created...</p>
+        </div>
+        <div class="mt-4">
+          <p class="text-sm text-muted mb-2">Correlation ID</p>
+          <p class="font-mono text-xs text-muted bg-muted/10 inline-block px-3 py-1 rounded-lg">
+            {{ cartStore.checkoutCorrelationId() }}
+          </p>
+        </div>
+      </div>
+    } @else if (cartStore.isEmpty()) {
+      <div class="text-center py-16 bg-card/60 backdrop-blur-sm rounded-3xl border border-border">
+        <lucide-icon name="ShoppingCart" class="w-16 h-16 mx-auto mb-4 opacity-30"></lucide-icon>
+        <p class="text-xl font-medium text-foreground mb-4">Your cart is empty</p>
+        <a routerLink="/catalog"
+           class="inline-block px-6 py-3 bg-primary text-white rounded-xl hover:bg-secondary transition-colors">
+          Continue Shopping
+        </a>
+      </div>
+    } @else {
+      <div class="checkout-accordion">
+        <!-- Section 1: Shipping Address -->
+        <div class="accordion-item" [class.active]="activeSection() === 'address'" [class.completed]="checkoutStore.address()">
+          <button class="accordion-header" (click)="setSection('address')">
+            <div class="header-content">
+              <span class="step-number" *ngIf="!checkoutStore.address()">1</span>
+              <lucide-icon [img]="CheckIcon" class="step-check" *ngIf="checkoutStore.address()"></lucide-icon>
+              <lucide-icon [img]="MapPinIcon" class="header-icon"></lucide-icon>
+              <h2>Shipping Address</h2>
+            </div>
+            <lucide-icon [img]="ChevronIcon" class="chevron" [class.rotate-180]="activeSection() === 'address'"></lucide-icon>
+          </button>
+          <div class="accordion-content" *ngIf="activeSection() === 'address'">
+            <app-address-form (addressSaved)="onAddressSaved($event)"></app-address-form>
+          </div>
+          <div class="accordion-summary" *ngIf="activeSection() !== 'address' && checkoutStore.address()">
+            <p>{{ checkoutStore.address()?.addressLine1 }}, {{ checkoutStore.address()?.city }}, {{ checkoutStore.address()?.country }}</p>
+          </div>
+        </div>
+
+        <!-- Section 2: Shipping Method -->
+        <div class="accordion-item" [class.active]="activeSection() === 'shipping'" [class.completed]="checkoutStore.address()">
+          <button class="accordion-header" (click)="setSection('shipping')" [disabled]="!checkoutStore.address()">
+            <div class="header-content">
+              <span class="step-number">2</span>
+              <lucide-icon [img]="TruckIcon" class="header-icon"></lucide-icon>
+              <h2>Shipping Method</h2>
+            </div>
+            <lucide-icon [img]="ChevronIcon" class="chevron" [class.rotate-180]="activeSection() === 'shipping'"></lucide-icon>
+          </button>
+          <div class="accordion-content" *ngIf="activeSection() === 'shipping'">
+            <div class="shipping-methods">
+              <label class="shipping-method">
+                <input type="radio" name="shipping" (change)="setShippingMethod('standard')" [checked]="checkoutStore.shippingMethod() === 'standard'">
+                <div class="method-info">
+                  <span class="method-name">Standard Shipping</span>
+                  <span class="method-desc">5-7 business days</span>
+                </div>
+                <span class="method-price">Free</span>
+              </label>
+              <label class="shipping-method">
+                <input type="radio" name="shipping" (change)="setShippingMethod('express')" [checked]="checkoutStore.shippingMethod() === 'express'">
+                <div class="method-info">
+                  <span class="method-name">Express Shipping</span>
+                  <span class="method-desc">1-2 business days</span>
+                </div>
+                <span class="method-price">$15.00</span>
+              </label>
+            </div>
+          </div>
+          <div class="accordion-summary" *ngIf="activeSection() !== 'shipping' && checkoutStore.address()">
+             <p>{{ checkoutStore.shippingMethod() | titlecase }} Shipping</p>
+          </div>
+        </div>
+
+        <!-- Section 3: Order Summary -->
+        <div class="accordion-item" [class.active]="activeSection() === 'summary'">
+          <button class="accordion-header" (click)="setSection('summary')" [disabled]="!checkoutStore.address()">
+            <div class="header-content">
+              <span class="step-number">3</span>
+              <lucide-icon [img]="BagIcon" class="header-icon"></lucide-icon>
+              <h2>Order Summary</h2>
+            </div>
+            <lucide-icon [img]="ChevronIcon" class="chevron" [class.rotate-180]="activeSection() === 'summary'"></lucide-icon>
+          </button>
+          <div class="accordion-content" *ngIf="activeSection() === 'summary'">
+            <app-checkout-summary></app-checkout-summary>
+            <button class="next-btn" (click)="setSection('payment')">Continue to Payment</button>
+          </div>
+        </div>
+
+        <!-- Section 4: Payment -->
+        <div class="accordion-item" [class.active]="activeSection() === 'payment'">
+          <button class="accordion-header" (click)="setSection('payment')" [disabled]="!checkoutStore.address()">
+            <div class="header-content">
+              <span class="step-number">4</span>
+              <lucide-icon [img]="CardIcon" class="header-icon"></lucide-icon>
+              <h2>Payment</h2>
+            </div>
+            <lucide-icon [img]="ChevronIcon" class="chevron" [class.rotate-180]="activeSection() === 'payment'"></lucide-icon>
+          </button>
+          <div class="accordion-content" *ngIf="activeSection() === 'payment'">
+            <div class="payment-sim">
+              <p class="mb-4">This is a simulated payment step. In a real application, you would enter credit card details here.</p>
+              
+              <div class="price-breakdown mb-6">
+                <div class="flex justify-between mb-2">
+                  <span>Subtotal</span>
+                  <span>${{ cartStore.totalPrice() | number:'1.2-2' }}</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                  <span>Shipping</span>
+                  <span>{{ checkoutStore.shippingMethod() === 'express' ? '$15.00' : 'Free' }}</span>
+                </div>
+                <div class="flex justify-between font-bold text-lg border-t border-border pt-2 mt-2">
+                  <span>Total</span>
+                  <span>${{ (cartStore.totalPrice() + (checkoutStore.shippingMethod() === 'express' ? 15 : 0)) | number:'1.2-2' }}</span>
+                </div>
+              </div>
+
+              @if (checkoutStore.error()) {
+                <div class="mb-4 p-4 bg-red-500/10 text-red-500 rounded-xl">
+                  {{ checkoutStore.error() }}
+                </div>
+              }
+
+              <button (click)="onConfirm()"
+                      [disabled]="checkoutStore.submitting()"
+                      class="w-full py-4 bg-success text-white rounded-xl font-bold text-lg hover:opacity-90 transition-all disabled:opacity-50 cursor-pointer">
+                @if (checkoutStore.submitting()) {
+                  <span class="flex items-center justify-center gap-2">
+                    <span class="animate-spin w-5 h-5 border-3 border-white border-t-transparent rounded-full"></span>
+                    Processing...
+                  </span>
+                } @else {
+                  Place Order
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8">
+        <a routerLink="/cart" class="text-muted hover:text-foreground transition-colors flex items-center gap-2">
+          <lucide-icon name="ChevronLeft" class="w-4 h-4"></lucide-icon>
+          Back to Cart
+        </a>
+      </div>
+    }
+  </div>
+</div>

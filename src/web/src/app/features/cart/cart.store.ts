@@ -15,6 +15,7 @@ interface CartState {
   loading: boolean;
   error: string | null;
   checkoutCorrelationId: string | null;
+  isDrawerOpen: boolean;
 }
 
 const initialState: CartState = {
@@ -22,6 +23,7 @@ const initialState: CartState = {
   loading: false,
   error: null,
   checkoutCorrelationId: null,
+  isDrawerOpen: false,
 };
 
 import { isPlatformBrowser } from '@angular/common';
@@ -38,6 +40,16 @@ export const CartStore = signalStore(
   })),
 
   withMethods((store, cartService = inject(CartService)) => ({
+    showDrawer() {
+      patchState(store, { isDrawerOpen: true });
+    },
+    hideDrawer() {
+      patchState(store, { isDrawerOpen: false });
+    },
+    toggleDrawer() {
+      patchState(store, { isDrawerOpen: !store.isDrawerOpen() });
+    },
+
     async loadCart(): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
@@ -48,26 +60,13 @@ export const CartStore = signalStore(
       }
     },
 
-    async addToCart(sku: string, quantity: number = 1, unitPrice?: number): Promise<void> {
+    async addToCart(sku: string, quantity: number = 1): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        // Optimistic local update
-        const currentItems = [...store.items()];
-        const existingItem = currentItems.find((i) => i.sku === sku);
-
-        if (existingItem) {
-          existingItem.quantity += quantity;
-          if (unitPrice !== undefined) existingItem.unitPrice = unitPrice;
-        } else {
-          currentItems.push({ sku, quantity, unitPrice });
-        }
-
-        const updatedCart = await cartService.updateCart({ items: currentItems });
-
-        patchState(store, { items: updatedCart.items, loading: false });
+        const updatedCart = await cartService.addItem(sku, quantity);
+        patchState(store, { items: updatedCart.items, loading: false, isDrawerOpen: true });
       } catch (err: any) {
         patchState(store, { error: 'Failed to add item to cart', loading: false });
-        // Re-load cart to discard failed optimistic update
         await this.loadCart();
       }
     },
@@ -80,35 +79,34 @@ export const CartStore = signalStore(
 
       patchState(store, { loading: true, error: null });
       try {
-        const currentItems = store.items().map((i) => (i.sku === sku ? { ...i, quantity } : i));
-
-        const updatedCart = await cartService.updateCart({ items: currentItems });
+        const updatedCart = await cartService.updateItem(sku, quantity);
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
         patchState(store, { error: 'Failed to update quantity', loading: false });
+        await this.loadCart();
       }
     },
 
     async removeFromCart(sku: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const currentItems = store.items().filter((i) => i.sku !== sku);
-
-        const updatedCart = await cartService.updateCart({ items: currentItems });
+        const updatedCart = await cartService.removeItem(sku);
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
         patchState(store, { error: 'Failed to remove item', loading: false });
+        await this.loadCart();
       }
     },
 
-    async checkout(): Promise<void> {
+    async checkout(address?: any): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const response = await cartService.checkout();
+        const response = await cartService.checkout(address);
         patchState(store, {
           items: [],
           checkoutCorrelationId: response.correlationId,
           loading: false,
+          isDrawerOpen: false,
         });
       } catch (err: any) {
         patchState(store, { error: 'Checkout failed', loading: false });

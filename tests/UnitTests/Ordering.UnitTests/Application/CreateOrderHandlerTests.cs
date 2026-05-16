@@ -28,7 +28,7 @@ public class CreateOrderHandlerTests
         [
             new CreateOrderItemDto("SKU-1", "Product 1", 10m, 2),
             new CreateOrderItemDto("SKU-2", "Product 2", 5m, 3)
-        ]);
+        ], null, null, null, null, null, null);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 

@@ -8,7 +8,14 @@ using MediatR;
 namespace Cart.Application.Commands;
 
 public record CheckoutResponseDto(Guid CorrelationId);
-public record CheckoutCartCommand(string BuyerId) : IRequest<Result<CheckoutResponseDto>>;
+public record CheckoutCartCommand(
+    string BuyerId,
+    string? AddressLine1 = null,
+    string? AddressLine2 = null,
+    string? City = null,
+    string? State = null,
+    string? PostalCode = null,
+    string? Country = null) : IRequest<Result<CheckoutResponseDto>>;
 
 public sealed class CheckoutCartCommandHandler(
     ICartRepository repository,
@@ -30,7 +37,13 @@ public sealed class CheckoutCartCommandHandler(
             correlationId,
             request.BuyerId,
             itemsContract,
-            DateTime.UtcNow
+            DateTime.UtcNow,
+            request.AddressLine1,
+            request.AddressLine2,
+            request.City,
+            request.State,
+            request.PostalCode,
+            request.Country
         );
 
         await publishEndpoint.Publish(orderSubmittedEvent, cancellationToken);

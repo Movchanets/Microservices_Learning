@@ -16,6 +16,7 @@ describe('CheckoutStore', () => {
     isEmpty: signal(false),
     checkout: vi.fn().mockResolvedValue(undefined),
     checkoutCorrelationId: signal('test-correlation-id'),
+    totalPrice: signal(20),
   };
 
   beforeEach(() => {
@@ -41,7 +42,10 @@ describe('CheckoutStore', () => {
   });
 
   describe('submitCheckout', () => {
+    const testAddress = { addressLine1: '123 Main St', city: 'NY', state: 'NY', postalCode: '10001', country: 'US' };
+
     it('should call cartStore.checkout on submit', async () => {
+      store.setAddress(testAddress);
       await store.submitCheckout();
 
       expect(mockCartStore.checkout).toHaveBeenCalled();
@@ -50,6 +54,7 @@ describe('CheckoutStore', () => {
     });
 
     it('should set submitting during checkout', async () => {
+      store.setAddress(testAddress);
       let resolveCheckout: () => void;
       mockCartStore.checkout.mockReturnValueOnce(
         new Promise<void>((resolve) => { resolveCheckout = resolve; })
@@ -65,6 +70,7 @@ describe('CheckoutStore', () => {
     });
 
     it('should set error when cart is empty', async () => {
+      store.setAddress(testAddress);
       mockCartStore.items.set([]);
 
       await store.submitCheckout();
@@ -73,7 +79,15 @@ describe('CheckoutStore', () => {
       expect(mockCartStore.checkout).not.toHaveBeenCalled();
     });
 
+    it('should set error when address is missing', async () => {
+      await store.submitCheckout();
+
+      expect(store.error()).toBe('Shipping address is required');
+      expect(mockCartStore.checkout).not.toHaveBeenCalled();
+    });
+
     it('should set error when checkout fails', async () => {
+      store.setAddress(testAddress);
       mockCartStore.checkout.mockRejectedValueOnce(new Error('Network error'));
 
       await store.submitCheckout();

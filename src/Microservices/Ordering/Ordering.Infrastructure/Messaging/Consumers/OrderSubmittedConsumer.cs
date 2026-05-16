@@ -3,6 +3,7 @@ using BuildingBlocks.SharedContracts.Events.Cart;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Ordering.Domain.Aggregates;
+using Ordering.Domain.ValueObjects;
 
 namespace Ordering.Infrastructure.Messaging.Consumers;
 
@@ -30,7 +31,12 @@ public sealed class OrderSubmittedConsumer(
             return;
         }
 
-        var order = Order.Create(evt.BuyerId);
+        var address = Address.FromShipping(
+            evt.ShippingAddressLine1, evt.ShippingAddressLine2,
+            evt.ShippingCity, evt.ShippingState,
+            evt.ShippingPostalCode, evt.ShippingCountry);
+
+        var order = Order.Create(evt.BuyerId, address);
 
         foreach (var item in evt.Items)
         {

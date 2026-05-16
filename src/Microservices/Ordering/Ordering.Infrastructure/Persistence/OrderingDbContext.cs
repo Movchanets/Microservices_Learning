@@ -9,6 +9,7 @@ public sealed class OrderingDbContext(DbContextOptions<OrderingDbContext> option
     : DbContext(options), IUnitOfWork
 {
     public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderState> OrderStates => Set<OrderState>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,7 +21,15 @@ public sealed class OrderingDbContext(DbContextOptions<OrderingDbContext> option
         modelBuilder.AddOutboxMessageEntity();
         modelBuilder.AddOutboxStateEntity();
 
-        // Saga state table is configured via AddSagaStateMachine().EntityFrameworkRepository()
-        // in the API's MassTransit registration. The table is created by EF migrations.
+        // Saga state entity
+        modelBuilder.Entity<OrderState>(b =>
+        {
+            b.HasKey(x => x.CorrelationId);
+            b.Property(x => x.CurrentState).IsRequired().HasMaxLength(64);
+            b.Property(x => x.BuyerId).IsRequired();
+            b.Property(x => x.ItemsJson).HasMaxLength(4000);
+            b.Property(x => x.RowVersion).IsRowVersion()
+                .HasDefaultValueSql("gen_random_uuid()::text::bytea");
+        });
     }
 }

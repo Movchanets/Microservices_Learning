@@ -17,13 +17,18 @@ public sealed class CartItem : Entity
         Price = price;
     }
 
-    internal void AddQuantity(int quantity)
+    public void AddQuantity(int quantity)
     {
         Quantity += quantity;
     }
 
-    internal void SetQuantity(int quantity)
+    public void SetQuantity(int quantity)
     {
         Quantity = quantity;
+    }
+
+    public void SetPrice(decimal price)
+    {
+        Price = price;
     }
 }

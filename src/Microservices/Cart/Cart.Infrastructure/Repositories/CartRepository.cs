@@ -59,23 +59,34 @@ public class CartRepository(IDistributedCache cache, CartDbContext dbContext) : 
         }
         else
         {
-            // We clear and re-add instead of complex syncing for simplicity
-            // Alternatively, domain logic already updated `cart.Items`
-            // Since `cart` here is the aggregate root that we might have attached,
-            // EF will track changes. If it's detached, we just sync items.
-            dbContext.Entry(existing).CurrentValues.SetValues(cart);
-            // Sync items (EF Core handles collections if configured properly, but usually manual sync is needed)
-            existing.Clear();
-            foreach (var item in cart.Items)
+            var existingItems = existing.Items.ToDictionary(i => i.Sku);
+            var newItems = cart.Items.ToDictionary(i => i.Sku);
+
+            // Remove items no longer in cart
+            foreach (var existingItem in existingItems.Values)
             {
-                existing.AddItem(item.Sku, item.Quantity);
+                if (!newItems.ContainsKey(existingItem.Sku))
+                    dbContext.CartItems.Remove(existingItem);
+            }
+
+            // Update existing items or add new ones
+            foreach (var newItem in newItems.Values)
+            {
+                if (existingItems.TryGetValue(newItem.Sku, out var existingItem))
+                {
+                    existingItem.SetQuantity(newItem.Quantity);
+                    existingItem.SetPrice(newItem.Price);
+                }
+                else
+                {
+                    existing.AddItem(newItem.Sku, newItem.Quantity, newItem.Price);
+                }
             }
         }
 
         await dbContext.SaveChangesAsync(ct);
-        await UpdateCacheAsync(cart, ct);
-
-        return cart;
+        await UpdateCacheAsync(existing ?? cart, ct);
+        return existing ?? cart;
     }
 
     public async Task DeleteCartAsync(string buyerId, CancellationToken ct = default)

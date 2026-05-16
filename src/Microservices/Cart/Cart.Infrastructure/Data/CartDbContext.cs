@@ -1,4 +1,5 @@
 using Cart.Domain.Aggregates;
+using Cart.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cart.Infrastructure.Data;
@@ -7,6 +8,7 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
 {
     public DbSet<ShoppingCart> ShoppingCarts => Set<ShoppingCart>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
+    public DbSet<ProductPrice> ProductPrices => Set<ProductPrice>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -26,5 +28,8 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
             b.HasKey(x => x.Id);
             b.Property(x => x.Sku).IsRequired().HasMaxLength(50);
         });
+
+        // ProductPrice configuration from assembly
+        builder.ApplyConfigurationsFromAssembly(typeof(CartDbContext).Assembly);
     }
 }

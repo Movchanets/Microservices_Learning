@@ -56,10 +56,19 @@
       </button>
 
       <!-- Cart Icon -->
-      <a routerLink="/cart" class="relative flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors h-11 w-11 rounded-xl hover:bg-primary/5">
+      <button 
+        (click)="cartStore.toggleDrawer()"
+        class="relative flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors h-11 w-11 rounded-xl hover:bg-primary/5"
+      >
         <lucide-icon [name]="CartIcon" class="w-5 h-5"></lucide-icon>
-        <!-- Badge could go here -->
-      </a>
+        @if (cartStore.totalItems() > 0) {
+        <div
+          class="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-primary text-white text-[10px] font-bold border-2 border-background"
+        >
+          {{ cartStore.totalItems() }}
+        </div>
+        }
+      </button>
 
       <!-- Profile Section -->
       @if (!user()) {
@@ -89,8 +98,8 @@
           </button>
 
           <!-- Dropdown Menu -->
+          @if (isMenuOpen()) {
           <div
-            *ngIf="isMenuOpen()"
             (click)="isMenuOpen.set(false)"
             class="absolute right-0 mt-2 w-56 bg-card/90 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 z-[100]"
             data-testid="user-dropdown"
@@ -141,6 +150,7 @@
               </button>
             </div>
           </div>
+          }
         </div>
       }
     </div>

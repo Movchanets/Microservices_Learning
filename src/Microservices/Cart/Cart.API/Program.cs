@@ -1,9 +1,12 @@
 using System.Text;
 using Cart.API.Endpoints;
 using Cart.Domain.Aggregates;
+using Cart.Domain.Repositories;
 using Cart.Infrastructure.Repositories;
 using Cart.Infrastructure.Data;
+using Cart.Infrastructure.Messaging.Consumers;
 using Cart.Application.Commands;
+using FluentValidation;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,16 +24,24 @@ builder.AddNpgsqlDbContext<CartDbContext>("cart-db");
 builder.AddRedisDistributedCache("redis");
 
 builder.Services.AddScoped<ICartRepository, CartRepository>();
+builder.Services.AddScoped<IProductPriceRepository, ProductPriceRepository>();
 
-// Application (MediatR)
+// Application (MediatR + FluentValidation)
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(CheckoutCartCommand).Assembly);
 });
+builder.Services.AddValidatorsFromAssembly(typeof(CheckoutCartCommand).Assembly);
 
 // MassTransit
 builder.Services.AddMassTransit(x =>
 {
+    // Product price sync consumers from Catalog events
+    x.AddConsumer<ProductCreatedConsumer>();
+    x.AddConsumer<ProductUpdatedConsumer>();
+    x.AddConsumer<ProductPriceChangedConsumer>();
+    x.AddConsumer<ProductDeletedConsumer>();
+
     x.UsingRabbitMq((context, cfg) =>
     {
         var configuration = context.GetRequiredService<IConfiguration>();

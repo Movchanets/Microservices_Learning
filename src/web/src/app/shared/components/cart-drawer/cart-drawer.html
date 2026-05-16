@@ -1,0 +1,61 @@
+<div class="cart-overlay" *ngIf="cartStore.isDrawerOpen()" (click)="close()">
+  <div class="cart-drawer" (click)="$event.stopPropagation()">
+    <div class="cart-header">
+      <h2>Your Cart ({{ cartStore.totalItems() }})</h2>
+      <button class="close-btn" (click)="close()">
+        <lucide-icon [img]="XIcon" size="24"></lucide-icon>
+      </button>
+    </div>
+
+    <div class="free-shipping-progress" *ngIf="!cartStore.isEmpty()">
+      <p *ngIf="amountAwayFromFreeShipping() > 0">
+        Add <strong>${{ amountAwayFromFreeShipping() | number:'1.2-2' }}</strong> more to unlock free shipping!
+      </p>
+      <p *ngIf="amountAwayFromFreeShipping() === 0" class="success">
+        You've unlocked free shipping!
+      </p>
+      <div class="progress-bar-container">
+        <div class="progress-bar" [style.width.%]="freeShippingPercentage()"></div>
+      </div>
+    </div>
+
+    <div class="cart-items" *ngIf="!cartStore.isEmpty()">
+      <div class="cart-item" *ngFor="let item of cartStore.items()">
+        <div class="item-details">
+          <h3>{{ item.sku }}</h3>
+          <p class="price">${{ item.unitPrice | number:'1.2-2' }}</p>
+        </div>
+        <div class="item-controls">
+          <div class="quantity-control">
+            <button (click)="updateQuantity(item.sku, item.quantity - 1)" [disabled]="cartStore.loading()">
+              <lucide-icon [img]="MinusIcon" size="16"></lucide-icon>
+            </button>
+            <span>{{ item.quantity }}</span>
+            <button (click)="updateQuantity(item.sku, item.quantity + 1)" [disabled]="cartStore.loading()">
+              <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
+            </button>
+          </div>
+          <button class="remove-btn" (click)="removeItem(item.sku)" [disabled]="cartStore.loading()">
+            <lucide-icon [img]="TrashIcon" size="18"></lucide-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-cart" *ngIf="cartStore.isEmpty()">
+      <p>Your cart is empty.</p>
+      <button class="primary-btn" (click)="close()" routerLink="/catalog">Continue Shopping</button>
+    </div>
+
+    <div class="cart-footer" *ngIf="!cartStore.isEmpty()">
+      <div class="total-row">
+        <span>Subtotal</span>
+        <span>${{ cartStore.totalPrice() | number:'1.2-2' }}</span>
+      </div>
+      <div class="action-buttons">
+        <button class="secondary-btn" (click)="close()" routerLink="/cart">View Cart</button>
+        <button class="primary-btn" (click)="close()" routerLink="/checkout">Checkout</button>
+      </div>
+    </div>
+  </div>
+</div>

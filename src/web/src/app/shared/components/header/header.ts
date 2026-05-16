@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from '../../../core/auth/auth.store';
+import { CartStore } from '../../../features/cart/cart.store';
 import { LucideAngularModule, User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Globe } from 'lucide-angular';
 import { MegaMenu } from '../mega-menu/mega-menu';
 
@@ -15,6 +16,7 @@ import { MegaMenu } from '../mega-menu/mega-menu';
 export class Header {
   private authStore = inject(AuthStore);
   private router = inject(Router);
+  cartStore = inject(CartStore);
 
   user = this.authStore.user;
   isMenuOpen = signal(false);

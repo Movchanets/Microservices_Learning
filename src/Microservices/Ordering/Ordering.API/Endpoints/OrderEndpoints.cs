@@ -26,7 +26,15 @@ public static class OrderEndpoints
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var cmd = new CreateOrderCommand(buyerId, request.Items);
+            var cmd = new CreateOrderCommand(
+                buyerId, 
+                request.Items,
+                request.ShippingAddressLine1,
+                request.ShippingAddressLine2,
+                request.ShippingCity,
+                request.ShippingState,
+                request.ShippingPostalCode,
+                request.ShippingCountry);
             var result = await sender.Send(cmd, ct);
             return result.IsSuccess
                 ? Results.Created($"/api/orders/{result.Value}", result.Value)
@@ -66,4 +74,10 @@ public static class OrderEndpoints
 }
 
 public sealed record CreateOrderRequest(
-    List<CreateOrderItemDto> Items);
+    List<CreateOrderItemDto> Items,
+    string? ShippingAddressLine1,
+    string? ShippingAddressLine2,
+    string? ShippingCity,
+    string? ShippingState,
+    string? ShippingPostalCode,
+    string? ShippingCountry);

@@ -24,6 +24,17 @@ public sealed class Address : ValueObject
         ZipCode = zipCode;
     }
 
+    public static Address? FromShipping(
+        string? line1, string? line2, string? city, string? state, string? postalCode, string? country)
+    {
+        if (string.IsNullOrEmpty(line1) || string.IsNullOrEmpty(city) ||
+            string.IsNullOrEmpty(country) || string.IsNullOrEmpty(postalCode))
+            return null;
+
+        var street = string.IsNullOrEmpty(line2) ? line1 : $"{line1} {line2}";
+        return new Address(street, city, state ?? string.Empty, country, postalCode);
+    }
+
     protected override IEnumerable<object?> GetEqualityComponents()
     {
         yield return Street;

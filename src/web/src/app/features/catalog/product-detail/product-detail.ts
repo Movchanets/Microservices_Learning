@@ -173,7 +173,7 @@ export class ProductDetailComponent implements OnInit {
   onAddToCart(productId: string): void {
     const p = this.product();
     if (p) {
-      this.cartStore.addToCart(p.sku, 1, p.price);
+      this.cartStore.addToCart(p.sku, 1);
     }
   }
 }

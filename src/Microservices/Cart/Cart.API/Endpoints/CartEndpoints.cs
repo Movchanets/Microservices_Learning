@@ -64,22 +64,46 @@ public static class CartEndpoints
             return result.IsSuccess ? Results.Accepted(value: result.Value) : Results.BadRequest(result.Error);
         });
 
-        // TODO: Add single-item endpoints for better UX.
-        //       Currently Cart only supports full replacement (POST /api/cart).
-        //       Needed for: "Add to Cart" button on product detail page.
-        //
-        //       POST /api/cart/items — add single item { sku, quantity, price }
-        //       PUT /api/cart/items/{sku} — update quantity
-        //       DELETE /api/cart/items/{sku} — remove single item
-        //
-        //       Backend: Needs AddItemCommand, UpdateItemQuantityCommand, RemoveItemCommand
-        //       Ref: src/Microservices/Cart/Cart.Domain/Aggregates/ShoppingCart.cs — AddItem method
-        //
-        //       Frontend: CartStore.addToCart() calls this instead of full cart replacement.
-        //       Ref: src/web/src/app/features/cart/cart.store.ts — addToCart method
-        //       Ref: plans/future_design/cart_and_checkout.md — "Slide-out Cart Drawer"
+        group.MapPost("/items", async (
+            ClaimsPrincipal user,
+            [FromBody] AddCartItemRequest request,
+            [FromServices] ISender sender,
+            CancellationToken ct) =>
+        {
+            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
+            var result = await sender.Send(new AddCartItemCommand(buyerId, request.Sku, request.Quantity), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+        });
+
+        group.MapPut("/items/{sku}", async (
+            ClaimsPrincipal user,
+            string sku,
+            [FromBody] UpdateCartItemRequest request,
+            [FromServices] ISender sender,
+            CancellationToken ct) =>
+        {
+            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
+            var result = await sender.Send(new UpdateCartItemCommand(buyerId, sku, request.Quantity), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+        });
+
+        group.MapDelete("/items/{sku}", async (
+            ClaimsPrincipal user,
+            string sku,
+            [FromServices] ISender sender,
+            CancellationToken ct) =>
+        {
+            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
+            var result = await sender.Send(new RemoveCartItemCommand(buyerId, sku), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+        });
     }
 }
 
 public record UpdateCartRequest(List<CartItemRequest> Items);
 public record CartItemRequest(string Sku, int Quantity, decimal Price);
+public record AddCartItemRequest(string Sku, int Quantity, decimal Price);
+public record UpdateCartItemRequest(int Quantity);

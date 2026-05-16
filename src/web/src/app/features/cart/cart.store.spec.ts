@@ -16,7 +16,14 @@ describe('CartStore', () => {
       getCart: vi.fn().mockResolvedValue({ buyerId: 'test-user', items: [] }),
       updateCart: vi.fn().mockImplementation((cart) => Promise.resolve(cart)),
       deleteCart: vi.fn().mockResolvedValue(undefined),
-      checkout: vi.fn().mockResolvedValue({ correlationId: 'test-correlation-id' })
+      checkout: vi.fn().mockResolvedValue({ correlationId: 'test-correlation-id' }),
+      addItem: vi.fn().mockImplementation((sku: string, quantity: number) =>
+        Promise.resolve({ buyerId: 'test-user', items: [{ sku, quantity, unitPrice: 0 }] })
+      ),
+      updateItem: vi.fn().mockImplementation((sku, quantity) =>
+        Promise.resolve({ buyerId: 'test-user', items: [{ sku, quantity, unitPrice: 0 }] })
+      ),
+      removeItem: vi.fn().mockResolvedValue({ buyerId: 'test-user', items: [] }),
     };
 
     TestBed.configureTestingModule({
@@ -41,68 +48,63 @@ describe('CartStore', () => {
 
   describe('addToCart', () => {
     it('should add a new item to the cart', async () => {
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user',
-        items: [{ sku: 'PROD-1', quantity: 1 }]
+        items: [{ sku: 'PROD-1', quantity: 1, unitPrice: 10 }]
       });
 
       await store.addToCart('PROD-1', 1);
 
-      expect(store.items()).toEqual([{ sku: 'PROD-1', quantity: 1 }]);
+      expect(store.items()).toEqual([{ sku: 'PROD-1', quantity: 1, unitPrice: 10 }]);
       expect(store.isEmpty()).toBe(false);
       expect(store.totalItems()).toBe(1);
-      expect(mockCartService.updateCart).toHaveBeenCalled();
+      expect(mockCartService.addItem).toHaveBeenCalledWith('PROD-1', 1);
     });
 
     it('should increase quantity if item already exists', async () => {
-      // Setup initial state with an item
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user',
-        items: [{ sku: 'PROD-1', quantity: 1 }]
+        items: [{ sku: 'PROD-1', quantity: 1, unitPrice: 10 }]
       });
       await store.addToCart('PROD-1', 1);
 
-      // Add the same item again
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user',
-        items: [{ sku: 'PROD-1', quantity: 3 }]
+        items: [{ sku: 'PROD-1', quantity: 3, unitPrice: 10 }]
       });
       await store.addToCart('PROD-1', 2);
 
-      expect(store.items()).toEqual([{ sku: 'PROD-1', quantity: 3 }]);
+      expect(store.items()).toEqual([{ sku: 'PROD-1', quantity: 3, unitPrice: 10 }]);
       expect(store.totalItems()).toBe(3);
     });
   });
 
   describe('updateQuantity', () => {
     it('should update the quantity of an existing item', async () => {
-      // Setup
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user',
-        items: [{ sku: 'PROD-1', quantity: 1 }]
+        items: [{ sku: 'PROD-1', quantity: 1, unitPrice: 10 }]
       });
       await store.addToCart('PROD-1', 1);
 
-      // Update quantity
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.updateItem.mockResolvedValueOnce({
         buyerId: 'test-user',
-        items: [{ sku: 'PROD-1', quantity: 5 }]
+        items: [{ sku: 'PROD-1', quantity: 5, unitPrice: 10 }]
       });
       await store.updateQuantity('PROD-1', 5);
 
-      expect(store.items()).toEqual([{ sku: 'PROD-1', quantity: 5 }]);
+      expect(store.items()).toEqual([{ sku: 'PROD-1', quantity: 5, unitPrice: 10 }]);
+      expect(mockCartService.updateItem).toHaveBeenCalledWith('PROD-1', 5);
     });
 
     it('should remove the item if quantity is 0', async () => {
-      // Setup
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user',
-        items: [{ sku: 'PROD-1', quantity: 1 }]
+        items: [{ sku: 'PROD-1', quantity: 1, unitPrice: 10 }]
       });
       await store.addToCart('PROD-1', 1);
 
-      // Update quantity to 0
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.removeItem.mockResolvedValueOnce({
         buyerId: 'test-user',
         items: []
       });
@@ -115,15 +117,13 @@ describe('CartStore', () => {
 
   describe('removeFromCart', () => {
     it('should remove the item from the cart', async () => {
-      // Setup
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user',
-        items: [{ sku: 'PROD-1', quantity: 1 }]
+        items: [{ sku: 'PROD-1', quantity: 1, unitPrice: 10 }]
       });
       await store.addToCart('PROD-1', 1);
 
-      // Remove item
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.removeItem.mockResolvedValueOnce({
         buyerId: 'test-user',
         items: []
       });
@@ -131,16 +131,26 @@ describe('CartStore', () => {
 
       expect(store.items()).toEqual([]);
       expect(store.isEmpty()).toBe(true);
+      expect(mockCartService.removeItem).toHaveBeenCalledWith('PROD-1');
     });
   });
 
   describe('totalPrice', () => {
     it('should correctly sum item prices', async () => {
-      // Setup mock
-      mockCartService.updateCart.mockImplementation((cart: any) => Promise.resolve(cart));
+      mockCartService.addItem.mockResolvedValueOnce({
+        buyerId: 'test-user',
+        items: [{ sku: 'PROD-1', quantity: 2, unitPrice: 10.5 }]
+      });
+      await store.addToCart('PROD-1', 2);
 
-      await store.addToCart('PROD-1', 2, 10.5); // 2 * 10.5 = 21
-      await store.addToCart('PROD-2', 1, 5.0);  // 1 * 5 = 5
+      mockCartService.addItem.mockResolvedValueOnce({
+        buyerId: 'test-user',
+        items: [
+          { sku: 'PROD-1', quantity: 2, unitPrice: 10.5 },
+          { sku: 'PROD-2', quantity: 1, unitPrice: 5.0 }
+        ]
+      });
+      await store.addToCart('PROD-2', 1);
 
       expect(store.totalPrice()).toBe(26);
     });
@@ -148,14 +158,12 @@ describe('CartStore', () => {
 
   describe('checkout', () => {
     it('should call checkout and clear the cart', async () => {
-      // Setup
-      mockCartService.updateCart.mockResolvedValueOnce({
+      mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user',
-        items: [{ sku: 'PROD-1', quantity: 1 }]
+        items: [{ sku: 'PROD-1', quantity: 1, unitPrice: 10 }]
       });
       await store.addToCart('PROD-1', 1);
 
-      // Checkout
       await store.checkout();
 
       expect(mockCartService.checkout).toHaveBeenCalled();

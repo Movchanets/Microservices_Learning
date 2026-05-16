@@ -1,0 +1,53 @@
+<form [formGroup]="addressForm" (ngSubmit)="submit()" class="address-form">
+  <div class="form-group full-width">
+    <label for="addressLine1">Address Line 1</label>
+    <input id="addressLine1" type="text" formControlName="addressLine1" placeholder="Street address, P.O. box">
+    <div class="error" *ngIf="addressForm.get('addressLine1')?.touched && addressForm.get('addressLine1')?.invalid">
+      Address is required
+    </div>
+  </div>
+
+  <div class="form-group full-width">
+    <label for="addressLine2">Address Line 2 (Optional)</label>
+    <input id="addressLine2" type="text" formControlName="addressLine2" placeholder="Apartment, suite, unit, building, floor">
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="city">City</label>
+      <input id="city" type="text" formControlName="city">
+      <div class="error" *ngIf="addressForm.get('city')?.touched && addressForm.get('city')?.invalid">
+        City is required
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="state">State / Province</label>
+      <input id="state" type="text" formControlName="state">
+      <div class="error" *ngIf="addressForm.get('state')?.touched && addressForm.get('state')?.invalid">
+        State is required
+      </div>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="postalCode">Postal / Zip Code</label>
+      <input id="postalCode" type="text" formControlName="postalCode">
+      <div class="error" *ngIf="addressForm.get('postalCode')?.touched && addressForm.get('postalCode')?.invalid">
+        Valid postal code is required
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="country">Country</label>
+      <select id="country" formControlName="country">
+        <option *ngFor="let country of countries" [value]="country.code">{{ country.name }}</option>
+      </select>
+    </div>
+  </div>
+
+  <button type="submit" [disabled]="addressForm.invalid" class="save-btn">
+    Save and Continue
+  </button>
+</form>
