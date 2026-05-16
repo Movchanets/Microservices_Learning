@@ -2,17 +2,19 @@ import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@ang
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { CatalogService } from '../catalog.service';
-import { Product, ProductListItem } from '../catalog.models';
+import { Product, ProductListItem, CreateReviewRequest } from '../catalog.models';
 import { InventoryService } from '../../../core/services/inventory.service';
+import { AuthStore } from '../../../core/auth/auth.store';
+import { ReviewStore } from '../review.store';
 import { BuyBoxComponent } from '../components/buy-box/buy-box';
 import { FrequentlyBoughtTogetherComponent } from '../components/frequently-bought-together/frequently-bought-together';
 import { StockIndicatorComponent } from '../../../shared/components/stock-indicator/stock-indicator';
+import { ReviewSummaryComponent } from '../components/review-summary/review-summary';
+import { ReviewListComponent } from '../components/review-list/review-list';
+import { WriteReviewComponent } from '../components/write-review/write-review';
 
 // TODO: Add product variant selector (color, size) when Catalog supports variants.
 //       Ref: plans/future_design/product_details.md — "Advanced Product Variations Selector"
-
-// TODO: Add Community Q&A and Reviews section.
-//       Ref: plans/future_design/product_details.md — "Community Q&A and Rich Reviews"
 
 @Component({
   selector: 'app-product-detail',
@@ -23,7 +25,11 @@ import { StockIndicatorComponent } from '../../../shared/components/stock-indica
     BuyBoxComponent,
     FrequentlyBoughtTogetherComponent,
     StockIndicatorComponent,
+    ReviewSummaryComponent,
+    ReviewListComponent,
+    WriteReviewComponent,
   ],
+  providers: [ReviewStore],
   template: `
     <div class="min-h-screen bg-background p-6 pt-10">
       <div class="container mx-auto max-w-6xl">
@@ -141,6 +147,64 @@ import { StockIndicatorComponent } from '../../../shared/components/stock-indica
               [loading]="recommendationsLoading()"
             />
           </div>
+
+          <!-- Reviews Section -->
+          <div class="mt-16">
+            <h2 class="text-2xl font-bold text-foreground font-lexend mb-8">Customer Reviews</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-[300px,1fr] gap-8">
+              <!-- Left: Summary -->
+              <div>
+                @if (reviewStore.summary(); as summary) {
+                  <app-review-summary
+                    [summary]="summary"
+                    (filterByRating)="onFilterByRating($event)"
+                  />
+                }
+              </div>
+
+              <!-- Right: Reviews List -->
+              <div class="flex flex-col gap-6">
+                <!-- Sort & Filter Bar -->
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm text-muted-foreground">Sort by:</span>
+                    <select
+                      (change)="onSortChange($event)"
+                      class="px-3 py-1.5 bg-muted/10 border border-border rounded-lg text-sm text-foreground
+                             focus:outline-none focus:border-primary"
+                    >
+                      <option value="helpful">Most Helpful</option>
+                      <option value="newest">Newest</option>
+                      <option value="highest">Highest Rated</option>
+                      <option value="lowest">Lowest Rated</option>
+                    </select>
+                  </div>
+
+                  @if (authStore.user()) {
+                    <app-write-review
+                      [submitting]="reviewStore.submitting()"
+                      (submit)="onSubmitReview($event)"
+                    />
+                  }
+                </div>
+
+                <!-- Reviews -->
+                @if (reviewStore.loading()) {
+                  <div class="space-y-4 animate-pulse">
+                    @for (i of [1, 2, 3]; track i) {
+                      <div class="h-40 bg-muted/20 rounded-2xl"></div>
+                    }
+                  </div>
+                } @else {
+                  <app-review-list
+                    [reviews]="reviewStore.reviews()"
+                    (vote)="onVote($event)"
+                  />
+                }
+              </div>
+            </div>
+          </div>
         }
       </div>
     </div>
@@ -151,6 +215,9 @@ export class ProductDetailComponent implements OnInit {
   private router = inject(Router);
   private catalogService = inject(CatalogService);
   private inventoryService = inject(InventoryService);
+  protected authStore = inject(AuthStore);
+
+  protected reviewStore = inject(ReviewStore);
 
   product = signal<Product | null>(null);
   loading = signal(true);
@@ -162,9 +229,12 @@ export class ProductDetailComponent implements OnInit {
   recommendations = signal<ProductListItem[]>([]);
   recommendationsLoading = signal(false);
 
+  private currentProductId = '';
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
+      this.currentProductId = id;
       this.loadProduct(id);
     } else {
       this.error.set('Product ID missing in URL');
@@ -179,9 +249,10 @@ export class ProductDetailComponent implements OnInit {
       const p = await this.catalogService.getProduct(id);
       this.product.set(p);
 
-      // Load stock and recommendations in parallel
+      // Load stock, recommendations, and reviews in parallel
       this.loadStock(p.sku);
       this.loadRecommendations(p.id);
+      this.loadReviews(p.id);
     } catch (err: any) {
       this.error.set(err?.error?.error ?? 'Failed to load product details');
     } finally {
@@ -195,7 +266,6 @@ export class ProductDetailComponent implements OnInit {
       const item = await this.inventoryService.checkStock(sku);
       this.stockQuantity.set(item.availableQuantity);
     } catch {
-      // If inventory check fails, assume unknown (null) — don't block the user
       this.stockQuantity.set(null);
     } finally {
       this.stockLoading.set(false);
@@ -208,14 +278,36 @@ export class ProductDetailComponent implements OnInit {
       const items = await this.catalogService.getRecommendations(productId);
       this.recommendations.set(items);
     } catch {
-      // Recommendations are non-critical; silently fail
       this.recommendations.set([]);
     } finally {
       this.recommendationsLoading.set(false);
     }
   }
 
+  private loadReviews(productId: string): void {
+    this.reviewStore.loadSummary(productId);
+    this.reviewStore.loadReviews(productId);
+  }
+
   onBuyNow(): void {
     this.router.navigate(['/checkout']);
+  }
+
+  onSortChange(event: Event): void {
+    const sort = (event.target as HTMLSelectElement).value;
+    this.reviewStore.setSort(this.currentProductId, sort);
+  }
+
+  onFilterByRating(rating: number): void {
+    const current = this.reviewStore.ratingFilter();
+    this.reviewStore.setRatingFilter(this.currentProductId, current === rating ? null : rating);
+  }
+
+  onVote(event: { reviewId: string; isHelpful: boolean }): void {
+    this.reviewStore.voteReview(this.currentProductId, event.reviewId, event.isHelpful);
+  }
+
+  async onSubmitReview(data: CreateReviewRequest): Promise<void> {
+    await this.reviewStore.createReview(this.currentProductId, data);
   }
 }

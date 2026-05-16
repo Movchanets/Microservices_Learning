@@ -1,10 +1,15 @@
+using System.Security.Claims;
 using BuildingBlocks.Infrastructure.Models;
 using Catalog.Application.Commands.ChangePrice;
 using Catalog.Application.Commands.CreateProduct;
+using Catalog.Application.Commands.CreateReview;
 using Catalog.Application.Commands.DeleteProduct;
+using Catalog.Application.Commands.SellerResponse;
 using Catalog.Application.Commands.UpdateProduct;
+using Catalog.Application.Commands.VoteReview;
 using Catalog.Application.DTOs;
 using Catalog.Application.Queries;
+using Catalog.Application.Queries.GetProductReviews;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -117,6 +122,111 @@ public static class ProductEndpoints
         })
         .WithName("GetProductRecommendations")
         .Produces<List<ProductListDto>>();
+
+        // Public: get product review summary
+        group.MapGet("/{id:guid}/reviews/summary", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetReviewSummaryQuery(id), ct);
+            return Results.Ok(result);
+        })
+        .WithName("GetReviewSummary")
+        .Produces<ReviewSummaryDto>();
+
+        // Public: get product reviews (paginated, filterable)
+        group.MapGet("/{id:guid}/reviews", async (
+            Guid id,
+            [FromQuery] int page,
+            [FromQuery] int pageSize,
+            [FromQuery] string? sort,
+            [FromQuery] int? rating,
+            [FromQuery] bool? photoOnly,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var query = new GetProductReviewsQuery(
+                id,
+                page > 0 ? page : 1,
+                pageSize > 0 ? Math.Min(pageSize, 50) : 10,
+                sort ?? "helpful",
+                rating,
+                photoOnly);
+            var result = await sender.Send(query, ct);
+            return Results.Ok(result);
+        })
+        .WithName("GetProductReviews")
+        .Produces<PagedResult<ReviewDto>>();
+
+        // Authorized: create review
+        group.MapPost("/{id:guid}/reviews", async (
+            Guid id,
+            CreateReviewCommand command,
+            ClaimsPrincipal user,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Results.Unauthorized();
+
+            var userName = user.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
+            var cmd = command with { ProductId = id, UserId = Guid.Parse(userId), UserName = userName };
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.Created($"/api/catalog/products/{id}/reviews", result.Value)
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("CreateReview")
+        .RequireAuthorization()
+        .Produces<ReviewDto>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // Authorized: vote on review
+        group.MapPost("/reviews/{reviewId:guid}/vote", async (
+            Guid reviewId,
+            VoteReviewCommand command,
+            ClaimsPrincipal user,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Results.Unauthorized();
+
+            var cmd = command with { ReviewId = reviewId, UserId = Guid.Parse(userId) };
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("VoteReview")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // Authorized: seller response to review (seller role only)
+        group.MapPost("/reviews/{reviewId:guid}/response", async (
+            Guid reviewId,
+            SellerResponseCommand command,
+            ClaimsPrincipal user,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            // Extract storeId from claims — sellers have StoreId in their claims
+            var storeIdClaim = user.FindFirstValue("StoreId");
+            if (string.IsNullOrEmpty(storeIdClaim) || !Guid.TryParse(storeIdClaim, out var storeId))
+                return Results.Forbid();
+
+            var cmd = command with { ReviewId = reviewId, StoreId = storeId };
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("SellerResponse")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
 
         // Authorized: soft-delete product
         group.MapDelete("/{id:guid}", async (

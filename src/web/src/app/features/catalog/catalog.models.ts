@@ -102,3 +102,42 @@ export interface ProductSearchParams {
   page?: number;
   pageSize?: number;
 }
+
+/**
+ * Mirrors backend Catalog.Application.DTOs.ReviewDto
+ */
+export interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  title: string;
+  text: string;
+  isVerifiedPurchase: boolean;
+  photoUrls: string[];
+  helpfulCount: number;
+  notHelpfulCount: number;
+  sellerResponse: string | null;
+  sellerResponseDate: string | null;
+  createdAt: string;
+}
+
+/**
+ * Mirrors backend Catalog.Application.DTOs.ReviewSummaryDto
+ */
+export interface ReviewSummary {
+  averageRating: number;
+  totalReviews: number;
+  ratingDistribution: Record<number, number>;
+}
+
+/**
+ * Request payload for creating a review.
+ * userId and userName are derived server-side from auth claims.
+ */
+export interface CreateReviewRequest {
+  rating: number;
+  title: string;
+  text: string;
+  photoUrls?: string[];
+}
