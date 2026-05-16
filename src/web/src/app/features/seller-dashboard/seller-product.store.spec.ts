@@ -83,7 +83,7 @@ describe('SellerProductStore', () => {
       mockProductService.createProduct.mockResolvedValueOnce(newProduct);
 
       const result = await store.createProduct({
-        name: 'New Widget', sku: 'NW-1', description: 'A new widget', price: 10, currency: 'USD', categoryId: 'cat-1', sellerId: 'seller-1',
+        name: 'New Widget', sku: 'NW-1', description: 'A new widget', price: 10, currency: 'USD', categoryId: 'cat-1', storeId: 'store-1',
       });
 
       expect(result).toBe(true);

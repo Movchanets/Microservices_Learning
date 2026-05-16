@@ -39,7 +39,7 @@ public sealed class ProductCreatedDomainEventHandler(
             category?.Name ?? "",
             product.Tags,
             product.ImageUrl,
-            product.SellerId,
+            product.StoreId,
             product.CreatedAt), cancellationToken);
 
         logger.LogInformation("Published ProductCreatedEvent for {ProductId}", notification.ProductId);

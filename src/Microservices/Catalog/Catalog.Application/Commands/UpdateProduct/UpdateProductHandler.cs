@@ -50,7 +50,7 @@ public sealed class UpdateProductHandler(
             category?.Name ?? "",
             product.Status.ToString(),
             product.ImageUrl,
-            product.SellerId,
+            product.StoreId,
             product.Tags,
             product.CreatedAt,
             product.UpdatedAt));

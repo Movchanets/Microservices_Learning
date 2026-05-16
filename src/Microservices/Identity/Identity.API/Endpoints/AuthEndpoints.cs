@@ -78,5 +78,17 @@ public static class AuthEndpoints
         .WithName("ForgotPassword")
         .Produces(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // TODO: Add change-password endpoint (POST /api/identity/auth/change-password).
+        //       Needs: ChangePasswordCommand { UserId, OldPassword, NewPassword }
+        //       Handler: Verify old password hash, update to new hash.
+        //       Ref: src/Microservices/Identity/Identity.Domain/Aggregates/User.cs — PasswordHash property
+
+        // TODO: Add update-profile endpoint (PUT /api/identity/users/{id}).
+        //       Needs: UpdateProfileCommand { UserId, FirstName, LastName, Email, PhoneNumber }
+        //       Handler: Update user properties, publish UserUpdatedEvent.
+        //       Ref: src/Microservices/Identity/Identity.Domain/Aggregates/User.cs
+        //       Frontend: Edit form in profile page.
+        //       Ref: src/web/src/app/features/auth/profile/profile.ts
     }
 }

@@ -1,5 +1,5 @@
 // SellerProductService unit tests.
-// Verifies HTTP calls to the Catalog API: GET /api/catalog/products?sellerId,
+// Verifies HTTP calls to the Catalog API: GET /api/catalog/products?storeId,
 // GET /api/catalog/products/{id}, POST, PUT, DELETE.
 // Uses HttpClientTestingModule to assert correct URLs and methods.
 
@@ -29,11 +29,11 @@ describe('SellerProductService', () => {
   });
 
   describe('getMyProducts', () => {
-    it('should GET /api/catalog/products?sellerId={sellerId}', async () => {
+    it('should GET /api/catalog/products?storeId={storeId}', async () => {
       const mockProducts = [{ id: 'prod-1', name: 'Widget' }];
-      const promise = service.getMyProducts('seller-1');
+      const promise = service.getMyProducts('store-1');
 
-      const req = httpMock.expectOne('/api/catalog/products?sellerId=seller-1');
+      const req = httpMock.expectOne('/api/catalog/products?storeId=store-1');
       expect(req.request.method).toBe('GET');
       req.flush(mockProducts);
 
@@ -58,7 +58,7 @@ describe('SellerProductService', () => {
 
   describe('createProduct', () => {
     it('should POST /api/catalog/products', async () => {
-      const request = { name: 'New Widget', sku: 'W-1', description: 'A new widget', price: 10, currency: 'USD', categoryId: 'cat-1', sellerId: 'seller-1' };
+      const request = { name: 'New Widget', sku: 'W-1', description: 'A new widget', price: 10, currency: 'USD', categoryId: 'cat-1', storeId: 'store-1' };
       const mockResponse = { id: 'prod-2', ...request };
       const promise = service.createProduct(request);
 

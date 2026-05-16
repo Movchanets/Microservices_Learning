@@ -26,7 +26,7 @@ public sealed class ProductCreatedConsumer(
             CategoryName = msg.CategoryName,
             Tags = msg.Tags,
             ImageUrl = msg.ImageUrl,
-            SellerId = msg.SellerId,
+            StoreId = msg.StoreId,
             IsActive = true,
             CreatedAt = msg.CreatedAt,
             UpdatedAt = msg.CreatedAt

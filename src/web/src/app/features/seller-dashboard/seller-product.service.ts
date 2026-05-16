@@ -12,9 +12,9 @@ export class SellerProductService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/catalog/products';
 
-  async getMyProducts(sellerId: string): Promise<SellerProduct[]> {
+  async getMyProducts(storeId: string): Promise<SellerProduct[]> {
     return firstValueFrom(
-      this.http.get<SellerProduct[]>(`${this.baseUrl}?sellerId=${sellerId}`)
+      this.http.get<SellerProduct[]>(`${this.baseUrl}?storeId=${storeId}`)
     );
   }
 

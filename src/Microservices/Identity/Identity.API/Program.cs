@@ -75,7 +75,10 @@ builder.Services.AddAuthentication("Bearer")
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+});
 
 // ── OpenAPI ─────────────────────────────────────────────
 builder.Services.AddOpenApi();

@@ -30,7 +30,7 @@ public class IndexingTests
             CategoryName = "Gadgets",
             Tags = ["widget", "tool"],
             ImageUrl = "http://example.com/widget.jpg",
-            SellerId = Guid.NewGuid(),
+            StoreId = Guid.NewGuid(),
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -68,7 +68,7 @@ public class IndexingTests
             CategoryId = Guid.NewGuid(),
             CategoryName = "Original Cat",
             Tags = ["old"],
-            SellerId = Guid.NewGuid(),
+            StoreId = Guid.NewGuid(),
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -89,7 +89,7 @@ public class IndexingTests
             CategoryId = Guid.NewGuid(),
             CategoryName = "Updated Cat",
             Tags = ["new"],
-            SellerId = Guid.NewGuid(),
+            StoreId = Guid.NewGuid(),
             IsActive = true,
             CreatedAt = document.CreatedAt,
             UpdatedAt = DateTime.UtcNow

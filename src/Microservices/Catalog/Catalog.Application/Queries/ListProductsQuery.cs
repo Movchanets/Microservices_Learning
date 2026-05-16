@@ -8,5 +8,5 @@ public sealed record ListProductsQuery(
     int Page = 1,
     int PageSize = 20,
     Guid? CategoryId = null,
-    Guid? SellerId = null,
+    Guid? StoreId = null,
     string? Search = null) : IRequest<PagedResult<ProductListDto>>;

@@ -25,9 +25,9 @@ public sealed class ProductRepository(CatalogDbContext context) : IProductReposi
             .Where(p => p.CategoryId == categoryId && p.Status != ProductStatus.Deleted)
             .ToListAsync(ct);
 
-    public async Task<List<Product>> GetBySellerAsync(Guid sellerId, CancellationToken ct = default) =>
+    public async Task<List<Product>> GetByStoreAsync(Guid storeId, CancellationToken ct = default) =>
         await context.Products
-            .Where(p => p.SellerId == sellerId && p.Status != ProductStatus.Deleted)
+            .Where(p => p.StoreId == storeId && p.Status != ProductStatus.Deleted)
             .ToListAsync(ct);
 
     public void Add(Product product) => context.Products.Add(product);

@@ -12,7 +12,7 @@ export interface SellerProduct {
   categoryName: string;
   status: 'Draft' | 'Active' | 'Inactive' | 'Deleted';
   imageUrl: string | null;
-  sellerId: string;
+  storeId: string;
   tags: string[];
   createdAt: string;
   updatedAt: string | null;
@@ -25,7 +25,7 @@ export interface CreateProductRequest {
   price: number;
   currency: string;
   categoryId: string;
-  sellerId: string;
+  storeId: string;
   tags?: string[];
   imageUrl?: string;
 }

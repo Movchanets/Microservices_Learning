@@ -22,4 +22,6 @@ public interface IUserRepository : IRepository<User>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>True if the user exists, otherwise false.</returns>
     Task<bool> ExistsAsync(string email, CancellationToken ct = default);
+
+    Task<List<User>> GetAllAsync(CancellationToken ct = default);
 }

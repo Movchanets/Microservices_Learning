@@ -23,7 +23,7 @@ public static class ProductEndpoints
             [FromQuery] int page,
             [FromQuery] int pageSize,
             [FromQuery] Guid? categoryId,
-            [FromQuery] Guid? sellerId,
+            [FromQuery] Guid? storeId,
             [FromQuery] string? search,
             ISender sender,
             CancellationToken ct) =>
@@ -31,7 +31,7 @@ public static class ProductEndpoints
             var query = new ListProductsQuery(
                 page > 0 ? page : 1,
                 pageSize > 0 ? Math.Min(pageSize, 100) : 20,
-                categoryId, sellerId, search);
+                categoryId, storeId, search);
             var result = await sender.Send(query, ct);
             return Results.Ok(result);
         })

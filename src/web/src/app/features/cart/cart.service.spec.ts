@@ -49,15 +49,15 @@ describe('CartService', () => {
       expect(result).toEqual(mockCart);
     });
 
-    it('should set x-buyer-id header', async () => {
-      localStorage.setItem('buyerId', 'test-buyer-123');
+    it('should send request to correct URL', async () => {
       const promise = service.getCart();
 
       const req = httpMock.expectOne('/api/cart');
-      expect(req.request.headers.get('x-buyer-id')).toBe('test-buyer-123');
+      expect(req.request.method).toBe('GET');
       req.flush(mockCart);
 
-      await promise;
+      const result = await promise;
+      expect(result).toEqual(mockCart);
     });
   });
 

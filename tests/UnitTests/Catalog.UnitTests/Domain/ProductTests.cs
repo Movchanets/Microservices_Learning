@@ -19,10 +19,10 @@ public class ProductTests
         var currency = "USD";
         var sku = "TEST-SKU-1";
         var categoryId = Guid.NewGuid();
-        var sellerId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
 
         // Act
-        var product = Product.Create(name, description, price, currency, sku, categoryId, sellerId);
+        var product = Product.Create(name, description, price, currency, sku, categoryId, storeId);
 
         // Assert
         product.Should().NotBeNull();

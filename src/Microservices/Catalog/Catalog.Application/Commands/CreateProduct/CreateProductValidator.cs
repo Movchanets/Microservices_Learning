@@ -12,7 +12,7 @@ public sealed partial class CreateProductValidator : AbstractValidator<CreatePro
         RuleFor(x => x.Price).GreaterThan(0);
         RuleFor(x => x.Currency).NotEmpty().Length(3);
         RuleFor(x => x.CategoryId).NotEmpty();
-        RuleFor(x => x.SellerId).NotEmpty();
+        RuleFor(x => x.StoreId).NotEmpty();
 
         RuleFor(x => x.Sku)
             .NotEmpty()

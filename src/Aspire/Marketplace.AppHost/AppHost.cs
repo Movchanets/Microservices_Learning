@@ -35,7 +35,7 @@ var elasticsearch = builder.AddElasticsearch("elasticsearch");
 // Microservices (to be added in later phases)
 // ──────────────────────────────────────────────
 
-// Phase 1: Identity.API  → .WithReference(identityDb).WithReference(messaging)
+// Phase 1: Identity.API  -> .WithReference(identityDb).WithReference(messaging)
 var identityApi = builder.AddProject<Projects.Identity_API>("identity-api")
     .WithReference(identityDb)
     .WaitFor(identityDb)
@@ -125,7 +125,7 @@ var mediaApi = builder.AddProject<Projects.Media_API>("media-api")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
-// Phase 1: ApiGateway    → .WithReference(redis)
+// Phase 1: ApiGateway    -> .WithReference(redis)
 var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(identityApi)
     .WaitFor(identityApi)
@@ -183,7 +183,7 @@ scalar
     .WaitFor(storeApi)
     .WaitFor(mediaApi);
 
-// Phase 7: Angular       → builder.AddNpmApp(...)
+// Phase 7: Angular       -> builder.AddNpmApp(...)
 var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
     .WaitFor(scalar)
     .WithReference(gateway)
