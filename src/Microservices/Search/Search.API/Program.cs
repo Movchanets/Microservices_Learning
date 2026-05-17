@@ -19,7 +19,8 @@ builder.Services.AddSingleton(_ =>
 {
     var settings = new ElasticsearchClientSettings(new Uri(elasticUri))
         .DefaultIndex("marketplace-products")
-        .EnableDebugMode();
+        .EnableDebugMode()
+        .RequestTimeout(TimeSpan.FromSeconds(30));
     return new ElasticsearchClient(settings);
 });
 

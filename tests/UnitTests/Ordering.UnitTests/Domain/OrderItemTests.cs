@@ -73,4 +73,20 @@ public class OrderItemTests
 
         item.TotalPrice.Should().Be(30.00m);
     }
+
+    [Fact]
+    public void Constructor_WithSellerId_SetsSellerId()
+    {
+        var item = new OrderItem("SKU", "Product", 10m, 1, "seller-42");
+
+        item.SellerId.Should().Be("seller-42");
+    }
+
+    [Fact]
+    public void Constructor_WithoutSellerId_SetsSellerIdToNull()
+    {
+        var item = new OrderItem("SKU", "Product", 10m, 1);
+
+        item.SellerId.Should().BeNull();
+    }
 }

@@ -28,6 +28,11 @@ public sealed class GlobalExceptionMiddleware(
         {
             await next(context);
         }
+        catch (OperationCanceledException ex) when (context.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogWarning("Request cancelled: {Path}", context.Request.Path);
+            await HandleExceptionAsync(context, ex);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
@@ -46,6 +51,7 @@ public sealed class GlobalExceptionMiddleware(
     {
         var (statusCode, title) = exception switch
         {
+            OperationCanceledException => (HttpStatusCode.ServiceUnavailable, "Request Cancelled"),
             ArgumentException => (HttpStatusCode.BadRequest, "Bad Request"),
             KeyNotFoundException => (HttpStatusCode.NotFound, "Not Found"),
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Unauthorized"),

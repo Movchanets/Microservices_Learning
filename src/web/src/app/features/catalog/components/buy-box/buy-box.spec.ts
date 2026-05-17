@@ -133,7 +133,7 @@ describe('BuyBoxComponent', () => {
 
     await component.onAddToCart();
 
-    expect(mockCartService.addItem).toHaveBeenCalledWith('SKU-1', 1);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('SKU-1', 1, undefined);
   });
 
   it('should emit buyNow event', () => {

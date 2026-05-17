@@ -93,6 +93,7 @@ export class BuyBoxComponent {
   currency = input.required<string>();
   stockQuantity = input<number | null>(null);
   stockLoading = input(false);
+  sellerId = input<string>();
 
   buyNow = output<void>();
 
@@ -116,11 +117,11 @@ export class BuyBoxComponent {
   }
 
   async onAddToCart(): Promise<void> {
-    await this.cartStore.addToCart(this.sku(), this.quantity());
+    await this.cartStore.addToCart(this.sku(), this.quantity(), this.sellerId());
   }
 
   onBuyNow(): void {
-    this.cartStore.addToCart(this.sku(), this.quantity());
+    this.cartStore.addToCart(this.sku(), this.quantity(), this.sellerId());
     this.buyNow.emit();
   }
 }

@@ -136,6 +136,7 @@ import { WriteReviewComponent } from '../components/write-review/write-review';
                 [currency]="p.currency"
                 [stockQuantity]="stockQuantity()"
                 [stockLoading]="stockLoading()"
+                [sellerId]="p.sellerId"
                 (buyNow)="onBuyNow()"
               />
             </div>

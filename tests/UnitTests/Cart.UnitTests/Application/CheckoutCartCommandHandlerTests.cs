@@ -49,8 +49,8 @@ public class CheckoutCartCommandHandlerTests
         // Arrange
         var buyerId = "buyer-1";
         var cart = new ShoppingCart(buyerId);
-        cart.AddItem("sku-1", 2);
-        cart.AddItem("sku-2", 3);
+        cart.AddItem("sku-1", 2, 10m, "seller-A");
+        cart.AddItem("sku-2", 3, 20m, "seller-B");
         _repositoryMock.Setup(r => r.GetCartAsync(buyerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cart);
 
@@ -69,6 +69,8 @@ public class CheckoutCartCommandHandlerTests
             It.Is<OrderSubmittedEvent>(e =>
                 e.BuyerId == buyerId &&
                 e.Items.Count == 2 &&
+                e.Items.Any(i => i.SellerId == "seller-A") &&
+                e.Items.Any(i => i.SellerId == "seller-B") &&
                 e.CorrelationId == result.Value.CorrelationId),
             It.IsAny<CancellationToken>()), Times.Once);
 

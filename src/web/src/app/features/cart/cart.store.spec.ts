@@ -58,7 +58,7 @@ describe('CartStore', () => {
       expect(store.items()).toEqual([{ sku: 'PROD-1', quantity: 1, unitPrice: 10 }]);
       expect(store.isEmpty()).toBe(false);
       expect(store.totalItems()).toBe(1);
-      expect(mockCartService.addItem).toHaveBeenCalledWith('PROD-1', 1);
+      expect(mockCartService.addItem).toHaveBeenCalledWith('PROD-1', 1, undefined);
     });
 
     it('should increase quantity if item already exists', async () => {

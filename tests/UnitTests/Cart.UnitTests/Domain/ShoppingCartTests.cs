@@ -21,6 +21,33 @@ public class ShoppingCartTests
     }
 
     [Fact]
+    public void AddItem_WithSellerId_ShouldPropagateSellerId()
+    {
+        // Arrange
+        var cart = new ShoppingCart("buyer-1");
+
+        // Act
+        cart.AddItem("sku-1", 2, 10m, "seller-42");
+
+        // Assert
+        cart.Items.Should().ContainSingle();
+        cart.Items.First().SellerId.Should().Be("seller-42");
+    }
+
+    [Fact]
+    public void AddItem_WithoutSellerId_ShouldHaveNullSellerId()
+    {
+        // Arrange
+        var cart = new ShoppingCart("buyer-1");
+
+        // Act
+        cart.AddItem("sku-1", 2, 10m);
+
+        // Assert
+        cart.Items.First().SellerId.Should().BeNull();
+    }
+
+    [Fact]
     public void AddItem_WhenExistingSku_ShouldIncrementQuantity()
     {
         // Arrange

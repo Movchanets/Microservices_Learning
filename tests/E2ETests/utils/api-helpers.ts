@@ -227,11 +227,12 @@ export async function addToCart(
   api: APIRequestContext,
   sku: string,
   quantity: number,
-  price: number
+  price: number,
+  sellerId?: string
 ): Promise<void> {
   // Get current cart to preserve existing items
   const cartResponse = await api.get('/api/cart');
-  let existingItems: Array<{ sku: string; quantity: number; price: number }> = [];
+  let existingItems: Array<{ sku: string; quantity: number; price: number; sellerId?: string }> = [];
 
   if (cartResponse.ok()) {
     const cart = await cartResponse.json();
@@ -239,6 +240,7 @@ export async function addToCart(
       sku: i.sku,
       quantity: i.quantity,
       price: i.unitPrice ?? i.price ?? 0,
+      sellerId: i.sellerId ?? undefined,
     }));
   }
 
@@ -247,7 +249,7 @@ export async function addToCart(
   if (existingIndex >= 0) {
     existingItems[existingIndex].quantity += quantity;
   } else {
-    existingItems.push({ sku, quantity, price });
+    existingItems.push({ sku, quantity, price, sellerId });
   }
 
   const response = await api.post('/api/cart/', {

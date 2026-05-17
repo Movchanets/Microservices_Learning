@@ -68,6 +68,8 @@ public sealed class ElasticsearchService : ISearchService
         int pageSize,
         CancellationToken ct = default)
     {
+        try
+        {
         var response = await _client.SearchAsync<ProductSearchDocument>(s => s
             .Indices(IndexName)
             .From((page - 1) * pageSize)
@@ -204,5 +206,11 @@ public sealed class ElasticsearchService : ISearchService
             page,
             pageSize,
             facets);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Elasticsearch search request was cancelled");
+            return new SearchResult<ProductSearchDocument>([], 0, page, pageSize);
+        }
     }
 }

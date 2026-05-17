@@ -56,6 +56,16 @@ public class OrderTests
     }
 
     [Fact]
+    public void AddItem_WithSellerId_PropagatesSellerId()
+    {
+        var order = Order.Create("buyer-1");
+        order.AddItem("SKU-1", "Product 1", 10.50m, 2, "seller-42");
+
+        order.Items.Should().HaveCount(1);
+        order.Items[0].SellerId.Should().Be("seller-42");
+    }
+
+    [Fact]
     public void AddItem_WithDuplicateSku_ReplacesExistingItem()
     {
         var order = Order.Create("buyer-1");

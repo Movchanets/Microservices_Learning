@@ -12,6 +12,7 @@ public static class SearchEndpoints
             .WithOpenApi();
 
         group.MapGet("/products", async (
+            ISearchService searchService,
             string? q,
             Guid? categoryId,
             decimal? priceMin,
@@ -20,10 +21,9 @@ public static class SearchEndpoints
             string? brand,
             double? minRating,
             bool? inStock,
-            int page,
-            int pageSize,
-            ISearchService searchService,
-            CancellationToken ct) =>
+            int page = 1,
+            int pageSize = 20,
+            CancellationToken ct = default) =>
         {
             var tagList = !string.IsNullOrWhiteSpace(tags)
                 ? tags.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()

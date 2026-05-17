@@ -35,7 +35,7 @@ public static class CartEndpoints
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var items = request.Items.Select(i => new CartItemDto(i.Sku, i.Quantity, i.Price)).ToList();
+            var items = request.Items.Select(i => new CartItemDto(i.Sku, i.Quantity, i.Price, i.SellerId)).ToList();
             var result = await sender.Send(new UpdateCartCommand(buyerId, items), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
@@ -80,7 +80,7 @@ public static class CartEndpoints
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new AddCartItemCommand(buyerId, request.Sku, request.Quantity), ct);
+            var result = await sender.Send(new AddCartItemCommand(buyerId, request.Sku, request.Quantity, request.SellerId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
@@ -112,8 +112,8 @@ public static class CartEndpoints
 }
 
 public record UpdateCartRequest(List<CartItemRequest> Items);
-public record CartItemRequest(string Sku, int Quantity, decimal Price);
-public record AddCartItemRequest(string Sku, int Quantity, decimal Price);
+public record CartItemRequest(string Sku, int Quantity, decimal Price, string? SellerId = null);
+public record AddCartItemRequest(string Sku, int Quantity, string? SellerId = null);
 public record UpdateCartItemRequest(int Quantity);
 public record CheckoutRequest(
     string? AddressLine1,

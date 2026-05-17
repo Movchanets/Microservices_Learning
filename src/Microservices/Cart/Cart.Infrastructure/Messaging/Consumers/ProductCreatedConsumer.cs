@@ -17,32 +17,21 @@ public sealed class ProductCreatedConsumer(
         logger.LogInformation("Product created: {ProductId}, SKU={Sku}, Price={Price}",
             evt.ProductId, evt.Sku, evt.Price);
 
-        var existing = await dbContext.ProductPrices
-            .FirstOrDefaultAsync(p => p.Id == evt.ProductId, context.CancellationToken);
-
-        if (existing is not null)
+        try
         {
-            existing.UpdateDetails(evt.Name, evt.Price, evt.Currency);
-        }
-        else
-        {
-            // Check by SKU as well — handles the case where a different ProductId maps to the same SKU
-            var existingBySku = await dbContext.ProductPrices
-                .FirstOrDefaultAsync(p => p.Sku == evt.Sku, context.CancellationToken);
+            var existing = await dbContext.ProductPrices
+                .FirstOrDefaultAsync(p => p.Id == evt.ProductId || p.Sku == evt.Sku, context.CancellationToken);
 
-            if (existingBySku is not null)
+            if (existing is not null)
             {
-                existingBySku.UpdateDetails(evt.Name, evt.Price, evt.Currency);
+                existing.UpdateDetails(evt.Name, evt.Price, evt.Currency);
             }
             else
             {
                 dbContext.ProductPrices.Add(
                     ProductPrice.Create(evt.ProductId, evt.Sku, evt.Name, evt.Price, evt.Currency));
             }
-        }
 
-        try
-        {
             await dbContext.SaveChangesAsync(context.CancellationToken);
         }
         catch (DbUpdateException)
@@ -55,6 +44,10 @@ public sealed class ProductCreatedConsumer(
             {
                 retry.UpdateDetails(evt.Name, evt.Price, evt.Currency);
                 await dbContext.SaveChangesAsync(context.CancellationToken);
+            }
+            else
+            {
+                logger.LogWarning("ProductPrice {ProductId} could not be created or found after retry", evt.ProductId);
             }
         }
     }

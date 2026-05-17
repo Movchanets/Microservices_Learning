@@ -2,6 +2,7 @@ export interface CartItem {
   sku: string;
   quantity: number;
   unitPrice?: number;
+  sellerId?: string;
 }
 
 export interface ShoppingCart {

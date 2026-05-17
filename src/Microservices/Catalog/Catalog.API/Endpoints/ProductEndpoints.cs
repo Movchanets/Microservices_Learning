@@ -37,13 +37,13 @@ public static class ProductEndpoints
 
         // Public: list products
         group.MapGet("/", async (
-            [FromQuery] int page,
-            [FromQuery] int pageSize,
-            [FromQuery] Guid? categoryId,
-            [FromQuery] Guid? storeId,
-            [FromQuery] string? search,
             ISender sender,
-            CancellationToken ct) =>
+            [FromQuery] Guid? categoryId = null,
+            [FromQuery] Guid? storeId = null,
+            [FromQuery] string? search = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken ct = default) =>
         {
             var query = new ListProductsQuery(
                 page > 0 ? page : 1,
@@ -150,13 +150,13 @@ public static class ProductEndpoints
         // Public: get product reviews (paginated, filterable)
         group.MapGet("/{id:guid}/reviews", async (
             Guid id,
-            [FromQuery] int page,
-            [FromQuery] int pageSize,
-            [FromQuery] string? sort,
-            [FromQuery] int? rating,
-            [FromQuery] bool? photoOnly,
             ISender sender,
-            CancellationToken ct) =>
+            [FromQuery] string? sort = null,
+            [FromQuery] int? rating = null,
+            [FromQuery] bool? photoOnly = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken ct = default) =>
         {
             var query = new GetProductReviewsQuery(
                 id,

@@ -110,9 +110,9 @@ export const checkoutTest = pageTest.extend<CheckoutFixtures>({
     await use(product);
   },
 
-  addItemToCart: async ({ testProduct }, use) => {
+  addItemToCart: async ({ testProduct, testStore }, use) => {
     const fn = async (buyerApi: APIRequestContext, quantity = 1) => {
-      await addToCart(buyerApi, testProduct.sku, quantity, testProduct.price);
+      await addToCart(buyerApi, testProduct.sku, quantity, testProduct.price, testStore.sellerId);
     };
     await use(fn);
   },

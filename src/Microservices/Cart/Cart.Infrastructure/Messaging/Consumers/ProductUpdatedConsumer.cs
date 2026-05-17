@@ -17,34 +17,23 @@ public sealed class ProductUpdatedConsumer(
         logger.LogInformation("Product updated: {ProductId}, SKU={Sku}, Price={Price}",
             evt.ProductId, evt.Sku, evt.Price);
 
-        var existing = await dbContext.ProductPrices
-            .FirstOrDefaultAsync(p => p.Id == evt.ProductId, context.CancellationToken);
-
-        if (existing is not null)
-        {
-            existing.UpdateDetails(evt.Name, evt.Price, existing.Currency);
-            await dbContext.SaveChangesAsync(context.CancellationToken);
-            return;
-        }
-
-        logger.LogWarning("ProductPrice {ProductId} not found, creating from update event", evt.ProductId);
-
-        // Check by SKU before adding to avoid duplicate
-        var existingBySku = await dbContext.ProductPrices
-            .FirstOrDefaultAsync(p => p.Sku == evt.Sku, context.CancellationToken);
-
-        if (existingBySku is not null)
-        {
-            existingBySku.UpdateDetails(evt.Name, evt.Price, existingBySku.Currency);
-            await dbContext.SaveChangesAsync(context.CancellationToken);
-            return;
-        }
-
-        dbContext.ProductPrices.Add(
-            ProductPrice.Create(evt.ProductId, evt.Sku, evt.Name, evt.Price, "USD"));
-
         try
         {
+            var existing = await dbContext.ProductPrices
+                .FirstOrDefaultAsync(p => p.Id == evt.ProductId || p.Sku == evt.Sku, context.CancellationToken);
+
+            if (existing is not null)
+            {
+                existing.UpdateDetails(evt.Name, evt.Price, existing.Currency);
+                await dbContext.SaveChangesAsync(context.CancellationToken);
+                return;
+            }
+
+            logger.LogWarning("ProductPrice {ProductId} not found, creating from update event", evt.ProductId);
+
+            dbContext.ProductPrices.Add(
+                ProductPrice.Create(evt.ProductId, evt.Sku, evt.Name, evt.Price, "USD"));
+
             await dbContext.SaveChangesAsync(context.CancellationToken);
         }
         catch (DbUpdateException)
@@ -57,6 +46,10 @@ public sealed class ProductUpdatedConsumer(
             {
                 retry.UpdateDetails(evt.Name, evt.Price, retry.Currency);
                 await dbContext.SaveChangesAsync(context.CancellationToken);
+            }
+            else
+            {
+                logger.LogWarning("ProductPrice {ProductId} could not be created or found after retry", evt.ProductId);
             }
         }
     }

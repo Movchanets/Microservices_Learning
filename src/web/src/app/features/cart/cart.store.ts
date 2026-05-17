@@ -60,10 +60,10 @@ export const CartStore = signalStore(
       }
     },
 
-    async addToCart(sku: string, quantity: number = 1): Promise<void> {
+    async addToCart(sku: string, quantity: number = 1, sellerId?: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.addItem(sku, quantity);
+        const updatedCart = await cartService.addItem(sku, quantity, sellerId);
         patchState(store, { items: updatedCart.items, loading: false, isDrawerOpen: true });
       } catch (err: any) {
         patchState(store, { error: 'Failed to add item to cart', loading: false });

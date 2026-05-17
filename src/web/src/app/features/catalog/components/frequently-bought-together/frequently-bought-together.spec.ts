@@ -122,8 +122,8 @@ describe('FrequentlyBoughtTogetherComponent', () => {
     await component.addAllToCart();
 
     expect(mockCartService.addItem).toHaveBeenCalledTimes(3);
-    expect(mockCartService.addItem).toHaveBeenCalledWith('CAM-1', 1);
-    expect(mockCartService.addItem).toHaveBeenCalledWith('MEM-1', 1);
-    expect(mockCartService.addItem).toHaveBeenCalledWith('CASE-1', 1);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('CAM-1', 1, undefined);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('MEM-1', 1, undefined);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('CASE-1', 1, undefined);
   });
 });
