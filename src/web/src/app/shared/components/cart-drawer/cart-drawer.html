@@ -1,8 +1,8 @@
 <div class="cart-overlay" *ngIf="cartStore.isDrawerOpen()" (click)="close()">
-  <div class="cart-drawer" (click)="$event.stopPropagation()">
+  <div data-testid="cart-drawer" class="cart-drawer" (click)="$event.stopPropagation()">
     <div class="cart-header">
       <h2>Your Cart ({{ cartStore.totalItems() }})</h2>
-      <button class="close-btn" (click)="close()">
+      <button data-testid="cart-drawer-close" class="close-btn" (click)="close()">
         <lucide-icon [img]="XIcon" size="24"></lucide-icon>
       </button>
     </div>
@@ -42,7 +42,7 @@
       </div>
     </div>
 
-    <div class="empty-cart" *ngIf="cartStore.isEmpty()">
+    <div data-testid="cart-drawer-empty" class="empty-cart" *ngIf="cartStore.isEmpty()">
       <p>Your cart is empty.</p>
       <button class="primary-btn" (click)="close()" routerLink="/catalog">Continue Shopping</button>
     </div>
@@ -50,11 +50,11 @@
     <div class="cart-footer" *ngIf="!cartStore.isEmpty()">
       <div class="total-row">
         <span>Subtotal</span>
-        <span>${{ cartStore.totalPrice() | number:'1.2-2' }}</span>
+        <span data-testid="cart-drawer-subtotal">${{ cartStore.totalPrice() | number:'1.2-2' }}</span>
       </div>
       <div class="action-buttons">
-        <button class="secondary-btn" (click)="close()" routerLink="/cart">View Cart</button>
-        <button class="primary-btn" (click)="close()" routerLink="/checkout">Checkout</button>
+        <button data-testid="cart-drawer-view-cart" class="secondary-btn" (click)="close()" routerLink="/cart">View Cart</button>
+        <button data-testid="cart-drawer-checkout" class="primary-btn" (click)="close()" routerLink="/checkout">Checkout</button>
       </div>
     </div>
   </div>

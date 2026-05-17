@@ -69,4 +69,52 @@ describe('OrderService', () => {
       expect(result).toEqual(mockPayment);
     });
   });
+
+  describe('cancelOrder', () => {
+    it('should POST /api/orders/{id}/cancel with reason', async () => {
+      const promise = service.cancelOrder('order-1', 'changed mind');
+
+      const req = httpMock.expectOne('/api/orders/order-1/cancel');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ reason: 'changed mind' });
+      req.flush(null);
+
+      await promise;
+    });
+
+    it('should POST without reason when not provided', async () => {
+      const promise = service.cancelOrder('order-1');
+
+      const req = httpMock.expectOne('/api/orders/order-1/cancel');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ reason: undefined });
+      req.flush(null);
+
+      await promise;
+    });
+  });
+
+  describe('updateOrderStatus', () => {
+    it('should PUT /api/orders/{id}/status with status and notes', async () => {
+      const promise = service.updateOrderStatus('order-1', 'Shipped', 'Left warehouse');
+
+      const req = httpMock.expectOne('/api/orders/order-1/status');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ status: 'Shipped', notes: 'Left warehouse' });
+      req.flush(null);
+
+      await promise;
+    });
+
+    it('should PUT without notes when not provided', async () => {
+      const promise = service.updateOrderStatus('order-1', 'Processing');
+
+      const req = httpMock.expectOne('/api/orders/order-1/status');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ status: 'Processing', notes: undefined });
+      req.flush(null);
+
+      await promise;
+    });
+  });
 });

@@ -21,6 +21,7 @@ describe('OrderStore', () => {
     mockOrderService = {
       getOrdersByBuyer: vi.fn().mockResolvedValue(mockOrders),
       getOrderById: vi.fn().mockResolvedValue(mockOrders[0]),
+      cancelOrder: vi.fn().mockResolvedValue(undefined),
     };
 
     TestBed.configureTestingModule({
@@ -126,6 +127,48 @@ describe('OrderStore', () => {
       store.updateOrderStatus('order-1', 'Cancelled');
 
       expect(store.selectedOrder().status).toBe('Cancelled');
+    });
+  });
+
+  describe('cancelOrder', () => {
+    it('should cancel an order and update local state', async () => {
+      await store.loadOrders('buyer-1');
+      mockOrderService.cancelOrder.mockResolvedValueOnce(undefined);
+
+      const result = await store.cancelOrder('order-2');
+
+      expect(result).toBe(true);
+      expect(mockOrderService.cancelOrder).toHaveBeenCalledWith('order-2', undefined);
+      const updated = store.orders().find((o: any) => o.id === 'order-2');
+      expect(updated.status).toBe('Cancelled');
+    });
+
+    it('should cancel with reason', async () => {
+      await store.loadOrders('buyer-1');
+      mockOrderService.cancelOrder.mockResolvedValueOnce(undefined);
+
+      await store.cancelOrder('order-2', 'changed mind');
+
+      expect(mockOrderService.cancelOrder).toHaveBeenCalledWith('order-2', 'changed mind');
+    });
+
+    it('should update selectedOrder if it matches', async () => {
+      await store.loadOrderById('order-1');
+      mockOrderService.cancelOrder.mockResolvedValueOnce(undefined);
+
+      await store.cancelOrder('order-1');
+
+      expect(store.selectedOrder().status).toBe('Cancelled');
+    });
+
+    it('should return false and set error on failure', async () => {
+      await store.loadOrders('buyer-1');
+      mockOrderService.cancelOrder.mockRejectedValueOnce(new Error('fail'));
+
+      const result = await store.cancelOrder('order-1');
+
+      expect(result).toBe(false);
+      expect(store.error()).toBe('Failed to cancel order');
     });
   });
 

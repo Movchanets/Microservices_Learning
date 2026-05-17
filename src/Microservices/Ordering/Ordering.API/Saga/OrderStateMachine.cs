@@ -46,6 +46,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                     ctx.Saga.BuyerId = ctx.Message.BuyerId;
                     ctx.Saga.OrderId = ctx.Message.CorrelationId; // CorrelationId = OrderId
                     ctx.Saga.ItemsJson = JsonSerializer.Serialize(ctx.Message.Items);
+                    ctx.Saga.TotalAmount = ctx.Message.Items.Sum(i => i.Price * i.Quantity);
                     ctx.Saga.CreatedAt = DateTime.UtcNow;
                 })
                 .Publish(ctx => new ReserveInventoryCommand(

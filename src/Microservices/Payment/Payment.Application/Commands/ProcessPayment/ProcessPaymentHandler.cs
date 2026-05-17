@@ -16,10 +16,14 @@ public sealed class ProcessPaymentHandler(
         repository.Add(transaction);
         await uow.SaveChangesAsync(ct);
 
-        // Actual gateway call would happen here (deferred to production).
-        // For now, simulate success.
-        var gatewayTransactionId = $"txn_{Guid.NewGuid():N}";
-        transaction.MarkCompleted(gatewayTransactionId);
+        if (request.IsSuccessful)
+        {
+            transaction.MarkCompleted(request.GatewayTransactionId ?? $"txn_{Guid.NewGuid():N}");
+        }
+        else
+        {
+            transaction.MarkFailed(request.FailureReason ?? "Payment failed");
+        }
 
         repository.Update(transaction);
         await uow.SaveChangesAsync(ct);

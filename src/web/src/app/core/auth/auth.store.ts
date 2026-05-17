@@ -3,6 +3,7 @@ import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { AuthService } from './auth.service';
 import { User, LoginCredentials, RegisterCredentials } from './auth.models';
 import { Router } from '@angular/router';
+import { NotificationService } from '../signalr/notification.service';
 
 type AuthState = {
   user: User | null;
@@ -19,14 +20,21 @@ const initialState: AuthState = {
 export const AuthStore = signalStore(
   { providedIn: 'root' },
   withState(initialState),
-  withMethods((store, authService = inject(AuthService), router = inject(Router)) => ({
+  withMethods((
+    store,
+    authService = inject(AuthService),
+    router = inject(Router),
+    notificationService = inject(NotificationService)) => ({
     async login(credentials: LoginCredentials) {
       patchState(store, { loading: true, error: null });
       try {
         await authService.login(credentials);
         await authService.ensureCsrf();
         const user = await authService.getUser();
-        if (user) localStorage.setItem('buyerId', user.id);
+        if (user) {
+          localStorage.setItem('buyerId', user.id);
+          await notificationService.start(user.id);
+        }
         patchState(store, { user, loading: false });
         router.navigate(['/catalog']);
       } catch (err: any) {
@@ -39,7 +47,10 @@ export const AuthStore = signalStore(
         await authService.register(credentials);
         await authService.ensureCsrf();
         const user = await authService.getUser();
-        if (user) localStorage.setItem('buyerId', user.id);
+        if (user) {
+          localStorage.setItem('buyerId', user.id);
+          await notificationService.start(user.id);
+        }
         patchState(store, { user, loading: false });
         router.navigate(['/catalog']);
       } catch (err: any) {
@@ -50,12 +61,14 @@ export const AuthStore = signalStore(
       patchState(store, { loading: true });
       try {
         localStorage.removeItem('buyerId');
+        await notificationService.stop();
         await authService.ensureCsrf();
         await authService.logout();
         patchState(store, { user: null, loading: false });
         router.navigate(['/auth/login']);
       } catch {
         localStorage.removeItem('buyerId');
+        await notificationService.stop();
         patchState(store, { user: null, loading: false });
         router.navigate(['/auth/login']);
       }
@@ -65,10 +78,14 @@ export const AuthStore = signalStore(
       try {
         await authService.ensureCsrf();
         const user = await authService.getUser();
-        if (user) localStorage.setItem('buyerId', user.id);
+        if (user) {
+          localStorage.setItem('buyerId', user.id);
+          await notificationService.start(user.id);
+        }
         patchState(store, { user, loading: false });
       } catch {
         localStorage.removeItem('buyerId');
+        await notificationService.stop();
         patchState(store, { user: null, loading: false });
       }
     },

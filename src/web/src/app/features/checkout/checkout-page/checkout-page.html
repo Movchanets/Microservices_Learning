@@ -1,6 +1,6 @@
 <div class="min-h-screen bg-background p-6 pt-10">
   <div class="container mx-auto max-w-3xl">
-    <h1 class="text-3xl font-bold text-foreground font-lexend mb-8">Checkout</h1>
+    <h1 data-testid="checkout-heading" class="text-3xl font-bold text-foreground font-lexend mb-8">Checkout</h1>
 
     @if (checkoutStore.hasOrder()) {
       <app-checkout-status
@@ -10,18 +10,18 @@
       <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-8 text-center">
         <div class="animate-pulse">
           <lucide-icon name="Clock" class="w-16 h-16 mx-auto mb-4 text-primary"></lucide-icon>
-          <h2 class="text-2xl font-bold font-lexend mb-2">Order Submitted</h2>
+          <h2 data-testid="checkout-order-submitted" class="text-2xl font-bold font-lexend mb-2">Order Submitted</h2>
           <p class="text-muted mb-6">Your order is being created...</p>
         </div>
         <div class="mt-4">
           <p class="text-sm text-muted mb-2">Correlation ID</p>
-          <p class="font-mono text-xs text-muted bg-muted/10 inline-block px-3 py-1 rounded-lg">
+          <p data-testid="checkout-correlation-id" class="font-mono text-xs text-muted bg-muted/10 inline-block px-3 py-1 rounded-lg">
             {{ cartStore.checkoutCorrelationId() }}
           </p>
         </div>
       </div>
     } @else if (cartStore.isEmpty()) {
-      <div class="text-center py-16 bg-card/60 backdrop-blur-sm rounded-3xl border border-border">
+      <div data-testid="checkout-empty" class="text-center py-16 bg-card/60 backdrop-blur-sm rounded-3xl border border-border">
         <lucide-icon name="ShoppingCart" class="w-16 h-16 mx-auto mb-4 opacity-30"></lucide-icon>
         <p class="text-xl font-medium text-foreground mb-4">Your cart is empty</p>
         <a routerLink="/catalog"
@@ -63,7 +63,7 @@
           <div class="accordion-content" *ngIf="activeSection() === 'shipping'">
             <div class="shipping-methods">
               <label class="shipping-method">
-                <input type="radio" name="shipping" (change)="setShippingMethod('standard')" [checked]="checkoutStore.shippingMethod() === 'standard'">
+                <input data-testid="checkout-shipping-standard" type="radio" name="shipping" (change)="setShippingMethod('standard')" [checked]="checkoutStore.shippingMethod() === 'standard'">
                 <div class="method-info">
                   <span class="method-name">Standard Shipping</span>
                   <span class="method-desc">5-7 business days</span>
@@ -71,7 +71,7 @@
                 <span class="method-price">Free</span>
               </label>
               <label class="shipping-method">
-                <input type="radio" name="shipping" (change)="setShippingMethod('express')" [checked]="checkoutStore.shippingMethod() === 'express'">
+                <input data-testid="checkout-shipping-express" type="radio" name="shipping" (change)="setShippingMethod('express')" [checked]="checkoutStore.shippingMethod() === 'express'">
                 <div class="method-info">
                   <span class="method-name">Express Shipping</span>
                   <span class="method-desc">1-2 business days</span>
@@ -97,7 +97,7 @@
           </button>
           <div class="accordion-content" *ngIf="activeSection() === 'summary'">
             <app-checkout-summary></app-checkout-summary>
-            <button class="next-btn" (click)="setSection('payment')">Continue to Payment</button>
+            <button data-testid="checkout-continue-payment" class="next-btn" (click)="setSection('payment')">Continue to Payment</button>
           </div>
         </div>
 
@@ -136,7 +136,7 @@
                 </div>
               }
 
-              <button (click)="onConfirm()"
+              <button data-testid="checkout-place-order" (click)="onConfirm()"
                       [disabled]="checkoutStore.submitting()"
                       class="w-full py-4 bg-success text-white rounded-xl font-bold text-lg hover:opacity-90 transition-all disabled:opacity-50 cursor-pointer">
                 @if (checkoutStore.submitting()) {
@@ -154,7 +154,7 @@
       </div>
 
       <div class="mt-8">
-        <a routerLink="/cart" class="text-muted hover:text-foreground transition-colors flex items-center gap-2">
+        <a routerLink="/cart" data-testid="checkout-back-cart" class="text-muted hover:text-foreground transition-colors flex items-center gap-2">
           <lucide-icon name="ChevronLeft" class="w-4 h-4"></lucide-icon>
           Back to Cart
         </a>

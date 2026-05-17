@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
 import { HomeStore } from '../home.store';
+import { CartStore } from '../../cart/cart.store';
 import { RecentlyViewedService } from '../../../core/services/recently-viewed.service';
 import { HeroBannerComponent } from '../components/hero-banner/hero-banner';
 import { CategoryTilesComponent } from '../components/category-tiles/category-tiles';
@@ -45,6 +46,7 @@ import { DealOfTheDayComponent } from '../components/deal-of-the-day/deal-of-the
               title="Featured Products"
               [products]="homeStore.featuredProducts()"
               viewAllLink="/catalog"
+              (addToCart)="onAddToCart($event)"
             />
           </section>
         }
@@ -56,6 +58,7 @@ import { DealOfTheDayComponent } from '../components/deal-of-the-day/deal-of-the
               title="New Arrivals"
               [products]="homeStore.newArrivals()"
               viewAllLink="/catalog"
+              (addToCart)="onAddToCart($event)"
             />
           </section>
         }
@@ -76,8 +79,17 @@ import { DealOfTheDayComponent } from '../components/deal-of-the-day/deal-of-the
 export class HomePageComponent implements OnInit {
   protected homeStore = inject(HomeStore);
   protected recentlyViewedService = inject(RecentlyViewedService);
+  private cartStore = inject(CartStore);
 
   ngOnInit(): void {
     this.homeStore.loadAll();
+  }
+
+  onAddToCart(productId: string): void {
+    const allProducts = [...this.homeStore.featuredProducts(), ...this.homeStore.newArrivals()];
+    const product = allProducts.find((p) => p.id === productId);
+    if (product) {
+      this.cartStore.addToCart(product.sku, 1);
+    }
   }
 }

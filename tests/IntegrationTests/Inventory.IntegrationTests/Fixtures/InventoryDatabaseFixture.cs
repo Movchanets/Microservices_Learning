@@ -27,6 +27,9 @@ public sealed class InventoryDatabaseFixture : IAsyncLifetime
         services.AddScoped<Inventory.Domain.Aggregates.IInventoryItemRepository,
             Inventory.Infrastructure.Repositories.InventoryItemRepository>();
 
+        services.AddScoped<BuildingBlocks.SharedContracts.Abstractions.IUnitOfWork>(sp =>
+            sp.GetRequiredService<InventoryDbContext>());
+
         services.AddLogging();
 
         ServiceProvider = services.BuildServiceProvider();

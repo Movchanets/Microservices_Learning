@@ -18,7 +18,7 @@ import { ProductListItem } from '../../catalog.models';
     >
       <!-- Image with defer -->
       <a
-        [routerLink]="[product().id]"
+        [routerLink]="['/catalog', product().id]"
         class="block relative w-full aspect-square rounded-xl overflow-hidden mb-5 bg-muted/10"
       >
         @if (product().imageUrl) {
@@ -65,7 +65,7 @@ import { ProductListItem } from '../../catalog.models';
           class="text-xl font-bold text-foreground font-lexend mb-1 line-clamp-2
                    group-hover:text-primary transition-colors"
         >
-          <a [routerLink]="[product().id]">{{ product().name }}</a>
+          <a [routerLink]="['/catalog', product().id]">{{ product().name }}</a>
         </h3>
 
         <!-- SKU -->

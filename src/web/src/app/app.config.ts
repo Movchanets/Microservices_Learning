@@ -62,7 +62,6 @@ import {
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { AuthStore } from './core/auth/auth.store';
-import { NotificationService } from './core/signalr/notification.service';
 import { apiInterceptor } from './core/http/api.interceptor';
 import { errorInterceptor } from './core/http/error.interceptor';
 import { CategoryTreeService } from './core/services/category-tree.service';
@@ -80,17 +79,13 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       if (isPlatformBrowser(inject(PLATFORM_ID))) {
         const authStore = inject(AuthStore);
-        const notificationService = inject(NotificationService);
         const categoryTreeService = inject(CategoryTreeService);
         
         // Fire off category tree load (don't block app boot)
         void categoryTreeService.initialize();
 
         // Auth must complete before router starts (guards need user state)
-        return authStore.checkAuth().then(() => {
-          const buyerId = authStore.user()?.id;
-          void notificationService.start(buyerId);
-        });
+        return authStore.checkAuth();
       }
       return Promise.resolve();
     }),

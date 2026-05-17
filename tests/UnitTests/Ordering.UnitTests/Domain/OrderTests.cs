@@ -190,6 +190,107 @@ public class OrderTests
         order.CancellationReason.Should().Be("system error");
     }
 
+    // ── UpdateStatus (Seller Status Transitions) ───────────
+
+    [Fact]
+    public void UpdateStatus_SubmittedToProcessing_Succeeds()
+    {
+        var order = Order.Create("buyer-1");
+        order.UpdateStatus(OrderStatus.Processing);
+
+        order.Status.Should().Be(OrderStatus.Processing);
+    }
+
+    [Fact]
+    public void UpdateStatus_ProcessingToShipped_Succeeds()
+    {
+        var order = Order.Create("buyer-1");
+        order.UpdateStatus(OrderStatus.Processing);
+        order.UpdateStatus(OrderStatus.Shipped);
+
+        order.Status.Should().Be(OrderStatus.Shipped);
+    }
+
+    [Fact]
+    public void UpdateStatus_ShippedToDelivered_SucceedsAndSetsCompletedAt()
+    {
+        var order = Order.Create("buyer-1");
+        order.UpdateStatus(OrderStatus.Processing);
+        order.UpdateStatus(OrderStatus.Shipped);
+        order.UpdateStatus(OrderStatus.Delivered);
+
+        order.Status.Should().Be(OrderStatus.Delivered);
+        order.CompletedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void UpdateStatus_ShippedToDelivered_RaisesOrderCompletedEvent()
+    {
+        var order = Order.Create("buyer-1");
+        order.UpdateStatus(OrderStatus.Processing);
+        order.UpdateStatus(OrderStatus.Shipped);
+        order.UpdateStatus(OrderStatus.Delivered);
+
+        order.DomainEvents.Should().Contain(e => e is OrderCompletedDomainEvent);
+    }
+
+    [Fact]
+    public void UpdateStatus_SubmittedToShipped_ThrowsDomainException()
+    {
+        var order = Order.Create("buyer-1");
+
+        var act = () => order.UpdateStatus(OrderStatus.Shipped);
+
+        act.Should().Throw<DomainException>()
+            .WithMessage("*Invalid status transition*");
+    }
+
+    [Fact]
+    public void UpdateStatus_SubmittedToDelivered_ThrowsDomainException()
+    {
+        var order = Order.Create("buyer-1");
+
+        var act = () => order.UpdateStatus(OrderStatus.Delivered);
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void UpdateStatus_CompletedToProcessing_ThrowsDomainException()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkInventoryReserved();
+        order.MarkPaymentProcessing();
+        order.MarkCompleted();
+
+        var act = () => order.UpdateStatus(OrderStatus.Processing);
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void UpdateStatus_CancelledToProcessing_ThrowsDomainException()
+    {
+        var order = Order.Create("buyer-1");
+        order.MarkCancelled("cancelled");
+
+        var act = () => order.UpdateStatus(OrderStatus.Processing);
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void UpdateStatus_ValidTransition_RaisesStatusChangedEvent()
+    {
+        var order = Order.Create("buyer-1");
+        order.UpdateStatus(OrderStatus.Processing, "Starting order");
+
+        var evt = order.DomainEvents.OfType<OrderStatusChangedDomainEvent>().FirstOrDefault();
+        evt.Should().NotBeNull();
+        evt!.NewStatus.Should().Be(OrderStatus.Processing);
+        evt.Notes.Should().Be("Starting order");
+    }
+
     // ── Full Lifecycle ─────────────────────────────────────
 
     [Fact]

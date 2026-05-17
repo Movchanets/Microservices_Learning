@@ -99,6 +99,11 @@ app.MapDefaultEndpoints(); // health checks
 app.UseRateLimiter();
 app.UseCors();
 app.UseMiddleware<RequestLoggingMiddleware>();
+app.Use(async (context, next) =>
+{
+    context.Request.EnableBuffering();
+    await next();
+});
 app.UseAuthentication();
 app.UseCsrfValidation();   // Custom CSRF check
 app.UseCookieToBearer();   // Cookie → Bearer transform

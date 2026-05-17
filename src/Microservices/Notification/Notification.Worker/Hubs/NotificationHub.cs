@@ -12,7 +12,14 @@ public sealed class NotificationHub(ILogger<NotificationHub> logger) : Hub
 {
     public override Task OnConnectedAsync()
     {
-        var buyerId = Context.GetHttpContext()?.Request.Headers["x-buyer-id"].ToString();
+        var httpContext = Context.GetHttpContext();
+        var buyerId = httpContext?.Request.Query["buyerId"].ToString();
+
+        if (string.IsNullOrWhiteSpace(buyerId))
+        {
+            buyerId = httpContext?.Request.Headers["x-buyer-id"].ToString();
+        }
+
         logger.LogInformation("Client connected: ConnectionId={ConnectionId}, BuyerId={BuyerId}",
             Context.ConnectionId, buyerId ?? "anonymous");
         return base.OnConnectedAsync();

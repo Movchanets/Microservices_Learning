@@ -26,7 +26,7 @@ public class ProcessPaymentHandlerTests
     public async Task Handle_CreatesTransactionAndMarksCompleted()
     {
         var command = new ProcessPaymentInternalCommand(
-            Guid.NewGuid(), Guid.NewGuid(), 100m, "buyer-1");
+            Guid.NewGuid(), Guid.NewGuid(), 100m, "buyer-1", true, "txn_test_123");
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -44,7 +44,7 @@ public class ProcessPaymentHandlerTests
 
         var orderId = Guid.NewGuid();
         var command = new ProcessPaymentInternalCommand(
-            Guid.NewGuid(), orderId, 75.50m, "buyer-2");
+            Guid.NewGuid(), orderId, 75.50m, "buyer-2", true, "txn_fixed_456");
 
         await _handler.Handle(command, CancellationToken.None);
 
@@ -53,6 +53,25 @@ public class ProcessPaymentHandlerTests
         captured.BuyerId.Should().Be("buyer-2");
         captured.Amount.Should().Be(75.50m);
         captured.Status.Should().Be(PaymentStatus.Completed);
-        captured.TransactionId.Should().StartWith("txn_");
+        captured.TransactionId.Should().Be("txn_fixed_456");
+    }
+
+    [Fact]
+    public async Task Handle_WhenPaymentFails_PersistsFailedTransaction()
+    {
+        PaymentTransaction? captured = null;
+        _repositoryMock.Setup(r => r.Add(It.IsAny<PaymentTransaction>()))
+            .Callback<PaymentTransaction>(t => captured = t);
+
+        var command = new ProcessPaymentInternalCommand(
+            Guid.NewGuid(), Guid.NewGuid(), 42m, "buyer-3", false, null, "Card declined");
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        captured.Should().NotBeNull();
+        captured!.Status.Should().Be(PaymentStatus.Failed);
+        captured.FailureReason.Should().Be("Card declined");
+        captured.TransactionId.Should().BeNull();
     }
 }

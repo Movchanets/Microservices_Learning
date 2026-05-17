@@ -46,6 +46,10 @@ builder.Services.AddMassTransit(x =>
 
     // Consumer that creates Order entity from OrderSubmittedEvent
     x.AddConsumer<OrderSubmittedConsumer>();
+    x.AddConsumer<OrderInventoryReservedConsumer>();
+    x.AddConsumer<OrderPaymentProcessingConsumer>();
+    x.AddConsumer<OrderCompletedProjectionConsumer>();
+    x.AddConsumer<OrderCancelledProjectionConsumer>();
 
     // Saga state machine with EF Core persistence
     x.AddSagaStateMachine<OrderStateMachine, OrderState>()

@@ -24,7 +24,13 @@ public sealed class ProcessPaymentConsumer(
         if (gatewayResult.IsSuccess)
         {
             await sender.Send(new ProcessPaymentInternalCommand(
-                cmd.CorrelationId, cmd.OrderId, cmd.Amount, cmd.BuyerId), context.CancellationToken);
+                cmd.CorrelationId,
+                cmd.OrderId,
+                cmd.Amount,
+                cmd.BuyerId,
+                true,
+                gatewayResult.TransactionId,
+                null), context.CancellationToken);
 
             await context.Publish(new PaymentCompletedEvent(
                 cmd.CorrelationId, cmd.OrderId, gatewayResult.TransactionId!));
@@ -34,6 +40,15 @@ public sealed class ProcessPaymentConsumer(
         }
         else
         {
+            await sender.Send(new ProcessPaymentInternalCommand(
+                cmd.CorrelationId,
+                cmd.OrderId,
+                cmd.Amount,
+                cmd.BuyerId,
+                false,
+                null,
+                gatewayResult.FailureReason), context.CancellationToken);
+
             await context.Publish(new PaymentFailedEvent(
                 cmd.CorrelationId, cmd.OrderId, gatewayResult.FailureReason!));
 

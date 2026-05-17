@@ -21,8 +21,7 @@ var cartDb = postgres.AddDatabase("cart-db");
 
 // Redis — used by Cart.API, Notification.Worker (SignalR backplane)
 var redis = builder.AddRedis("redis")
-    .WithRedisInsight()
-    .WithHostPort(6379);
+    .WithRedisInsight();
 
 // RabbitMQ — message broker for MassTransit
 var messaging = builder.AddRabbitMQ("messaging")

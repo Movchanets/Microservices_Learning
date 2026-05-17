@@ -7,6 +7,7 @@ using Cart.Infrastructure.Data;
 using Cart.Infrastructure.Messaging.Consumers;
 using Cart.Application.Commands;
 using FluentValidation;
+using BuildingBlocks.Infrastructure.Middleware;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -80,6 +81,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.MapDefaultEndpoints();
 app.UseAuthentication();
 app.UseAuthorization();

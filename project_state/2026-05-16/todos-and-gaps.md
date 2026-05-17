@@ -1,127 +1,92 @@
-# TODOs and Gaps — 2026-05-16
+# TODOs and Gaps — 2026-05-16 (Updated after Plans 01-09)
 
-**Total actionable items: 35** (4 backend, 20 frontend, 8 infrastructure, 3 docs)
-
----
-
-## Backend TODOs
-
-### Identity.API
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Change-password endpoint | P1 | Users can't change password |
-| Update-profile endpoint | P1 | Users can't edit profile |
-| Email sending for forgot-password | P2 | Flow is placeholder |
-| Email verification on registration | P2 | Unverified emails |
-
-### Cart.API
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Single-item endpoints (POST/PUT/DELETE /items) | P1 | Inefficient full replacement |
-| Redis implementation (currently PostgreSQL) | P2 | Deviates from architecture plan |
-
-### Ordering.API
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Cancel order endpoint | P1 | CancelOrderCommand exists but no endpoint |
-| Order status update endpoint | P1 | Sellers can't mark as shipped/completed |
-
-### Payment.API
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Refund endpoint | P1 | No way to process refunds |
-| Payment method selection | P2 | Only simulated payments |
-
-### Inventory.API
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Low-stock alerts | P2 | No notification mechanism |
-| Seller-specific inventory view | P2 | No filtered view |
-
-### Search.API
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Admin reindex endpoint | P2 | Can't rebuild index if corrupted |
-
-### StoreManagement.API
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Store deletion endpoint | P2 | Can't remove stores |
-
-### Notification.Worker
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Target specific users | P1 | Broadcasts to all |
-
-### API Gateway
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Token refresh | P2 | No automatic token renewal |
+**Last updated:** 2026-05-16 after reviewing all 9 implementation plans
 
 ---
 
-## Frontend TODOs (20 items)
+## Plans 01-09 Status
 
-### Catalog (6 TODOs)
-| TODO | Priority | Impact |
-|------|----------|--------|
-| "Add to Cart" button on product detail | P1 | Can't add products to cart from detail page |
-| InventoryService for stock checks | P2 | No availability check before add |
-| "Sticky Buy Box" | P2 | UX improvement |
-| "Frequently Bought Together" section | P2 | Cross-sell opportunity |
-| Product variant selector | P2 | No color/size selection |
-| Community Q&A and Reviews | P2 | Social proof missing |
-
-### Cart (3 TODOs)
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Slide-out cart drawer | P2 | UX improvement |
-| Single-item API calls | P1 | Depends on backend |
-| Remove x-buyer-id header pattern | P2 | Legacy code, JWT claims now used |
-
-### Checkout (3 TODOs)
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Address form | P1 | No shipping address collection |
-| Payment method selection | P2 | Only simulated |
-| Express checkout (Apple Pay, Google Pay) | P2 | Modern payment UX |
-| Free shipping progress bar | P2 | Conversion optimization |
-
-### Orders
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Order cancellation UI | P1 | Depends on backend endpoint |
-
-### Seller Dashboard (3 TODOs)
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Inventory management UI | P1 | Sellers can't manage stock |
-| Media upload in product form | P2 | No image upload |
-| Sales summary endpoint | P2 | Currently hardcoded zeros |
-| SellerOrdersComponent bypasses store | P2 | Architectural inconsistency |
-
-### Profile (5 TODOs)
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Edit profile form | P1 | Read-only profile |
-| Change password form | P1 | Depends on backend |
-| Order history tab | P2 | Reuse OrderListComponent |
-| Notification badges | P2 | UX improvement |
-| "Personal Account" hub transformation | P2 | Full sidebar navigation |
-
-### Auth
-| TODO | Priority | Impact |
-|------|----------|--------|
-| Email verification flow | P2 | Unverified registrations |
+| Plan | Name | Status | Remaining Gaps |
+|------|------|--------|----------------|
+| 01 | Global Header & Mega-Menu | ✅ Complete | None |
+| 02 | User Profile Hub | ✅ Complete | None |
+| 03 | Cart & Checkout Optimization | ✅ Complete | None |
+| 04 | Product Detail Enhancements | ✅ Complete | Stock badge uses status not inventory (cosmetic) |
+| 05 | Reviews & Ratings | ✅ Complete | No photo upload, no tests, GetSummaryAsync in-memory |
+| 06 | Homepage Content Blocks | ✅ Complete | Recently Viewed shows count only |
+| 07 | Search & Discovery | ✅ Verified | avg_rating aggregation, active filter chips, PriceAlertConsumer, breadcrumbs dropdowns |
+| 08 | Inventory Management UI | ✅ Complete | None |
+| 09 | Order Cancellation & Status | ✅ Complete | None |
 
 ---
 
-## Architecture Gaps
+## Unimplemented / Mocked Tasks from Plans 01-09
 
-### Testing (~221 total test methods/cases)
+### HIGH — Missing Features
+
+| # | Plan | Item | Description |
+|---|------|------|-------------|
+| 1 | 05 | Photo upload in write-review | Media.API integration for review photos (max 5 images) |
+| 2 | 07 | PriceAlertConsumer | Notification.Worker consumer to check saved searches against product updates and push SignalR alerts |
+| 3 | 07 | Active filter chips | Show active filters as removable chips in search-facets component |
+| 4 | 07 | Breadcrumbs sibling dropdowns | Hovering a breadcrumb node shows dropdown of sibling categories |
+
+### MEDIUM — Performance / Quality
+
+| # | Plan | Item | Description |
+|---|------|------|-------------|
+| 5 | 05 | GetSummaryAsync optimization | Loads all reviews into memory; should use SQL aggregation (`GROUP BY Rating`, `AVG`, `COUNT`) |
+| 6 | 07 | avg_rating aggregation | Elasticsearch `AverageAggregation` for `avg_rating` facet missing from search service |
+| 7 | 05 | Backend tests for reviews | No unit tests for CreateReviewHandler, VoteReviewHandler, SellerResponseHandler |
+| 8 | 05 | Frontend tests for reviews | No spec files for review-summary, review-list, write-review, review store |
+| 9 | 07 | Frontend tests for search | No spec files for search-facets, search-bar, breadcrumbs, saved-searches |
+
+### LOW — Cosmetic / Style
+
+| # | Plan | Item | Description |
+|---|------|------|-------------|
+| 10 | 04 | `standalone: true` on product-card.ts | Redundant in Angular v20+ (default) |
+| 11 | 04 | Stock badge based on status | Shows "In Stock" when `status === 'Active'`, not actual inventory |
+| 12 | 09 | `standalone: true` on status-badge.ts | Redundant in Angular v20+ (default) |
+| 13 | 06 | Recently Viewed product cards | Shows count only ("X items"), not actual product cards |
+
+---
+
+## Pre-existing Gaps (from before Plans 01-09)
+
+### Backend TODOs
+
+| Service | TODO | Priority | Status |
+|---------|------|----------|--------|
+| Identity.API | Email sending for forgot-password | P2 | Not started |
+| Identity.API | Email verification on registration | P2 | Not started |
+| Cart.API | Redis implementation (currently PostgreSQL) | P2 | Architectural deviation |
+| Payment.API | Refund endpoint | P1 | Not started |
+| Payment.API | Payment method selection | P2 | Only simulated |
+| Search.API | Admin reindex endpoint | P2 | Not started |
+| StoreManagement.API | Store deletion endpoint | P2 | Not started |
+| Notification.Worker | Targeted notifications (not broadcast) | P2 | Broadcasts to all |
+| API Gateway | Token refresh | P2 | No automatic token renewal |
+
+### Frontend TODOs
+
+| Feature | TODO | Priority | Status |
+|---------|------|----------|--------|
+| Cart | Remove x-buyer-id header pattern | P2 | Legacy code |
+| Checkout | Payment method selection | P2 | Only simulated |
+| Checkout | Express checkout (Apple Pay, Google Pay) | P2 | Not started |
+| Checkout | Free shipping progress bar | P2 | Not started |
+| Seller Dashboard | Media upload in product form | P2 | No image upload |
+| Seller Dashboard | Sales summary endpoint | P2 | Currently hardcoded zeros |
+| Seller Dashboard | SellerOrdersComponent bypasses store | P2 | Architectural inconsistency |
+| Auth | Email verification flow | P2 | Unverified registrations |
+| Catalog | Product variant selector | P2 | No color/size selection |
+
+### Testing Gaps
+
 | Gap | Status |
 |-----|--------|
-| Media.UnitTests | ❌ Empty project (no tests) |
+| Media.UnitTests | ❌ Empty project |
 | Media.IntegrationTests | ❌ Empty |
 | Notification.IntegrationTests | ❌ Empty |
 | Ordering.IntegrationTests | ❌ Empty |
@@ -133,6 +98,7 @@
 | api-helpers.ts / db-helpers.ts | ⚠️ Stubs (empty methods) |
 
 ### DevOps
+
 | Gap | Status |
 |-----|--------|
 | CI/CD pipeline | ❌ No GitHub Actions config |
@@ -140,78 +106,37 @@
 | Terraform / IaC | ❌ No infrastructure code |
 | Environment-specific config | ❌ Only appsettings.json |
 
-### Cross-Cutting
-| Gap | Status |
-|-----|--------|
-| Email sending | ❌ No email service |
-| Email verification | ❌ Unverified users |
-| Cart uses PostgreSQL | ⚠️ Deviates from Redis plan |
-| Rate limiting | ✅ Implemented (100 req/min) |
-| Request logging | ✅ Implemented |
-| CSRF protection | ✅ Implemented |
-
----
-
-## Event Flow Gaps
-
-### Working Flows
-```
-Cart → OrderSubmittedEvent → Ordering Saga → Inventory → Payment → Notification → SignalR
-Catalog → ProductCreated/Updated/Deleted → Search (ES)
-StoreManagement → StoreVerifiedEvent → Identity (role update)
-```
-
-### Missing Flows
-```
-Identity → UserRegisteredEvent → (nothing — no welcome email, no analytics)
-Payment → PaymentFailedEvent → Notification → (broadcasts to all, not targeted)
-Ordering → OrderCancelledEvent → (saga handles, but no UI trigger)
-```
-
 ---
 
 ## Priority Summary
 
-### P1 (Important for UX) — 8 items
-1. Change-password endpoint + UI
-2. Update-profile endpoint + UI
-3. Single-item cart endpoints
-4. Cancel order endpoint + UI
-5. Order status update (seller)
-6. "Add to Cart" button on product detail
-7. Address form in checkout
-8. Inventory management UI
+### Remaining P1 (from pre-existing, not covered by plans)
+1. Refund endpoint (Payment.API)
 
-### P2 (Nice to have) — 19 items
-1. Refund endpoint
-2. Email sending (forgot-password)
-3. Email verification
-4. Low-stock alerts
-5. Admin reindex endpoint
-6. Store deletion endpoint
-7. Targeted notifications (not broadcast)
-8. Token refresh in gateway
-9. Slide-out cart drawer
-10. Media upload in product form
-11. InventoryService for stock checks
-12. "Sticky Buy Box"
-13. "Frequently Bought Together"
-14. Product variant selector
-15. Community Q&A and Reviews
-16. Express checkout (Apple Pay, Google Pay)
-17. Free shipping progress bar
-18. Sales summary endpoint
-19. "Personal Account" hub transformation
+### Remaining P2 (from pre-existing + plan gaps)
+1. Photo upload in write-review (Plan 05)
+2. PriceAlertConsumer (Plan 07)
+3. Active filter chips (Plan 07)
+4. Breadcrumbs sibling dropdowns (Plan 07)
+5. GetSummaryAsync SQL optimization (Plan 05)
+6. avg_rating aggregation (Plan 07)
+7. Email sending / verification (Identity)
+8. Cart Redis implementation
+9. Payment method selection
+10. Express checkout
+11. Media upload in product form
+12. Sales summary endpoint
+13. Targeted notifications
+14. Token refresh
+15. Product variant selector
+16. Admin reindex endpoint
+17. Store deletion endpoint
+18. Free shipping progress bar
 
-### DevOps (Deferred) — 4 items
+### Deferred
 1. CI/CD pipeline
 2. Dockerfiles
 3. Terraform / IaC
 4. Environment-specific config
-
-### Testing Gaps — 5 items
-1. Media.UnitTests (empty)
-2. 5 empty integration test projects
-3. Full E2E checkout flow
-4. E2E payment flow
-5. E2E order creation flow
+5. 5 empty integration test projects
+6. 3 E2E test flows

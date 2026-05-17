@@ -24,14 +24,12 @@ export class NotificationService {
   readonly connected = signal(false);
 
   async start(buyerId?: string): Promise<void> {
-    if (this.hubConnection) return;
-
-    const userId = buyerId || 'anonymous';
+    if (this.hubConnection || !buyerId) {
+      return;
+    }
 
     this.hubConnection = new HubConnectionBuilder()
-      .withUrl('/hubs/notifications', {
-        headers: { 'x-buyer-id': userId },
-        // Use WebSockets only — skip SSE/LongPolling fallback
+      .withUrl(`/hubs/notifications?buyerId=${encodeURIComponent(buyerId)}`, {
         transport: HttpTransportType.WebSockets,
       })
       .withAutomaticReconnect({

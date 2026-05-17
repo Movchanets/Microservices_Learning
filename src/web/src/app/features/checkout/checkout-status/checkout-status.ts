@@ -32,7 +32,7 @@ import { OrderStatus } from '../checkout.models';
         }
         @case ('Completed') {
           <lucide-icon name="CheckCircle2" class="w-16 h-16 mx-auto mb-4 text-green-500"></lucide-icon>
-          <h2 class="text-2xl font-bold font-lexend mb-2">Order Completed!</h2>
+          <h2 data-testid="checkout-status-completed" class="text-2xl font-bold font-lexend mb-2">Order Completed!</h2>
           <p class="text-muted mb-6">Your order has been placed successfully.</p>
           <a routerLink="/orders"
              class="inline-block px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors">
@@ -41,7 +41,7 @@ import { OrderStatus } from '../checkout.models';
         }
         @case ('Cancelled') {
           <lucide-icon name="XCircle" class="w-16 h-16 mx-auto mb-4 text-red-500"></lucide-icon>
-          <h2 class="text-2xl font-bold font-lexend mb-2">Order Cancelled</h2>
+          <h2 data-testid="checkout-status-cancelled" class="text-2xl font-bold font-lexend mb-2">Order Cancelled</h2>
           <p class="text-muted mb-6">Your order could not be completed.</p>
           <a routerLink="/catalog"
              class="inline-block px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors">
@@ -50,7 +50,7 @@ import { OrderStatus } from '../checkout.models';
         }
         @case ('Faulted') {
           <lucide-icon name="AlertTriangle" class="w-16 h-16 mx-auto mb-4 text-red-500"></lucide-icon>
-          <h2 class="text-2xl font-bold font-lexend mb-2">Something Went Wrong</h2>
+          <h2 data-testid="checkout-status-faulted" class="text-2xl font-bold font-lexend mb-2">Something Went Wrong</h2>
           <p class="text-muted mb-6">An error occurred while processing your order.</p>
           <a routerLink="/cart"
              class="inline-block px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors">

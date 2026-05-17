@@ -45,10 +45,9 @@ public sealed class ProductCreatedConsumer(
         {
             await dbContext.SaveChangesAsync(context.CancellationToken);
         }
-        catch (DbUpdateException) when (
-            dbContext.ChangeTracker.Entries<ProductPrice>().Any(e => e.State == EntityState.Added))
+        catch (DbUpdateException)
         {
-            // Race condition: clear tracker and retry as update
+            // Race condition: concurrent consumer inserted first. Clear tracker and retry as update.
             dbContext.ChangeTracker.Clear();
             var retry = await dbContext.ProductPrices
                 .FirstOrDefaultAsync(p => p.Id == evt.ProductId || p.Sku == evt.Sku, context.CancellationToken);

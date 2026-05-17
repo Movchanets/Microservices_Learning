@@ -2,7 +2,7 @@ using MassTransit;
 
 namespace Ordering.Infrastructure.Persistence;
 
-public sealed class OrderState : SagaStateMachineInstance
+public sealed class OrderState : SagaStateMachineInstance, ISagaVersion
 {
     public Guid CorrelationId { get; set; }
     public string CurrentState { get; set; } = string.Empty;
@@ -13,4 +13,5 @@ public sealed class OrderState : SagaStateMachineInstance
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public byte[] RowVersion { get; set; } = [];
+    public int Version { get; set; }
 }

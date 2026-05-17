@@ -7,4 +7,7 @@ public sealed record ProcessPaymentInternalCommand(
     Guid CorrelationId,
     Guid OrderId,
     decimal Amount,
-    string BuyerId) : IRequest<Result<bool>>;
+    string BuyerId,
+    bool IsSuccessful,
+    string? GatewayTransactionId = null,
+    string? FailureReason = null) : IRequest<Result<bool>>;

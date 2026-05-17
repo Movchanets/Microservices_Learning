@@ -53,13 +53,21 @@ public static class CartEndpoints
 
         group.MapPost("/checkout", async (
             ClaimsPrincipal user,
+            [FromBody] CheckoutRequest request,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
 
-            var result = await sender.Send(new CheckoutCartCommand(buyerId), ct);
+            var result = await sender.Send(new CheckoutCartCommand(
+                buyerId,
+                request.AddressLine1,
+                request.AddressLine2,
+                request.City,
+                request.State,
+                request.PostalCode,
+                request.Country), ct);
 
             return result.IsSuccess ? Results.Accepted(value: result.Value) : Results.BadRequest(result.Error);
         });
@@ -107,3 +115,10 @@ public record UpdateCartRequest(List<CartItemRequest> Items);
 public record CartItemRequest(string Sku, int Quantity, decimal Price);
 public record AddCartItemRequest(string Sku, int Quantity, decimal Price);
 public record UpdateCartItemRequest(int Quantity);
+public record CheckoutRequest(
+    string? AddressLine1,
+    string? AddressLine2,
+    string? City,
+    string? State,
+    string? PostalCode,
+    string? Country);

@@ -3,13 +3,21 @@ using Microsoft.AspNetCore.SignalR;
 namespace Notification.Worker.Hubs;
 
 /// <summary>
-/// Maps the x-buyer-id header (set by the BFF gateway) to SignalR's user concept.
-/// This enables hubContext.Clients.User(buyerId) to target specific buyers.
+/// Maps buyer identity from the SignalR handshake to SignalR's user concept.
+/// Browser WebSocket clients cannot reliably send custom headers, so query string is primary.
 /// </summary>
 public sealed class BuyerIdUserIdProvider : IUserIdProvider
 {
     public string? GetUserId(HubConnectionContext connection)
     {
-        return connection.GetHttpContext()?.Request.Headers["x-buyer-id"].ToString();
+        var httpContext = connection.GetHttpContext();
+        var buyerId = httpContext?.Request.Query["buyerId"].ToString();
+
+        if (!string.IsNullOrWhiteSpace(buyerId))
+        {
+            return buyerId;
+        }
+
+        return httpContext?.Request.Headers["x-buyer-id"].ToString();
     }
 }

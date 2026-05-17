@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, ViewChild, ElementRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, ViewChild, ElementRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ProductListItem } from '../../../catalog/catalog.models';
@@ -30,7 +30,7 @@ import { ProductCardComponent } from '../../../catalog/components/product-card/p
         >
           @for (product of products(); track product.id) {
             <div class="flex-none w-[250px]">
-              <app-product-card [product]="product" />
+              <app-product-card [product]="product" (addToCart)="addToCart.emit($event)" />
             </div>
           } @empty {
             @for (i of [1,2,3,4]; track i) {
@@ -70,6 +70,7 @@ export class ProductCarouselComponent {
   title = input.required<string>();
   products = input.required<ProductListItem[]>();
   viewAllLink = input<string | null>(null);
+  addToCart = output<string>();
 
   @ViewChild('scrollContainer') scrollContainer!: ElementRef<HTMLDivElement>;
 
