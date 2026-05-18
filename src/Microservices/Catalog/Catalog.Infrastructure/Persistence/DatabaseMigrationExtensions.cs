@@ -54,6 +54,10 @@ public static class DatabaseMigrationExtensions
         {
             // Products may already exist from a previous startup when Search consumer queues were not bound yet.
             // Touching products emits ProductUpdated domain events to replay indexing messages.
+            // IMPORTANT: Call only Update() — NOT both Update() + Activate().
+            // Both methods emit ProductUpdatedDomainEvent. Firing two events for the same
+            // product causes two concurrent ProductUpdatedConsumer invocations in Cart,
+            // which race on UpsertAsync and can violate PK_ProductPrices.
             var existingProducts = context.Products
                 .Where(p => p.Status != ProductStatus.Deleted)
                 .ToList();
@@ -67,8 +71,8 @@ public static class DatabaseMigrationExtensions
                     product.Tags,
                     product.ImageUrl);
 
-                if (!product.IsActive)
-                    product.Activate();
+                // Activate only if needed — skip if already active to avoid a second domain event.
+                // The Update() call above already queued a ProductUpdatedDomainEvent.
             }
 
             context.SaveChangesAsync().GetAwaiter().GetResult();

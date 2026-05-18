@@ -24,49 +24,20 @@ public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepo
     public async Task UpsertAsync(
         Guid productId, string sku, string name, decimal price, string currency, CancellationToken ct = default)
     {
-        // Start with a clean tracker — prevents stale entities from previous consumer
-        // calls in the same scope from interfering.
-        dbContext.ChangeTracker.Clear();
-
-        var existing = await dbContext.ProductPrices
-            .FirstOrDefaultAsync(p => p.Id == productId, ct);
-
-        if (existing is not null)
-        {
-            // Row exists — update in place.
-            existing.UpdateDetails(name, price, currency);
-            await dbContext.SaveChangesAsync(ct);
-            dbContext.ChangeTracker.Clear();
-            return;
-        }
-
-        // Row does not exist — insert.
-        dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, sku, name, price, currency));
-
-        try
-        {
-            await dbContext.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException)
-        {
-            // Race: another consumer inserted between our check and our save.
-            // Detach the failed entity, load the winner, update it.
-            dbContext.ChangeTracker.Clear();
-
-            var retry = await dbContext.ProductPrices
-                .FirstOrDefaultAsync(p => p.Id == productId, ct);
-
-            if (retry is not null)
-            {
-                retry.UpdateDetails(name, price, currency);
-                await dbContext.SaveChangesAsync(ct);
-            }
-        }
-        finally
-        {
-            dbContext.ChangeTracker.Clear();
-        }
+        // Atomic upsert via PostgreSQL INSERT ... ON CONFLICT DO UPDATE.
+        // This eliminates the TOCTOU race between ProductCreatedConsumer and
+        // ProductUpdatedConsumer when both fire for the same product during seeding.
+        await dbContext.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO "ProductPrices" ("Id", "Sku", "Name", "Price", "Currency", "UpdatedAt")
+            VALUES ({productId}, {sku}, {name}, {price}, {currency}, {DateTime.UtcNow})
+            ON CONFLICT ("Id") DO UPDATE SET
+                "Sku"       = EXCLUDED."Sku",
+                "Name"      = EXCLUDED."Name",
+                "Price"     = EXCLUDED."Price",
+                "Currency"  = EXCLUDED."Currency",
+                "UpdatedAt" = EXCLUDED."UpdatedAt"
+            """, ct);
     }
 
     public void Add(ProductPrice productPrice)
@@ -84,3 +55,4 @@ public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepo
         dbContext.ProductPrices.Remove(productPrice);
     }
 }
+
