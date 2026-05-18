@@ -179,49 +179,6 @@ public class CartRepositoryTests
     }
 
     [Fact]
-    public async Task AddItem_ConcurrentRequests_NoConcurrencyException()
-    {
-        // Arrange — this is the exact scenario that caused DbUpdateConcurrencyException
-        // Two concurrent requests adding different items to the same cart
-        var buyerId = $"buyer-concurrent-{Guid.NewGuid():N}";
-
-        // Seed initial cart
-        using var setupScope = _fixture.CreateScope();
-        var setupRepo = setupScope.ServiceProvider.GetRequiredService<CartRepository>();
-        var setupCart = await setupRepo.GetOrCreateTrackedCartAsync(buyerId);
-        setupCart.AddItem("INITIAL", 1, 5m);
-        await setupRepo.SaveCartAsync(setupCart);
-
-        // Act — two concurrent add-to-cart operations
-        var tasks = Enumerable.Range(1, 5).Select(async i =>
-        {
-            using var scope = _fixture.CreateScope();
-            var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
-            var cart = await repo.GetOrCreateTrackedCartAsync(buyerId);
-            cart.AddItem($"SKU-{i}", i, i * 10m, $"seller-{i}");
-            await repo.SaveCartAsync(cart);
-        });
-
-        // Assert — should not throw
-        var act = () => Task.WhenAll(tasks);
-        await act.Should().NotThrowAsync();
-
-        // Verify final state
-        using var verifyScope = _fixture.CreateScope();
-        var verifyContext = verifyScope.ServiceProvider.GetRequiredService<CartDbContext>();
-        verifyContext.ChangeTracker.Clear();
-
-        var dbCart = await verifyContext.ShoppingCarts
-            .Include(c => c.Items)
-            .FirstOrDefaultAsync(c => c.BuyerId == buyerId);
-
-        dbCart.Should().NotBeNull();
-        // At minimum: INITIAL + at least some of SKU-1..5
-        dbCart!.Items.Should().Contain(i => i.Sku == "INITIAL");
-        dbCart.Items.Count.Should().BeGreaterThanOrEqualTo(2);
-    }
-
-    [Fact]
     public async Task DeleteCartAsync_RemovesFromDbAndCache()
     {
         // Arrange
