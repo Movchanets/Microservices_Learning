@@ -26,6 +26,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
     public Event<InventoryReservationFailedEvent> InventoryFailed { get; private set; } = null!;
     public Event<PaymentCompletedEvent> PaymentCompleted { get; private set; } = null!;
     public Event<PaymentFailedEvent> PaymentFailed { get; private set; } = null!;
+    public Event<CancelOrderEvent> CancelOrder { get; private set; } = null!;
 
     public OrderStateMachine()
     {
@@ -37,6 +38,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
         Event(() => InventoryFailed, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
         Event(() => PaymentCompleted, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
         Event(() => PaymentFailed, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
+        Event(() => CancelOrder, x => x.CorrelateById(ctx => ctx.Message.CorrelationId));
 
         // ── Initial → ReservingInventory ───────────────────
         Initially(
@@ -78,8 +80,27 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
                     ctx.Saga.BuyerId,
-                    $"Inventory reservation failed: {ctx.Message.Reason}"))
-                .TransitionTo(Faulted));
+                    $"Inventory reservation failed: {ctx.Message.Reason}",
+                    DateTime.UtcNow))
+                .TransitionTo(Faulted),
+
+            // Buyer-initiated cancellation while inventory is being reserved
+            When(CancelOrder)
+                .Then(ctx =>
+                {
+                    ctx.Saga.UpdatedAt = DateTime.UtcNow;
+                })
+                .Publish(ctx => new CancelReservationCommand(
+                    ctx.Saga.CorrelationId,
+                    ctx.Saga.OrderId,
+                    JsonSerializer.Deserialize<List<OrderItemContract>>(ctx.Saga.ItemsJson) ?? []))
+                .Publish(ctx => new OrderCancelledEvent(
+                    ctx.Saga.CorrelationId,
+                    ctx.Saga.OrderId,
+                    ctx.Saga.BuyerId,
+                    ctx.Message.Reason ?? "Cancelled by buyer",
+                    DateTime.UtcNow))
+                .TransitionTo(Cancelled));
 
         // ── ProcessingPayment ──────────────────────────────
         During(ProcessingPayment,
@@ -99,7 +120,13 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                 {
                     ctx.Saga.UpdatedAt = DateTime.UtcNow;
                 })
-                // Compensation: release inventory
+                // Compensation: release inventory and refund payment
+                .Publish(ctx => new RefundPaymentIntegrationCommand(
+                    ctx.Saga.CorrelationId,
+                    ctx.Saga.OrderId,
+                    Guid.Empty, // TransactionId — consumer will look up by OrderId
+                    ctx.Saga.TotalAmount,
+                    $"Payment failed: {ctx.Message.FailureReason}"))
                 .Publish(ctx => new CancelReservationCommand(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
@@ -108,7 +135,33 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
                     ctx.Saga.BuyerId,
-                    $"Payment failed: {ctx.Message.FailureReason}"))
+                    $"Payment failed: {ctx.Message.FailureReason}",
+                    DateTime.UtcNow))
+                .TransitionTo(Cancelled),
+
+            // Buyer-initiated cancellation while payment is processing
+            When(CancelOrder)
+                .Then(ctx =>
+                {
+                    ctx.Saga.UpdatedAt = DateTime.UtcNow;
+                })
+                // Compensation: refund payment and release inventory
+                .Publish(ctx => new RefundPaymentIntegrationCommand(
+                    ctx.Saga.CorrelationId,
+                    ctx.Saga.OrderId,
+                    Guid.Empty, // TransactionId — consumer will look up by OrderId
+                    ctx.Saga.TotalAmount,
+                    ctx.Message.Reason ?? "Cancelled by buyer"))
+                .Publish(ctx => new CancelReservationCommand(
+                    ctx.Saga.CorrelationId,
+                    ctx.Saga.OrderId,
+                    JsonSerializer.Deserialize<List<OrderItemContract>>(ctx.Saga.ItemsJson) ?? []))
+                .Publish(ctx => new OrderCancelledEvent(
+                    ctx.Saga.CorrelationId,
+                    ctx.Saga.OrderId,
+                    ctx.Saga.BuyerId,
+                    ctx.Message.Reason ?? "Cancelled by buyer",
+                    DateTime.UtcNow))
                 .TransitionTo(Cancelled));
     }
 }

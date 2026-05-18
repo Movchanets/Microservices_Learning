@@ -9,6 +9,7 @@ public sealed class PaymentDbContext(DbContextOptions<PaymentDbContext> options)
     : DbContext(options), IUnitOfWork
 {
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
+    public DbSet<Refund> Refunds => Set<Refund>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

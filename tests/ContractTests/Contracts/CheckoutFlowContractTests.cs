@@ -347,4 +347,156 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
         deserialized.Should().ContainSingle()
             .Which.Should().BeEquivalentTo(new OrderItemContract("SKU-SPECIAL", 7, 12.50m, "seller-99"));
     }
+
+    // ─── Buyer Cancel During ReservingInventory ──────────────────────────
+
+    [Fact]
+    public async Task CancelOrder_DuringReservingInventory_ShouldTransitionToCancelled()
+    {
+        var correlationId = Guid.NewGuid();
+
+        await _harness.Bus.Publish(new OrderSubmittedEvent(
+            correlationId, "buyer-cancel-1",
+            [new OrderItemContract("SKU-C1", 1, 50m, "seller-1")],
+            DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
+
+        // Cancel while inventory is being reserved
+        await _harness.Bus.Publish(new CancelOrderEvent(
+            correlationId, correlationId, "buyer-cancel-1", "Changed my mind", DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<CancelOrderEvent>()).Should().BeTrue();
+
+        var saga = _sagaHarness.Sagas.ContainsInState(correlationId, _sagaHarness.StateMachine, x => x.Cancelled);
+        saga.Should().NotBeNull("saga should be in Cancelled state after buyer cancels during inventory reservation");
+    }
+
+    [Fact]
+    public async Task CancelOrder_DuringReservingInventory_ShouldPublishCancelReservationAndOrderCancelled()
+    {
+        var correlationId = Guid.NewGuid();
+
+        await _harness.Bus.Publish(new OrderSubmittedEvent(
+            correlationId, "buyer-cancel-2",
+            [new OrderItemContract("SKU-C2", 2, 30m, "seller-1")],
+            DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
+
+        await _harness.Bus.Publish(new CancelOrderEvent(
+            correlationId, correlationId, "buyer-cancel-2", "Found better price", DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<CancelOrderEvent>()).Should().BeTrue();
+
+        (await _harness.Published.Any<CancelReservationCommand>()).Should().BeTrue(
+            "saga should publish CancelReservationCommand to release inventory");
+        (await _harness.Published.Any<OrderCancelledEvent>()).Should().BeTrue(
+            "saga should publish OrderCancelledEvent");
+
+        // Should NOT publish refund command (no payment was made yet)
+        (await _harness.Published.Any<RefundPaymentIntegrationCommand>()).Should().BeFalse(
+            "saga should NOT publish RefundPaymentIntegrationCommand when cancelling before payment");
+    }
+
+    // ─── Buyer Cancel During ProcessingPayment ──────────────────────────
+
+    [Fact]
+    public async Task CancelOrder_DuringProcessingPayment_ShouldTransitionToCancelled()
+    {
+        var correlationId = Guid.NewGuid();
+
+        await _harness.Bus.Publish(new OrderSubmittedEvent(
+            correlationId, "buyer-cancel-3",
+            [new OrderItemContract("SKU-C3", 1, 100m, "seller-1")],
+            DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
+
+        await _harness.Bus.Publish(new InventoryReservedEvent(correlationId, correlationId));
+        (await _sagaHarness.Consumed.Any<InventoryReservedEvent>()).Should().BeTrue();
+
+        // Cancel while payment is processing
+        await _harness.Bus.Publish(new CancelOrderEvent(
+            correlationId, correlationId, "buyer-cancel-3", "Found cheaper elsewhere", DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<CancelOrderEvent>()).Should().BeTrue();
+
+        var saga = _sagaHarness.Sagas.ContainsInState(correlationId, _sagaHarness.StateMachine, x => x.Cancelled);
+        saga.Should().NotBeNull("saga should be in Cancelled state after buyer cancels during payment processing");
+    }
+
+    [Fact]
+    public async Task CancelOrder_DuringProcessingPayment_ShouldPublishRefundAndCancelReservation()
+    {
+        var correlationId = Guid.NewGuid();
+
+        await _harness.Bus.Publish(new OrderSubmittedEvent(
+            correlationId, "buyer-cancel-4",
+            [new OrderItemContract("SKU-C4", 3, 25m, "seller-1")],
+            DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
+
+        await _harness.Bus.Publish(new InventoryReservedEvent(correlationId, correlationId));
+        (await _sagaHarness.Consumed.Any<InventoryReservedEvent>()).Should().BeTrue();
+
+        await _harness.Bus.Publish(new CancelOrderEvent(
+            correlationId, correlationId, "buyer-cancel-4", "Cancelled by buyer", DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<CancelOrderEvent>()).Should().BeTrue();
+
+        (await _harness.Published.Any<RefundPaymentIntegrationCommand>()).Should().BeTrue(
+            "saga should publish RefundPaymentIntegrationCommand to refund payment");
+        (await _harness.Published.Any<CancelReservationCommand>()).Should().BeTrue(
+            "saga should publish CancelReservationCommand to release inventory");
+        (await _harness.Published.Any<OrderCancelledEvent>()).Should().BeTrue(
+            "saga should publish OrderCancelledEvent");
+    }
+
+    [Fact]
+    public async Task CancelOrder_DuringProcessingPayment_RefundCommandShouldHaveCorrectAmount()
+    {
+        var correlationId = Guid.NewGuid();
+
+        await _harness.Bus.Publish(new OrderSubmittedEvent(
+            correlationId, "buyer-cancel-5",
+            [new OrderItemContract("SKU-C5", 2, 50m, "seller-1"),
+             new OrderItemContract("SKU-C6", 1, 30m, "seller-2")],
+            DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
+
+        await _harness.Bus.Publish(new InventoryReservedEvent(correlationId, correlationId));
+        (await _sagaHarness.Consumed.Any<InventoryReservedEvent>()).Should().BeTrue();
+
+        await _harness.Bus.Publish(new CancelOrderEvent(
+            correlationId, correlationId, "buyer-cancel-5", "Order mistake", DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<CancelOrderEvent>()).Should().BeTrue();
+
+        // Verify the refund command was published with correct amount
+        var refundPublished = await _harness.Published.Any<RefundPaymentIntegrationCommand>();
+        refundPublished.Should().BeTrue();
+
+        var refundMessage = _harness.Published
+            .Select<RefundPaymentIntegrationCommand>()
+            .FirstOrDefault();
+        refundMessage.Should().NotBeNull();
+        refundMessage!.Context.Message.Amount.Should().Be(130m); // (50*2) + (30*1)
+        refundMessage.Context.Message.OrderId.Should().Be(correlationId);
+        refundMessage.Context.Message.Reason.Should().Be("Order mistake");
+    }
+
+    [Fact]
+    public async Task CancelOrder_DuringProcessingPayment_ShouldNotPublishPaymentCompleted()
+    {
+        var correlationId = Guid.NewGuid();
+
+        await _harness.Bus.Publish(new OrderSubmittedEvent(
+            correlationId, "buyer-cancel-6",
+            [new OrderItemContract("SKU-C7", 1, 10m, "seller-1")],
+            DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
+
+        await _harness.Bus.Publish(new InventoryReservedEvent(correlationId, correlationId));
+        (await _sagaHarness.Consumed.Any<InventoryReservedEvent>()).Should().BeTrue();
+
+        await _harness.Bus.Publish(new CancelOrderEvent(
+            correlationId, correlationId, "buyer-cancel-6", "Duplicate order", DateTime.UtcNow));
+        (await _sagaHarness.Consumed.Any<CancelOrderEvent>()).Should().BeTrue();
+
+        (await _harness.Published.Any<OrderCompletedEvent>()).Should().BeFalse(
+            "saga should NOT publish OrderCompletedEvent when order is cancelled");
+    }
 }

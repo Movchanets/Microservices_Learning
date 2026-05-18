@@ -12,6 +12,7 @@ public static class DependencyInjection
     public static IServiceCollection AddPaymentInfrastructure(this IServiceCollection services)
     {
         services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
+        services.AddScoped<IRefundRepository, RefundRepository>();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<PaymentDbContext>());
         services.AddSingleton<IPaymentGateway, MockPaymentGateway>();
 

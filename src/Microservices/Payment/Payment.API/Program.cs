@@ -1,6 +1,7 @@
 using System.Text;
 using BuildingBlocks.Infrastructure.Behaviors;
 using BuildingBlocks.Infrastructure.Middleware;
+using FluentValidation;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Payment.API.Endpoints;
 using Payment.Application.Commands.ProcessPayment;
+using Payment.Application.Commands.RefundPayment;
 using Payment.Infrastructure;
 using Payment.Infrastructure.Data;
 using Payment.Infrastructure.Messaging;
@@ -33,6 +35,7 @@ builder.Services.AddMediatR(cfg =>
 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+builder.Services.AddValidatorsFromAssemblyContaining<RefundPaymentValidator>();
 
 // ── MassTransit v8 + Outbox ─────────────────────────────
 builder.Services.AddMassTransit(x =>
@@ -40,6 +43,7 @@ builder.Services.AddMassTransit(x =>
     x.SetKebabCaseEndpointNameFormatter();
 
     x.AddConsumer<ProcessPaymentConsumer>();
+    x.AddConsumer<RefundPaymentConsumer>();
 
     x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>
     {

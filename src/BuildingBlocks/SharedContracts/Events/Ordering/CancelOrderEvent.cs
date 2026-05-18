@@ -1,8 +1,8 @@
 namespace BuildingBlocks.SharedContracts.Events.Ordering;
 
-public record OrderCancelledEvent(
+public record CancelOrderEvent(
     Guid CorrelationId,
     Guid OrderId,
     string BuyerId,
-    string Reason,
-    DateTime Timestamp = default);
+    string? Reason,
+    DateTime Timestamp);

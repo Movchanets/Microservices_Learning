@@ -75,4 +75,38 @@ public class PaymentTransactionTests
         txn.FailureReason.Should().Be("insufficient funds");
         txn.ProcessedAt.Should().NotBeNull();
     }
+
+    [Fact]
+    public void MarkRefunded_WhenCompleted_SetsStatusToRefunded()
+    {
+        var txn = PaymentTransaction.Create(Guid.NewGuid(), "buyer-1", 50m);
+        txn.MarkCompleted("txn_123");
+
+        txn.MarkRefunded();
+
+        txn.Status.Should().Be(PaymentStatus.Refunded);
+    }
+
+    [Fact]
+    public void MarkRefunded_WhenPending_Throws()
+    {
+        var txn = PaymentTransaction.Create(Guid.NewGuid(), "buyer-1", 50m);
+
+        var act = () => txn.MarkRefunded();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Can only refund completed transactions");
+    }
+
+    [Fact]
+    public void MarkRefunded_WhenFailed_Throws()
+    {
+        var txn = PaymentTransaction.Create(Guid.NewGuid(), "buyer-1", 50m);
+        txn.MarkFailed("Card declined");
+
+        var act = () => txn.MarkRefunded();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Can only refund completed transactions");
+    }
 }

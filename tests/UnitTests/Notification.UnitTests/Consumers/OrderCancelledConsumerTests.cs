@@ -32,7 +32,7 @@ public class OrderCancelledConsumerTests
     {
         var buyerId = "buyer-456";
         var orderId = Guid.NewGuid();
-        var evt = new OrderCancelledEvent(Guid.NewGuid(), orderId, buyerId, "payment declined");
+        var evt = new OrderCancelledEvent(Guid.NewGuid(), orderId, buyerId, "payment declined", DateTime.UtcNow);
 
         _clientsMock.Setup(c => c.User(buyerId)).Returns(_clientProxyMock.Object);
 

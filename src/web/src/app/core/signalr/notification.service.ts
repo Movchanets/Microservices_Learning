@@ -31,6 +31,9 @@ export class NotificationService {
     this.hubConnection = new HubConnectionBuilder()
       .withUrl(`/hubs/notifications?buyerId=${encodeURIComponent(buyerId)}`, {
         transport: HttpTransportType.WebSockets,
+        // BFF CookieToBearerMiddleware injects JWT from session cookie.
+        // For direct connections (non-BFF), provide token explicitly:
+        // accessTokenFactory: () => getStoredToken(),
       })
       .withAutomaticReconnect({
         nextRetryDelayInMilliseconds: (retryContext) => {

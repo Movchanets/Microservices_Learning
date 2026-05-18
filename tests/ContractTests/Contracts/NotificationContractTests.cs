@@ -68,7 +68,7 @@ public class NotificationContractTests
         var orderId = Guid.NewGuid();
         var buyerId = "buyer-notify-002";
         var reason = "Payment failed: Card declined";
-        var @event = new OrderCancelledEvent(Guid.NewGuid(), orderId, buyerId, reason);
+        var @event = new OrderCancelledEvent(Guid.NewGuid(), orderId, buyerId, reason, DateTime.UtcNow);
 
         OrderUpdateMessage? capturedMessage = null;
         var clientProxyMock = new Mock<IClientProxy>();

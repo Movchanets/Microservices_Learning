@@ -47,4 +47,12 @@ public sealed class PaymentTransaction : AggregateRoot
         FailureReason = reason;
         ProcessedAt = DateTime.UtcNow;
     }
+
+    public void MarkRefunded()
+    {
+        if (Status != PaymentStatus.Completed)
+            throw new InvalidOperationException("Can only refund completed transactions");
+
+        Status = PaymentStatus.Refunded;
+    }
 }

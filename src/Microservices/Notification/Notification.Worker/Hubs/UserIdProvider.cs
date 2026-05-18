@@ -1,23 +1,32 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Notification.Worker.Hubs;
 
 /// <summary>
-/// Maps buyer identity from the SignalR handshake to SignalR's user concept.
-/// Browser WebSocket clients cannot reliably send custom headers, so query string is primary.
+/// Maps buyer identity from JWT claims to SignalR's user concept.
+/// Prefers authenticated claims over query string for security.
 /// </summary>
 public sealed class BuyerIdUserIdProvider : IUserIdProvider
 {
     public string? GetUserId(HubConnectionContext connection)
     {
-        var httpContext = connection.GetHttpContext();
-        var buyerId = httpContext?.Request.Query["buyerId"].ToString();
+        return ResolveBuyerId(connection.User, connection.GetHttpContext()?.Request.Query);
+    }
 
-        if (!string.IsNullOrWhiteSpace(buyerId))
-        {
-            return buyerId;
-        }
+    /// <summary>
+    /// Extracts buyer ID from claims first, then falls back to query string.
+    /// Separated from HubConnectionContext for testability.
+    /// </summary>
+    internal static string? ResolveBuyerId(
+        ClaimsPrincipal? user,
+        Microsoft.AspNetCore.Http.IQueryCollection? query)
+    {
+        var claimId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrWhiteSpace(claimId))
+            return claimId;
 
-        return httpContext?.Request.Headers["x-buyer-id"].ToString();
+        // Fallback: query string (for backward compatibility during rollout)
+        return query?["buyerId"].ToString();
     }
 }

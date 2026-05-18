@@ -10,7 +10,7 @@ namespace Search.IntegrationTests;
 public sealed class SearchDatabaseFixture : IAsyncLifetime
 {
     private readonly IContainer _container = new ContainerBuilder()
-        .WithImage("elasticsearch:8.12.0")
+        .WithImage("docker.elastic.co/elasticsearch/elasticsearch:9.0.0")
         .WithEnvironment("discovery.type", "single-node")
         .WithEnvironment("xpack.security.enabled", "false")
         .WithEnvironment("xpack.security.enrollment.enabled", "false")

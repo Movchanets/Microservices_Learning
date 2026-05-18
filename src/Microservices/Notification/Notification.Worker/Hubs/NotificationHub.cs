@@ -1,25 +1,16 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
 namespace Notification.Worker.Hubs;
 
-/// <summary>
-/// SignalR Hub for real-time order notifications.
-/// Clients connect to /hubs/notifications and receive OrderUpdate messages.
-/// All message sending is done via IHubContext from MassTransit consumers.
-/// </summary>
+[Authorize]
 public sealed class NotificationHub(ILogger<NotificationHub> logger) : Hub
 {
     public override Task OnConnectedAsync()
     {
-        var httpContext = Context.GetHttpContext();
-        var buyerId = httpContext?.Request.Query["buyerId"].ToString();
-
-        if (string.IsNullOrWhiteSpace(buyerId))
-        {
-            buyerId = httpContext?.Request.Headers["x-buyer-id"].ToString();
-        }
-
+        var buyerId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         logger.LogInformation("Client connected: ConnectionId={ConnectionId}, BuyerId={BuyerId}",
             Context.ConnectionId, buyerId ?? "anonymous");
         return base.OnConnectedAsync();

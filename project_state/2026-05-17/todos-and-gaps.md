@@ -1,10 +1,10 @@
-# TODOs and Gaps — 2026-05-17 (Updated after Plans 01-10)
+# TODOs and Gaps — 2026-05-17 (Updated after Plan 11 Code Review)
 
-**Last updated:** 2026-05-17 after Plan 10 (Seller Order Correlation)
+**Last updated:** 2026-05-17 after Plan 11 (Saga-Aware Cancellation) code review
 
 ---
 
-## Plans 01-10 Status
+## Plans 01-11 Status
 
 | Plan | Name | Status | Remaining Gaps |
 |------|------|--------|----------------|
@@ -18,6 +18,38 @@
 | 08 | Inventory Management UI | ✅ Complete | None |
 | 09 | Order Cancellation & Status | ✅ Complete | None |
 | 10 | Seller Order Correlation | ✅ Complete | None |
+| 11 | Saga-Aware Cancellation | ⚠️ Implemented | Missing contract test, missing E2E spec, CorrelatedBy<Guid> on CancelOrderEvent |
+
+---
+
+## Plan 11 — Code Review Findings (2026-05-17)
+
+### What Was Done
+- `CancelOrderHandler` refactored: direct aggregate mutation → publishes `CancelOrderEvent` to saga
+- `OrderStateMachine` updated: handles `CancelOrder` in `ReservingInventory` and `ProcessingPayment` states
+- Saga compensation: publishes `CancelReservationCommand` (inventory release) + `OrderCancelledEvent`
+- `CancelOrderEvent` added to SharedContracts
+- `OrderCancelledEvent` has `DateTime Timestamp = default` field
+- Unit tests updated: 5 tests covering success, not-found, completed, cancelled, faulted states
+- Handler has detailed comment explaining eventual consistency pattern (lines 21-26)
+- TODO comments on both `ProcessingPayment` cancel paths for `RefundPaymentCommand`
+- Build passes (0 errors), all 68 Ordering unit tests pass, 45 contract tests pass, 8 inventory integration tests pass
+
+### Remaining Gaps (from code review)
+
+| # | Severity | Issue | Status |
+|---|----------|-------|--------|
+| 1 | CRITICAL | No contract test for buyer-initiated cancellation path (`CancelOrderEvent → saga → Cancelled`) | OPEN |
+| 2 | CRITICAL | No E2E spec (`saga-aware-cancellation.spec.ts`) — page objects exist but spec not created | OPEN |
+| 3 | MAJOR | `CancelOrderEvent` missing `CorrelatedBy<Guid>` interface (saga uses explicit `CorrelateById`, works but breaks convention) | OPEN |
+| 4 | MAJOR | No `RefundPaymentCommand` in ProcessingPayment cancel path — TODO comments in code, no refund infra in Payment service | TRACKED |
+| 5 | MINOR | `InventoryReleasedEvent` published by `CancelReservationConsumer` but never consumed (dead message, pre-existing) | DEFERRED |
+
+### Accepted Decisions
+- **Race condition (handler vs saga):** Intentional. Handler validation is best-effort fast-fail, saga's `During()` is the real guard. Comment documents this.
+- **Duplicated `When(CancelOrder)` blocks:** MassTransit fluent DSL doesn't cleanly support helper extraction inside `During()`. Acceptable for 2 occurrences.
+- **`CancelReservationCommand` instead of `ReleaseInventoryCommand`:** Better choice — avoids contract proliferation, reuses existing consumer.
+- **Eventual consistency risk:** `OrderConsumerHelpers.LoadOrderAsync` retries 5× with 200ms delay, mitigating transient read-after-write races.
 
 ---
 
@@ -53,7 +85,7 @@
 
 ---
 
-## Pre-existing Gaps (from before Plans 01-10)
+## Pre-existing Gaps (from before Plans 01-11)
 
 ### Backend TODOs
 
@@ -62,7 +94,7 @@
 | Identity.API | Email sending for forgot-password | P2 | Not started |
 | Identity.API | Email verification on registration | P2 | Not started |
 | Cart.API | Redis implementation (currently PostgreSQL) | P2 | Architectural deviation |
-| Payment.API | Refund endpoint | P1 | Not started |
+| Payment.API | Refund endpoint | P1 | Not started (Plan 11 saga TODO depends on this) |
 | Payment.API | Payment method selection | P2 | Only simulated |
 | Search.API | Admin reindex endpoint | P2 | Not started |
 | StoreManagement.API | Store deletion endpoint | P2 | Not started |
@@ -97,6 +129,8 @@
 | E2E payment flow | ❌ Missing |
 | E2E order creation flow | ❌ Missing |
 | api-helpers.ts / db-helpers.ts | ⚠️ Stubs (empty methods) |
+| Plan 11 contract test (buyer cancel → saga) | ❌ Missing |
+| Plan 11 E2E spec (saga-aware-cancellation) | ❌ Missing |
 
 ### DevOps
 
@@ -111,28 +145,31 @@
 
 ## Priority Summary
 
-### Remaining P1 (from pre-existing, not covered by plans)
-1. Refund endpoint (Payment.API)
+### Remaining P1
+1. Refund endpoint (Payment.API) — blocks Plan 11 saga compensation completeness
+2. Plan 11 contract test for buyer-initiated cancellation path
 
-### Remaining P2 (from pre-existing + plan gaps)
-1. Photo upload in write-review (Plan 05)
-2. PriceAlertConsumer (Plan 07)
-3. Active filter chips (Plan 07)
-4. Breadcrumbs sibling dropdowns (Plan 07)
-5. GetSummaryAsync SQL optimization (Plan 05)
-6. avg_rating aggregation (Plan 07)
-7. Email sending / verification (Identity)
-8. Cart Redis implementation
-9. Payment method selection
-10. Express checkout
-11. Media upload in product form
-12. Sales summary endpoint
-13. Targeted notifications
-14. Token refresh
-15. Product variant selector
-16. Admin reindex endpoint
-17. Store deletion endpoint
-18. Free shipping progress bar
+### Remaining P2
+1. Plan 11 E2E spec
+2. Plan 11 CorrelatedBy<Guid> on CancelOrderEvent
+3. Photo upload in write-review (Plan 05)
+4. PriceAlertConsumer (Plan 07)
+5. Active filter chips (Plan 07)
+6. Breadcrumbs sibling dropdowns (Plan 07)
+7. GetSummaryAsync SQL optimization (Plan 05)
+8. avg_rating aggregation (Plan 07)
+9. Email sending / verification (Identity)
+10. Cart Redis implementation
+11. Payment method selection
+12. Express checkout
+13. Media upload in product form
+14. Sales summary endpoint
+15. Targeted notifications
+16. Token refresh
+17. Product variant selector
+18. Admin reindex endpoint
+19. Store deletion endpoint
+20. Free shipping progress bar
 
 ### Deferred
 1. CI/CD pipeline
@@ -141,3 +178,4 @@
 4. Environment-specific config
 5. 5 empty integration test projects
 6. 3 E2E test flows
+7. InventoryReleasedEvent dead publish (pre-existing)

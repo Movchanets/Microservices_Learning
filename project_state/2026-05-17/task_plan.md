@@ -4,7 +4,7 @@
 Close all residual gaps from the 2026-05-17 ordering flow audit, with each fix verified by a Playwright E2E test that simulates the real user scenario.
 
 ## Current Phase
-Phase 1 — Plans created, ready for implementation
+Phase 3 — Plan 11 implemented, code-reviewed, gaps documented
 
 ## Phases
 
@@ -16,14 +16,16 @@ Phase 1 — Plans created, ready for implementation
 - **Status:** complete
 
 ### Phase 2: Plan 10 — Seller Order Correlation
-- [ ] Propagate SellerId through checkout → OrderItem
-- [ ] E2E: seller sees order after buyer checkout
-- **Status:** pending
+- [x] Propagate SellerId through checkout → OrderItem
+- [x] E2E: seller sees order after buyer checkout
+- **Status:** complete
 
 ### Phase 3: Plan 11 — Saga-Aware Cancellation
-- [ ] CancelOrderHandler coordinates with saga compensation
+- [x] CancelOrderHandler coordinates with saga compensation
+- [x] Code review conducted (2 rounds)
+- [ ] Contract test for buyer-initiated cancellation path
 - [ ] E2E: buyer cancels, inventory released, payment rolled back
-- **Status:** pending
+- **Status:** partially complete (implementation done, tests pending)
 
 ### Phase 4: Plan 12 — Payment Refund Endpoint
 - [ ] POST /api/payments/{id}/refund endpoint
@@ -54,6 +56,8 @@ Phase 1 — Plans created, ready for implementation
 | Use API helpers for setup (register, login, create store/product) | Existing pattern in checkout.fixture.ts |
 | E2E tests use real backend (Aspire AppHost) | Catches integration issues that unit tests miss |
 | Plans numbered 10-14 (continuing from 01-09) | Maintains sequence with existing plan index |
+| CancelReservationCommand reused (not ReleaseInventoryCommand) | Avoids contract proliferation |
+| Handler validation is best-effort fast-fail | Saga's During() is the real guard |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
