@@ -25,20 +25,19 @@ namespace Cart.Infrastructure.Migrations
             modelBuilder.Entity("Cart.Domain.Aggregates.CartItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CartId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("CartId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Price")
-                        .HasColumnType("numeric");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<string>("SellerId")
+                    b.Property<string>("ShopId")
                         .HasColumnType("text");
 
                     b.Property<string>("Sku")
@@ -56,13 +55,29 @@ namespace Cart.Infrastructure.Migrations
 
             modelBuilder.Entity("Cart.Domain.Aggregates.ShoppingCart", b =>
                 {
-                    b.Property<string>("BuyerId")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.HasKey("BuyerId");
+                    b.Property<string>("BuyerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuyerId")
+                        .IsUnique();
 
                     b.ToTable("ShoppingCarts");
                 });
@@ -105,13 +120,11 @@ namespace Cart.Infrastructure.Migrations
 
             modelBuilder.Entity("Cart.Domain.Aggregates.CartItem", b =>
                 {
-                    b.HasOne("Cart.Domain.Aggregates.ShoppingCart", "Cart")
+                    b.HasOne("Cart.Domain.Aggregates.ShoppingCart", null)
                         .WithMany("Items")
                         .HasForeignKey("CartId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Cart");
                 });
 
             modelBuilder.Entity("Cart.Domain.Aggregates.ShoppingCart", b =>

@@ -98,8 +98,8 @@ public class CartRepositoryTests
         dbCart.Items.First().Sku.Should().Be("PROD-001");
         dbCart.Items.First().Quantity.Should().Be(2);
         dbCart.Items.First().Price.Should().Be(29.99m);
-        dbCart.Items.First().SellerId.Should().Be("seller-1");
-        dbCart.Items.First().CartId.Should().Be(buyerId);
+        dbCart.Items.First().ShopId.Should().Be("seller-1");
+        dbCart.Items.First().CartId.Should().Be(dbCart.Id);
 
         // Assert — verify in cache
         using var scope2 = _fixture.CreateScope();
@@ -239,7 +239,7 @@ public class CartRepositoryTests
         // Assert - DB should be empty
         var context = scope.ServiceProvider.GetRequiredService<CartDbContext>();
         context.ChangeTracker.Clear();
-        var dbCart = await context.ShoppingCarts.FindAsync(buyerId);
+        var dbCart = await context.ShoppingCarts.FirstOrDefaultAsync(c => c.BuyerId == buyerId);
         dbCart.Should().BeNull();
 
         // Assert - cache should return empty cart

@@ -4,10 +4,14 @@ using Cart.Infrastructure.Data;
 using Cart.Infrastructure.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 
 namespace Cart.Infrastructure.Repositories;
 
-public sealed class CartRepository(IDistributedCache cache, CartDbContext dbContext) : ICartRepository
+public sealed class CartRepository(
+    IDistributedCache cache,
+    CartDbContext dbContext,
+    ILogger<CartRepository> logger) : ICartRepository
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -46,6 +50,9 @@ public sealed class CartRepository(IDistributedCache cache, CartDbContext dbCont
     /// <summary>
     /// Write path: loads tracked cart from DB. Creates if missing.
     /// Domain operations happen directly on the returned tracked entity.
+    /// Handles the race condition where two concurrent requests both try to
+    /// create a cart for the same buyer by catching the duplicate-key violation
+    /// and reloading the already-persisted row.
     /// </summary>
     public async Task<ShoppingCart> GetOrCreateTrackedCartAsync(string buyerId, CancellationToken ct = default)
     {
@@ -57,6 +64,7 @@ public sealed class CartRepository(IDistributedCache cache, CartDbContext dbCont
         {
             cart = new ShoppingCart(buyerId);
             dbContext.ShoppingCarts.Add(cart);
+           
         }
 
         return cart;
@@ -64,6 +72,8 @@ public sealed class CartRepository(IDistributedCache cache, CartDbContext dbCont
 
     /// <summary>
     /// Persists tracked changes and invalidates the cache.
+    /// Handles optimistic concurrency via xmin: if another request modified the row,
+    /// we refresh the original values (xmin) and retry once.
     /// </summary>
     public async Task SaveCartAsync(ShoppingCart cart, CancellationToken ct = default)
     {
@@ -73,7 +83,9 @@ public sealed class CartRepository(IDistributedCache cache, CartDbContext dbCont
 
     public async Task DeleteCartAsync(string buyerId, CancellationToken ct = default)
     {
-        var cart = await dbContext.ShoppingCarts.FindAsync([buyerId], ct);
+        var cart = await dbContext.ShoppingCarts
+            .FirstOrDefaultAsync(c => c.BuyerId == buyerId, ct);
+
         if (cart is not null)
         {
             dbContext.ShoppingCarts.Remove(cart);

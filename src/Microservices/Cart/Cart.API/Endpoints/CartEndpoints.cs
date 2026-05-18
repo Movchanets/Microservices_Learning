@@ -1,6 +1,6 @@
 using System.Security.Claims;
-using BuildingBlocks.SharedContracts.Dtos;
 using Cart.Application.Commands;
+using Cart.Application.Dtos;
 using Cart.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -35,7 +35,7 @@ public static class CartEndpoints
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var items = request.Items.Select(i => new CartItemDto(i.Sku, i.Quantity, i.Price, i.SellerId)).ToList();
+            var items = request.Items.Select(i => new CartItemDto(i.Sku, i.Quantity, i.Price, i.ShopId)).ToList();
             var result = await sender.Send(new UpdateCartCommand(buyerId, items), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
@@ -80,7 +80,7 @@ public static class CartEndpoints
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new AddCartItemCommand(buyerId, request.Sku, request.Quantity, request.SellerId), ct);
+            var result = await sender.Send(new AddCartItemCommand(buyerId, request.Sku, request.Quantity, request.ShopId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
@@ -112,8 +112,8 @@ public static class CartEndpoints
 }
 
 public record UpdateCartRequest(List<CartItemRequest> Items);
-public record CartItemRequest(string Sku, int Quantity, decimal Price, string? SellerId = null);
-public record AddCartItemRequest(string Sku, int Quantity, string? SellerId = null);
+public record CartItemRequest(string Sku, int Quantity, decimal Price, string? ShopId = null);
+public record AddCartItemRequest(string Sku, int Quantity, string? ShopId = null);
 public record UpdateCartItemRequest(int Quantity);
 public record CheckoutRequest(
     string? AddressLine1,

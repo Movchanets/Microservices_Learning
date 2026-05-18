@@ -21,7 +21,7 @@ public class ShoppingCartTests
     }
 
     [Fact]
-    public void AddItem_WithSellerId_ShouldPropagateSellerId()
+    public void AddItem_WithShopId_ShouldPropagateShopId()
     {
         // Arrange
         var cart = new ShoppingCart("buyer-1");
@@ -31,11 +31,11 @@ public class ShoppingCartTests
 
         // Assert
         cart.Items.Should().ContainSingle();
-        cart.Items.First().SellerId.Should().Be("seller-42");
+        cart.Items.First().ShopId.Should().Be("seller-42");
     }
 
     [Fact]
-    public void AddItem_WithoutSellerId_ShouldHaveNullSellerId()
+    public void AddItem_WithoutShopId_ShouldHaveNullShopId()
     {
         // Arrange
         var cart = new ShoppingCart("buyer-1");
@@ -44,7 +44,7 @@ public class ShoppingCartTests
         cart.AddItem("sku-1", 2, 10m);
 
         // Assert
-        cart.Items.First().SellerId.Should().BeNull();
+        cart.Items.First().ShopId.Should().BeNull();
     }
 
     [Fact]

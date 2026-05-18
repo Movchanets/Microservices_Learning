@@ -4,4 +4,4 @@ public record OrderItemContract(
     string Sku,
     int Quantity,
     decimal Price,
-    string? SellerId = null);
+    string? ShopId = null);

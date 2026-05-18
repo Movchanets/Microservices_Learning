@@ -6,6 +6,7 @@ using Cart.Infrastructure.Repositories;
 using Cart.Infrastructure.Data;
 using Cart.Infrastructure.Messaging.Consumers;
 using Cart.Application.Commands;
+using Cart.Infrastructure.Serialization;
 using FluentValidation;
 using BuildingBlocks.Infrastructure.Middleware;
 using MassTransit;
@@ -17,6 +18,12 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+// Register ShoppingCartJsonConverter globally for HTTP responses
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new ShoppingCartJsonConverter());
+});
 
 // PostgreSQL DB
 builder.AddNpgsqlDbContext<CartDbContext>("cart-db");
@@ -91,9 +98,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 
-    // Auto-migrate on startup for dev environment
+    // Drop & re-create DB in dev to handle replaced migrations
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<CartDbContext>();
+    db.Database.EnsureDeleted();
     db.Database.Migrate();
 }
 

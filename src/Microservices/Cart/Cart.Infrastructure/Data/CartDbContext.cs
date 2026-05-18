@@ -16,9 +16,20 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
 
         builder.Entity<ShoppingCart>(b =>
         {
-            b.HasKey(x => x.BuyerId);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever(); // Client-generated via Entity base class
+            b.Property(x => x.BuyerId).IsRequired();
+            b.HasIndex(x => x.BuyerId).IsUnique();
+
+            // Map Version (uint) to PostgreSQL xmin system column.
+            // IsRowVersion() on uint in Npgsql = automatic xmin concurrency token.
+            // No physical column is created — xmin is a system column managed by PostgreSQL.
+            b.Property(x => x.Version).IsRowVersion();
+
+            b.Property(x => x.CreatedAt).IsRequired();
+            b.Property(x => x.UpdatedAt).IsRequired();
             b.HasMany(x => x.Items)
-             .WithOne(i => i.Cart)
+             .WithOne()  // No back-reference — DDD aggregate children don't navigate to parent
              .HasForeignKey(i => i.CartId)
              .OnDelete(DeleteBehavior.Cascade);
         });
@@ -26,8 +37,10 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
         builder.Entity<CartItem>(b =>
         {
             b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedNever(); // Client-generated via Entity base class
             b.Property(x => x.CartId).IsRequired();
             b.Property(x => x.Sku).IsRequired().HasMaxLength(50);
+            b.Property(x => x.Price).HasPrecision(18, 2);
             b.HasIndex(x => new { x.CartId, x.Sku }).IsUnique();
         });
 

@@ -4,20 +4,18 @@ namespace Cart.Domain.Aggregates;
 
 public sealed class CartItem : Entity
 {
-    public string CartId { get; private set; } = string.Empty;
+    public Guid CartId { get; private set; } 
     public string Sku { get; private set; } = string.Empty;
     public int Quantity { get; private set; }
     public decimal Price { get; private set; }
-    public string? SellerId { get; private set; }
-
-    // Navigation property back to parent
-    public ShoppingCart Cart { get; private set; } = null!;
+    public string? ShopId { get; private set; }
 
     private CartItem() { } // EF Core
 
-    internal CartItem(string cartId, string sku, int quantity, decimal price = 0m, string? sellerId = null)
+    internal CartItem(Guid cartId, string sku, int quantity, decimal price = 0m, string? shopId = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(cartId);
+        if (cartId == Guid.Empty)
+            throw new ArgumentException("CartId cannot be empty", nameof(cartId));
         ArgumentException.ThrowIfNullOrWhiteSpace(sku);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(quantity);
 
@@ -25,7 +23,7 @@ public sealed class CartItem : Entity
         Sku = sku;
         Quantity = quantity;
         Price = price;
-        SellerId = sellerId;
+        ShopId = shopId;
     }
 
     public void AddQuantity(int quantity)

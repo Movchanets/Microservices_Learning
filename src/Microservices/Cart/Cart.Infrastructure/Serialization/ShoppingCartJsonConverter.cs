@@ -16,8 +16,16 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
 
         // Support both PascalCase and camelCase
         var buyerId = GetStringProperty(root, "BuyerId", "buyerId");
+        var id = GetNullableGuidProperty(root, "Id", "id");
 
         var cart = new ShoppingCart(buyerId);
+
+        // Restore the original Id so CartItem.CartId stays consistent after cache round-trip
+        if (id.HasValue)
+        {
+            var idProp = typeof(ShoppingCart).GetProperty("Id")!;
+            idProp.SetValue(cart, id.Value);
+        }
 
         if (TryGetProperty(root, "Items", "items", out var itemsElement))
         {
@@ -26,8 +34,8 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
                 var sku = GetStringProperty(item, "Sku", "sku");
                 var quantity = GetInt32Property(item, "Quantity", "quantity");
                 var price = GetDecimalProperty(item, "Price", "price");
-                var sellerId = GetNullableStringProperty(item, "SellerId", "sellerId");
-                cart.AddItem(sku, quantity, price, sellerId);
+                var shopId = GetNullableStringProperty(item, "ShopId", "shopId");
+                cart.AddItem(sku, quantity, price, shopId);
             }
         }
 
@@ -40,7 +48,11 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
 
         writer.WriteStartObject();
 
+        writer.WriteString(ConvertName(namingPolicy, "Id"), value.Id);
         writer.WriteString(ConvertName(namingPolicy, "BuyerId"), value.BuyerId);
+        writer.WriteNumber(ConvertName(namingPolicy, "Version"), value.Version);
+        writer.WriteString(ConvertName(namingPolicy, "CreatedAt"), value.CreatedAt);
+        writer.WriteString(ConvertName(namingPolicy, "UpdatedAt"), value.UpdatedAt);
 
         writer.WritePropertyName(ConvertName(namingPolicy, "Items"));
         writer.WriteStartArray();
@@ -50,8 +62,8 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
             writer.WriteString(ConvertName(namingPolicy, "Sku"), item.Sku);
             writer.WriteNumber(ConvertName(namingPolicy, "Quantity"), item.Quantity);
             writer.WriteNumber(ConvertName(namingPolicy, "Price"), item.Price);
-            if (item.SellerId is not null)
-                writer.WriteString(ConvertName(namingPolicy, "SellerId"), item.SellerId);
+            if (item.ShopId is not null)
+                writer.WriteString(ConvertName(namingPolicy, "ShopId"), item.ShopId);
             writer.WriteEndObject();
         }
         writer.WriteEndArray();
@@ -106,5 +118,14 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
             return true;
         value = default;
         return false;
+    }
+
+    private static Guid? GetNullableGuidProperty(JsonElement element, string name1, string name2)
+    {
+        if (element.TryGetProperty(name1, out var prop) && prop.TryGetGuid(out var g1))
+            return g1;
+        if (element.TryGetProperty(name2, out prop) && prop.TryGetGuid(out var g2))
+            return g2;
+        return null;
     }
 }

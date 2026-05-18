@@ -69,8 +69,8 @@ public class CheckoutCartCommandHandlerTests
             It.Is<OrderSubmittedEvent>(e =>
                 e.BuyerId == buyerId &&
                 e.Items.Count == 2 &&
-                e.Items.Any(i => i.SellerId == "seller-A") &&
-                e.Items.Any(i => i.SellerId == "seller-B") &&
+                e.Items.Any(i => i.ShopId == "seller-A") &&
+                e.Items.Any(i => i.ShopId == "seller-B") &&
                 e.CorrelationId == result.Value.CorrelationId),
             It.IsAny<CancellationToken>()), Times.Once);
 

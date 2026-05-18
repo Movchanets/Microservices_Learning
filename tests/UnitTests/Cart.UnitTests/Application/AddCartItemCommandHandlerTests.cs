@@ -1,4 +1,5 @@
 using Cart.Application.Commands;
+using Cart.Application.Dtos;
 using Cart.Domain.Aggregates;
 using Cart.Domain.Entities;
 using Cart.Domain.Repositories;
@@ -42,7 +43,7 @@ public class AddCartItemCommandHandlerTests
         result.Value.Items.First().Sku.Should().Be(sku);
         result.Value.Items.First().Quantity.Should().Be(2);
         result.Value.Items.First().Price.Should().Be(price);
-        result.Value.Items.First().SellerId.Should().Be("seller-1");
+        result.Value.Items.First().ShopId.Should().Be("seller-1");
         _repositoryMock.Verify(r => r.SaveCartAsync(freshCart, It.IsAny<CancellationToken>()), Times.Once);
     }
 

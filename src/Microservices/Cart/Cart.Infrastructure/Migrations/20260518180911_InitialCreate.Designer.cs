@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cart.Infrastructure.Migrations
 {
     [DbContext(typeof(CartDbContext))]
-    [Migration("20260518154222_AddVersionConcurrencyToken")]
-    partial class AddVersionConcurrencyToken
+    [Migration("20260518180911_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -31,6 +31,10 @@ namespace Cart.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CartId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
 
@@ -40,9 +44,6 @@ namespace Cart.Infrastructure.Migrations
                     b.Property<string>("SellerId")
                         .HasColumnType("text");
 
-                    b.Property<string>("ShoppingCartBuyerId")
-                        .HasColumnType("text");
-
                     b.Property<string>("Sku")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -50,7 +51,8 @@ namespace Cart.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ShoppingCartBuyerId");
+                    b.HasIndex("CartId", "Sku")
+                        .IsUnique();
 
                     b.ToTable("CartItems");
                 });
@@ -62,12 +64,6 @@ namespace Cart.Infrastructure.Migrations
 
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
-
-                    b.Property<int>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
 
                     b.HasKey("BuyerId");
 
@@ -112,10 +108,13 @@ namespace Cart.Infrastructure.Migrations
 
             modelBuilder.Entity("Cart.Domain.Aggregates.CartItem", b =>
                 {
-                    b.HasOne("Cart.Domain.Aggregates.ShoppingCart", null)
+                    b.HasOne("Cart.Domain.Aggregates.ShoppingCart", "Cart")
                         .WithMany("Items")
-                        .HasForeignKey("ShoppingCartBuyerId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cart");
                 });
 
             modelBuilder.Entity("Cart.Domain.Aggregates.ShoppingCart", b =>

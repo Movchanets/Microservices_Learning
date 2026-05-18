@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cart.Infrastructure.Migrations
 {
     [DbContext(typeof(CartDbContext))]
-    [Migration("20260516175303_AddProductPrices")]
-    partial class AddProductPrices
+    [Migration("20260518195700_ChangeCartPkToGuidId")]
+    partial class ChangeCartPkToGuidId
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -28,16 +28,19 @@ namespace Cart.Infrastructure.Migrations
             modelBuilder.Entity("Cart.Domain.Aggregates.CartItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CartId")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Price")
-                        .HasColumnType("numeric");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ShoppingCartBuyerId")
+                    b.Property<string>("ShopId")
                         .HasColumnType("text");
 
                     b.Property<string>("Sku")
@@ -47,20 +50,37 @@ namespace Cart.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ShoppingCartBuyerId");
+                    b.HasIndex("CartId", "Sku")
+                        .IsUnique();
 
                     b.ToTable("CartItems");
                 });
 
             modelBuilder.Entity("Cart.Domain.Aggregates.ShoppingCart", b =>
                 {
-                    b.Property<string>("BuyerId")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.HasKey("BuyerId");
+                    b.Property<string>("BuyerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuyerId")
+                        .IsUnique();
 
                     b.ToTable("ShoppingCarts");
                 });
@@ -105,8 +125,9 @@ namespace Cart.Infrastructure.Migrations
                 {
                     b.HasOne("Cart.Domain.Aggregates.ShoppingCart", null)
                         .WithMany("Items")
-                        .HasForeignKey("ShoppingCartBuyerId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Cart.Domain.Aggregates.ShoppingCart", b =>

@@ -1,4 +1,5 @@
 using Cart.Application.Commands;
+using Cart.Application.Dtos;
 using Cart.Domain.Aggregates;
 using FluentAssertions;
 using Moq;
@@ -42,8 +43,8 @@ public class UpdateCartCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Items.Should().HaveCount(2);
-        result.Value.Items.Should().Contain(i => i.Sku == "new-sku-1" && i.Quantity == 2 && i.SellerId == "seller-A");
-        result.Value.Items.Should().Contain(i => i.Sku == "new-sku-2" && i.Quantity == 3 && i.SellerId == "seller-B");
+        result.Value.Items.Should().Contain(i => i.Sku == "new-sku-1" && i.Quantity == 2 && i.ShopId == "seller-A");
+        result.Value.Items.Should().Contain(i => i.Sku == "new-sku-2" && i.Quantity == 3 && i.ShopId == "seller-B");
         result.Value.Items.Should().NotContain(i => i.Sku == "old-sku");
 
         _repositoryMock.Verify(r => r.SaveCartAsync(existingCart, It.IsAny<CancellationToken>()), Times.Once);

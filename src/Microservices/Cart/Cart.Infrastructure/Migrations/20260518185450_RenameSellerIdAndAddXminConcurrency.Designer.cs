@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cart.Infrastructure.Migrations
 {
     [DbContext(typeof(CartDbContext))]
-    [Migration("20260518164921_RemoveVersionConcurrencyToken")]
-    partial class RemoveVersionConcurrencyToken
+    [Migration("20260518185450_RenameSellerIdAndAddXminConcurrency")]
+    partial class RenameSellerIdAndAddXminConcurrency
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -36,12 +36,13 @@ namespace Cart.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal>("Price")
-                        .HasColumnType("numeric");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<string>("SellerId")
+                    b.Property<string>("ShopId")
                         .HasColumnType("text");
 
                     b.Property<string>("Sku")
@@ -62,8 +63,17 @@ namespace Cart.Infrastructure.Migrations
                     b.Property<string>("BuyerId")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("BuyerId");
 
@@ -108,13 +118,11 @@ namespace Cart.Infrastructure.Migrations
 
             modelBuilder.Entity("Cart.Domain.Aggregates.CartItem", b =>
                 {
-                    b.HasOne("Cart.Domain.Aggregates.ShoppingCart", "Cart")
+                    b.HasOne("Cart.Domain.Aggregates.ShoppingCart", null)
                         .WithMany("Items")
                         .HasForeignKey("CartId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Cart");
                 });
 
             modelBuilder.Entity("Cart.Domain.Aggregates.ShoppingCart", b =>

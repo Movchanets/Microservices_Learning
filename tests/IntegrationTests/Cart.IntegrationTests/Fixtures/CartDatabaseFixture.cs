@@ -33,6 +33,8 @@ public sealed class CartDatabaseFixture : IAsyncLifetime
             options.Configuration = _redisContainer.GetConnectionString();
         });
 
+        services.AddLogging();
+
         services.AddScoped<CartRepository>();
         services.AddScoped<ICartRepository>(sp => sp.GetRequiredService<CartRepository>());
         services.AddScoped<IProductPriceRepository, ProductPriceRepository>();
