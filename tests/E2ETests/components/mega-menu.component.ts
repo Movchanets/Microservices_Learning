@@ -8,7 +8,7 @@ export class MegaMenuComponent {
 
   constructor(page: Page) {
     this.page = page;
-    this.rootCategories = page.locator('.w-1\\/4 button');
+    this.rootCategories = page.getByTestId('root-category-btn');
     this.subcategoriesPanel = page.locator('.flex-1.p-8');
     this.categoryLinks = this.subcategoriesPanel.locator('a');
   }

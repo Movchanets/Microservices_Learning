@@ -13,15 +13,14 @@ public sealed class AddCartItemCommandHandler(
 {
     public async Task<Result<ShoppingCart>> Handle(AddCartItemCommand request, CancellationToken cancellationToken)
     {
-        // Look up current price from local table (synced from Catalog via events)
         var productPrice = await priceRepository.GetBySkuAsync(request.Sku, cancellationToken);
         if (productPrice is null)
             return Result<ShoppingCart>.Failure($"Product with SKU '{request.Sku}' not found");
 
-        var cart = await repository.GetCartAsync(request.BuyerId, cancellationToken);
+        var cart = await repository.GetOrCreateTrackedCartAsync(request.BuyerId, cancellationToken);
         cart.AddItem(request.Sku, request.Quantity, productPrice.Price, request.SellerId);
 
-        await repository.UpdateCartAsync(cart, cancellationToken);
+        await repository.SaveCartAsync(cart, cancellationToken);
         return Result<ShoppingCart>.Success(cart);
     }
 }

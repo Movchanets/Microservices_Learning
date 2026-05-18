@@ -22,13 +22,12 @@ test.describe('Plan 09: Seller Orders Management', () => {
     await page.waitForLoadState('networkidle');
 
     const ordersTab = page.getByRole('link', { name: /orders/i });
-    if (await ordersTab.isVisible()) {
-      await ordersTab.click();
-      await page.waitForLoadState('networkidle');
-      const hasTable = await page.locator('table').isVisible();
-      const isEmpty = await page.getByText('No orders yet').isVisible();
-      expect(hasTable || isEmpty).toBe(true);
-    }
+    await expect(ordersTab).toBeVisible({ timeout: 10000 });
+    await ordersTab.click();
+    await page.waitForLoadState('networkidle');
+    const hasTable = await page.locator('table').isVisible();
+    const isEmpty = await page.getByText('No orders yet').isVisible();
+    expect(hasTable || isEmpty).toBe(true);
   });
 
   test('should show orders table with status', async ({ page }) => {
@@ -36,17 +35,16 @@ test.describe('Plan 09: Seller Orders Management', () => {
     await page.waitForLoadState('networkidle');
 
     const ordersTab = page.getByRole('link', { name: /orders/i });
-    if (await ordersTab.isVisible()) {
-      await ordersTab.click();
-      await page.waitForLoadState('networkidle');
-      const hasTable = await page.locator('table').isVisible();
-      const isEmpty = await page.getByText('No orders yet').isVisible();
-      expect(hasTable || isEmpty).toBe(true);
+    await expect(ordersTab).toBeVisible({ timeout: 10000 });
+    await ordersTab.click();
+    await page.waitForLoadState('networkidle');
+    const hasTable = await page.locator('table').isVisible();
+    const isEmpty = await page.getByText('No orders yet').isVisible();
+    expect(hasTable || isEmpty).toBe(true);
 
-      if (hasTable) {
-        await expect(page.getByRole('columnheader', { name: /order id/i })).toBeVisible();
-        await expect(page.getByRole('columnheader', { name: /status/i })).toBeVisible();
-      }
+    if (hasTable) {
+      await expect(page.getByRole('columnheader', { name: /order id/i })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: /status/i })).toBeVisible();
     }
   });
 
@@ -55,13 +53,12 @@ test.describe('Plan 09: Seller Orders Management', () => {
     await page.waitForLoadState('networkidle');
 
     const ordersTab = page.getByRole('link', { name: /orders/i });
-    if (await ordersTab.isVisible()) {
-      await ordersTab.click();
-      await page.waitForLoadState('networkidle');
-      const updateBtns = page.getByRole('button', { name: /mark|update/i });
-      const count = await updateBtns.count();
-      expect(count).toBeGreaterThanOrEqual(0);
-    }
+    await expect(ordersTab).toBeVisible({ timeout: 10000 });
+    await ordersTab.click();
+    await page.waitForLoadState('networkidle');
+    const updateBtns = page.getByRole('button', { name: /mark|update/i });
+    const count = await updateBtns.count();
+    expect(count).toBeGreaterThan(0); // Should have at least 1 order item
   });
 
   test('should redirect unauthenticated from seller orders', async ({ page }) => {

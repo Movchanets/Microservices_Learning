@@ -10,10 +10,10 @@ public sealed class RemoveCartItemCommandHandler(ICartRepository repository) : I
 {
     public async Task<Result<ShoppingCart>> Handle(RemoveCartItemCommand request, CancellationToken cancellationToken)
     {
-        var cart = await repository.GetCartAsync(request.BuyerId, cancellationToken);
+        var cart = await repository.GetOrCreateTrackedCartAsync(request.BuyerId, cancellationToken);
         cart.RemoveItem(request.Sku);
 
-        await repository.UpdateCartAsync(cart, cancellationToken);
+        await repository.SaveCartAsync(cart, cancellationToken);
         return Result<ShoppingCart>.Success(cart);
     }
 }

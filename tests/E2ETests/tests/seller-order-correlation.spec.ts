@@ -43,7 +43,7 @@ test.describe('Plan 10: Seller Order Correlation', () => {
       expect(checkoutResult.correlationId).toBeTruthy();
 
       // 4. Wait for order to be processed (saga completes)
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // 5. Login as seller in browser
       await page.goto('/auth/login');
@@ -56,22 +56,21 @@ test.describe('Plan 10: Seller Order Correlation', () => {
       await page.goto('/seller');
       await page.waitForLoadState('networkidle');
 
-      const ordersTab = page.getByRole('link', { name: /orders/i });
-      if (await ordersTab.isVisible()) {
-        await ordersTab.click();
-        await page.waitForLoadState('networkidle');
+    const ordersTab = page.getByRole('link', { name: /orders/i });
+    await expect(ordersTab).toBeVisible({ timeout: 10000 });
+    await ordersTab.click();
+    await page.waitForLoadState('networkidle');
 
-        // 7. Verify order appears in seller order list
-        const hasTable = await page.locator('table').isVisible();
-        const isEmpty = await page.getByText('No orders yet').isVisible();
+    // 7. Verify order appears in seller order list
+    const hasTable = await page.locator('table').isVisible();
+    const isEmpty = await page.getByText('No orders yet').isVisible();
 
-        if (hasTable) {
-          const tableText = await page.locator('table').textContent();
-          expect(tableText).toBeTruthy();
-        } else {
-          expect(isEmpty).toBe(true);
-        }
-      }
+    if (hasTable) {
+      const tableText = await page.locator('table').textContent();
+      expect(tableText).toBeTruthy();
+    } else {
+      expect(isEmpty).toBe(true);
+    }
     } finally {
       await buyerApi.dispose();
     }

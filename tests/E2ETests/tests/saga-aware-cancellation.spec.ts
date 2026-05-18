@@ -42,7 +42,6 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
     // --- Navigate to cart and checkout ---
     await cartPage.goto();
     await cartPage.waitForPageLoad();
-    await page.waitForTimeout(1000);
 
     const isEmpty = await cartPage.isEmpty();
     expect(isEmpty).toBe(false);
@@ -60,7 +59,7 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
       country: 'US',
     });
     await checkoutEnhancedPage.saveAddress();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     await checkoutEnhancedPage.selectExpressShipping();
     await expect(checkoutEnhancedPage.continueToPaymentBtn).toBeVisible({ timeout: 10000 });
@@ -69,7 +68,7 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
 
     // --- Place order ---
     await checkoutEnhancedPage.placeOrder();
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Wait for order to complete (saga processes quickly)
     const submittedVisible = await checkoutEnhancedPage.orderSubmittedHeading.isVisible().catch(() => false);
@@ -82,15 +81,14 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
     await page.waitForLoadState('networkidle');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
-    if (await orderLink.isVisible()) {
-      await orderLink.click();
-      await page.waitForLoadState('networkidle');
-      await orderDetailEnhancedPage.waitForLoaded();
+    await expect(orderLink).toBeVisible({ timeout: 10000 });
+    await orderLink.click();
+    await page.waitForLoadState('networkidle');
+    await orderDetailEnhancedPage.waitForLoaded();
 
-      // Completed orders should NOT have a cancel button
-      const hasCancel = await orderDetailEnhancedPage.hasCancelButton();
-      expect(hasCancel).toBe(false);
-    }
+    // Completed orders should NOT have a cancel button
+    const hasCancel = await orderDetailEnhancedPage.hasCancelButton();
+    expect(hasCancel).toBe(false);
 
     await buyerApi.dispose();
   });
@@ -154,7 +152,7 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
 
     if (cancelSucceeded) {
       // Wait for saga to process the cancellation
-      await page.waitForTimeout(5000);
+      await page.waitForLoadState('networkidle');
 
       // Verify order status via API
       const orderDetailResponse = await buyerApi.get(`/api/orders/${orderId}`);
@@ -221,34 +219,35 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
 
     if (cancelResponse.ok()) {
       // Wait for saga to process
-      await page.waitForTimeout(5000);
+      await page.waitForLoadState('networkidle');
 
       // Navigate to orders page in browser
       await page.goto('/orders');
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
 
       // Look for the cancelled order in the list
       const cancelledBadge = page.getByText(/cancelled/i).first();
       const isBadgeVisible = await cancelledBadge.isVisible().catch(() => false);
-
-      if (isBadgeVisible) {
-        // Navigate to order detail
-        const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
-        if (await orderLink.isVisible()) {
-          await orderLink.click();
-          await page.waitForLoadState('networkidle');
-          await orderDetailEnhancedPage.waitForLoaded();
-
-          // Verify status badge shows Cancelled
-          const status = await orderDetailEnhancedPage.getStatus();
-          expect(status.toLowerCase()).toContain('cancelled');
-
-          // Cancelled orders should NOT have a cancel button
-          const hasCancel = await orderDetailEnhancedPage.hasCancelButton();
-          expect(hasCancel).toBe(false);
-        }
+      if (!isBadgeVisible) {
+        test.skip(true, 'Cancelled order badge not found in list — skipping');
+        await buyerApi.dispose();
+        return;
       }
+
+      // Navigate to order detail
+      const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
+      await expect(orderLink).toBeVisible({ timeout: 10000 });
+      await orderLink.click();
+      await page.waitForLoadState('networkidle');
+      await orderDetailEnhancedPage.waitForLoaded();
+
+      // Verify status badge shows Cancelled
+      const status = await orderDetailEnhancedPage.getStatus();
+      expect(status.toLowerCase()).toContain('cancelled');
+
+      // Cancelled orders should NOT have a cancel button
+      const hasCancel = await orderDetailEnhancedPage.hasCancelButton();
+      expect(hasCancel).toBe(false);
     }
 
     await buyerApi.dispose();

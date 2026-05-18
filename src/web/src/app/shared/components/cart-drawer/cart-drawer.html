@@ -50,7 +50,7 @@
     <div class="cart-footer" *ngIf="!cartStore.isEmpty()">
       <div class="total-row">
         <span>Subtotal</span>
-        <span data-testid="cart-drawer-subtotal">${{ cartStore.totalPrice() | number:'1.2-2' }}</span>
+        <span data-testid="cart-total">${{ cartStore.totalPrice() | number:'1.2-2' }}</span>
       </div>
       <div class="action-buttons">
         <button data-testid="cart-drawer-view-cart" class="secondary-btn" (click)="close()" routerLink="/cart">View Cart</button>

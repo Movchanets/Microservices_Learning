@@ -48,7 +48,7 @@ export class SellerOrdersPage extends BasePage {
 
   async getStatusForOrder(orderId: string): Promise<string> {
     const row = await this.getRowByOrderId(orderId);
-    const statusBadge = row.locator('span[class*="rounded-full"]');
+    const statusBadge = row.getByTestId('order-status-badge');
     return statusBadge.innerText();
   }
 

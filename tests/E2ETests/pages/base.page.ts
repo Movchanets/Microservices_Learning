@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
 
@@ -19,5 +19,22 @@ export abstract class BasePage {
 
   async waitForPageLoad() {
     await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * Fills an input and verifies the value took effect.
+   * Retries up to 3 times to handle reactive form interference.
+   */
+  protected async fillStable(input: Locator, value: string): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await input.fill(value);
+      await expect(input).toHaveValue(value);
+
+      if ((await input.inputValue()) === value) {
+        return;
+      }
+
+      await this.page.waitForTimeout(100);
+    }
   }
 }

@@ -22,12 +22,15 @@ test.describe('Plan 09: Order Cancellation & Status', () => {
     await page.waitForLoadState('networkidle');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
-    if (await orderLink.isVisible()) {
-      await orderLink.click();
-      await page.waitForLoadState('networkidle');
-      await orderDetailEnhancedPage.waitForLoaded();
-      await expect(orderDetailEnhancedPage.pageHeading).toBeVisible();
+    const isOrderVisible = await orderLink.isVisible().catch(() => false);
+    if (!isOrderVisible) {
+      test.skip(true, 'No orders available for this user — skipping');
+      return;
     }
+    await orderLink.click();
+    await page.waitForLoadState('networkidle');
+    await orderDetailEnhancedPage.waitForLoaded();
+    await expect(orderDetailEnhancedPage.pageHeading).toBeVisible();
   });
 
   test('should show order status badge', async ({ page, orderDetailEnhancedPage }) => {
@@ -35,12 +38,15 @@ test.describe('Plan 09: Order Cancellation & Status', () => {
     await page.waitForLoadState('networkidle');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
-    if (await orderLink.isVisible()) {
-      await orderLink.click();
-      await page.waitForLoadState('networkidle');
-      await orderDetailEnhancedPage.waitForLoaded();
-      await expect(orderDetailEnhancedPage.statusBadge).toBeVisible();
+    const isOrderVisible = await orderLink.isVisible().catch(() => false);
+    if (!isOrderVisible) {
+      test.skip(true, 'No orders available for this user — skipping');
+      return;
     }
+    await orderLink.click();
+    await page.waitForLoadState('networkidle');
+    await orderDetailEnhancedPage.waitForLoaded();
+    await expect(orderDetailEnhancedPage.statusBadge).toBeVisible();
   });
 
   test('should show order timeline', async ({ page, orderDetailEnhancedPage }) => {
@@ -48,12 +54,15 @@ test.describe('Plan 09: Order Cancellation & Status', () => {
     await page.waitForLoadState('networkidle');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
-    if (await orderLink.isVisible()) {
-      await orderLink.click();
-      await page.waitForLoadState('networkidle');
-      await orderDetailEnhancedPage.waitForLoaded();
-      await expect(orderDetailEnhancedPage.timeline).toBeVisible();
+    const isOrderVisible = await orderLink.isVisible().catch(() => false);
+    if (!isOrderVisible) {
+      test.skip(true, 'No orders available for this user — skipping');
+      return;
     }
+    await orderLink.click();
+    await page.waitForLoadState('networkidle');
+    await orderDetailEnhancedPage.waitForLoaded();
+    await expect(orderDetailEnhancedPage.timeline).toBeVisible();
   });
 
   test('should show order items list', async ({ page, orderDetailEnhancedPage }) => {
@@ -61,13 +70,16 @@ test.describe('Plan 09: Order Cancellation & Status', () => {
     await page.waitForLoadState('networkidle');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
-    if (await orderLink.isVisible()) {
-      await orderLink.click();
-      await page.waitForLoadState('networkidle');
-      await orderDetailEnhancedPage.waitForLoaded();
-      const itemCount = await orderDetailEnhancedPage.getOrderItemCount();
-      expect(itemCount).toBeGreaterThanOrEqual(0);
+    const isOrderVisible = await orderLink.isVisible().catch(() => false);
+    if (!isOrderVisible) {
+      test.skip(true, 'No orders available for this user — skipping');
+      return;
     }
+    await orderLink.click();
+    await page.waitForLoadState('networkidle');
+    await orderDetailEnhancedPage.waitForLoaded();
+    const itemCount = await orderDetailEnhancedPage.getOrderItemCount();
+    expect(itemCount).toBeGreaterThan(0); // Should have at least 1 order item
   });
 
   test('should navigate back to orders from detail', async ({ page, orderDetailEnhancedPage }) => {
@@ -75,12 +87,15 @@ test.describe('Plan 09: Order Cancellation & Status', () => {
     await page.waitForLoadState('networkidle');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
-    if (await orderLink.isVisible()) {
-      await orderLink.click();
-      await page.waitForLoadState('networkidle');
-      await orderDetailEnhancedPage.waitForLoaded();
-      await orderDetailEnhancedPage.backToOrdersLink.click();
-      await expect(page).toHaveURL(/\/orders/);
+    const isOrderVisible = await orderLink.isVisible().catch(() => false);
+    if (!isOrderVisible) {
+      test.skip(true, 'No orders available for this user — skipping');
+      return;
     }
+    await orderLink.click();
+    await page.waitForLoadState('networkidle');
+    await orderDetailEnhancedPage.waitForLoaded();
+    await orderDetailEnhancedPage.backToOrdersLink.click();
+    await expect(page).toHaveURL(/\/orders/);
   });
 });

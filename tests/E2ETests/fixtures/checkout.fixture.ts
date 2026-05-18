@@ -1,58 +1,35 @@
-import { test as base, APIRequestContext } from '@playwright/test';
-import { test as pageTest } from './test-base';
+import { APIRequestContext } from '@playwright/test';
 import {
-  loginApi,
   createStore,
   verifyStore,
   createProduct,
-  addToCart,
+  createInventoryItem,
   getCategories,
   getStoreBySellerId,
   getCurrentUser,
+  addToCart,
   type StoreResult,
   type ProductResult,
 } from '../utils/api-helpers';
-import * as users from '../data/users.json';
+import { authTest as baseTest, type AuthFixtures } from './auth.fixture';
 
 /**
  * Combined fixture for checkout E2E tests.
- * Merges page object fixtures from test-base with store/product API fixtures.
+ * Merges page object fixtures with auth + store/product API fixtures.
+ *
+ * Provides pre-authenticated buyer/seller/admin contexts, a verified store,
+ * and a product with inventory — so tests focus on the feature under test.
  */
-export type CheckoutFixtures = {
-  /** Authenticated API context for the seller user */
-  sellerApi: APIRequestContext;
-  /** Authenticated API context for the admin user */
-  adminApi: APIRequestContext;
-  /** A store that has been created by the seller and approved by admin */
+export type CheckoutFixtures = AuthFixtures & {
+  /** A store created by the seller and approved by admin */
   testStore: StoreResult;
-  /** A draft product created in the verified test store */
+  /** A product with inventory in the verified test store */
   testProduct: ProductResult;
   /** Adds the test product to a buyer's cart via API */
   addItemToCart: (buyerApi: APIRequestContext, quantity?: number) => Promise<void>;
 };
 
-// Merge page fixtures with store fixtures
-export const checkoutTest = pageTest.extend<CheckoutFixtures>({
-  sellerApi: async ({ playwright }, use) => {
-    const api = await loginApi(
-      playwright.request,
-      users.sellerUser.email,
-      users.sellerUser.password
-    );
-    await use(api);
-    await api.dispose();
-  },
-
-  adminApi: async ({ playwright }, use) => {
-    const api = await loginApi(
-      playwright.request,
-      users.adminUser.email,
-      users.adminUser.password
-    );
-    await use(api);
-    await api.dispose();
-  },
-
+export const checkoutTest = baseTest.extend<Omit<CheckoutFixtures, keyof AuthFixtures>>({
   testStore: async ({ sellerApi, adminApi }, use) => {
     const seller = await getCurrentUser(sellerApi);
 
@@ -106,6 +83,8 @@ export const checkoutTest = pageTest.extend<CheckoutFixtures>({
       storeId: testStore.id,
       tags: ['e2e', 'test'],
     });
+
+    await createInventoryItem(sellerApi, product.sku, 100);
 
     await use(product);
   },

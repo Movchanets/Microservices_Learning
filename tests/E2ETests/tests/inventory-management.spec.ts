@@ -27,22 +27,7 @@ test.describe('Plan 08: Inventory Management UI', () => {
 
     if (hasHeading) {
       const inventoryTab = page.getByRole('link', { name: /inventory/i });
-      if (await inventoryTab.isVisible()) {
-        await inventoryTab.click();
-        await page.waitForLoadState('networkidle');
-        const hasTable = await page.locator('table').isVisible();
-        const isEmpty = await page.getByText(/no inventory/i).isVisible();
-        expect(hasTable || isEmpty).toBe(true);
-      }
-    }
-  });
-
-  test('should show inventory table with products', async ({ page }) => {
-    await page.goto('/seller');
-    await page.waitForLoadState('networkidle');
-
-    const inventoryTab = page.getByRole('link', { name: /inventory/i });
-    if (await inventoryTab.isVisible()) {
+      await expect(inventoryTab).toBeVisible({ timeout: 10000 });
       await inventoryTab.click();
       await page.waitForLoadState('networkidle');
       const hasTable = await page.locator('table').isVisible();
@@ -51,27 +36,37 @@ test.describe('Plan 08: Inventory Management UI', () => {
     }
   });
 
+  test('should show inventory table with products', async ({ page }) => {
+    await page.goto('/seller');
+    await page.waitForLoadState('networkidle');
+
+    const inventoryTab = page.getByRole('link', { name: /inventory/i });
+    await expect(inventoryTab).toBeVisible({ timeout: 10000 });
+    await inventoryTab.click();
+    await page.waitForLoadState('networkidle');
+    const hasTable = await page.locator('table').isVisible();
+    const isEmpty = await page.getByText(/no inventory/i).isVisible();
+    expect(hasTable || isEmpty).toBe(true);
+  });
+
   test('should filter inventory by status', async ({ page }) => {
     await page.goto('/seller');
     await page.waitForLoadState('networkidle');
 
     const inventoryTab = page.getByRole('link', { name: /inventory/i });
-    if (await inventoryTab.isVisible()) {
-      await inventoryTab.click();
-      await page.waitForLoadState('networkidle');
+    await expect(inventoryTab).toBeVisible({ timeout: 10000 });
+    await inventoryTab.click();
+    await page.waitForLoadState('networkidle');
 
-      const lowStockBtn = page.getByRole('button', { name: 'Low Stock' });
-      if (await lowStockBtn.isVisible()) {
-        await lowStockBtn.click();
-        await page.waitForTimeout(300);
-      }
+    const lowStockBtn = page.getByRole('button', { name: 'Low Stock' });
+    await expect(lowStockBtn).toBeVisible({ timeout: 10000 });
+    await lowStockBtn.click();
+    await page.waitForLoadState('networkidle');
 
-      const allItemsBtn = page.getByRole('button', { name: 'All Items' });
-      if (await allItemsBtn.isVisible()) {
-        await allItemsBtn.click();
-        await page.waitForTimeout(300);
-      }
-    }
+    const allItemsBtn = page.getByRole('button', { name: 'All Items' });
+    await expect(allItemsBtn).toBeVisible({ timeout: 10000 });
+    await allItemsBtn.click();
+    await page.waitForLoadState('networkidle');
   });
 
   test('should redirect unauthenticated from inventory', async ({ page }) => {

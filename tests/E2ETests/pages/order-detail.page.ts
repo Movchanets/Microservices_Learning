@@ -20,7 +20,7 @@ export class OrderDetailPage extends BasePage {
     this.statusBadge = page.locator('app-status-badge');
     
     // Total amount in the grid
-    this.totalAmountText = page.locator('div:has(> p.text-muted:text-is("Total")) > p.text-xl');
+    this.totalAmountText = page.getByTestId('order-total');
     
     this.orderItemsList = page.locator('ul.divide-y');
     this.orderItems = this.orderItemsList.locator('li');

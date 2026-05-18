@@ -82,17 +82,17 @@ import { OrderTimelineComponent } from '../order-timeline/order-timeline';
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p class="text-muted">Created</p>
-                <p class="font-medium">{{ order.createdAt | date:'medium' }}</p>
+                <p data-testid="order-created-at" class="font-medium">{{ order.createdAt | date:'medium' }}</p>
               </div>
               @if (order.completedAt) {
                 <div>
                   <p class="text-muted">Completed</p>
-                  <p class="font-medium">{{ order.completedAt | date:'medium' }}</p>
+                  <p data-testid="order-completed-at" class="font-medium">{{ order.completedAt | date:'medium' }}</p>
                 </div>
               }
               <div>
                 <p class="text-muted">Total</p>
-                <p class="text-xl font-bold font-lexend">{{ order.totalAmount | currency }}</p>
+                <p data-testid="order-total" class="text-xl font-bold font-lexend">{{ order.totalAmount | currency }}</p>
               </div>
               <div>
                 <p class="text-muted">Items</p>

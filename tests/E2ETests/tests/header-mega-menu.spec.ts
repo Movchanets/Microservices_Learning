@@ -54,12 +54,11 @@ test.describe('Plan 01: Header & Mega-Menu', () => {
 
   test('should show cart badge when items in cart', async ({ page, header }) => {
     const addBtn = page.getByRole('button', { name: /add to cart/i }).first();
-    if (await addBtn.isVisible()) {
-      await addBtn.click();
-      await page.waitForTimeout(500);
-      const hasBadge = await header.hasCartBadge();
-      expect(hasBadge).toBe(true);
-    }
+    await expect(addBtn).toBeVisible({ timeout: 10000 });
+    await addBtn.click();
+    await page.waitForLoadState('networkidle');
+    const hasBadge = await header.hasCartBadge();
+    expect(hasBadge).toBe(true);
   });
 
   test('should open cart drawer when clicking cart icon', async ({ page, header, cartDrawer }) => {

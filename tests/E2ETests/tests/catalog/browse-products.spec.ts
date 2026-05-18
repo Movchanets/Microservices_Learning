@@ -37,7 +37,7 @@ test.describe('Catalog: Browse Products', () => {
     await catalogPage.search('iPhone');
 
     // Wait for results to update
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should have fewer or equal products
     const filteredCount = await catalogPage.productCards.count();
@@ -50,13 +50,16 @@ test.describe('Catalog: Browse Products', () => {
 
     // Find and click a category button
     const categoryBtn = page.getByRole('button').filter({ hasText: /Electronics|Home|Clothing/ }).first();
-    if (await categoryBtn.isVisible()) {
-      await categoryBtn.click();
-      await page.waitForTimeout(500);
-
-      // Products should be filtered
-      const productCount = await catalogPage.productCards.count();
-      expect(productCount).toBeGreaterThan(0);
+    const isCategoryVisible = await categoryBtn.isVisible().catch(() => false);
+    if (!isCategoryVisible) {
+      test.skip(true, 'No category buttons available — skipping');
+      return;
     }
+    await categoryBtn.click();
+    await page.waitForLoadState('networkidle');
+
+    // Products should be filtered
+    const productCount = await catalogPage.productCards.count();
+    expect(productCount).toBeGreaterThan(0);
   });
 });

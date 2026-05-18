@@ -25,7 +25,9 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
             {
                 var sku = GetStringProperty(item, "Sku", "sku");
                 var quantity = GetInt32Property(item, "Quantity", "quantity");
-                cart.AddItem(sku, quantity);
+                var price = GetDecimalProperty(item, "Price", "price");
+                var sellerId = GetNullableStringProperty(item, "SellerId", "sellerId");
+                cart.AddItem(sku, quantity, price, sellerId);
             }
         }
 
@@ -47,6 +49,9 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
             writer.WriteStartObject();
             writer.WriteString(ConvertName(namingPolicy, "Sku"), item.Sku);
             writer.WriteNumber(ConvertName(namingPolicy, "Quantity"), item.Quantity);
+            writer.WriteNumber(ConvertName(namingPolicy, "Price"), item.Price);
+            if (item.SellerId is not null)
+                writer.WriteString(ConvertName(namingPolicy, "SellerId"), item.SellerId);
             writer.WriteEndObject();
         }
         writer.WriteEndArray();
@@ -73,6 +78,24 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
         if (element.TryGetProperty(name2, out prop))
             return prop.GetInt32();
         return 0;
+    }
+
+    private static decimal GetDecimalProperty(JsonElement element, string name1, string name2)
+    {
+        if (element.TryGetProperty(name1, out var prop))
+            return prop.GetDecimal();
+        if (element.TryGetProperty(name2, out prop))
+            return prop.GetDecimal();
+        return 0m;
+    }
+
+    private static string? GetNullableStringProperty(JsonElement element, string name1, string name2)
+    {
+        if (element.TryGetProperty(name1, out var prop))
+            return prop.GetString();
+        if (element.TryGetProperty(name2, out prop))
+            return prop.GetString();
+        return null;
     }
 
     private static bool TryGetProperty(JsonElement element, string name1, string name2, out JsonElement value)

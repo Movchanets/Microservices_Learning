@@ -5,7 +5,7 @@ export class ForgotPasswordPage extends BasePage {
   readonly emailInput: Locator;
   readonly forgotSubmitBtn: Locator;
 
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
     this.emailInput = page.getByTestId('email-input');
     this.forgotSubmitBtn = page.getByTestId('forgot-submit-btn');

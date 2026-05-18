@@ -45,8 +45,8 @@ export class HeaderComponent {
     this.searchInput = page.locator('header').getByPlaceholder('Search products...');
 
     // Cart — scope to header only to avoid matching product card buttons
-    this.cartBtn = page.locator('header button').filter({ has: page.locator('lucide-icon[name="ShoppingCart"]') });
-    this.cartBadge = page.locator('header [class*="absolute"][class*="-top-1"][class*="-right-1"]').filter({ hasText: /\d+/ });
+    this.cartBtn = page.getByTestId('cart-button');
+    this.cartBadge = page.getByTestId('cart-badge');
   }
 
   async clickLogo() {

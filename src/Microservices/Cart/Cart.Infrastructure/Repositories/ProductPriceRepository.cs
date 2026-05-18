@@ -10,13 +10,63 @@ public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepo
     public async Task<ProductPrice?> GetBySkuAsync(string sku, CancellationToken ct = default)
     {
         return await dbContext.ProductPrices
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Sku == sku, ct);
     }
 
     public async Task<ProductPrice?> GetByIdAsync(Guid productId, CancellationToken ct = default)
     {
         return await dbContext.ProductPrices
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == productId, ct);
+    }
+
+    public async Task UpsertAsync(
+        Guid productId, string sku, string name, decimal price, string currency, CancellationToken ct = default)
+    {
+        // Start with a clean tracker — prevents stale entities from previous consumer
+        // calls in the same scope from interfering.
+        dbContext.ChangeTracker.Clear();
+
+        var existing = await dbContext.ProductPrices
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+
+        if (existing is not null)
+        {
+            // Row exists — update in place.
+            existing.UpdateDetails(name, price, currency);
+            await dbContext.SaveChangesAsync(ct);
+            dbContext.ChangeTracker.Clear();
+            return;
+        }
+
+        // Row does not exist — insert.
+        dbContext.ProductPrices.Add(
+            ProductPrice.Create(productId, sku, name, price, currency));
+
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Race: another consumer inserted between our check and our save.
+            // Detach the failed entity, load the winner, update it.
+            dbContext.ChangeTracker.Clear();
+
+            var retry = await dbContext.ProductPrices
+                .FirstOrDefaultAsync(p => p.Id == productId, ct);
+
+            if (retry is not null)
+            {
+                retry.UpdateDetails(name, price, currency);
+                await dbContext.SaveChangesAsync(ct);
+            }
+        }
+        finally
+        {
+            dbContext.ChangeTracker.Clear();
+        }
     }
 
     public void Add(ProductPrice productPrice)

@@ -1,4 +1,5 @@
 using Cart.Domain.Aggregates;
+using Cart.Domain.Repositories;
 using Cart.Infrastructure.Data;
 using Cart.Infrastructure.Repositories;
 using Marketplace.IntegrationTests.Shared;
@@ -33,10 +34,12 @@ public sealed class CartDatabaseFixture : IAsyncLifetime
         });
 
         services.AddScoped<CartRepository>();
+        services.AddScoped<ICartRepository>(sp => sp.GetRequiredService<CartRepository>());
+        services.AddScoped<IProductPriceRepository, ProductPriceRepository>();
 
         ServiceProvider = services.BuildServiceProvider();
 
-        // Create schema (no migrations exist, use EnsureCreated)
+        // Create schema
         using var scope = ServiceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CartDbContext>();
         await context.Database.EnsureCreatedAsync();

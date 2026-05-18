@@ -11,7 +11,7 @@ import { ReviewSummary as ReviewSummaryType } from '../../catalog.models';
       <div class="flex flex-col gap-6">
         <!-- Average Rating -->
         <div class="flex items-center gap-4">
-          <div class="text-5xl font-bold text-foreground font-lexend">
+          <div data-testid="average-rating" class="text-5xl font-bold text-foreground font-lexend">
             {{ s.averageRating.toFixed(1) }}
           </div>
           <div class="flex flex-col gap-1">

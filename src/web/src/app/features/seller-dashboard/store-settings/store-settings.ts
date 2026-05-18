@@ -32,6 +32,7 @@ import { StoreSettingsStore } from '../store-settings.store';
           <div class="space-y-3">
             <input [value]="storeName()" (input)="storeName.set($any($event.target).value)"
                    placeholder="Store Name"
+                   data-testid="store-name-input"
                    class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
             <textarea [value]="storeDesc()" (input)="storeDesc.set($any($event.target).value)"
                       placeholder="Store Description"
@@ -49,6 +50,7 @@ import { StoreSettingsStore } from '../store-settings.store';
           <div>
             <label class="block text-sm font-medium mb-1.5" i18n>Store Name</label>
             <input [value]="storeName()" (input)="storeName.set($any($event.target).value)"
+                   data-testid="store-name-input"
                    class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
           </div>
           <div>

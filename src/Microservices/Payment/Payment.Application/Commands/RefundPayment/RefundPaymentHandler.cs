@@ -31,9 +31,6 @@ public sealed class RefundPaymentHandler(
             return Result<Guid>.Failure(
                 $"Refund amount ({refundAmount:C}) would exceed remaining refundable amount ({transaction.Amount - totalRefunded:C})");
 
-        if (totalRefunded >= transaction.Amount)
-            return Result<Guid>.Failure("Transaction already fully refunded");
-
         var refund = Refund.Create(transaction.Id, transaction.OrderId, refundAmount, request.Reason);
 
         refund.MarkProcessed($"ref_{Guid.NewGuid():N}");

@@ -33,6 +33,9 @@ public sealed class Refund : Entity
 
     public void MarkProcessed(string gatewayRefundId)
     {
+        if (Status != RefundStatus.Pending)
+            throw new InvalidOperationException($"Cannot process refund in {Status} state");
+
         Status = RefundStatus.Processed;
         GatewayRefundId = gatewayRefundId;
         ProcessedAt = DateTime.UtcNow;
@@ -40,6 +43,9 @@ public sealed class Refund : Entity
 
     public void MarkFailed(string reason)
     {
+        if (Status != RefundStatus.Pending)
+            throw new InvalidOperationException($"Cannot fail refund in {Status} state");
+
         Status = RefundStatus.Failed;
         Reason = reason;
         ProcessedAt = DateTime.UtcNow;

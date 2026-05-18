@@ -7,7 +7,7 @@ export class CatalogPage extends BasePage {
   readonly catalogContainer: Locator;
   readonly catalogTitle: Locator;
 
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
     this.searchInput = page.getByTestId('search-input');
     this.productCards = page.getByTestId(/product-card-.*/);

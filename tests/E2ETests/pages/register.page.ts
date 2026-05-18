@@ -1,4 +1,4 @@
-import { Locator, expect } from '@playwright/test';
+import { Locator, expect, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export class RegisterPage extends BasePage {
@@ -8,26 +8,13 @@ export class RegisterPage extends BasePage {
   readonly passwordInput: Locator;
   readonly registerSubmitBtn: Locator;
 
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
     this.firstNameInput = page.getByTestId('first-name-input');
     this.lastNameInput = page.getByTestId('last-name-input');
     this.emailInput = page.getByTestId('email-input');
     this.passwordInput = page.getByTestId('password-input');
     this.registerSubmitBtn = page.getByTestId('register-submit-btn');
-  }
-
-  private async fillStable(input: Locator, value: string) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await input.fill(value);
-      await expect(input).toHaveValue(value);
-
-      if ((await input.inputValue()) === value) {
-        return;
-      }
-
-      await this.page.waitForTimeout(100);
-    }
   }
 
   async register(firstName: string, lastName: string, email: string, password: string) {

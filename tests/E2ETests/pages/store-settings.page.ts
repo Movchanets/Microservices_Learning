@@ -12,7 +12,7 @@ export class StoreSettingsPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.storeNameInput = page.locator('input').first();
+    this.storeNameInput = page.getByTestId('store-name-input');
     this.storeDescInput = page.locator('textarea');
     this.contactEmailInput = page.locator('input[type="email"]');
     this.saveBtn = page.getByRole('button', { name: /save changes/i });

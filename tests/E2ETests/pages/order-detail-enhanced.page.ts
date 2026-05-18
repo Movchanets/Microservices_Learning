@@ -33,9 +33,9 @@ export class OrderDetailEnhancedPage extends BasePage {
     this.backToOrdersLink = page.getByRole('link', { name: 'Back to Orders' });
     this.orderIdText = page.locator('h1 + p.font-mono, h2 + p.font-mono');
     this.statusBadge = page.locator('app-status-badge');
-    this.totalAmountText = page.locator('div:has(> p.text-muted:text-is("Total")) > p.text-xl');
-    this.createdAtText = page.locator('div:has(> p.text-muted:text-is("Created")) > p.font-medium');
-    this.completedAtText = page.locator('div:has(> p.text-muted:text-is("Completed")) > p.font-medium');
+    this.totalAmountText = page.getByTestId('order-total');
+    this.createdAtText = page.getByTestId('order-created-at');
+    this.completedAtText = page.getByTestId('order-completed-at');
     this.orderItemsList = page.locator('ul.divide-y');
     this.orderItems = this.orderItemsList.locator('li');
 

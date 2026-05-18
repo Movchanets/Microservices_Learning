@@ -6,7 +6,7 @@ export class ProfilePage extends BasePage {
   readonly userNameTitle: Locator;
   readonly userEmailText: Locator;
 
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
     this.logoutBtn = page.getByTestId('profile-logout-btn');
     this.userNameTitle = page.locator('h1');

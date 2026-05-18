@@ -34,7 +34,8 @@ var messaging = builder.AddRabbitMQ("messaging")
 // Elastic.Clients.Elasticsearch 9.4.0 requires ES server 9.x
 var elasticsearch = builder.AddElasticsearch("elasticsearch")
     .WithImage("elasticsearch")
-    .WithImageTag("9.0.1");
+    .WithImageTag("9.0.1")
+    .WithEnvironment("ES_JAVA_OPTS", "-Xms512m -Xmx512m");
 
 // ──────────────────────────────────────────────
 // Microservices (to be added in later phases)

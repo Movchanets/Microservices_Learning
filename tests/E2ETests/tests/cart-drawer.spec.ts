@@ -40,14 +40,13 @@ test.describe('Plan 03: Cart Drawer & Checkout', () => {
 
   test('should add item and see it in cart drawer', async ({ page, header, cartDrawer }) => {
     const addBtn = page.getByRole('button', { name: /add to cart/i }).first();
-    if (await addBtn.isVisible()) {
-      await addBtn.click();
-      await page.waitForTimeout(500);
-      await header.openCart();
-      await cartDrawer.waitForOpen();
-      const itemCount = await cartDrawer.getItemCount();
-      expect(itemCount).toBeGreaterThan(0);
-    }
+    await expect(addBtn).toBeVisible({ timeout: 10000 });
+    await addBtn.click();
+    await page.waitForLoadState('networkidle');
+    await header.openCart();
+    await cartDrawer.waitForOpen();
+    const itemCount = await cartDrawer.getItemCount();
+    expect(itemCount).toBeGreaterThan(0);
   });
 
   test('should display checkout page with address form', async ({ page, checkoutEnhancedPage }) => {

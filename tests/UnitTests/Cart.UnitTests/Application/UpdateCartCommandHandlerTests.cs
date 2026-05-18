@@ -24,7 +24,7 @@ public class UpdateCartCommandHandlerTests
         var existingCart = new ShoppingCart(buyerId);
         existingCart.AddItem("old-sku", 1);
 
-        _repositoryMock.Setup(r => r.GetCartAsync(buyerId, It.IsAny<CancellationToken>()))
+        _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(buyerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingCart);
 
         var newItems = new List<CartItemDto>
@@ -46,6 +46,6 @@ public class UpdateCartCommandHandlerTests
         result.Value.Items.Should().Contain(i => i.Sku == "new-sku-2" && i.Quantity == 3 && i.SellerId == "seller-B");
         result.Value.Items.Should().NotContain(i => i.Sku == "old-sku");
 
-        _repositoryMock.Verify(r => r.UpdateCartAsync(existingCart, It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.SaveCartAsync(existingCart, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

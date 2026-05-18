@@ -45,12 +45,14 @@
 
       <!-- Cart Icon -->
       <button 
+        data-testid="cart-button"
         (click)="cartStore.toggleDrawer()"
         class="relative flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors h-11 w-11 rounded-xl hover:bg-primary/5"
       >
         <lucide-icon [name]="CartIcon" class="w-5 h-5"></lucide-icon>
         @if (cartStore.totalItems() > 0) {
         <div
+          data-testid="cart-badge"
           class="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-primary text-white text-[10px] font-bold border-2 border-background"
         >
           {{ cartStore.totalItems() }}

@@ -24,7 +24,7 @@ export class InventoryPage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.pageHeading = page.getByRole('heading', { name: /inventory/i });
-    this.lowStockAlert = page.locator('[class*="orange"]').filter({ hasText: /low.*stock/i });
+    this.lowStockAlert = page.getByTestId('low-stock-alert');
     this.viewLowStockBtn = this.lowStockAlert.getByRole('button', { name: /view items/i });
 
     this.allItemsFilter = page.getByRole('button', { name: 'All Items' });

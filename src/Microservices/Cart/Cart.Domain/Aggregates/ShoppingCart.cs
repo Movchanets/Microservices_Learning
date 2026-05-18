@@ -31,7 +31,7 @@ public sealed class ShoppingCart : AggregateRoot
         }
         else
         {
-            _items.Add(new CartItem(sku, quantity, price, sellerId));
+            _items.Add(new CartItem(BuyerId, sku, quantity, price, sellerId));
         }
     }
 

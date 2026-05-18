@@ -1,7 +1,9 @@
+using BuildingBlocks.Infrastructure.Models;
 using BuildingBlocks.SharedContracts.Events.Payment;
 using MassTransit;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Payment.Application.Commands.RefundPayment;
 using Payment.Domain.Aggregates;
 
@@ -11,6 +13,8 @@ public sealed record RefundRequest(string Reason, decimal? Amount = null);
 
 public static class PaymentEndpoints
 {
+    private const int MaxRefundRetries = 2;
+
     public static void MapPaymentEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/payments")
@@ -63,7 +67,24 @@ public static class PaymentEndpoints
             CancellationToken ct) =>
         {
             var cmd = new RefundPaymentCommand(transactionId, request.Reason, request.Amount);
-            var result = await sender.Send(cmd, ct);
+
+            // Retry on concurrency conflict (concurrent refund requests)
+            Result<Guid>? result = null;
+            for (var attempt = 0; attempt <= MaxRefundRetries; attempt++)
+            {
+                try
+                {
+                    result = await sender.Send(cmd, ct);
+                    break;
+                }
+                catch (DbUpdateConcurrencyException) when (attempt < MaxRefundRetries)
+                {
+                    // Concurrent refund modified data — retry with fresh read
+                }
+            }
+
+            if (result is null)
+                return Results.StatusCode(500);
 
             if (!result.IsSuccess)
                 return Results.BadRequest(new { result.Error });

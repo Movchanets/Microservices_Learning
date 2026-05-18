@@ -37,7 +37,6 @@ test.describe('Full Checkout Flow', () => {
     // --- Step 3: Navigate to cart and verify item ---
     await cartPage.goto();
     await cartPage.waitForPageLoad();
-    await page.waitForTimeout(1000);
 
     const isEmpty = await cartPage.isEmpty();
     expect(isEmpty).toBe(false);
@@ -59,7 +58,7 @@ test.describe('Full Checkout Flow', () => {
       country: 'US',
     });
     await checkoutEnhancedPage.saveAddress();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // --- Step 6: Select express shipping (to trigger change event) ---
     await checkoutEnhancedPage.selectExpressShipping();
@@ -75,7 +74,7 @@ test.describe('Full Checkout Flow', () => {
     await checkoutEnhancedPage.placeOrder();
 
     // --- Step 9: Verify order was submitted ---
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     const submittedVisible = await checkoutEnhancedPage.orderSubmittedHeading.isVisible().catch(() => false);
     const completedVisible = await checkoutEnhancedPage.isCompleted().catch(() => false);

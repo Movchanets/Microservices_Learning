@@ -1,61 +1,41 @@
-import { test, expect } from '../../fixtures/test-base';
-import * as users from '../../data/users.json';
+import { authTest as test, expect } from '../../fixtures/auth.fixture';
 
 test.describe('Orders: Order History', () => {
 
-  test('should display orders page after login', async ({ page }) => {
-    // Login
-    await page.goto('/auth/login');
-    await page.getByPlaceholder('name@company.com').fill(users.validUser.email);
-    await page.getByPlaceholder('••••••••').fill(users.validUser.password);
-    await page.getByRole('button', { name: /sign in/i }).click();
-    await expect(page).toHaveURL(/\/catalog/);
-
-    // Navigate to orders
+  test('should display orders page after login', async ({ buyerContext }) => {
+    const page = await buyerContext.newPage();
     await page.goto('/orders');
     await page.waitForLoadState('networkidle');
 
-    // Should see orders heading
     await expect(page.getByRole('heading', { name: 'My Orders' })).toBeVisible();
+    await page.close();
   });
 
-  test('should show empty state when no orders', async ({ page }) => {
-    // Login as existing user
-    await page.goto('/auth/login');
-    await page.getByPlaceholder('name@company.com').fill(users.validUser.email);
-    await page.getByPlaceholder('••••••••').fill(users.validUser.password);
-    await page.getByRole('button', { name: /sign in/i }).click();
-    await expect(page).toHaveURL(/\/catalog/);
-
-    // Go to orders
+  test('should show empty state when no orders', async ({ buyerContext }) => {
+    const page = await buyerContext.newPage();
     await page.goto('/orders');
     await page.waitForLoadState('networkidle');
 
-    // Should see orders heading
     const heading = page.getByRole('heading', { name: 'My Orders' });
     await expect(heading).toBeVisible();
+    await page.close();
   });
 
-  test('should navigate to order detail when clicking an order', async ({ page }) => {
-    // Login
-    await page.goto('/auth/login');
-    await page.getByPlaceholder('name@company.com').fill(users.validUser.email);
-    await page.getByPlaceholder('••••••••').fill(users.validUser.password);
-    await page.getByRole('button', { name: /sign in/i }).click();
-    await expect(page).toHaveURL(/\/catalog/);
-
-    // Go to orders
+  test('should navigate to order detail when clicking an order', async ({ buyerContext }) => {
+    const page = await buyerContext.newPage();
     await page.goto('/orders');
     await page.waitForLoadState('networkidle');
 
-    // Click first order if exists
     const orderLink = page.getByRole('link').filter({ hasText: /View Details|order-/i }).first();
-    if (await orderLink.isVisible()) {
-      await orderLink.click();
-      await page.waitForLoadState('networkidle');
-
-      // Should be on order detail page
-      await expect(page).toHaveURL(/\/orders\/.+/);
+    const isOrderVisible = await orderLink.isVisible().catch(() => false);
+    if (!isOrderVisible) {
+      test.skip(true, 'No orders available for this user — skipping');
+      await page.close();
+      return;
     }
+    await orderLink.click();
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/orders\/.+/);
+    await page.close();
   });
 });

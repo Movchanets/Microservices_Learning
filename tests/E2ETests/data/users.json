@@ -1,14 +1,15 @@
 {
   "validUser": {
-    "email": "admin@marketplace.com",
+    "email": "buyer@marketplace.com",
     "password": "P@ssw0rd123!",
-    "name": "Admin User",
-    "role": "Admin"
+    "name": "Test Buyer",
+    "role": "Buyer"
   },
   "buyerUser": {
-    "email": "admin@marketplace.com",
+    "email": "buyer@marketplace.com",
     "password": "P@ssw0rd123!",
-    "name": "Admin User"
+    "name": "Test Buyer",
+    "role": "Buyer"
   },
   "sellerUser": {
     "email": "store.tech@marketplace.com",
@@ -24,7 +25,7 @@
   },
   "invalidUser": {
     "email": "wrong@test.com",
-    "password": "wrongpassword"
+    "password": "WrongPass123!"
   },
   "blockedUser": {
     "email": "blocked@test.com",

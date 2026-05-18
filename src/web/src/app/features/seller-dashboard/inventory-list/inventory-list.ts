@@ -13,7 +13,7 @@ import { ToastService } from '../../../core/services/toast.service';
     <div class="space-y-6">
       <!-- Low Stock Alert Banner -->
       @if (store.lowStockCount() > 0) {
-        <div class="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center gap-3">
+        <div data-testid="low-stock-alert" class="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center gap-3">
           <lucide-icon name="AlertTriangle" class="w-5 h-5 text-orange-500"></lucide-icon>
           <div class="flex-1">
             <p class="text-sm font-medium text-foreground">

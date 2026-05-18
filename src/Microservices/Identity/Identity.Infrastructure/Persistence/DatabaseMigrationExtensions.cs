@@ -48,6 +48,7 @@ public static class DatabaseMigrationExtensions
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Identity.DatabaseSeeding");
         var hasher = scope.ServiceProvider.GetService<Identity.Application.Interfaces.IPasswordHasher>();
         var adminId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var buyerId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var storeSellerOneId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var storeSellerTwoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
@@ -68,6 +69,19 @@ public static class DatabaseMigrationExtensions
                 Identity.Domain.Enums.UserRole.Admin,
                 userId: adminId);
             context.Users.Add(admin);
+        }
+
+        if (!context.Users.Any(u => u.Email == Email.Create("buyer@marketplace.com")))
+        {
+            logger.LogInformation("Seeding buyer user...");
+            var buyer = Identity.Domain.Aggregates.User.Create(
+                "buyer@marketplace.com",
+                hasher.Hash("P@ssw0rd123!"),
+                "Test",
+                "Buyer",
+                Identity.Domain.Enums.UserRole.Buyer,
+                userId: buyerId);
+            context.Users.Add(buyer);
         }
 
         if (!context.Users.Any(u => u.Email == Email.Create("store.tech@marketplace.com")))

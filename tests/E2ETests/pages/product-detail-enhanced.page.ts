@@ -45,7 +45,7 @@ export class ProductDetailEnhancedPage extends BasePage {
 
     // Reviews
     this.reviewSummary = page.locator('app-review-summary');
-    this.averageRating = this.reviewSummary.locator('[class*="text-2xl"], [class*="font-bold"]').first();
+    this.averageRating = this.reviewSummary.getByTestId('average-rating');
     this.reviewCount = this.reviewSummary.locator('span, p').filter({ hasText: /review/i });
     this.writeReviewBtn = page.getByRole('button', { name: /write.*review|add.*review/i });
     this.reviewList = page.locator('app-review-list');

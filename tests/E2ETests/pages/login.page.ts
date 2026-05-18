@@ -1,4 +1,4 @@
-import { Locator, expect } from '@playwright/test';
+import { Locator, expect, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export class LoginPage extends BasePage {
@@ -7,25 +7,12 @@ export class LoginPage extends BasePage {
   readonly loginSubmitBtn: Locator;
   readonly errorMessage: Locator;
 
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
     this.emailInput = page.getByTestId('email-input');
     this.passwordInput = page.getByTestId('password-input');
     this.loginSubmitBtn = page.getByTestId('login-submit-btn');
     this.errorMessage = page.locator('role=alert');
-  }
-
-  private async fillStable(input: Locator, value: string) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await input.fill(value);
-      await expect(input).toHaveValue(value);
-
-      if ((await input.inputValue()) === value) {
-        return;
-      }
-
-      await this.page.waitForTimeout(100);
-    }
   }
 
   async login(email: string, password: string) {

@@ -1,7 +1,9 @@
 using BuildingBlocks.SharedContracts.Events.Catalog;
 using Cart.Domain.Entities;
+using Cart.Domain.Repositories;
 using Cart.Infrastructure.Data;
 using Cart.Infrastructure.Messaging.Consumers;
+using Cart.Infrastructure.Repositories;
 using FluentAssertions;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +28,9 @@ public class CatalogToCartContractTests
             .Options;
         return new CartDbContext(options);
     }
+
+    private IProductPriceRepository CreateRepository(CartDbContext dbContext)
+        => new ProductPriceRepository(dbContext);
 
     [Fact]
     public async Task ProductCreatedEvent_Contract_ShouldCreateProductPriceInCart()
@@ -54,7 +59,8 @@ public class CatalogToCartContractTests
 
         // Act
         await using var dbContext = CreateDbContext();
-        var consumer = new ProductCreatedConsumer(dbContext, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var repository = CreateRepository(dbContext);
+        var consumer = new ProductCreatedConsumer(repository, Mock.Of<ILogger<ProductCreatedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert - Cart should have a ProductPrice record
@@ -93,10 +99,12 @@ public class CatalogToCartContractTests
 
         // Act - consume twice with same DB context
         await using var dbContext = CreateDbContext();
-        var consumer1 = new ProductCreatedConsumer(dbContext, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var repository = CreateRepository(dbContext);
+
+        var consumer1 = new ProductCreatedConsumer(repository, Mock.Of<ILogger<ProductCreatedConsumer>>());
         await consumer1.Consume(consumeContext.Object);
 
-        var consumer2 = new ProductCreatedConsumer(dbContext, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var consumer2 = new ProductCreatedConsumer(repository, Mock.Of<ILogger<ProductCreatedConsumer>>());
         await consumer2.Consume(consumeContext.Object);
 
         // Assert - only one record
@@ -133,7 +141,8 @@ public class CatalogToCartContractTests
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
-        var consumer = new ProductUpdatedConsumer(dbContext, Mock.Of<ILogger<ProductUpdatedConsumer>>());
+        var repository = CreateRepository(dbContext);
+        var consumer = new ProductUpdatedConsumer(repository, Mock.Of<ILogger<ProductUpdatedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert
@@ -168,7 +177,8 @@ public class CatalogToCartContractTests
 
         // Act
         await using var dbContext = CreateDbContext();
-        var consumer = new ProductUpdatedConsumer(dbContext, Mock.Of<ILogger<ProductUpdatedConsumer>>());
+        var repository = CreateRepository(dbContext);
+        var consumer = new ProductUpdatedConsumer(repository, Mock.Of<ILogger<ProductUpdatedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert - should be created as fallback

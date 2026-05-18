@@ -33,6 +33,7 @@ import { AdminStore as AdminStoreModel } from '../admin.models';
         <div class="space-y-4">
           @for (storeItem of store.pendingStores(); track storeItem.id) {
             <div class="bg-card/60 backdrop-blur-sm rounded-2xl border border-border p-6">
+                    data-testid="store-verification-card"
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <div class="flex items-center gap-3 mb-2">

@@ -20,7 +20,7 @@ export class CartDrawerComponent {
     this.emptyMessage = page.getByText('Your cart is empty');
     this.itemsList = this.drawer.locator('ul');
     this.items = this.itemsList.locator('li');
-    this.totalText = this.drawer.locator('p.text-2xl.font-bold');
+    this.totalText = this.drawer.getByTestId('cart-total');
     this.viewCartLink = page.getByRole('link', { name: 'View Full Cart' });
     this.checkoutLink = page.getByRole('link', { name: 'Go to Checkout' });
   }

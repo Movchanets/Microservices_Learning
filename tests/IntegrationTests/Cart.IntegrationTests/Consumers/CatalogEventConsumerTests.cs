@@ -1,5 +1,6 @@
 using BuildingBlocks.SharedContracts.Events.Catalog;
 using Cart.Domain.Entities;
+using Cart.Domain.Repositories;
 using Cart.Infrastructure.Data;
 using Cart.Infrastructure.Messaging.Consumers;
 using FluentAssertions;
@@ -50,12 +51,14 @@ public class CatalogEventConsumerTests
 
         // Act
         using var scope = _fixture.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
-        var consumer = new ProductCreatedConsumer(dbContext, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var priceRepository = scope.ServiceProvider.GetRequiredService<IProductPriceRepository>();
+        var consumer = new ProductCreatedConsumer(priceRepository, Mock.Of<ILogger<ProductCreatedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert
+        var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
         var productPrice = await dbContext.ProductPrices
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == productId);
 
         productPrice.Should().NotBeNull();
@@ -90,15 +93,16 @@ public class CatalogEventConsumerTests
 
         // Act — consume the same event twice against the same DB
         using var scope = _fixture.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
+        var priceRepository = scope.ServiceProvider.GetRequiredService<IProductPriceRepository>();
 
-        var consumer1 = new ProductCreatedConsumer(dbContext, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var consumer1 = new ProductCreatedConsumer(priceRepository, Mock.Of<ILogger<ProductCreatedConsumer>>());
         await consumer1.Consume(consumeContext.Object);
 
-        var consumer2 = new ProductCreatedConsumer(dbContext, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var consumer2 = new ProductCreatedConsumer(priceRepository, Mock.Of<ILogger<ProductCreatedConsumer>>());
         await consumer2.Consume(consumeContext.Object);
 
         // Assert — only one record for this product
+        var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
         var count = await dbContext.ProductPrices.CountAsync(p => p.Id == productId);
         count.Should().Be(1);
 
@@ -140,7 +144,8 @@ public class CatalogEventConsumerTests
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
-        var consumer = new ProductUpdatedConsumer(dbContext, Mock.Of<ILogger<ProductUpdatedConsumer>>());
+        var priceRepository = scope.ServiceProvider.GetRequiredService<IProductPriceRepository>();
+        var consumer = new ProductUpdatedConsumer(priceRepository, Mock.Of<ILogger<ProductUpdatedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert
@@ -177,11 +182,13 @@ public class CatalogEventConsumerTests
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
-        var consumer = new ProductUpdatedConsumer(dbContext, Mock.Of<ILogger<ProductUpdatedConsumer>>());
+        var priceRepository = scope.ServiceProvider.GetRequiredService<IProductPriceRepository>();
+        var consumer = new ProductUpdatedConsumer(priceRepository, Mock.Of<ILogger<ProductUpdatedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert — should have been created as a fallback
         var productPrice = await dbContext.ProductPrices
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == productId);
 
         productPrice.Should().NotBeNull();

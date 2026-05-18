@@ -27,7 +27,7 @@ export class AdminPage extends BasePage {
     this.statsCards = page.locator('app-stats-card');
     this.usersTable = page.getByRole('table');
     this.userRows = this.usersTable.locator('tbody tr');
-    this.verificationCards = page.locator('app-store-verification > div > div > div');
+    this.verificationCards = page.getByTestId('store-verification-card');
   }
 
   async goto() {

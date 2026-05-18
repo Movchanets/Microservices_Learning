@@ -49,7 +49,7 @@ import { Order } from '../../checkout/checkout.models';
                     <td class="p-4 font-mono text-xs">{{ order.id | slice:0:8 }}...</td>
                     <td class="p-4">{{ order.buyerId | slice:0:8 }}...</td>
                     <td class="p-4">
-                      <span [class]="statusClass(order.status)">{{ order.status }}</span>
+                      <span data-testid="order-status-badge" [class]="statusClass(order.status)">{{ order.status }}</span>
                     </td>
                     <td class="p-4 font-medium">\${{ order.totalAmount | number:'1.2-2' }}</td>
                     <td class="p-4 text-muted">{{ order.createdAt | date:'short' }}</td>

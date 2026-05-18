@@ -22,11 +22,10 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await page.waitForLoadState('networkidle');
 
     const firstProduct = page.locator('[data-testid^="product-card-"] a').first();
-    if (await firstProduct.isVisible()) {
-      await firstProduct.click();
-      await page.waitForLoadState('networkidle');
-      await expect(productDetailEnhancedPage.addToCartBtn).toBeVisible();
-    }
+    await expect(firstProduct).toBeVisible({ timeout: 10000 });
+    await firstProduct.click();
+    await page.waitForLoadState('networkidle');
+    await expect(productDetailEnhancedPage.addToCartBtn).toBeVisible();
   });
 
   test('should show stock indicator on product detail', async ({ page, productDetailEnhancedPage }) => {
@@ -34,12 +33,11 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await page.waitForLoadState('networkidle');
 
     const firstProduct = page.locator('[data-testid^="product-card-"] a').first();
-    if (await firstProduct.isVisible()) {
-      await firstProduct.click();
-      await page.waitForLoadState('networkidle');
-      const stockVisible = await productDetailEnhancedPage.stockIndicator.isVisible();
-      expect(stockVisible).toBe(true);
-    }
+    await expect(firstProduct).toBeVisible({ timeout: 10000 });
+    await firstProduct.click();
+    await page.waitForLoadState('networkidle');
+    const stockVisible = await productDetailEnhancedPage.stockIndicator.isVisible();
+    expect(stockVisible).toBe(true);
   });
 
   test('should change quantity with plus/minus buttons', async ({ page, productDetailEnhancedPage }) => {
@@ -47,12 +45,11 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await page.waitForLoadState('networkidle');
 
     const firstProduct = page.locator('[data-testid^="product-card-"] a').first();
-    if (await firstProduct.isVisible()) {
-      await firstProduct.click();
-      await page.waitForLoadState('networkidle');
-      await productDetailEnhancedPage.increaseQuantity();
-      await productDetailEnhancedPage.decreaseQuantity();
-    }
+    await expect(firstProduct).toBeVisible({ timeout: 10000 });
+    await firstProduct.click();
+    await page.waitForLoadState('networkidle');
+    await productDetailEnhancedPage.increaseQuantity();
+    await productDetailEnhancedPage.decreaseQuantity();
   });
 
   test('should add product to cart from detail page', async ({ page, productDetailEnhancedPage }) => {
@@ -60,12 +57,11 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await page.waitForLoadState('networkidle');
 
     const firstProduct = page.locator('[data-testid^="product-card-"] a').first();
-    if (await firstProduct.isVisible()) {
-      await firstProduct.click();
-      await page.waitForLoadState('networkidle');
-      await productDetailEnhancedPage.addToCart();
-      await page.waitForTimeout(500);
-    }
+    await expect(firstProduct).toBeVisible({ timeout: 10000 });
+    await firstProduct.click();
+    await page.waitForLoadState('networkidle');
+    await productDetailEnhancedPage.addToCart();
+    await page.waitForLoadState('networkidle');
   });
 
   test('should display review section when reviews exist', async ({ page, productDetailEnhancedPage }) => {
@@ -73,13 +69,12 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await page.waitForLoadState('networkidle');
 
     const firstProduct = page.locator('[data-testid^="product-card-"] a').first();
-    if (await firstProduct.isVisible()) {
-      await firstProduct.click();
-      await page.waitForLoadState('networkidle');
-      const hasReviews = await productDetailEnhancedPage.reviewSummary.isVisible();
-      const hasNoReviews = await page.getByText(/no reviews|be the first/i).isVisible();
-      expect(hasReviews || hasNoReviews).toBe(true);
-    }
+    await expect(firstProduct).toBeVisible({ timeout: 10000 });
+    await firstProduct.click();
+    await page.waitForLoadState('networkidle');
+    const hasReviews = await productDetailEnhancedPage.reviewSummary.isVisible();
+    const hasNoReviews = await page.getByText(/no reviews|be the first/i).isVisible();
+    expect(hasReviews || hasNoReviews).toBe(true);
   });
 
   test('should show frequently bought together section', async ({ page, productDetailEnhancedPage }) => {
@@ -87,11 +82,10 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await page.waitForLoadState('networkidle');
 
     const firstProduct = page.locator('[data-testid^="product-card-"] a').first();
-    if (await firstProduct.isVisible()) {
-      await firstProduct.click();
-      await page.waitForLoadState('networkidle');
-      const hasFBT = await productDetailEnhancedPage.frequentlyBoughtTogether.isVisible();
-      expect(typeof hasFBT).toBe('boolean');
-    }
+    await expect(firstProduct).toBeVisible({ timeout: 10000 });
+    await firstProduct.click();
+    await page.waitForLoadState('networkidle');
+    const hasFBT = await productDetailEnhancedPage.frequentlyBoughtTogether.isVisible();
+    expect(hasFBT).toBe(true); // Frequently bought together should be visible
   });
 });

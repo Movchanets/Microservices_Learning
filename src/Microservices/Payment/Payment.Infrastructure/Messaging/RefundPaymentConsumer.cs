@@ -49,9 +49,14 @@ public sealed class RefundPaymentConsumer(
         }
         else
         {
-            logger.LogWarning(
-                "Refund failed for Order {OrderId}: {Error}",
+            logger.LogError(
+                "Refund failed for Order {OrderId}: {Error} — throwing for MassTransit retry",
                 cmd.OrderId, result.Error);
+
+            // Throw so MassTransit retries with redelivery policy.
+            // Leaving the system in "cancelled but not refunded" state is unacceptable.
+            throw new InvalidOperationException(
+                $"Refund failed for Order {cmd.OrderId}: {result.Error}");
         }
     }
 }
