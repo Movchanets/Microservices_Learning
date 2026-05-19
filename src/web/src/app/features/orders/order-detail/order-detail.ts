@@ -26,7 +26,7 @@ import { OrderTimelineComponent } from '../order-timeline/order-timeline';
             <div class="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
           </div>
         } @else if (store.selectedOrder(); as order) {
-          <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-6 mb-6">
+          <div class="bg-card rounded-3xl border border-border p-6 mb-6">
             <div class="flex items-center justify-between mb-4">
               <div>
                 <h1 class="text-2xl font-bold font-lexend">Order Details</h1>
@@ -101,7 +101,7 @@ import { OrderTimelineComponent } from '../order-timeline/order-timeline';
             </div>
           </div>
 
-          <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border overflow-hidden">
+          <div class="bg-card rounded-3xl border border-border overflow-hidden">
             <div class="p-5 border-b border-border">
               <h2 class="font-semibold">Items</h2>
             </div>

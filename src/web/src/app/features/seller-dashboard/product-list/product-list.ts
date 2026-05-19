@@ -15,7 +15,7 @@ import { SellerProduct } from '../seller.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, CurrencyPipe, LucideAngularModule],
   template: `
-    <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border overflow-hidden">
+    <div class="bg-card rounded-3xl border border-border overflow-hidden">
       <div class="p-6 flex items-center justify-between border-b border-border">
         <h2 class="text-xl font-bold font-lexend" i18n>My Products</h2>
         <a routerLink="/seller/products/new"

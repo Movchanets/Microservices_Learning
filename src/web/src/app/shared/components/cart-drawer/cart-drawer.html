@@ -23,7 +23,7 @@
       <div class="cart-item" *ngFor="let item of cartStore.items()">
         <div class="item-details">
           <h3>{{ item.sku }}</h3>
-          <p class="price">${{ item.unitPrice | number:'1.2-2' }}</p>
+          <p class="price">${{ item.price | number:'1.2-2' }}</p>
         </div>
         <div class="item-controls">
           <div class="quantity-control">

@@ -24,13 +24,13 @@ import { Order } from '../../checkout/checkout.models';
           <div class="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
         </div>
       } @else if (orders().length === 0) {
-        <div class="text-center py-16 bg-card/60 backdrop-blur-sm rounded-3xl border border-border">
+        <div class="text-center py-16 bg-card rounded-3xl border border-border">
           <lucide-icon name="Package" class="w-16 h-16 mx-auto mb-4 text-muted/30"></lucide-icon>
           <p class="text-xl font-medium text-foreground mb-2">No orders yet</p>
           <p class="text-muted">Orders containing your products will appear here</p>
         </div>
       } @else {
-        <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border overflow-hidden">
+        <div class="bg-card rounded-3xl border border-border overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>

@@ -1,5 +1,5 @@
 <header
-  class="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl transition-all duration-300 relative"
+  class="sticky top-0 z-50 w-full border-b border-border bg-card shadow-sm transition-all duration-300 relative"
 >
   <div class="container mx-auto flex h-20 items-center justify-between gap-6 px-6">
     <!-- Left: Logo & Catalog Button -->
@@ -11,7 +11,7 @@
         data-testid="header-logo"
       >
         <div
-          class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform"
+          class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center group-hover:scale-110 transition-transform"
         >
           <span class="text-white font-bold text-2xl">M</span>
         </div>
@@ -20,7 +20,7 @@
 
       <button 
         (click)="toggleMegaMenu()"
-        class="flex items-center gap-2 h-11 px-5 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium shadow-lg shadow-primary/20 transition-all active:scale-95"
+        class="flex items-center gap-2 h-11 px-5 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium transition-all active:scale-95"
       >
         <lucide-icon [name]="MenuIcon" class="w-5 h-5"></lucide-icon>
         <span class="hidden sm:inline">Catalog</span>
@@ -72,7 +72,7 @@
         <div class="relative">
           <button
             (click)="toggleMenu()"
-            class="flex items-center gap-2 p-1.5 rounded-xl border border-border bg-card/50 hover:bg-card transition-all focus:ring-2 focus:ring-primary/20 outline-none group"
+            class="flex items-center gap-2 p-1.5 rounded-xl border border-border bg-card hover:bg-card/80 transition-all focus:ring-2 focus:ring-primary/20 outline-none group"
             data-testid="user-menu-trigger"
           >
             <div
@@ -91,7 +91,7 @@
           @if (isMenuOpen()) {
           <div
             (click)="isMenuOpen.set(false)"
-            class="absolute right-0 mt-2 w-56 bg-card/90 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 z-[100]"
+            class="absolute right-0 mt-2 w-56 bg-card border border-border rounded-2xl shadow-lg overflow-hidden animate-in fade-in zoom-in duration-200 z-[100]"
             data-testid="user-dropdown"
           >
             <div class="p-4 border-b border-border/50">

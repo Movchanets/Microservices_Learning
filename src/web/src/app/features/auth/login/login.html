@@ -2,11 +2,11 @@
   class="min-h-screen bg-background flex items-center justify-center p-6 transition-colors duration-300"
 >
   <div
-    class="w-full max-w-md bg-card/80 backdrop-blur-xl border border-border rounded-[2.5rem] p-10 z-10 shadow-2xl"
+    class="w-full max-w-md bg-card shadow-lg border border-border rounded-[2.5rem] p-10 z-10"
   >
     <div class="flex flex-col items-center mb-10">
       <div
-        class="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20 mb-6 transition-transform hover:scale-110"
+        class="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-6 transition-transform hover:scale-110"
       >
         <span class="text-white font-bold text-3xl">M</span>
       </div>
@@ -90,7 +90,7 @@
         data-testid="login-submit-btn"
         type="submit"
         [disabled]="loginForm.invalid || isSubmitting()"
-        class="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg transition-all hover:bg-secondary hover:scale-[1.02] active:scale-95 disabled:opacity-50 shadow-xl shadow-primary/20 hover:shadow-primary/40 mt-4 flex items-center justify-center gap-3"
+        class="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg transition-all hover:bg-secondary hover:scale-[1.02] active:scale-95 disabled:opacity-50 mt-4 flex items-center justify-center gap-3"
       >
         @if (isSubmitting()) {
           <svg

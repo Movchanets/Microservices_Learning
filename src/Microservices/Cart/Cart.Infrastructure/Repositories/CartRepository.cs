@@ -50,9 +50,7 @@ public sealed class CartRepository(
     /// <summary>
     /// Write path: loads tracked cart from DB. Creates if missing.
     /// Domain operations happen directly on the returned tracked entity.
-    /// Handles the race condition where two concurrent requests both try to
-    /// create a cart for the same buyer by catching the duplicate-key violation
-    /// and reloading the already-persisted row.
+  
     /// </summary>
     public async Task<ShoppingCart> GetOrCreateTrackedCartAsync(string buyerId, CancellationToken ct = default)
     {

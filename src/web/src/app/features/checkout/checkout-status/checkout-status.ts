@@ -9,7 +9,7 @@ import { OrderStatus } from '../checkout.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, LucideAngularModule],
   template: `
-    <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-8 text-center">
+    <div class="bg-card rounded-3xl border border-border p-8 text-center">
       @switch (status()) {
         @case ('Submitted') {
           <div class="animate-pulse">

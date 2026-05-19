@@ -16,7 +16,7 @@ describe('BuyBoxComponent', () => {
       updateCart: vi.fn().mockResolvedValue(undefined),
       deleteCart: vi.fn().mockResolvedValue(undefined),
       checkout: vi.fn().mockResolvedValue({ correlationId: 'test' }),
-      addItem: vi.fn().mockResolvedValue({ buyerId: 'test', items: [{ sku: 'SKU-1', quantity: 1, unitPrice: 10 }] }),
+      addItem: vi.fn().mockResolvedValue({ buyerId: 'test', items: [{ sku: 'SKU-1', quantity: 1, price: 10, lineTotal: 10 }] }),
       updateItem: vi.fn().mockResolvedValue({ buyerId: 'test', items: [] }),
       removeItem: vi.fn().mockResolvedValue({ buyerId: 'test', items: [] }),
     };

@@ -7,7 +7,7 @@
         [status]="checkoutStore.orderStatus()!"
         [correlationId]="cartStore.checkoutCorrelationId()" />
     } @else if (submitted()) {
-      <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-8 text-center">
+      <div class="bg-card rounded-3xl border border-border p-8 text-center">
         <div class="animate-pulse">
           <lucide-icon name="Clock" class="w-16 h-16 mx-auto mb-4 text-primary"></lucide-icon>
           <h2 data-testid="checkout-order-submitted" class="text-2xl font-bold font-lexend mb-2">Order Submitted</h2>
@@ -21,7 +21,7 @@
         </div>
       </div>
     } @else if (cartStore.isEmpty()) {
-      <div data-testid="checkout-empty" class="text-center py-16 bg-card/60 backdrop-blur-sm rounded-3xl border border-border">
+      <div data-testid="checkout-empty" class="text-center py-16 bg-card rounded-3xl border border-border">
         <lucide-icon name="ShoppingCart" class="w-16 h-16 mx-auto mb-4 opacity-30"></lucide-icon>
         <p class="text-xl font-medium text-foreground mb-4">Your cart is empty</p>
         <a routerLink="/catalog"

@@ -14,7 +14,7 @@ describe('CartService', () => {
 
   const mockCart: ShoppingCart = {
     buyerId: 'test-user',
-    items: [{ sku: 'PROD-1', quantity: 2 }]
+    items: [{ sku: 'PROD-1', quantity: 2, price: 10, lineTotal: 20 }]
   };
 
   beforeEach(() => {

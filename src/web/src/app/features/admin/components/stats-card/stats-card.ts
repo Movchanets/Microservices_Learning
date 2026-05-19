@@ -10,7 +10,7 @@ import { LucideAngularModule } from 'lucide-angular';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideAngularModule],
   template: `
-    <div class="bg-card/60 backdrop-blur-sm rounded-2xl border border-border p-5">
+    <div class="bg-card rounded-2xl border border-border p-5">
       <div class="flex items-center gap-3 mb-3">
         <div class="p-2.5 rounded-xl bg-primary/10">
           <lucide-icon [name]="icon()" class="w-5 h-5 text-primary"></lucide-icon>

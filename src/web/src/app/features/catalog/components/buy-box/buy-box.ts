@@ -9,7 +9,7 @@ import { CartStore } from '../../../cart/cart.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CurrencyPipe, LucideAngularModule, StockIndicatorComponent],
   template: `
-    <div class="buy-box flex flex-col gap-4 p-6 bg-card/40 backdrop-blur-sm border border-border rounded-2xl">
+    <div class="buy-box flex flex-col gap-4 p-6 bg-card border border-border rounded-2xl">
       <!-- Price -->
       <div class="text-3xl font-bold text-foreground font-lexend">
         {{ price() | currency: currency() : 'symbol' : '1.2-2' }}
@@ -55,7 +55,7 @@ import { CartStore } from '../../../cart/cart.store';
         [disabled]="isOutOfStock() || cartStore.loading()"
         class="w-full py-4 px-6 bg-primary text-white text-lg font-bold rounded-xl
                hover:bg-secondary active:scale-[0.98] transition-all
-               flex items-center justify-center gap-3 shadow-xl shadow-primary/20
+               flex items-center justify-center gap-3 shadow-lg
                disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
       >
         @if (cartStore.loading()) {
@@ -76,7 +76,7 @@ import { CartStore } from '../../../cart/cart.store';
           (click)="onBuyNow()"
           [disabled]="cartStore.loading()"
           class="w-full py-3 px-6 bg-secondary text-white font-semibold rounded-xl
-                 hover:bg-secondary/80 active:scale-[0.98] transition-all
+                 hover:bg-secondary active:scale-[0.98] transition-all
                  disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Buy Now

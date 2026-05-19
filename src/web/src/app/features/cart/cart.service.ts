@@ -26,8 +26,8 @@ export class CartService {
     return firstValueFrom(this.http.post<CheckoutResponse>(`${this.baseUrl}/checkout`, address || {}));
   }
 
-  async addItem(sku: string, quantity: number, sellerId?: string): Promise<ShoppingCart> {
-    return firstValueFrom(this.http.post<ShoppingCart>(`${this.baseUrl}/items`, { sku, quantity, sellerId }));
+  async addItem(sku: string, quantity: number, shopId?: string): Promise<ShoppingCart> {
+    return firstValueFrom(this.http.post<ShoppingCart>(`${this.baseUrl}/items`, { sku, quantity, shopId }));
   }
 
   async updateItem(sku: string, quantity: number): Promise<ShoppingCart> {

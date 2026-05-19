@@ -5,7 +5,7 @@
     <div class="flex flex-col gap-4">
       <a routerLink="/" class="flex items-center gap-3 group">
         <div
-          class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform"
+          class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center group-hover:scale-110 transition-transform"
         >
           <span class="text-white font-bold text-2xl">M</span>
         </div>
@@ -24,7 +24,7 @@
         <button
           (click)="toggleTheme()"
           data-testid="theme-toggle-btn"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[120px] justify-between"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-card/80 transition-all group min-w-[120px] justify-between"
         >
           <div class="flex items-center gap-2">
             <lucide-icon
@@ -42,7 +42,7 @@
 
         <div
           *ngIf="isThemeOpen()"
-          class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl"
+          class="absolute bottom-full mb-2 left-0 w-full bg-card border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-lg"
         >
           <button
             (click)="setTheme('light')"
@@ -70,7 +70,7 @@
         <button
           (click)="toggleLang()"
           data-testid="lang-toggle-btn"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[140px] justify-between"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-card/80 transition-all group min-w-[140px] justify-between"
         >
           <div class="flex items-center gap-2">
             <!-- Current Flag -->
@@ -100,7 +100,7 @@
 
         <div
           *ngIf="isLangOpen()"
-          class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl"
+          class="absolute bottom-full mb-2 left-0 w-full bg-card border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-lg"
         >
           <button
             (click)="setLang('en')"

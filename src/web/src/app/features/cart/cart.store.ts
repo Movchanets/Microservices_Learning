@@ -36,7 +36,7 @@ export const CartStore = signalStore(
   withComputed((store) => ({
     totalItems: computed(() => store.items().reduce((sum, item) => sum + item.quantity, 0)),
     isEmpty: computed(() => store.items().length === 0),
-    totalPrice: computed(() => store.items().reduce((sum, item) => sum + (item.quantity * (item.unitPrice || 0)), 0))
+    totalPrice: computed(() => store.items().reduce((sum, item) => sum + item.lineTotal, 0))
   })),
 
   withMethods((store, cartService = inject(CartService)) => ({
@@ -60,10 +60,10 @@ export const CartStore = signalStore(
       }
     },
 
-    async addToCart(sku: string, quantity: number = 1, sellerId?: string): Promise<void> {
+    async addToCart(sku: string, quantity: number = 1, shopId?: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.addItem(sku, quantity, sellerId);
+        const updatedCart = await cartService.addItem(sku, quantity, shopId);
         patchState(store, { items: updatedCart.items, loading: false, isDrawerOpen: true });
       } catch (err: any) {
         patchState(store, { error: 'Failed to add item to cart', loading: false });

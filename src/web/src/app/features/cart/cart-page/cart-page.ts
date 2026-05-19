@@ -26,7 +26,7 @@ import { CartStore } from '../cart.store';
         } @else if (store.isEmpty()) {
           <div
             data-testid="cart-empty"
-            class="text-center py-16 bg-card/60 backdrop-blur-sm rounded-3xl border border-border"
+            class="text-center py-16 bg-card rounded-3xl border border-border"
           >
             <lucide-icon
               name="ShoppingCart"
@@ -42,7 +42,7 @@ import { CartStore } from '../cart.store';
             </a>
           </div>
         } @else {
-          <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border overflow-hidden">
+          <div class="bg-card rounded-3xl border border-border overflow-hidden">
             <ul class="divide-y divide-border">
               @for (item of store.items(); track item.sku) {
                 <li [attr.data-testid]="'cart-item-' + item.sku" class="p-6 flex items-center gap-6">

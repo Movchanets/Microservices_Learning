@@ -12,7 +12,7 @@ import { StoreSettingsStore } from '../store-settings.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideAngularModule],
   template: `
-    <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-6 max-w-2xl">
+    <div class="bg-card rounded-3xl border border-border p-6 max-w-2xl">
       <h2 class="text-xl font-bold font-lexend mb-6" i18n>Store Settings</h2>
 
       @if (store.loading()) {

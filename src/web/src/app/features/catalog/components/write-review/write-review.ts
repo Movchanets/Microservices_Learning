@@ -9,7 +9,7 @@ import { CreateReviewRequest } from '../../catalog.models';
   imports: [ReactiveFormsModule, LucideAngularModule],
   template: `
     @if (isOpen()) {
-      <div class="p-6 bg-card/40 backdrop-blur-sm border border-border rounded-2xl">
+      <div class="p-6 bg-card border border-border rounded-2xl">
         <h3 class="text-xl font-bold text-foreground font-lexend mb-4">Write a Review</h3>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">

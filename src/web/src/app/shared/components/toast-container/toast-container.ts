@@ -26,7 +26,7 @@ export class ToastContainerComponent {
   readonly toastService = inject(ToastService);
 
   toastClass(type: string): string {
-    const base = 'backdrop-blur-sm';
+    const base = '';
     const variants: Record<string, string> = {
       success: `${base} bg-green-500/10 text-green-500 border-green-500/20`,
       error: `${base} bg-red-500/10 text-red-500 border-red-500/20`,

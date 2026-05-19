@@ -13,7 +13,7 @@ import { Category } from '../../../catalog/catalog.models';
         <a
           [routerLink]="['/catalog']"
           [queryParams]="{ category: category.id }"
-          class="group flex flex-col items-center gap-3 p-6 bg-card/40 backdrop-blur-sm
+          class="group flex flex-col items-center gap-3 p-6 bg-card
                  border border-border rounded-2xl hover:border-primary/50 hover:bg-primary/5
                  transition-all"
         >

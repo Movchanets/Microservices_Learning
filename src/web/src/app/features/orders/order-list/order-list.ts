@@ -23,7 +23,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
         } @else if (store.error()) {
           <div class="p-4 bg-red-500/10 text-red-500 rounded-xl">{{ store.error() }}</div>
         } @else if (!store.hasOrders()) {
-          <div class="text-center py-16 bg-card/60 backdrop-blur-sm rounded-3xl border border-border">
+          <div class="text-center py-16 bg-card rounded-3xl border border-border">
             <lucide-icon name="Package" class="w-16 h-16 mx-auto mb-4 opacity-30"></lucide-icon>
             <p class="text-xl font-medium text-foreground mb-4">No orders yet</p>
             <a routerLink="/catalog"
@@ -35,7 +35,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
           <!-- Active Orders -->
           @if (store.activeOrders().length > 0) {
             <h2 class="text-lg font-semibold text-foreground mb-4">Active Orders</h2>
-            <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border overflow-hidden mb-8">
+            <div class="bg-card rounded-3xl border border-border overflow-hidden mb-8">
               <ul class="divide-y divide-border">
                 @for (order of store.activeOrders(); track order.id) {
                   <li>
@@ -64,7 +64,7 @@ import { AuthStore } from '../../../core/auth/auth.store';
           <!-- Completed Orders -->
           @if (store.completedOrders().length > 0) {
             <h2 class="text-lg font-semibold text-foreground mb-4">Completed Orders</h2>
-            <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border overflow-hidden">
+            <div class="bg-card rounded-3xl border border-border overflow-hidden">
               <ul class="divide-y divide-border">
                 @for (order of store.completedOrders(); track order.id) {
                   <li>

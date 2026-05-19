@@ -39,7 +39,7 @@ interface SavedSearch {
       } @else {
         <div class="space-y-2">
           @for (search of searches(); track search.id) {
-            <div class="flex items-center justify-between p-4 bg-card/40 backdrop-blur-sm border border-border rounded-xl
+            <div class="flex items-center justify-between p-4 bg-card border border-border rounded-xl
                         hover:border-primary/30 transition-colors">
               <div class="flex-1 min-w-0">
                 <button

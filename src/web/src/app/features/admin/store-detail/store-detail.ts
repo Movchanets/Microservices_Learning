@@ -38,7 +38,7 @@ import { AdminStore } from '../admin.store';
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Store Info -->
-          <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-6">
+          <div class="bg-card rounded-3xl border border-border p-6">
             <h3 class="text-lg font-semibold font-lexend mb-4">Store Information</h3>
             <dl class="space-y-3 text-sm">
               <div>
@@ -74,7 +74,7 @@ import { AdminStore } from '../admin.store';
 
           <!-- Actions -->
           @if (storeItem.verificationStatus === 'Pending') {
-            <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-6">
+            <div class="bg-card rounded-3xl border border-border p-6">
               <h3 class="text-lg font-semibold font-lexend mb-4">Verification Decision</h3>
               <div class="space-y-3">
                 <button

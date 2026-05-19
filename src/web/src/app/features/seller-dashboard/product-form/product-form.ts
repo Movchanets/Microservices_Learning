@@ -14,7 +14,7 @@ import { StoreSettingsStore } from '../store-settings.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, LucideAngularModule],
   template: `
-    <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-6 max-w-2xl mx-auto">
+    <div class="bg-card rounded-3xl border border-border p-6 max-w-2xl mx-auto">
       <h2 class="text-xl font-bold font-lexend mb-6">
         {{ isEditing() ? 'Edit Product' : 'Add Product' }}
       </h2>

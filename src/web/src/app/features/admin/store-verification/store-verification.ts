@@ -24,7 +24,7 @@ import { AdminStore as AdminStoreModel } from '../admin.models';
           {{ store.error() }}
         </div>
       } @else if (!store.hasPendingStores()) {
-        <div class="text-center py-16 bg-card/60 backdrop-blur-sm rounded-3xl border border-border">
+        <div class="text-center py-16 bg-card rounded-3xl border border-border">
           <lucide-icon name="CheckCircle" class="w-16 h-16 mx-auto mb-4 text-green-500/30"></lucide-icon>
           <p class="text-xl font-medium text-foreground mb-2">All caught up!</p>
           <p class="text-muted">No pending store verifications</p>
@@ -32,7 +32,7 @@ import { AdminStore as AdminStoreModel } from '../admin.models';
       } @else {
         <div class="space-y-4">
           @for (storeItem of store.pendingStores(); track storeItem.id) {
-            <div class="bg-card/60 backdrop-blur-sm rounded-2xl border border-border p-6">
+            <div class="bg-card rounded-2xl border border-border p-6">
                     data-testid="store-verification-card"
               <div class="flex items-start justify-between">
                 <div class="flex-1">

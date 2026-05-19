@@ -43,7 +43,7 @@ import { ProductCardComponent } from '../../../catalog/components/product-card/p
         <button
           (click)="scrollLeft()"
           class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 p-2
-                 bg-background/80 backdrop-blur-sm border border-border rounded-full
+                 bg-card border border-border rounded-full
                  text-foreground opacity-0 group-hover:opacity-100 transition-opacity
                  hover:bg-muted/20"
           aria-label="Scroll left"
@@ -55,7 +55,7 @@ import { ProductCardComponent } from '../../../catalog/components/product-card/p
         <button
           (click)="scrollRight()"
           class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 p-2
-                 bg-background/80 backdrop-blur-sm border border-border rounded-full
+                 bg-card border border-border rounded-full
                  text-foreground opacity-0 group-hover:opacity-100 transition-opacity
                  hover:bg-muted/20"
           aria-label="Scroll right"

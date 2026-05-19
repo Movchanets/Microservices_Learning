@@ -11,7 +11,7 @@ import { CartStore } from '../../../cart/cart.store';
   imports: [CurrencyPipe, RouterLink, LucideAngularModule],
   template: `
     @if (loading()) {
-      <div class="p-6 bg-card/40 backdrop-blur-sm border border-border rounded-2xl animate-pulse">
+      <div class="p-6 bg-card border border-border rounded-2xl animate-pulse">
         <div class="h-6 bg-muted/20 rounded w-48 mb-4"></div>
         <div class="flex gap-4">
           <div class="h-32 w-32 bg-muted/20 rounded-xl"></div>
@@ -20,7 +20,7 @@ import { CartStore } from '../../../cart/cart.store';
         </div>
       </div>
     } @else if (products().length > 0) {
-      <div class="p-6 bg-card/40 backdrop-blur-sm border border-border rounded-2xl">
+      <div class="p-6 bg-card border border-border rounded-2xl">
         <h3 class="text-xl font-bold text-foreground font-lexend mb-4">
           Frequently Bought Together
         </h3>
@@ -72,7 +72,7 @@ import { CartStore } from '../../../cart/cart.store';
             [disabled]="cartStore.loading()"
             class="px-6 py-3 bg-primary text-white font-semibold rounded-xl
                    hover:bg-secondary active:scale-[0.98] transition-all
-                   flex items-center gap-2 shadow-lg shadow-primary/20
+                   flex items-center gap-2 shadow-lg
                    disabled:opacity-50 disabled:cursor-not-allowed"
           >
             @if (cartStore.loading()) {

@@ -14,7 +14,7 @@
 .form-group label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--muted);
 }
 
 .form-group input, .form-group select {
@@ -22,14 +22,14 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   background-color: var(--background);
-  color: var(--text);
+  color: var(--foreground);
   font-size: 1rem;
 }
 
 .form-group input:focus, .form-group select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
 }
 
 .form-row {

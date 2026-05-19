@@ -10,14 +10,14 @@ import { Review } from '../../catalog.models';
   template: `
     <div class="flex flex-col gap-6">
       @for (review of reviews(); track review.id) {
-        <div class="p-6 bg-card/40 backdrop-blur-sm border border-border rounded-2xl">
+        <div class="p-6 bg-card border border-border rounded-2xl">
           <!-- Header -->
           <div class="flex items-start justify-between mb-3">
             <div class="flex flex-col gap-1">
               <div class="flex items-center gap-2">
                 <span class="font-semibold text-foreground">{{ review.userName }}</span>
                 @if (review.isVerifiedPurchase) {
-                  <span class="px-2 py-0.5 bg-green-500/10 text-green-500 text-xs font-medium rounded-full border border-green-500/20">
+                  <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800">
                     Verified Purchase
                   </span>
                 }

@@ -67,7 +67,7 @@ import { ProductListItem } from '../../../catalog/catalog.models';
             <a
               [routerLink]="['/catalog', p.id]"
               class="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white font-semibold
-                     rounded-xl hover:bg-orange-600 active:scale-[0.98] transition-all shadow-lg shadow-orange-500/20"
+                     rounded-xl hover:bg-orange-600 active:scale-[0.98] transition-all"
             >
               <lucide-icon name="Zap" class="w-5 h-5"></lucide-icon>
               View Deal

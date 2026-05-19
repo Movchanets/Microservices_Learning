@@ -40,7 +40,7 @@ interface Banner {
               <a
                 [routerLink]="banner.link"
                 class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-xl
-                       hover:bg-secondary active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
+                       hover:bg-secondary active:scale-[0.98] transition-all"
               >
                 {{ banner.cta }}
                 <lucide-icon name="ArrowRight" class="w-5 h-5"></lucide-icon>
@@ -53,16 +53,16 @@ interface Banner {
       <!-- Navigation Arrows -->
       <button
         (click)="prev()"
-        class="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-background/60 backdrop-blur-sm
-               rounded-full text-foreground hover:bg-background/80 transition-colors"
+        class="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-card border border-border
+               rounded-full text-foreground hover:bg-muted/20 transition-colors"
         aria-label="Previous slide"
       >
         <lucide-icon name="ChevronLeft" class="w-6 h-6"></lucide-icon>
       </button>
       <button
         (click)="next()"
-        class="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-background/60 backdrop-blur-sm
-               rounded-full text-foreground hover:bg-background/80 transition-colors"
+        class="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-card border border-border
+               rounded-full text-foreground hover:bg-muted/20 transition-colors"
         aria-label="Next slide"
       >
         <lucide-icon name="ChevronRight" class="w-6 h-6"></lucide-icon>

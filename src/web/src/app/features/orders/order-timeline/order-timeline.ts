@@ -16,7 +16,7 @@ interface TimelineStep {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideAngularModule],
   template: `
-    <div class="bg-card/60 backdrop-blur-sm rounded-2xl border border-border p-5">
+    <div class="bg-card rounded-2xl border border-border p-5">
       <h3 class="text-sm font-semibold text-foreground mb-4">Order Progress</h3>
       <div class="flex items-center gap-1">
         @for (step of steps(); track step.status; let last = $last) {

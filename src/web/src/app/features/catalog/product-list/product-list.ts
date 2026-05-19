@@ -52,7 +52,7 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
             placeholder="Search products..."
             class="w-full pl-12 pr-4 py-3 rounded-xl border border-border
                         focus:ring-2 focus:ring-primary focus:border-transparent outline-none
-                        bg-card/60 backdrop-blur-sm text-foreground placeholder:text-muted"
+                        bg-card text-foreground placeholder:text-muted"
             data-testid="search-input"
           />
         </div>
@@ -87,7 +87,7 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
               <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 @for (i of skeletons; track i) {
                   <div
-                    class="bg-card/40 backdrop-blur-sm border border-border rounded-2xl p-6 shadow-sm animate-pulse"
+                    class="bg-card border border-border rounded-2xl p-6 shadow-sm animate-pulse"
                   >
                     <div class="w-full aspect-square bg-muted/20 rounded-xl mb-4"></div>
                     <div class="h-3 bg-muted/20 rounded-md w-1/3 mb-3"></div>

@@ -36,7 +36,7 @@ import { ProductListItem } from '../../../features/catalog/catalog.models';
 
       <!-- Dropdown -->
       @if (showDropdown() && (suggestions().length > 0 || recentSearches().length > 0)) {
-        <div class="absolute top-full left-0 right-0 mt-2 bg-card/95 backdrop-blur-sm border border-border
+        <div class="absolute top-full left-0 right-0 mt-2 bg-card border border-border
                     rounded-xl shadow-lg overflow-hidden z-50">
           <!-- Suggestions -->
           @if (suggestions().length > 0) {

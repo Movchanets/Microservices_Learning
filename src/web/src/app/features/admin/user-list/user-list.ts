@@ -13,7 +13,7 @@ import { AdminUser } from '../admin.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, LucideAngularModule],
   template: `
-    <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border overflow-hidden">
+    <div class="bg-card rounded-3xl border border-border overflow-hidden">
       @if (store.loading()) {
         <div class="flex justify-center p-12">
           <div class="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>

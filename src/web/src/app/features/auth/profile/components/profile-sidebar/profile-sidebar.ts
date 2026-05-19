@@ -10,7 +10,7 @@ import { LucideAngularModule, User, ShoppingBag, Settings, LogOut } from 'lucide
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, RouterModule, LucideAngularModule],
   template: `
-    <div class="bg-card/80 backdrop-blur-xl border border-border rounded-2xl p-6 shadow-sm sticky top-24">
+    <div class="bg-card shadow-lg border border-border rounded-2xl p-6 shadow-sm sticky top-24">
       <div class="flex flex-col items-center mb-8 pb-8 border-b border-border text-center">
         <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 border border-primary/20 shadow-inner">
           <lucide-icon [name]="UserIcon" class="w-10 h-10 text-primary"></lucide-icon>

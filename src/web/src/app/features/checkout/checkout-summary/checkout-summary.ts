@@ -9,7 +9,7 @@ import { CartStore } from '../../cart/cart.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CurrencyPipe, LucideAngularModule],
   template: `
-    <div class="bg-card/60 backdrop-blur-sm rounded-3xl border border-border p-6">
+    <div class="bg-card rounded-3xl border border-border p-6">
       <h2 class="text-xl font-bold font-lexend mb-4">Order Summary</h2>
 
       <ul class="divide-y divide-border mb-6">
@@ -24,8 +24,8 @@ import { CartStore } from '../../cart/cart.store';
                 <p class="text-xs text-muted">Qty: {{ item.quantity }}</p>
               </div>
             </div>
-            @if (item.unitPrice) {
-              <span class="text-sm font-medium">{{ item.unitPrice * item.quantity | currency }}</span>
+            @if (item.price) {
+              <span class="text-sm font-medium">{{ item.lineTotal | currency }}</span>
             }
           </li>
         }

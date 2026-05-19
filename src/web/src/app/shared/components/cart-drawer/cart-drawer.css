@@ -14,7 +14,7 @@
   width: 100%;
   max-width: 400px;
   height: 100%;
-  background-color: var(--surface);
+  background-color: var(--card);
   box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
@@ -37,14 +37,14 @@
 .cart-header h2 {
   margin: 0;
   font-size: 1.25rem;
-  color: var(--text);
+  color: var(--foreground);
 }
 
 .close-btn {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -52,7 +52,7 @@
 }
 
 .close-btn:hover {
-  color: var(--text);
+  color: var(--foreground);
 }
 
 .free-shipping-progress {
@@ -64,7 +64,7 @@
 .free-shipping-progress p {
   margin: 0 0 0.5rem 0;
   font-size: 0.9rem;
-  color: var(--text);
+  color: var(--foreground);
 }
 
 .free-shipping-progress p.success {
@@ -105,7 +105,7 @@
 .item-details h3 {
   margin: 0 0 0.25rem 0;
   font-size: 1rem;
-  color: var(--text);
+  color: var(--foreground);
 }
 
 .item-details .price {
@@ -132,7 +132,7 @@
   border: none;
   padding: 0.5rem;
   cursor: pointer;
-  color: var(--text);
+  color: var(--foreground);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -155,7 +155,7 @@
 .remove-btn {
   background: none;
   border: none;
-  color: var(--error, #ef4444);
+  color: #ef4444;
   cursor: pointer;
   padding: 0.5rem;
   display: flex;
@@ -185,13 +185,13 @@
 
 .empty-cart p {
   margin-bottom: 1.5rem;
-  color: var(--text-muted);
+  color: var(--muted);
 }
 
 .cart-footer {
   padding: 1.5rem;
   border-top: 1px solid var(--border);
-  background-color: var(--surface);
+  background-color: var(--card);
 }
 
 .total-row {
@@ -201,7 +201,7 @@
   margin-bottom: 1.5rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--text);
+  color: var(--foreground);
 }
 
 .action-buttons {

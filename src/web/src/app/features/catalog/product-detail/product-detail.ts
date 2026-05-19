@@ -69,7 +69,7 @@ import { WriteReviewComponent } from '../components/write-review/write-review';
             <div>
               <!-- Image Gallery -->
               <div
-                class="bg-card/40 backdrop-blur-sm border border-border rounded-3xl p-4 md:p-8 flex items-center justify-center min-h-[400px]"
+                class="bg-card border border-border rounded-3xl p-4 md:p-8 flex items-center justify-center min-h-[400px]"
               >
                 @if (p.imageUrl) {
                   <img
@@ -86,7 +86,7 @@ import { WriteReviewComponent } from '../components/write-review/write-review';
               <div class="mt-8">
                 <!-- Breadcrumb / Category -->
                 <div class="flex items-center gap-2 mb-4">
-                  <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                  <span class="px-3 py-1 bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-800 rounded-full text-sm font-medium">
                     {{ p.categoryName }}
                   </span>
                   <span class="text-muted text-sm font-mono flex items-center">
@@ -118,7 +118,7 @@ import { WriteReviewComponent } from '../components/write-review/write-review';
                   <div class="flex flex-wrap gap-2">
                     @for (tag of p.tags; track tag) {
                       <span
-                        class="px-3 py-1.5 bg-muted/20 border border-border/50 rounded-lg text-sm text-muted-foreground"
+                        class="px-3 py-1.5 bg-muted/10 border border-border rounded-lg text-sm text-muted-foreground"
                       >
                         {{ tag }}
                       </span>
@@ -173,7 +173,7 @@ import { WriteReviewComponent } from '../components/write-review/write-review';
                     <span class="text-sm text-muted-foreground">Sort by:</span>
                     <select
                       (change)="onSortChange($event)"
-                      class="px-3 py-1.5 bg-muted/10 border border-border rounded-lg text-sm text-foreground
+                      class="px-3 py-1.5 bg-card border border-border rounded-lg text-sm text-foreground
                              focus:outline-none focus:border-primary"
                     >
                       <option value="helpful">Most Helpful</option>

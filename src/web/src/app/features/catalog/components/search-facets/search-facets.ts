@@ -8,7 +8,7 @@ import { FacetValue } from '../../catalog.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, LucideAngularModule],
   template: `
-    <div class="bg-card/40 backdrop-blur-sm border border-border rounded-2xl p-5 space-y-6">
+    <div class="bg-card border border-border rounded-2xl p-5 space-y-6">
       <h3 class="font-lexend font-semibold text-foreground flex items-center gap-2">
         <lucide-icon name="SlidersHorizontal" class="w-4 h-4"></lucide-icon>
         Filters
