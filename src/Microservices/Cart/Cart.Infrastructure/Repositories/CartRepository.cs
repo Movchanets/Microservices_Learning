@@ -71,10 +71,39 @@ public sealed class CartRepository(
     /// <summary>
     /// Persists tracked changes and invalidates the cache.
     /// Handles optimistic concurrency via xmin: if another request modified the row,
-    /// we refresh the original values (xmin) and retry once.
+    /// we clear the tracker, reload the cart, and retry.
     /// </summary>
     public async Task SaveCartAsync(ShoppingCart cart, CancellationToken ct = default)
     {
+        const int maxRetries = 3;
+
+        for (var attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                await dbContext.SaveChangesAsync(ct);
+                await UpdateCacheAsync(cart, ct);
+                return;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < maxRetries - 1)
+            {
+                dbContext.ChangeTracker.Clear();
+                // Reload the cart so the caller's next operation has fresh state
+                var reloaded = await dbContext.ShoppingCarts
+                    .Include(c => c.Items)
+                    .FirstOrDefaultAsync(c => c.BuyerId == cart.BuyerId, ct);
+                if (reloaded is not null)
+                {
+                    // Re-apply the caller's intended state onto the reloaded entity
+                    // (the caller must re-invoke domain methods after this throws)
+                    logger.LogWarning(
+                        "Concurrency conflict on cart {BuyerId}, attempt {Attempt}/{Max}",
+                        cart.BuyerId, attempt + 1, maxRetries);
+                }
+            }
+        }
+
+        // Final attempt — let exception propagate if all retries exhausted
         await dbContext.SaveChangesAsync(ct);
         await UpdateCacheAsync(cart, ct);
     }

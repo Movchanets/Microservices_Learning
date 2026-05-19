@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using BuildingBlocks.Infrastructure.Models;
+using BuildingBlocks.SharedContracts.Abstractions;
 using BuildingBlocks.SharedContracts.Events.Payment;
 using MassTransit;
 using MediatR;
@@ -26,11 +28,18 @@ public static class PaymentEndpoints
             Guid orderId,
             [FromServices] IPaymentTransactionRepository transactionRepo,
             [FromServices] IRefundRepository refundRepo,
+            ClaimsPrincipal user,
             CancellationToken ct) =>
         {
             var transaction = await transactionRepo.GetByOrderIdAsync(orderId, ct);
             if (transaction is null)
                 return Results.NotFound();
+
+            // Ownership check: only the buyer who made the payment or an Admin can view it
+            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdmin = user.IsInRole("Admin");
+            if (!isAdmin && transaction.BuyerId != buyerId)
+                return Results.Forbid();
 
             var refunds = await refundRepo.GetByOrderIdAsync(orderId, ct);
 
@@ -63,6 +72,7 @@ public static class PaymentEndpoints
             [FromBody] RefundRequest request,
             [FromServices] ISender sender,
             [FromServices] IRefundRepository refundRepo,
+            [FromServices] IUnitOfWork uow,
             [FromServices] IPublishEndpoint publishEndpoint,
             CancellationToken ct) =>
         {
@@ -100,6 +110,10 @@ public static class PaymentEndpoints
                     RefundId: refund.Id,
                     Amount: refund.Amount,
                     Reason: refund.Reason), ct);
+
+                // Flush outbox: the EF outbox queues the publish in memory,
+                // SaveChangesAsync persists it to the outbox table atomically.
+                await uow.SaveChangesAsync(ct);
             }
 
             return Results.Created($"/api/payments/refund/{result.Value}", new { refundId = result.Value });

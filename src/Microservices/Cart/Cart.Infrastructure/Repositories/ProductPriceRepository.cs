@@ -24,20 +24,43 @@ public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepo
     public async Task UpsertAsync(
         Guid productId, string sku, string name, decimal price, string currency, CancellationToken ct = default)
     {
-        // Atomic upsert via PostgreSQL INSERT ... ON CONFLICT DO UPDATE.
-        // This eliminates the TOCTOU race between ProductCreatedConsumer and
-        // ProductUpdatedConsumer when both fire for the same product during seeding.
-        await dbContext.Database.ExecuteSqlAsync(
-            $"""
-            INSERT INTO "ProductPrices" ("Id", "Sku", "Name", "Price", "Currency", "UpdatedAt")
-            VALUES ({productId}, {sku}, {name}, {price}, {currency}, {DateTime.UtcNow})
-            ON CONFLICT ("Id") DO UPDATE SET
-                "Sku"       = EXCLUDED."Sku",
-                "Name"      = EXCLUDED."Name",
-                "Price"     = EXCLUDED."Price",
-                "Currency"  = EXCLUDED."Currency",
-                "UpdatedAt" = EXCLUDED."UpdatedAt"
-            """, ct);
+        // Pure EF Core upsert — no raw SQL. Handles TOCTOU race between
+        // ProductCreatedConsumer and ProductUpdatedConsumer via catch-and-retry.
+        dbContext.ChangeTracker.Clear();
+
+        var existing = await dbContext.ProductPrices
+            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+
+        if (existing is not null)
+        {
+            existing.UpdateDetails(name, price, currency);
+            await dbContext.SaveChangesAsync(ct);
+            return;
+        }
+
+        dbContext.ProductPrices.Add(
+            ProductPrice.Create(productId, sku, name, price, currency));
+
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException) when (ct.IsCancellationRequested is false)
+        {
+            // Race: another consumer inserted between our check and our save.
+            // Detach the failed entity, load the winner, update it.
+            dbContext.ChangeTracker.Clear();
+            var retry = await dbContext.ProductPrices.FirstOrDefaultAsync(p => p.Id == productId, ct);
+            if (retry is not null)
+            {
+                retry.UpdateDetails(name, price, currency);
+                await dbContext.SaveChangesAsync(ct);
+            }
+        }
+        finally
+        {
+            dbContext.ChangeTracker.Clear();
+        }
     }
 
     public void Add(ProductPrice productPrice)
