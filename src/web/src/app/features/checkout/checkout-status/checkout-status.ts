@@ -5,7 +5,6 @@ import { OrderStatus } from '../checkout.models';
 
 @Component({
   selector: 'app-checkout-status',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, LucideAngularModule],
   template: `

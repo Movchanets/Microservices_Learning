@@ -2,9 +2,11 @@
   <div class="form-group full-width">
     <label for="addressLine1">Address Line 1</label>
     <input id="addressLine1" data-testid="address-line1" type="text" formControlName="addressLine1" placeholder="Street address, P.O. box">
-    <div class="error" *ngIf="addressForm.get('addressLine1')?.touched && addressForm.get('addressLine1')?.invalid">
+    @if (addressForm.get('addressLine1')?.touched && addressForm.get('addressLine1')?.invalid) {
+    <div class="error">
       Address is required
     </div>
+    }
   </div>
 
   <div class="form-group full-width">
@@ -16,17 +18,21 @@
     <div class="form-group">
       <label for="city">City</label>
       <input id="city" data-testid="address-city" type="text" formControlName="city">
-      <div class="error" *ngIf="addressForm.get('city')?.touched && addressForm.get('city')?.invalid">
+      @if (addressForm.get('city')?.touched && addressForm.get('city')?.invalid) {
+      <div class="error">
         City is required
       </div>
+      }
     </div>
 
     <div class="form-group">
       <label for="state">State / Province</label>
       <input id="state" data-testid="address-state" type="text" formControlName="state">
-      <div class="error" *ngIf="addressForm.get('state')?.touched && addressForm.get('state')?.invalid">
+      @if (addressForm.get('state')?.touched && addressForm.get('state')?.invalid) {
+      <div class="error">
         State is required
       </div>
+      }
     </div>
   </div>
 
@@ -34,15 +40,19 @@
     <div class="form-group">
       <label for="postalCode">Postal / Zip Code</label>
       <input id="postalCode" data-testid="address-postal-code" type="text" formControlName="postalCode">
-      <div class="error" *ngIf="addressForm.get('postalCode')?.touched && addressForm.get('postalCode')?.invalid">
+      @if (addressForm.get('postalCode')?.touched && addressForm.get('postalCode')?.invalid) {
+      <div class="error">
         Valid postal code is required
       </div>
+      }
     </div>
 
     <div class="form-group">
       <label for="country">Country</label>
       <select id="country" data-testid="address-country" formControlName="country">
-        <option *ngFor="let country of countries" [value]="country.code">{{ country.name }}</option>
+        @for (country of countries; track country.code) {
+        <option [value]="country.code">{{ country.name }}</option>
+        }
       </select>
     </div>
   </div>

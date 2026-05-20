@@ -1,6 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { CartStore } from '../../../features/cart/cart.store';
 import { LucideAngularModule, User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Globe } from 'lucide-angular';
@@ -9,8 +8,8 @@ import { SearchBarComponent } from '../search-bar/search-bar';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, CommonModule, LucideAngularModule, MegaMenu, SearchBarComponent],
-  standalone: true,
+  imports: [RouterLink, LucideAngularModule, MegaMenu, SearchBarComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './header.html',
   styleUrl: './header.css',
 })

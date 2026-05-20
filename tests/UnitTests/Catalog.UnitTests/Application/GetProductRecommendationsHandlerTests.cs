@@ -55,15 +55,15 @@ public class GetProductRecommendationsHandlerTests
 
         var relatedProduct1 = new ProductListDto(
             System.Guid.NewGuid(), "Related 1", 20m, "USD", "SKU-2",
-            "Electronics", "Active", null, System.DateTime.UtcNow);
+            "Electronics", "Active", null, System.Guid.NewGuid(), System.DateTime.UtcNow);
 
         var relatedProduct2 = new ProductListDto(
             System.Guid.NewGuid(), "Related 2", 30m, "USD", "SKU-3",
-            "Electronics", "Active", null, System.DateTime.UtcNow);
+            "Electronics", "Active", null, System.Guid.NewGuid(), System.DateTime.UtcNow);
 
         var currentProductDup = new ProductListDto(
             productId, "Test Product", 10m, "USD", "SKU-1",
-            "Electronics", "Active", null, System.DateTime.UtcNow);
+            "Electronics", "Active", null, System.Guid.NewGuid(), System.DateTime.UtcNow);
 
         var pagedResult = new PagedResult<ProductListDto>(
             [relatedProduct1, relatedProduct2, currentProductDup],
@@ -105,7 +105,7 @@ public class GetProductRecommendationsHandlerTests
         {
             items.Add(new ProductListDto(
                 System.Guid.NewGuid(), $"Related {i}", 10m, "USD", $"SKU-R{i}",
-                "Cat", "Active", null, System.DateTime.UtcNow));
+                "Cat", "Active", null, System.Guid.NewGuid(), System.DateTime.UtcNow));
         }
 
         var pagedResult = new PagedResult<ProductListDto>(items, 5, 1, 4);

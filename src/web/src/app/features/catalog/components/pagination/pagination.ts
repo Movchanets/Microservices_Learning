@@ -3,7 +3,6 @@ import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-pagination',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideAngularModule],
   template: `

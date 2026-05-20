@@ -10,7 +10,6 @@ import { StoreSettingsStore } from '../store-settings.store';
 
 @Component({
   selector: 'app-product-form',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, LucideAngularModule],
   template: `

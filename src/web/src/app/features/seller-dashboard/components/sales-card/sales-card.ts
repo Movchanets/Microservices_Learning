@@ -9,7 +9,6 @@ import { SalesSummary } from '../../seller.models';
 
 @Component({
   selector: 'app-sales-card',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CurrencyPipe, LucideAngularModule],
   template: `

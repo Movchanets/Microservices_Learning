@@ -31,6 +31,12 @@ public sealed class User : AggregateRoot
     /// <summary>Gets the current refresh token assigned to the user.</summary>
     public RefreshToken? CurrentRefreshToken { get; private set; }
 
+    /// <summary>Gets the current password reset token, if any.</summary>
+    public string? PasswordResetToken { get; private set; }
+
+    /// <summary>Gets when the password reset token expires.</summary>
+    public DateTime? PasswordResetTokenExpiresAt { get; private set; }
+
     /// <summary>Gets a value indicating whether the user is active.</summary>
     public bool IsActive { get; private set; } = true;
 
@@ -160,6 +166,20 @@ public sealed class User : AggregateRoot
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(newPasswordHash);
         PasswordHash = PasswordHash.Create(newPasswordHash);
+    }
+
+    /// <summary>
+    /// Generates a new password reset token valid for the specified duration.
+    /// </summary>
+    /// <param name="validity">The token validity duration. Defaults to 24 hours.</param>
+    /// <returns>The generated reset token.</returns>
+    public string GeneratePasswordResetToken(TimeSpan? validity = null)
+    {
+        var token = Guid.NewGuid().ToString("N");
+        PasswordResetToken = token;
+        PasswordResetTokenExpiresAt = DateTime.UtcNow.Add(validity ?? TimeSpan.FromHours(24));
+        AddDomainEvent(new PasswordResetRequestedEvent(Id, Email.Value, token));
+        return token;
     }
 
     /// <summary>

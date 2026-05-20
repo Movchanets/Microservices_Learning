@@ -1,9 +1,10 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { computed } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CatalogStore } from '../catalog.store';
 import { CartStore } from '../../cart/cart.store';
 import { ProductCardComponent } from '../components/product-card/product-card';
@@ -12,7 +13,6 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
 
 @Component({
   selector: 'app-product-list',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [CatalogStore], // Feature-scoped store
   imports: [
@@ -144,19 +144,17 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
     </div>
   `,
 })
-export class ProductListComponent implements OnInit, OnDestroy {
+export class ProductListComponent implements OnInit {
   store = inject(CatalogStore);
   cartStore = inject(CartStore);
   route = inject(ActivatedRoute);
+  private platformId = inject(PLATFORM_ID);
   
   readonly skeletons = Array.from({ length: 6 }, (_, i) => i);
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private sub: Subscription | null = null;
 
-  ngOnInit(): void {
-    // Note: We no longer load side-bar categories here since it's global mega-menu now.
-    
-    this.sub = this.route.queryParams.subscribe(params => {
+  constructor() {
+    this.route.queryParams.pipe(takeUntilDestroyed()).subscribe(params => {
       const q = params['q'] || '';
       const categoryId = params['categoryId'] || null;
       
@@ -166,10 +164,8 @@ export class ProductListComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void {
-    if (this.sub) {
-      this.sub.unsubscribe();
-    }
+  ngOnInit(): void {
+    // Note: We no longer load side-bar categories here since it's global mega-menu now.
   }
 
   onSearch(query: string): void {
@@ -181,7 +177,9 @@ export class ProductListComponent implements OnInit, OnDestroy {
   onPageChange(page: number): void {
     this.store.goToPage(page);
     this.store.refresh();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (isPlatformBrowser(this.platformId)) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   onAddToCart(productId: string): void {

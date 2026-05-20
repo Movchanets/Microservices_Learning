@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { DecimalPipe, TitleCasePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, ChevronDown, CheckCircle, CreditCard, Truck, MapPin, ShoppingBag } from 'lucide-angular';
 import { CartStore } from '../../cart/cart.store';
@@ -13,9 +13,8 @@ import { AddressFormComponent, Address } from '../address-form/address-form';
 
 @Component({
   selector: 'app-checkout-page',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, RouterLink, LucideAngularModule, CheckoutSummaryComponent, CheckoutStatusComponent, AddressFormComponent],
+  imports: [DecimalPipe, TitleCasePipe, RouterLink, LucideAngularModule, CheckoutSummaryComponent, CheckoutStatusComponent, AddressFormComponent],
   templateUrl: './checkout-page.html',
   styleUrl: './checkout-page.css',
 })
@@ -42,26 +41,55 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   readonly BagIcon = ShoppingBag;
 
   constructor() {
-    // React to SignalR order status updates — no polling needed
+    // React to SignalR order status updates — no polling needed.
+    // The SignalR update IS the source of truth for order status.
+    // We build a minimal order directly from it (no BFF round-trip)
+    // so the UI always reflects the real status, even if the BFF is down.
     effect(() => {
       const update = this.notifications.orderUpdates();
-      if (update && this.submitted() && !this.checkoutStore.hasOrder()) {
-        // SignalR notified us of an order update — fetch the order directly
-        this.orderStore.loadOrderById(update.orderId).then(() => {
-          const order = this.orderStore.selectedOrder();
-          if (order) {
-            this.checkoutStore.setOrder(order);
-            this.stopPolling();
+      if (update && this.submitted()) {
+        if (!this.checkoutStore.hasOrder()) {
+          // First update — create order directly from SignalR data
+          this.checkoutStore.setOrder({
+            id: update.orderId,
+            buyerId: update.buyerId,
+            status: update.status,
+            totalAmount: 0,
+            createdAt: update.timestamp,
+            completedAt: null,
+            items: [],
+          });
+          this.stopPolling();
+
+          // Enrich with full order data from BFF (items, amounts) in background.
+          // Non-blocking — the status is already displayed.
+          this.orderStore.loadOrderById(update.orderId).then(() => {
+            const full = this.orderStore.selectedOrder();
+            if (full) {
+              this.checkoutStore.setOrder(full);
+            }
+          }).catch(() => { /* BFF enrichment is optional */ });
+        } else {
+          // Subsequent update — update the status in-place so the UI
+          // transitions through Submitted → InventoryReserved → Completed
+          const currentOrder = this.checkoutStore.order();
+          if (currentOrder && currentOrder.id === update.orderId) {
+            this.checkoutStore.setOrder({ ...currentOrder, status: update.status });
           }
-        });
+        }
       }
     });
   }
 
   ngOnInit(): void {
-    this.checkoutStore.reset();
-    this.submitted.set(false);
-    this.pollingExpired.set(false);
+    // Only reset if there's no in-flight checkout. If an order is already
+    // tracked (from SignalR or fallback poll) or submission is in progress,
+    // preserve the state so the user sees the status after navigation.
+    if (!this.checkoutStore.hasOrder() && !this.submitted()) {
+      this.checkoutStore.reset();
+      this.submitted.set(false);
+      this.pollingExpired.set(false);
+    }
   }
 
   ngOnDestroy(): void {
@@ -82,17 +110,20 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
     this.activeSection.set('summary');
   }
 
-  async onConfirm(): Promise<void> {
+  onConfirm(): void {
     this.submitted.set(true);
 
-    await this.checkoutStore.submitCheckout();
+    // Fire checkout without blocking UI — the endpoint returns 202 Accepted
+    // almost immediately. SignalR delivers the real order status updates.
+    this.checkoutStore.submitCheckout().then(() => {
+      // If the HTTP call returned an error (e.g. 400 Bad Request), reset
+      // so the user can fix their input and try again.
+      if (this.checkoutStore.error()) {
+        this.submitted.set(false);
+      }
+    });
 
-    if (this.checkoutStore.error()) {
-      this.submitted.set(false);
-      return;
-    }
-
-    // Start a single fallback check after 8s in case SignalR misses it
+    // Fallback: poll after 15s in case SignalR misses the update
     this.pollTimer = setTimeout(async () => {
       if (this.checkoutStore.hasOrder()) return;
 
@@ -113,7 +144,12 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
       } catch { /* ignore */ }
 
       this.pollingExpired.set(true);
-    }, 8000);
+    }, 15000);
+  }
+
+  retryCheckout(): void {
+    this.submitted.set(false);
+    this.pollingExpired.set(false);
   }
 
   private stopPolling(): void {

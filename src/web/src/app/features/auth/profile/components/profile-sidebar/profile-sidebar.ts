@@ -1,14 +1,12 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { LucideAngularModule, User, ShoppingBag, Settings, LogOut } from 'lucide-angular';
 
 @Component({
   selector: 'app-profile-sidebar',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, RouterModule, LucideAngularModule],
+  imports: [RouterModule, LucideAngularModule],
   template: `
     <div class="bg-card shadow-lg border border-border rounded-2xl p-6 shadow-sm sticky top-24">
       <div class="flex flex-col items-center mb-8 pb-8 border-b border-border text-center">

@@ -1,4 +1,5 @@
-import { inject } from '@angular/core';
+import { inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { AuthService } from './auth.service';
 import { User, LoginCredentials, RegisterCredentials } from './auth.models';
@@ -24,7 +25,8 @@ export const AuthStore = signalStore(
     store,
     authService = inject(AuthService),
     router = inject(Router),
-    notificationService = inject(NotificationService)) => ({
+    notificationService = inject(NotificationService),
+    platformId = inject(PLATFORM_ID)) => ({
     async login(credentials: LoginCredentials) {
       patchState(store, { loading: true, error: null });
       try {
@@ -32,13 +34,16 @@ export const AuthStore = signalStore(
         await authService.ensureCsrf();
         const user = await authService.getUser();
         if (user) {
-          localStorage.setItem('buyerId', user.id);
+          if (isPlatformBrowser(platformId)) {
+            localStorage.setItem('buyerId', user.id);
+          }
           await notificationService.start(user.id);
         }
         patchState(store, { user, loading: false });
         router.navigate(['/catalog']);
-      } catch (err: any) {
-        patchState(store, { error: err.error?.error || 'Invalid credentials', loading: false });
+      } catch (err: unknown) {
+        const e = err as { error?: { error?: string } };
+        patchState(store, { error: e.error?.error || 'Invalid credentials', loading: false });
       }
     },
     async register(credentials: RegisterCredentials) {
@@ -48,26 +53,33 @@ export const AuthStore = signalStore(
         await authService.ensureCsrf();
         const user = await authService.getUser();
         if (user) {
-          localStorage.setItem('buyerId', user.id);
+          if (isPlatformBrowser(platformId)) {
+            localStorage.setItem('buyerId', user.id);
+          }
           await notificationService.start(user.id);
         }
         patchState(store, { user, loading: false });
         router.navigate(['/catalog']);
-      } catch (err: any) {
-        patchState(store, { error: err.error?.error || 'Registration failed', loading: false });
+      } catch (err: unknown) {
+        const e = err as { error?: { error?: string } };
+        patchState(store, { error: e.error?.error || 'Registration failed', loading: false });
       }
     },
     async logout() {
       patchState(store, { loading: true });
       try {
-        localStorage.removeItem('buyerId');
+        if (isPlatformBrowser(platformId)) {
+          localStorage.removeItem('buyerId');
+        }
         await notificationService.stop();
         await authService.ensureCsrf();
         await authService.logout();
         patchState(store, { user: null, loading: false });
         router.navigate(['/auth/login']);
       } catch {
-        localStorage.removeItem('buyerId');
+        if (isPlatformBrowser(platformId)) {
+          localStorage.removeItem('buyerId');
+        }
         await notificationService.stop();
         patchState(store, { user: null, loading: false });
         router.navigate(['/auth/login']);
@@ -79,12 +91,16 @@ export const AuthStore = signalStore(
         await authService.ensureCsrf();
         const user = await authService.getUser();
         if (user) {
-          localStorage.setItem('buyerId', user.id);
+          if (isPlatformBrowser(platformId)) {
+            localStorage.setItem('buyerId', user.id);
+          }
           await notificationService.start(user.id);
         }
         patchState(store, { user, loading: false });
       } catch {
-        localStorage.removeItem('buyerId');
+        if (isPlatformBrowser(platformId)) {
+          localStorage.removeItem('buyerId');
+        }
         await notificationService.stop();
         patchState(store, { user: null, loading: false });
       }

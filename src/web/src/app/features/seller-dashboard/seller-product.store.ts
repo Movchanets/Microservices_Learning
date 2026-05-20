@@ -2,7 +2,8 @@
 // NgRx SignalStore managing seller product CRUD operations.
 // Loads products filtered by sellerId, handles create/update/delete.
 
-import { computed, inject } from '@angular/core';
+import { computed, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { SellerProductService } from './seller-product.service';
 import { SellerProduct, CreateProductRequest, UpdateProductRequest } from './seller.models';
@@ -31,12 +32,12 @@ export const SellerProductStore = signalStore(
     hasProducts: computed(() => store.products().length > 0),
   })),
 
-  withMethods((store, productService = inject(SellerProductService)) => ({
+  withMethods((store, productService = inject(SellerProductService), platformId = inject(PLATFORM_ID)) => ({
 
     async loadProducts(): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const storeId = localStorage.getItem('storeId') || '';
+        const storeId = isPlatformBrowser(platformId) ? (localStorage.getItem('storeId') || '') : '';
         const products = await productService.getMyProducts(storeId);
         patchState(store, { products, loading: false });
       } catch {

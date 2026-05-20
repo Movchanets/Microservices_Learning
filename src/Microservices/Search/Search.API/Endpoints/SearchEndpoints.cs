@@ -29,19 +29,12 @@ public static class SearchEndpoints
                 ? tags.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
                 : null;
 
-            var result = await searchService.SearchAsync(
-                q,
-                categoryId,
-                priceMin,
-                priceMax,
-                tagList,
-                brand,
-                minRating,
-                inStock,
-                page > 0 ? page : 1,
-                pageSize > 0 ? Math.Min(pageSize, 100) : 20,
-                ct);
+            var request = new SearchRequest(
+                q, categoryId, priceMin, priceMax, tagList, brand,
+                minRating, inStock, page > 0 ? page : 1,
+                pageSize > 0 ? Math.Min(pageSize, 100) : 20);
 
+            var result = await searchService.SearchAsync(request, ct);
             return Results.Ok(result);
         })
         .WithName("SearchProducts")

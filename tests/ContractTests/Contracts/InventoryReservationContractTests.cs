@@ -30,7 +30,7 @@ public class InventoryReservationContractTests
 
         var items = new List<OrderItemContract>
         {
-            new("SKU-RES-123", 2, 29.99m)
+            new(Guid.NewGuid(), 2, 29.99m, Guid.Parse("33333333-3333-3333-3333-333333333333"))
         };
 
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
@@ -71,7 +71,7 @@ public class InventoryReservationContractTests
 
         var items = new List<OrderItemContract>
         {
-            new("SKU-NOSTOCK", 5, 10m)
+            new(Guid.NewGuid(), 5, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))
         };
 
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
@@ -111,7 +111,7 @@ public class InventoryReservationContractTests
 
         var items = new List<OrderItemContract>
         {
-            new("SKU-CANCEL", 2, 10m)
+            new(Guid.NewGuid(), 2, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))
         };
 
         var command = new CancelReservationCommand(correlationId, orderId, items);

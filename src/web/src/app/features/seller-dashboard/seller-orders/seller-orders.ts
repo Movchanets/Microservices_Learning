@@ -1,16 +1,17 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
 import { DatePipe, SlicePipe, DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { OrderService } from '../../orders/order.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { Order } from '../../checkout/checkout.models';
+import { Order, OrderStatus } from '../../checkout/checkout.models';
 
 @Component({
   selector: 'app-seller-orders',
-  standalone: true,
+
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, SlicePipe, DecimalPipe, FormsModule, LucideAngularModule],
   template: `
@@ -139,7 +140,7 @@ export class SellerOrdersComponent implements OnInit {
       await this.orderService.updateOrderStatus(orderId, newStatus, this.updateNotes || undefined);
       // Update local state
       this.orders.update(orders =>
-        orders.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o)
+        orders.map(o => o.id === orderId ? { ...o, status: newStatus as OrderStatus } : o)
       );
       this.toast.success(`Order marked as ${newStatus}`);
       this.updatingId.set(null);
@@ -152,13 +153,12 @@ export class SellerOrdersComponent implements OnInit {
 
   private loadOrders(sellerId: string): void {
     this.loading.set(true);
-    this.http.get<Order[]>(`/api/orders/seller/${sellerId}`).subscribe({
-      next: (orders) => {
+    firstValueFrom(this.http.get<Order[]>(`/api/orders/seller/${sellerId}`))
+      .then((orders) => {
         this.orders.set(orders);
         this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+      })
+      .catch(() => this.loading.set(false));
   }
 
   statusClass(status: string): string {

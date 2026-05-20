@@ -59,7 +59,11 @@ public sealed class Product : AggregateRoot
         };
 
         product.AddDomainEvent(new ProductCreatedDomainEvent(
-            product.Id, product.Name, product.Sku.Value));
+            product.Id, product.Name, product.Description,
+            product.Price.Amount, product.Price.Currency,
+            product.Sku.Value, product.CategoryId,
+            product.Tags, product.ImageUrl, product.StoreId,
+            product.CreatedAt));
 
         return product;
     }
@@ -81,7 +85,12 @@ public sealed class Product : AggregateRoot
         ImageUrl = imageUrl ?? ImageUrl;
         UpdatedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new ProductUpdatedDomainEvent(Id, Name));
+        AddDomainEvent(new ProductUpdatedDomainEvent(
+            Id, Name, Description,
+            Price.Amount, Price.Currency,
+            Sku.Value, CategoryId,
+            Tags, ImageUrl, StoreId,
+            IsActive, UpdatedAt.Value));
     }
 
     public void ChangePrice(decimal newPrice, string currency)
@@ -101,14 +110,24 @@ public sealed class Product : AggregateRoot
 
         Status = ProductStatus.Active;
         UpdatedAt = DateTime.UtcNow;
-        AddDomainEvent(new ProductUpdatedDomainEvent(Id, Name));
+        AddDomainEvent(new ProductUpdatedDomainEvent(
+            Id, Name, Description,
+            Price.Amount, Price.Currency,
+            Sku.Value, CategoryId,
+            Tags, ImageUrl, StoreId,
+            IsActive, UpdatedAt.Value));
     }
 
     public void Deactivate()
     {
         Status = ProductStatus.Inactive;
         UpdatedAt = DateTime.UtcNow;
-        AddDomainEvent(new ProductUpdatedDomainEvent(Id, Name));
+        AddDomainEvent(new ProductUpdatedDomainEvent(
+            Id, Name, Description,
+            Price.Amount, Price.Currency,
+            Sku.Value, CategoryId,
+            Tags, ImageUrl, StoreId,
+            IsActive, UpdatedAt.Value));
     }
 
     public void SoftDelete()

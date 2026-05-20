@@ -95,17 +95,17 @@ export class SavedSearchesComponent implements OnInit {
   }
 
   runSearch(search: SavedSearch): void {
-    const params: any = {};
-    if (search.query) params.q = search.query;
+    const params: Record<string, string> = {};
+    if (search.query) params['q'] = search.query;
 
     try {
       const filters = JSON.parse(search.filtersJson);
-      if (filters.categoryId) params.category = filters.categoryId;
-      if (filters.priceMin) params.priceMin = filters.priceMin;
-      if (filters.priceMax) params.priceMax = filters.priceMax;
-      if (filters.brand) params.brand = filters.brand;
-      if (filters.minRating) params.minRating = filters.minRating;
-      if (filters.inStock) params.inStock = filters.inStock;
+      if (filters.categoryId) params['category'] = filters.categoryId;
+      if (filters.priceMin) params['priceMin'] = filters.priceMin;
+      if (filters.priceMax) params['priceMax'] = filters.priceMax;
+      if (filters.brand) params['brand'] = filters.brand;
+      if (filters.minRating) params['minRating'] = filters.minRating;
+      if (filters.inStock) params['inStock'] = filters.inStock;
     } catch {
       // Ignore parse errors
     }

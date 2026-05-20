@@ -1,4 +1,3 @@
-using System.Text;
 using Cart.API.Endpoints;
 using Cart.Domain.Aggregates;
 using Cart.Domain.Repositories;
@@ -11,9 +10,8 @@ using FluentValidation;
 using BuildingBlocks.Infrastructure.Middleware;
 using MassTransit;
 using Marketplace.ServiceDefaults;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using BuildingBlocks.Infrastructure.Authentication;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +24,13 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 // PostgreSQL DB
-builder.AddNpgsqlDbContext<CartDbContext>("cart-db");
+// NOTE: Do NOT use AddNpgsqlDbContext here — it uses AddDbContextPool internally,
+// which conflicts with IDbContextOptionsConfiguration<T> being scoped in EF Core 10.
+builder.Services.AddDbContext<CartDbContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("cart-db"),
+        npgsql => npgsql.MigrationsAssembly(typeof(CartDbContext).Assembly.FullName));
+});
 
 // Redis
 builder.AddRedisDistributedCache("redis");
@@ -64,24 +68,8 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// ── Authentication (JWT Bearer) ─────────────────────────
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
-        };
-    });
-
-builder.Services.AddAuthorization();
+// ── Authentication ─────────────────────────────────────
+builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

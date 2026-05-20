@@ -24,6 +24,7 @@ builder.Services.AddSingleton(_ =>
     return new ElasticsearchClient(settings);
 });
 
+builder.Services.AddHostedService<ElasticsearchInitializer>();
 builder.Services.AddSingleton<ISearchService, ElasticsearchService>();
 
 // ── MassTransit (consumers) ─────────────────────────────

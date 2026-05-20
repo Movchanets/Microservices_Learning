@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using BuildingBlocks.Infrastructure.Database;
 using Identity.Domain.ValueObjects;
 
 namespace Identity.Infrastructure.Persistence;
@@ -16,27 +17,8 @@ public static class DatabaseMigrationExtensions
     /// Useful for local development and integration tests.
     /// </summary>
     public static WebApplication ApplyMigrations(this WebApplication app)
-    {
-        using var scope = app.Services.CreateScope();
-        var logger = scope.ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("Identity.DatabaseMigration");
+        => app.ApplyMigrations<IdentityDbContext>("Identity");
 
-        try
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-            logger.LogInformation("Applying Identity database migrations...");
-            dbContext.Database.Migrate();
-            logger.LogInformation("Identity database migrations applied successfully.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, "An error occurred while applying Identity database migrations.");
-            throw;
-        }
-
-        return app;
-    }
 
     /// <summary>
     /// Seeds initial test data for the Identity microservice.
@@ -114,7 +96,7 @@ public static class DatabaseMigrationExtensions
 
         if (context.ChangeTracker.HasChanges())
         {
-            context.SaveChanges();
+            context.SaveChangesAsync().GetAwaiter().GetResult();
             logger.LogInformation("Seed users created: admin + 2 seller stores.");
         }
 

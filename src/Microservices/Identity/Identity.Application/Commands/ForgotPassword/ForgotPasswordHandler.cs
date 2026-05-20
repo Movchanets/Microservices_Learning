@@ -1,4 +1,5 @@
 using BuildingBlocks.Infrastructure.Models;
+using BuildingBlocks.SharedContracts.Abstractions;
 using Identity.Domain.Aggregates;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -11,24 +12,26 @@ namespace Identity.Application.Commands.ForgotPassword;
 public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, Result<bool>>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ForgotPasswordHandler> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ForgotPasswordHandler"/> class.
     /// </summary>
     /// <param name="userRepository">The user repository.</param>
+    /// <param name="unitOfWork">The unit of work.</param>
     /// <param name="logger">The logger.</param>
-    public ForgotPasswordHandler(IUserRepository userRepository, ILogger<ForgotPasswordHandler> logger)
+    public ForgotPasswordHandler(IUserRepository userRepository, IUnitOfWork unitOfWork, ILogger<ForgotPasswordHandler> logger)
     {
         _userRepository = userRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     /// <summary>
     /// Handles the forgot password request.
     /// Rationale: For security reasons, we always return success even if the user doesn't exist
-    /// to prevent email enumeration attacks. In a real implementation, this would trigger
-    /// an email with a reset token.
+    /// to prevent email enumeration attacks.
     /// </summary>
     /// <param name="request">The forgot password request.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -46,8 +49,10 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, Resu
             return Result<bool>.Success(true);
         }
 
-        // TODO: Generate password reset token and send email in Phase 5 (Notifications)
-        _logger.LogInformation("Password reset would be initiated for {Email}", request.Email);
+        var token = user.GeneratePasswordResetToken();
+        _userRepository.Update(user);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("Password reset token generated for {Email}", request.Email);
 
         return Result<bool>.Success(true);
     }

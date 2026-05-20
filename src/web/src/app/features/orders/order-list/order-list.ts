@@ -8,7 +8,6 @@ import { AuthStore } from '../../../core/auth/auth.store';
 
 @Component({
   selector: 'app-order-list',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, CurrencyPipe, DatePipe, SlicePipe, LucideAngularModule, StatusBadgeComponent],
   template: `

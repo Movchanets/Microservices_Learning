@@ -25,7 +25,9 @@ public class InventoryItemRepositoryTests
         var context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var repository = new InventoryItemRepository(context);
 
-        var item = InventoryItem.Create("SKU-REPO-1", 100);
+        var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var productId = Guid.NewGuid();
+        var item = InventoryItem.Create("SKU-REPO-1", 100, storeId, productId);
 
         // Act
         repository.Add(item);
@@ -46,9 +48,10 @@ public class InventoryItemRepositoryTests
         var context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var repository = new InventoryItemRepository(context);
 
-        repository.Add(InventoryItem.Create("SKU-MULTI-1", 10));
-        repository.Add(InventoryItem.Create("SKU-MULTI-2", 20));
-        repository.Add(InventoryItem.Create("SKU-MULTI-3", 30));
+        var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        repository.Add(InventoryItem.Create("SKU-MULTI-1", 10, storeId, Guid.NewGuid()));
+        repository.Add(InventoryItem.Create("SKU-MULTI-2", 20, storeId, Guid.NewGuid()));
+        repository.Add(InventoryItem.Create("SKU-MULTI-3", 30, storeId, Guid.NewGuid()));
         await context.SaveChangesAsync();
 
         // Act
@@ -73,7 +76,8 @@ public class InventoryItemRepositoryTests
         {
             var setupContext = setupScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var setupRepo = new InventoryItemRepository(setupContext);
-            var item = InventoryItem.Create(sku, 50);
+            var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+            var item = InventoryItem.Create(sku, 50, storeId, Guid.NewGuid());
             setupRepo.Add(item);
             await setupContext.SaveChangesAsync();
         }
@@ -118,7 +122,8 @@ public class InventoryItemRepositoryTests
         var context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var repository = new InventoryItemRepository(context);
 
-        var item = InventoryItem.Create("SKU-UPD", 100);
+        var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var item = InventoryItem.Create("SKU-UPD", 100, storeId, Guid.NewGuid());
         repository.Add(item);
         await context.SaveChangesAsync();
 

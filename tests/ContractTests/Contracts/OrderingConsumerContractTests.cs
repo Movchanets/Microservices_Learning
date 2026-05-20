@@ -25,10 +25,14 @@ public class OrderingConsumerContractTests
         // Arrange
         var correlationId = Guid.NewGuid();
         var buyerId = "buyer-order-001";
+        var productAId = Guid.NewGuid();
+        var productBId = Guid.NewGuid();
+        var storeId1 = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var storeId2 = Guid.Parse("44444444-4444-4444-4444-444444444444");
         var items = new List<OrderItemContract>
         {
-            new("SKU-A", 3, 15.99m, "seller-1"),
-            new("SKU-B", 1, 29.99m, "seller-2")
+            new(productAId, 3, 15.99m, storeId1),
+            new(productBId, 1, 29.99m, storeId2)
         };
 
         var @event = new OrderSubmittedEvent(
@@ -72,9 +76,9 @@ public class OrderingConsumerContractTests
         capturedOrder!.BuyerId.Should().Be(buyerId);
         capturedOrder.Items.Should().HaveCount(2);
         capturedOrder.Items.Should().Contain(i =>
-            i.Sku == "SKU-A" && i.Quantity == 3 && i.UnitPrice == 15.99m && i.SellerId == "seller-1");
+            i.ProductId == productAId && i.Quantity == 3 && i.UnitPrice == 15.99m && i.StoreId == storeId1);
         capturedOrder.Items.Should().Contain(i =>
-            i.Sku == "SKU-B" && i.Quantity == 1 && i.UnitPrice == 29.99m && i.SellerId == "seller-2");
+            i.ProductId == productBId && i.Quantity == 1 && i.UnitPrice == 29.99m && i.StoreId == storeId2);
         capturedOrder.ShippingAddress.Should().NotBeNull();
         capturedOrder.ShippingAddress.City.Should().Be("Portland");
         capturedOrder.ShippingAddress.State.Should().Be("OR");
@@ -90,7 +94,7 @@ public class OrderingConsumerContractTests
         var @event = new OrderSubmittedEvent(
             CorrelationId: correlationId,
             BuyerId: "buyer-idempotent",
-            Items: [new OrderItemContract("SKU-1", 1, 10m)],
+            Items: [new OrderItemContract(Guid.NewGuid(), 1, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             Timestamp: DateTime.UtcNow);
 
         var existingOrder = Order.Create("buyer-idempotent",
@@ -126,7 +130,7 @@ public class OrderingConsumerContractTests
         var @event = new OrderSubmittedEvent(
             CorrelationId: correlationId,
             BuyerId: "buyer-minimal",
-            Items: [new OrderItemContract("SKU-1", 1, 5m)],
+            Items: [new OrderItemContract(Guid.NewGuid(), 1, 5m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             Timestamp: DateTime.UtcNow,
             ShippingAddressLine1: "789 Elm St",
             ShippingAddressLine2: null,

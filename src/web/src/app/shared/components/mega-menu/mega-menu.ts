@@ -1,20 +1,19 @@
-import { Component, EventEmitter, Output, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy, effect, inject, output, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { LucideAngularModule, ChevronRight } from 'lucide-angular';
 import { CategoryTree, CategoryTreeService } from '../../../core/services/category-tree.service';
 
 @Component({
   selector: 'app-mega-menu',
-  imports: [CommonModule, LucideAngularModule],
-  standalone: true,
+  imports: [LucideAngularModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './mega-menu.html',
 })
 export class MegaMenu {
   private categoryTreeService = inject(CategoryTreeService);
   private router = inject(Router);
 
-  @Output() closeMenu = new EventEmitter<void>();
+  closeMenu = output<void>();
 
   tree = this.categoryTreeService.categoryTree;
   activeRoot = signal<CategoryTree | null>(null);

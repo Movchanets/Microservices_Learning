@@ -10,7 +10,6 @@ import { OrderTimelineComponent } from '../order-timeline/order-timeline';
 
 @Component({
   selector: 'app-order-detail',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, CurrencyPipe, DatePipe, FormsModule, LucideAngularModule, StatusBadgeComponent, OrderTimelineComponent],
   template: `

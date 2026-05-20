@@ -23,6 +23,12 @@ public static class ProductEndpoints
             .WithTags("Products")
             .WithOpenApi();
 
+        group.MapProductCrudEndpoints();
+        group.MapProductReviewEndpoints();
+    }
+
+    private static void MapProductCrudEndpoints(this RouteGroupBuilder group)
+    {
         // Public: featured products (for homepage)
         group.MapGet("/featured", async (
             [FromQuery] string? tag,
@@ -34,6 +40,21 @@ public static class ProductEndpoints
         })
         .WithName("GetFeaturedProducts")
         .Produces<List<ProductListDto>>();
+
+        // Public: batch lookup products by IDs (for BFF cart enrichment)
+        group.MapPost("/by-ids", async (
+            List<Guid> ids,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            if (ids.Count == 0) return Results.Ok(new List<ProductListDto>());
+            if (ids.Count > 100) return Results.BadRequest(new { error = "Maximum 100 product IDs allowed." });
+            var result = await sender.Send(new GetProductsByIdsQuery(ids), ct);
+            return Results.Ok(result);
+        })
+        .WithName("GetProductsByIds")
+        .Produces<List<ProductListDto>>()
+        .ProducesProblem(StatusCodes.Status400BadRequest);
 
         // Public: list products
         group.MapGet("/", async (
@@ -135,6 +156,25 @@ public static class ProductEndpoints
         .WithName("GetProductRecommendations")
         .Produces<List<ProductListDto>>();
 
+        // Authorized: soft-delete product
+        group.MapDelete("/{id:guid}", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new DeleteProductCommand(id), ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.NotFound();
+        })
+        .WithName("DeleteProduct")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+    }
+
+    private static void MapProductReviewEndpoints(this RouteGroupBuilder group)
+    {
         // Public: get product review summary
         group.MapGet("/{id:guid}/reviews/summary", async (
             Guid id,
@@ -239,21 +279,5 @@ public static class ProductEndpoints
         .RequireAuthorization()
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest);
-
-        // Authorized: soft-delete product
-        group.MapDelete("/{id:guid}", async (
-            Guid id,
-            ISender sender,
-            CancellationToken ct) =>
-        {
-            var result = await sender.Send(new DeleteProductCommand(id), ct);
-            return result.IsSuccess
-                ? Results.NoContent()
-                : Results.NotFound();
-        })
-        .WithName("DeleteProduct")
-        .RequireAuthorization()
-        .Produces(StatusCodes.Status204NoContent)
-        .ProducesProblem(StatusCodes.Status404NotFound);
     }
 }

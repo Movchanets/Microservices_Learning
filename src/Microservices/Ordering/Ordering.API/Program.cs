@@ -1,12 +1,13 @@
-using System.Text;
 using BuildingBlocks.Infrastructure.Behaviors;
+using BuildingBlocks.Infrastructure.Database.Interceptors;
 using BuildingBlocks.Infrastructure.Middleware;
 using FluentValidation;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+using BuildingBlocks.Infrastructure.Authentication;
+using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Ordering.API.Endpoints;
 using Ordering.API.Saga;
 using Ordering.Application.Commands.CreateOrder;
@@ -21,7 +22,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // ── Database ────────────────────────────────────────────
-builder.AddNpgsqlDbContext<OrderingDbContext>("ordering-db");
+// NOTE: Do NOT use AddNpgsqlDbContext here — it uses AddDbContextPool internally,
+// which conflicts with IDbContextOptionsConfiguration<T> being scoped in EF Core 10.
+builder.Services.AddSingleton<DomainEventDispatcherInterceptor>();
+builder.Services.AddDbContext<OrderingDbContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("ordering-db"),
+        npgsql => npgsql.MigrationsAssembly(typeof(OrderingDbContext).Assembly.FullName));
+    options.AddInterceptors(sp.GetRequiredService<DomainEventDispatcherInterceptor>());
+});
 
 // ── Ordering Infrastructure ─────────────────────────────
 builder.Services.AddOrderingInfrastructure();
@@ -73,22 +82,8 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// ── Authentication (JWT Bearer) ─────────────────────────
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
-        };
-    });
+// ── Authentication ─────────────────────────────────────
+builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 
 builder.Services.AddAuthorization(options =>
 {

@@ -31,17 +31,19 @@ public class ReservationConsumerTests
     {
         // Arrange — seed an item with 10 units
         var sku = $"SKU-RESRV-{Guid.NewGuid():N}".ToUpperInvariant();
+        var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var productId = Guid.NewGuid();
         using (var seedScope = _fixture.CreateScope())
         {
             var ctx = seedScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var repo = new InventoryItemRepository(ctx);
-            repo.Add(InventoryItem.Create(sku, 10));
+            repo.Add(InventoryItem.Create(sku, 10, storeId, productId));
             await ctx.SaveChangesAsync();
         }
 
         var orderId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        var items = new List<OrderItemContract> { new(sku, 3, 25.00m) };
+        var items = new List<OrderItemContract> { new(productId, 3, 25.00m, storeId) };
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
 
         // Resolve real ISender from DI (MediatR with real handlers)
@@ -81,17 +83,19 @@ public class ReservationConsumerTests
     {
         // Arrange — seed an item with only 1 unit
         var sku = $"SKU-LOW-{Guid.NewGuid():N}".ToUpperInvariant();
+        var storeId2 = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var productId2 = Guid.NewGuid();
         using (var seedScope = _fixture.CreateScope())
         {
             var ctx = seedScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var repo = new InventoryItemRepository(ctx);
-            repo.Add(InventoryItem.Create(sku, 1));
+            repo.Add(InventoryItem.Create(sku, 1, storeId2, productId2));
             await ctx.SaveChangesAsync();
         }
 
         var orderId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        var items = new List<OrderItemContract> { new(sku, 5, 10.00m) };
+        var items = new List<OrderItemContract> { new(productId2, 5, 10.00m, storeId2) };
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
 
         using var scope = _fixture.CreateScope();
@@ -132,12 +136,15 @@ public class ReservationConsumerTests
         // Arrange — two items, both in stock
         var sku1 = $"SKU-M1-{Guid.NewGuid():N}".ToUpperInvariant();
         var sku2 = $"SKU-M2-{Guid.NewGuid():N}".ToUpperInvariant();
+        var storeId3 = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var productId1 = Guid.NewGuid();
+        var productId2b = Guid.NewGuid();
         using (var seedScope = _fixture.CreateScope())
         {
             var ctx = seedScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var repo = new InventoryItemRepository(ctx);
-            repo.Add(InventoryItem.Create(sku1, 10));
-            repo.Add(InventoryItem.Create(sku2, 20));
+            repo.Add(InventoryItem.Create(sku1, 10, storeId3, productId1));
+            repo.Add(InventoryItem.Create(sku2, 20, storeId3, productId2b));
             await ctx.SaveChangesAsync();
         }
 
@@ -145,8 +152,8 @@ public class ReservationConsumerTests
         var correlationId = Guid.NewGuid();
         var items = new List<OrderItemContract>
         {
-            new(sku1, 4, 15.00m),
-            new(sku2, 7, 30.00m)
+            new(productId1, 4, 15.00m, storeId3),
+            new(productId2b, 7, 30.00m, storeId3)
         };
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
 
@@ -189,11 +196,13 @@ public class ReservationConsumerTests
     {
         // Arrange — seed item with 10 stock, then reserve 4 (so 6 remaining)
         var sku = $"SKU-CANC-{Guid.NewGuid():N}".ToUpperInvariant();
+        var storeId4 = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var productId3 = Guid.NewGuid();
         using (var seedScope = _fixture.CreateScope())
         {
             var ctx = seedScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var repo = new InventoryItemRepository(ctx);
-            var item = InventoryItem.Create(sku, 10);
+            var item = InventoryItem.Create(sku, 10, storeId4, productId3);
             item.Reserve(4); // 10 → 6
             repo.Add(item);
             await ctx.SaveChangesAsync();
@@ -201,7 +210,7 @@ public class ReservationConsumerTests
 
         var orderId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        var items = new List<OrderItemContract> { new(sku, 4, 25.00m) };
+        var items = new List<OrderItemContract> { new(productId3, 4, 25.00m, storeId4) };
         var command = new CancelReservationCommand(correlationId, orderId, items);
 
         using var scope = _fixture.CreateScope();

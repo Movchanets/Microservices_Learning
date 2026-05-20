@@ -3,7 +3,6 @@ import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-toast-container',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">

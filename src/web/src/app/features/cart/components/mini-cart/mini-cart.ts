@@ -5,7 +5,6 @@ import { CartStore } from '../../cart.store';
 
 @Component({
   selector: 'app-mini-cart',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, LucideAngularModule],
   template: `

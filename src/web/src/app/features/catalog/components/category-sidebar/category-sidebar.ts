@@ -4,7 +4,6 @@ import { Category } from '../../catalog.models';
 
 @Component({
   selector: 'app-category-sidebar',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideAngularModule],
   template: `

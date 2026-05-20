@@ -33,6 +33,27 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
             .FirstOrDefaultAsync(ct);
     }
 
+    public async Task<List<ProductListDto>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var idSet = ids.ToHashSet();
+        return await context.Products
+            .AsNoTracking()
+            .Include(p => p.Category)
+            .Where(p => idSet.Contains(p.Id) && p.Status != ProductStatus.Deleted)
+            .Select(p => new ProductListDto(
+                p.Id,
+                p.Name,
+                p.Price.Amount,
+                p.Price.Currency,
+                p.Sku.Value,
+                p.Category != null ? p.Category.Name : "",
+                p.Status.ToString(),
+                p.ImageUrl,
+                p.StoreId,
+                p.CreatedAt))
+            .ToListAsync(ct);
+    }
+
     public async Task<PagedResult<ProductListDto>> ListAsync(
         int page, int pageSize,
         Guid? categoryId = null,
@@ -71,6 +92,7 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
                 p.Category != null ? p.Category.Name : "",
                 p.Status.ToString(),
                 p.ImageUrl,
+                p.StoreId,
                 p.CreatedAt))
             .ToListAsync(ct);
 

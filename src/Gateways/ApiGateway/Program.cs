@@ -1,6 +1,7 @@
 using ApiGateway.Endpoints;
 using ApiGateway.Extensions;
 using ApiGateway.Middleware;
+using ApiGateway.Services;
 using Marketplace.ServiceDefaults;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
@@ -52,6 +53,10 @@ builder.Services.AddHttpClient("store-api", c => c.BaseAddress = new Uri("http:/
 builder.Services.AddHttpClient("media-api", c => c.BaseAddress = new Uri("http://media-api"));
 builder.Services.AddHttpClient("payment-api", c => c.BaseAddress = new Uri("http://payment-api"));
 builder.Services.AddHttpClient("notification-worker", c => c.BaseAddress = new Uri("http://notification-worker"));
+
+// ── BFF Services ────────────────────────────────────────
+builder.Services.AddScoped<CartBffService>();
+builder.Services.AddScoped<OrderBffService>();
 
 // ── CORS (for Angular SPA) ──────────────────────────────
 builder.Services.AddCors(options =>

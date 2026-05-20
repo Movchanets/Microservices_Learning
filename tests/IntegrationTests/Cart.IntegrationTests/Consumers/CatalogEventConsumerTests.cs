@@ -121,7 +121,7 @@ public class CatalogEventConsumerTests
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
 
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "INT-UPD-001", "Old Name", 10.00m, "USD"));
+            ProductPrice.Create(productId, "INT-UPD-001", "Old Name", 10.00m, "USD", Guid.NewGuid()));
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 
@@ -136,6 +136,7 @@ public class CatalogEventConsumerTests
             CategoryName: "Updated Category",
             Tags: ["updated"],
             ImageUrl: null,
+            StoreId: Guid.NewGuid(),
             IsActive: true,
             UpdatedAt: DateTime.UtcNow);
 
@@ -174,6 +175,7 @@ public class CatalogEventConsumerTests
             CategoryName: "Cat",
             Tags: [],
             ImageUrl: null,
+            StoreId: Guid.NewGuid(),
             IsActive: true,
             UpdatedAt: DateTime.UtcNow);
 
@@ -208,7 +210,7 @@ public class CatalogEventConsumerTests
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
 
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "INT-DEL-001", "To Delete", 30.00m, "USD"));
+            ProductPrice.Create(productId, "INT-DEL-001", "To Delete", 30.00m, "USD", Guid.NewGuid()));
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 
@@ -257,7 +259,7 @@ public class CatalogEventConsumerTests
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
 
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "INT-PRC-001", "Price Change Product", 50.00m, "USD"));
+            ProductPrice.Create(productId, "INT-PRC-001", "Price Change Product", 50.00m, "USD", Guid.NewGuid()));
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 

@@ -8,6 +8,7 @@ using Ordering.Application.DTOs;
 using Ordering.Application.Queries.GetOrderById;
 using Ordering.Application.Queries.ListOrdersByBuyer;
 using Ordering.Application.Queries.ListOrdersBySeller;
+using Ordering.Application.Queries.HasPurchased;
 
 namespace Ordering.API.Endpoints;
 
@@ -104,6 +105,19 @@ public static class OrderEndpoints
                 : Results.BadRequest(new { result.Error });
         })
         .RequireAuthorization("Seller");
+
+        // Check if buyer has purchased a product (internal service call)
+        group.MapGet("/has-purchased", async (
+            string buyerId,
+            Guid productId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new HasPurchasedQuery(buyerId, productId), ct);
+            return Results.Ok(new { hasPurchased = result.Value });
+        })
+        .WithName("HasPurchased")
+        .AllowAnonymous();
     }
 }
 

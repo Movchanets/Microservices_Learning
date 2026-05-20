@@ -7,7 +7,6 @@ import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, LucideAngularModule],
   templateUrl: './forgot-password.html',

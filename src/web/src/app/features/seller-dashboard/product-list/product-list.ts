@@ -11,7 +11,6 @@ import { SellerProduct } from '../seller.models';
 
 @Component({
   selector: 'app-seller-product-list',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, CurrencyPipe, LucideAngularModule],
   template: `

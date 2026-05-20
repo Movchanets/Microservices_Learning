@@ -43,9 +43,10 @@ export const StoreSettingsStore = signalStore(
         }
         const settings = await storeService.getStoreBySellerId(user.id);
         patchState(store, { settings, loading: false });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const e = err as { status?: number; error?: { error?: string } };
         // If 404, seller has no store yet — not an error
-        if (err?.status === 404) {
+        if (e?.status === 404) {
           patchState(store, { settings: null, loading: false });
         } else {
           patchState(store, { error: 'Failed to load store settings', loading: false });
@@ -64,8 +65,9 @@ export const StoreSettingsStore = signalStore(
         const settings = await storeService.createStore(name, description, user.id);
         patchState(store, { settings, loading: false });
         return true;
-      } catch (err: any) {
-        patchState(store, { error: err?.error?.error || 'Failed to create store', loading: false });
+      } catch (err: unknown) {
+        const e = err as { error?: { error?: string } };
+        patchState(store, { error: e?.error?.error || 'Failed to create store', loading: false });
         return false;
       }
     },
@@ -81,8 +83,9 @@ export const StoreSettingsStore = signalStore(
         const settings = await storeService.updateStore(currentSettings.storeId, name, description);
         patchState(store, { settings, loading: false });
         return true;
-      } catch (err: any) {
-        patchState(store, { error: err?.error?.error || 'Failed to update store settings', loading: false });
+      } catch (err: unknown) {
+        const e = err as { error?: { error?: string } };
+        patchState(store, { error: e?.error?.error || 'Failed to update store settings', loading: false });
         return false;
       }
     },

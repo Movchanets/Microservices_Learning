@@ -5,13 +5,12 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import { SellerProductStore } from '../seller-product.store';
 import { StoreSettingsStore } from '../store-settings.store';
 import { SalesCardComponent } from '../components/sales-card/sales-card';
 
 @Component({
   selector: 'app-seller-dashboard',
-  standalone: true,
+
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, RouterOutlet, LucideAngularModule, SalesCardComponent],
   template: `
@@ -55,7 +54,6 @@ import { SalesCardComponent } from '../components/sales-card/sales-card';
   `
 })
 export class SellerDashboardPageComponent implements OnInit {
-  readonly productStore = inject(SellerProductStore);
   readonly settingsStore = inject(StoreSettingsStore);
 
   ngOnInit(): void {

@@ -25,6 +25,7 @@ public sealed record ProductListDto(
     string CategoryName,
     string Status,
     string? ImageUrl,
+    Guid StoreId,
     DateTime CreatedAt);
 
 public sealed record CategoryDto(

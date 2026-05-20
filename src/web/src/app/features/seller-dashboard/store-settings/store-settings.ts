@@ -8,7 +8,7 @@ import { StoreSettingsStore } from '../store-settings.store';
 
 @Component({
   selector: 'app-store-settings',
-  standalone: true,
+
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideAngularModule],
   template: `
@@ -80,7 +80,6 @@ export class StoreSettingsComponent implements OnInit {
   readonly store = inject(StoreSettingsStore);
   storeName = signal('');
   storeDesc = signal('');
-  contactEmail = signal('');
 
   constructor() {
     // Populate form fields when store settings load
@@ -89,7 +88,7 @@ export class StoreSettingsComponent implements OnInit {
       if (settings) {
         this.storeName.set(settings.storeName);
         this.storeDesc.set(settings.description);
-        this.contactEmail.set(settings.contactEmail);
+
       }
     });
   }

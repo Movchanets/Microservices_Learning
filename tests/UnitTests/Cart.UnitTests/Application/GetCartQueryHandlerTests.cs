@@ -23,7 +23,9 @@ public class GetCartQueryHandlerTests
         // Arrange
         var buyerId = "buyer-1";
         var cart = new ShoppingCart(buyerId);
-        cart.AddItem("sku-1", 1, 10m);
+        var productId = Guid.NewGuid();
+        var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        cart.AddItem(productId, 1, storeId, 10m);
         _repositoryMock.Setup(r => r.GetCartAsync(buyerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cart);
 
@@ -38,7 +40,7 @@ public class GetCartQueryHandlerTests
         result.Value.Should().BeOfType<CartResponse>();
         result.Value.BuyerId.Should().Be(buyerId);
         result.Value.Items.Should().ContainSingle();
-        result.Value.Items.First().Sku.Should().Be("sku-1");
+        result.Value.Items.First().ProductId.Should().Be(productId);
         result.Value.Items.First().Quantity.Should().Be(1);
         result.Value.TotalPrice.Should().Be(10m);
         result.Value.TotalItems.Should().Be(1);

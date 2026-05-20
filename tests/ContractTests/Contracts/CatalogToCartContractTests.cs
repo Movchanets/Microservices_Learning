@@ -119,7 +119,7 @@ public class CatalogToCartContractTests
         var productId = Guid.NewGuid();
         await using var dbContext = CreateDbContext();
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "SKU-UPD-001", "Old Name", 10.00m, "USD"));
+            ProductPrice.Create(productId, "SKU-UPD-001", "Old Name", 10.00m, "USD", Guid.Parse("33333333-3333-3333-3333-333333333333")));
         await dbContext.SaveChangesAsync();
 
         var @event = new ProductUpdatedEvent(
@@ -133,6 +133,7 @@ public class CatalogToCartContractTests
             CategoryName: "Updated Category",
             Tags: ["updated"],
             ImageUrl: null,
+            StoreId: Guid.NewGuid(),
             IsActive: true,
             UpdatedAt: DateTime.UtcNow);
 
@@ -168,6 +169,7 @@ public class CatalogToCartContractTests
             CategoryName: "Cat",
             Tags: [],
             ImageUrl: null,
+            StoreId: Guid.NewGuid(),
             IsActive: true,
             UpdatedAt: DateTime.UtcNow);
 
@@ -195,7 +197,7 @@ public class CatalogToCartContractTests
         var productId = Guid.NewGuid();
         await using var dbContext = CreateDbContext();
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "SKU-DEL-001", "To Delete", 25.00m, "USD"));
+            ProductPrice.Create(productId, "SKU-DEL-001", "To Delete", 25.00m, "USD", Guid.Parse("33333333-3333-3333-3333-333333333333")));
         await dbContext.SaveChangesAsync();
 
         var @event = new ProductDeletedEvent(productId, DateTime.UtcNow);
@@ -236,7 +238,7 @@ public class CatalogToCartContractTests
         var productId = Guid.NewGuid();
         await using var dbContext = CreateDbContext();
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "SKU-PRICE-001", "Product", 10.00m, "USD"));
+            ProductPrice.Create(productId, "SKU-PRICE-001", "Product", 10.00m, "USD", Guid.Parse("33333333-3333-3333-3333-333333333333")));
         await dbContext.SaveChangesAsync();
 
         var @event = new ProductPriceChangedEvent(

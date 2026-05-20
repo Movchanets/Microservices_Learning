@@ -10,7 +10,6 @@ import { StatsCardComponent } from '../components/stats-card/stats-card';
 
 @Component({
   selector: 'app-admin-page',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, RouterOutlet, LucideAngularModule, StatsCardComponent],
   template: `

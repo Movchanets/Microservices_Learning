@@ -3,7 +3,6 @@ import { OrderStatus } from '../../../checkout/checkout.models';
 
 @Component({
   selector: 'app-status-badge',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <span [class]="badgeClass()">

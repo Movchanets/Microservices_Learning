@@ -8,7 +8,16 @@
         [correlationId]="cartStore.checkoutCorrelationId()" />
     } @else if (submitted()) {
       <div class="bg-card rounded-3xl border border-border p-8 text-center">
-        @if (pollingExpired()) {
+        @if (checkoutStore.error()) {
+          <lucide-icon name="AlertTriangle" class="w-16 h-16 mx-auto mb-4 text-red-500"></lucide-icon>
+          <h2 class="text-2xl font-bold font-lexend mb-2">Checkout Failed</h2>
+          <p class="text-muted mb-6">{{ checkoutStore.error() }}</p>
+          <button (click)="retryCheckout()"
+                  data-testid="checkout-retry"
+                  class="inline-block px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors">
+            Try Again
+          </button>
+        } @else if (pollingExpired()) {
           <lucide-icon name="AlertTriangle" class="w-16 h-16 mx-auto mb-4 text-yellow-500"></lucide-icon>
           <h2 class="text-2xl font-bold font-lexend mb-2">Order Processing</h2>
           <p class="text-muted mb-6">Your order is taking longer than expected. Check your orders page for updates.</p>
@@ -45,19 +54,27 @@
         <div class="accordion-item" [class.active]="activeSection() === 'address'" [class.completed]="checkoutStore.address()">
           <button class="accordion-header" (click)="setSection('address')">
             <div class="header-content">
-              <span class="step-number" *ngIf="!checkoutStore.address()">1</span>
-              <lucide-icon [img]="CheckIcon" class="step-check" *ngIf="checkoutStore.address()"></lucide-icon>
+              @if (!checkoutStore.address()) {
+              <span class="step-number">1</span>
+              }
+              @if (checkoutStore.address()) {
+              <lucide-icon [img]="CheckIcon" class="step-check"></lucide-icon>
+              }
               <lucide-icon [img]="MapPinIcon" class="header-icon"></lucide-icon>
               <h2>Shipping Address</h2>
             </div>
             <lucide-icon [img]="ChevronIcon" class="chevron" [class.rotate-180]="activeSection() === 'address'"></lucide-icon>
           </button>
-          <div class="accordion-content" *ngIf="activeSection() === 'address'">
+          @if (activeSection() === 'address') {
+          <div class="accordion-content">
             <app-address-form (addressSaved)="onAddressSaved($event)"></app-address-form>
           </div>
-          <div class="accordion-summary" *ngIf="activeSection() !== 'address' && checkoutStore.address()">
+          }
+          @if (activeSection() !== 'address' && checkoutStore.address()) {
+          <div class="accordion-summary">
             <p>{{ checkoutStore.address()?.addressLine1 }}, {{ checkoutStore.address()?.city }}, {{ checkoutStore.address()?.country }}</p>
           </div>
+          }
         </div>
 
         <!-- Section 2: Shipping Method -->
@@ -70,7 +87,8 @@
             </div>
             <lucide-icon [img]="ChevronIcon" class="chevron" [class.rotate-180]="activeSection() === 'shipping'"></lucide-icon>
           </button>
-          <div class="accordion-content" *ngIf="activeSection() === 'shipping'">
+          @if (activeSection() === 'shipping') {
+          <div class="accordion-content">
             <div class="shipping-methods">
               <label class="shipping-method">
                 <input data-testid="checkout-shipping-standard" type="radio" name="shipping" (change)="setShippingMethod('standard')" [checked]="checkoutStore.shippingMethod() === 'standard'">
@@ -90,9 +108,12 @@
               </label>
             </div>
           </div>
-          <div class="accordion-summary" *ngIf="activeSection() !== 'shipping' && checkoutStore.address()">
+          }
+          @if (activeSection() !== 'shipping' && checkoutStore.address()) {
+          <div class="accordion-summary">
              <p>{{ checkoutStore.shippingMethod() | titlecase }} Shipping</p>
           </div>
+          }
         </div>
 
         <!-- Section 3: Order Summary -->
@@ -105,10 +126,12 @@
             </div>
             <lucide-icon [img]="ChevronIcon" class="chevron" [class.rotate-180]="activeSection() === 'summary'"></lucide-icon>
           </button>
-          <div class="accordion-content" *ngIf="activeSection() === 'summary'">
+          @if (activeSection() === 'summary') {
+          <div class="accordion-content">
             <app-checkout-summary></app-checkout-summary>
             <button data-testid="checkout-continue-payment" class="next-btn" (click)="setSection('payment')">Continue to Payment</button>
           </div>
+          }
         </div>
 
         <!-- Section 4: Payment -->
@@ -121,7 +144,8 @@
             </div>
             <lucide-icon [img]="ChevronIcon" class="chevron" [class.rotate-180]="activeSection() === 'payment'"></lucide-icon>
           </button>
-          <div class="accordion-content" *ngIf="activeSection() === 'payment'">
+          @if (activeSection() === 'payment') {
+          <div class="accordion-content">
             <div class="payment-sim">
               <p class="mb-4">This is a simulated payment step. In a real application, you would enter credit card details here.</p>
               
@@ -160,6 +184,7 @@
               </button>
             </div>
           </div>
+          }
         </div>
       </div>
 

@@ -15,9 +15,9 @@ export class ReviewService {
     rating?: number,
     photoOnly?: boolean,
   ): Promise<PagedResult<Review>> {
-    let params: any = { page, pageSize, sort };
-    if (rating) params.rating = rating;
-    if (photoOnly) params.photoOnly = true;
+    let params: Record<string, string | number | boolean> = { page, pageSize, sort };
+    if (rating) params['rating'] = rating;
+    if (photoOnly) params['photoOnly'] = true;
 
     return firstValueFrom(
       this.http.get<PagedResult<Review>>(

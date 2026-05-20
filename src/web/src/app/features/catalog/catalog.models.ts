@@ -87,7 +87,7 @@ export interface ProductListParams {
   page?: number;
   pageSize?: number;
   categoryId?: string;
-  sellerId?: string;
+  storeId?: string;
   search?: string;
 }
 

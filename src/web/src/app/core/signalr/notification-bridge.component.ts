@@ -2,14 +2,14 @@
 // Connects SignalR notifications to NgRx stores via effects.
 // Renderless component — injects into app root to bridge real-time updates.
 
-import { Component, effect, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, effect, inject } from '@angular/core';
 import { NotificationService } from './notification.service';
 import { OrderStore } from '../../features/orders/order.store';
 import { AuthStore } from '../auth/auth.store';
 
 @Component({
   selector: 'app-notification-bridge',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: '',
 })
 export class NotificationBridgeComponent {

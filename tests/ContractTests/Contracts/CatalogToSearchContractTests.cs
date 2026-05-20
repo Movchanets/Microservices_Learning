@@ -109,6 +109,7 @@ public class CatalogToSearchContractTests
             CategoryName: "Updated Category",
             Tags: ["updated"],
             ImageUrl: null,
+            StoreId: Guid.NewGuid(),
             IsActive: true,
             UpdatedAt: updatedAt,
             Brand: "UpdatedBrand",
@@ -152,6 +153,7 @@ public class CatalogToSearchContractTests
             CategoryName: "Cat",
             Tags: [],
             ImageUrl: null,
+            StoreId: Guid.NewGuid(),
             IsActive: false,
             UpdatedAt: DateTime.UtcNow);
 

@@ -1,5 +1,6 @@
 using ApiGateway.Contracts;
 using ApiGateway.Helpers;
+using ApiGateway.Services;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 
@@ -126,6 +127,65 @@ public static class BffEndpoints
         })
         .AllowAnonymous()
         .ExcludeFromDescription();
+
+        // ── BFF Cart (enriched with product details) ────────
+        app.MapGet("/bff/cart", async (
+            ClaimsPrincipal user,
+            CartBffService cartBffService,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+                       ?? user.FindFirstValue("sub");
+            if (string.IsNullOrEmpty(buyerId))
+                return Results.Unauthorized();
+
+            // Forward the Bearer token (set by CookieToBearerMiddleware) to downstream services
+            var bearerToken = ctx.Request.Headers.Authorization.ToString();
+            if (bearerToken.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                bearerToken = bearerToken["Bearer ".Length..];
+
+            var cart = await cartBffService.GetCartWithDetailsAsync(buyerId, bearerToken, ct);
+            return Results.Ok(cart);
+        })
+        .RequireAuthorization()
+        .WithTags("Cart")
+        .WithOpenApi();
+
+        // ── BFF Orders (enriched with product details) ─────
+        app.MapGet("/bff/orders/buyer/{buyerId}", async (
+            string buyerId,
+            OrderBffService orderBffService,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            var bearerToken = ctx.Request.Headers.Authorization.ToString();
+            if (bearerToken.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                bearerToken = bearerToken["Bearer ".Length..];
+
+            var orders = await orderBffService.GetOrdersByBuyerAsync(buyerId, bearerToken, ct);
+            return Results.Ok(orders);
+        })
+        .RequireAuthorization()
+        .WithTags("Orders")
+        .WithOpenApi();
+
+        app.MapGet("/bff/orders/{id:guid}", async (
+            Guid id,
+            OrderBffService orderBffService,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            var bearerToken = ctx.Request.Headers.Authorization.ToString();
+            if (bearerToken.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                bearerToken = bearerToken["Bearer ".Length..];
+
+            var order = await orderBffService.GetOrderByIdAsync(id, bearerToken, ct);
+            return order is not null ? Results.Ok(order) : Results.NotFound();
+        })
+        .RequireAuthorization()
+        .WithTags("Orders")
+        .WithOpenApi();
 
         // Health check moved to HealthEndpoints.cs — aggregated /bff/health
     }

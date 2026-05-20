@@ -5,7 +5,6 @@ import { CartStore } from '../../cart/cart.store';
 
 @Component({
   selector: 'app-checkout-summary',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CurrencyPipe, LucideAngularModule],
   template: `

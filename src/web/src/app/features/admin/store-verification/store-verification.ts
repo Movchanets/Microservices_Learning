@@ -10,7 +10,6 @@ import { AdminStore as AdminStoreModel } from '../admin.models';
 
 @Component({
   selector: 'app-store-verification',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink, LucideAngularModule],
   template: `
@@ -32,8 +31,8 @@ import { AdminStore as AdminStoreModel } from '../admin.models';
       } @else {
         <div class="space-y-4">
           @for (storeItem of store.pendingStores(); track storeItem.id) {
-            <div class="bg-card rounded-2xl border border-border p-6">
-                    data-testid="store-verification-card"
+            <div class="bg-card rounded-2xl border border-border p-6"
+                    data-testid="store-verification-card">
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <div class="flex items-center gap-3 mb-2">

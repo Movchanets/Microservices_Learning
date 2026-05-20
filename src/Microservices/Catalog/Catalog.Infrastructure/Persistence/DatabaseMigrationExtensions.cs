@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using BuildingBlocks.Infrastructure.Database;
 using Catalog.Domain.Aggregates;
 using Catalog.Domain.Entities;
 using Catalog.Domain.Enums;
@@ -18,33 +19,14 @@ public static class DatabaseMigrationExtensions
     /// Useful for local development and integration tests.
     /// </summary>
     public static WebApplication ApplyMigrations(this WebApplication app)
-    {
-        using var scope = app.Services.CreateScope();
-        var logger = scope.ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("Catalog.DatabaseMigration");
+        => app.ApplyMigrations<CatalogDbContext>("Catalog");
 
-        try
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
-            logger.LogInformation("Applying Catalog database migrations...");
-            dbContext.Database.Migrate();
-            logger.LogInformation("Catalog database migrations applied successfully.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, "An error occurred while applying Catalog database migrations.");
-            throw;
-        }
-
-        return app;
-    }
 
     /// <summary>
     /// Seeds development data for Catalog to validate search indexing flow.
     /// Must run after StoreManagement seeding (depends on store IDs).
     /// </summary>
-    public static WebApplication SeedData(this WebApplication app)
+    public static async Task SeedDataAsync(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
@@ -75,9 +57,9 @@ public static class DatabaseMigrationExtensions
                 // The Update() call above already queued a ProductUpdatedDomainEvent.
             }
 
-            context.SaveChangesAsync().GetAwaiter().GetResult();
+            await context.SaveChangesAsync();
             logger.LogInformation("Catalog seed replayed {ProductCount} products to messaging pipeline.", existingProducts.Count);
-            return app;
+            return;
         }
 
         var electronicsCategory = Category.Create(
@@ -260,10 +242,10 @@ public static class DatabaseMigrationExtensions
         }
 
         context.Products.AddRange(products);
-        context.SaveChangesAsync().GetAwaiter().GetResult();
+        await context.SaveChangesAsync();
 
         logger.LogInformation("Catalog seed completed: {CategoryCount} categories and {ProductCount} products.", 2, products.Length);
 
-        return app;
+        return;
     }
 }

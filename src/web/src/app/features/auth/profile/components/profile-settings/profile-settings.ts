@@ -1,24 +1,27 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ProfileStore } from '../../profile.store';
+import { UpdateProfileRequest, ChangePasswordRequest } from '../../../../../core/auth/auth.models';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { LucideAngularModule, Save, Key, User, Mail, Lock } from 'lucide-angular';
 
 @Component({
   selector: 'app-profile-settings',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule],
+  imports: [ReactiveFormsModule, LucideAngularModule],
   template: `
     <div class="space-y-8 animate-in fade-in duration-300">
-      <div *ngIf="profileStore.successMessage()" class="bg-green-500/10 text-green-600 p-4 rounded-xl border border-green-500/20">
+      @if (profileStore.successMessage()) {
+      <div class="bg-green-500/10 text-green-600 p-4 rounded-xl border border-green-500/20">
         {{ profileStore.successMessage() }}
       </div>
+      }
       
-      <div *ngIf="profileStore.error()" class="bg-red-500/10 text-red-500 p-4 rounded-xl border border-red-500/20">
+      @if (profileStore.error()) {
+      <div class="bg-red-500/10 text-red-500 p-4 rounded-xl border border-red-500/20">
         {{ profileStore.error() }}
       </div>
+      }
 
       <!-- Update Profile Section -->
       <section class="bg-card border border-border rounded-2xl p-6 shadow-sm">
@@ -75,8 +78,12 @@ import { LucideAngularModule, Save, Key, User, Mail, Lock } from 'lucide-angular
               class="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <lucide-icon [name]="SaveIcon" class="w-4 h-4"></lucide-icon>
-              <span *ngIf="profileStore.updating()">Saving...</span>
-              <span *ngIf="!profileStore.updating()">Save Changes</span>
+              @if (profileStore.updating()) {
+              <span>Saving...</span>
+              }
+              @if (!profileStore.updating()) {
+              <span>Save Changes</span>
+              }
             </button>
           </div>
         </form>
@@ -137,8 +144,12 @@ import { LucideAngularModule, Save, Key, User, Mail, Lock } from 'lucide-angular
               class="flex items-center gap-2 bg-foreground text-background px-6 py-2 rounded-xl font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <lucide-icon [name]="KeyIcon" class="w-4 h-4"></lucide-icon>
-              <span *ngIf="profileStore.changingPassword()">Updating...</span>
-              <span *ngIf="!profileStore.changingPassword()">Update Password</span>
+              @if (profileStore.changingPassword()) {
+              <span>Updating...</span>
+              }
+              @if (!profileStore.changingPassword()) {
+              <span>Update Password</span>
+              }
             </button>
           </div>
         </form>
@@ -186,7 +197,7 @@ export class ProfileSettingsComponent implements OnInit {
     const user = this.authStore.user();
     if (!user?.id) return;
 
-    await this.profileStore.updateProfile(user.id, this.profileForm.value as any);
+    await this.profileStore.updateProfile(user.id, this.profileForm.value as UpdateProfileRequest);
   }
 
   async onChangePassword() {
@@ -197,7 +208,7 @@ export class ProfileSettingsComponent implements OnInit {
       return;
     }
     
-    await this.profileStore.changePassword(this.passwordForm.value as any);
+    await this.profileStore.changePassword(this.passwordForm.value as ChangePasswordRequest);
     if (!this.profileStore.error()) {
       this.passwordForm.reset();
     }

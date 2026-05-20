@@ -10,7 +10,8 @@ namespace Catalog.Application.Commands.CreateReview;
 public sealed class CreateReviewHandler(
     IProductReadRepository readRepository,
     IReviewRepository reviewRepository,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IOrderingApiClient orderingApiClient)
     : IRequestHandler<CreateReviewCommand, Result<ReviewDto>>
 {
     public async Task<Result<ReviewDto>> Handle(
@@ -29,8 +30,7 @@ public sealed class CreateReviewHandler(
             return Result<ReviewDto>.Failure("You have already reviewed this product.", "DUPLICATE_REVIEW");
 
         // Create review
-        // TODO: Check Ordering.API for verified purchase (buyerId + productId)
-        var isVerifiedPurchase = false;
+        var isVerifiedPurchase = await orderingApiClient.HasPurchasedAsync(request.UserId.ToString(), request.ProductId, cancellationToken);
         var review = Review.Create(
             request.ProductId,
             request.UserId,

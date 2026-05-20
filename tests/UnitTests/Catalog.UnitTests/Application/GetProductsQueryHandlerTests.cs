@@ -30,7 +30,7 @@ public class GetProductsQueryHandlerTests
 
         var productsList = new List<ProductListDto>
         {
-            new ProductListDto(System.Guid.NewGuid(), "Test Product", 10m, "USD", "SKU", "Cat", "Active", null, System.DateTime.UtcNow)
+            new ProductListDto(System.Guid.NewGuid(), "Test Product", 10m, "USD", "SKU", "Cat", "Active", null, System.Guid.NewGuid(), System.DateTime.UtcNow)
         };
 
         var pagedResult = new PagedResult<ProductListDto>(productsList, 1, 1, 10);

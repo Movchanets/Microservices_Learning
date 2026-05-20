@@ -1,4 +1,5 @@
 using BuildingBlocks.Infrastructure.Behaviors;
+using BuildingBlocks.Infrastructure.Database.Interceptors;
 using BuildingBlocks.Infrastructure.Middleware;
 using FluentValidation;
 using Identity.API.Endpoints;
@@ -8,18 +9,24 @@ using Identity.Infrastructure.Persistence;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
+using BuildingBlocks.Infrastructure.Authentication;
 using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Aspire ServiceDefaults ──────────────────────────────
 builder.AddServiceDefaults();
 
-// ── Aspire PostgreSQL integration ───────────────────────
-builder.AddNpgsqlDbContext<Identity.Infrastructure.Persistence.IdentityDbContext>("identity-db", configureDbContextOptions: dbContextOptionsBuilder =>
+// ── Database ────────────────────────────────────────────
+// NOTE: Do NOT use AddNpgsqlDbContext here — it uses AddDbContextPool internally,
+// which conflicts with IDbContextOptionsConfiguration<T> being scoped in EF Core 10.
+builder.Services.AddSingleton<DomainEventDispatcherInterceptor>();
+builder.Services.AddDbContext<Identity.Infrastructure.Persistence.IdentityDbContext>((sp, options) =>
 {
-    dbContextOptionsBuilder.UseNpgsql(builder.Configuration.GetConnectionString("identity-db"), npgsql =>
-        npgsql.MigrationsAssembly(typeof(Identity.Infrastructure.Persistence.IdentityDbContext).Assembly.FullName));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("identity-db"),
+        npgsql => npgsql.MigrationsAssembly(typeof(Identity.Infrastructure.Persistence.IdentityDbContext).Assembly.FullName));
+    options.AddInterceptors(sp.GetRequiredService<DomainEventDispatcherInterceptor>());
 });
 
 // ── Identity Infrastructure (repos, services) ───────────
@@ -56,24 +63,8 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// ── Authentication (JWT Bearer) ─────────────────────────
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "marketplace-identity",
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "marketplace-api",
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                System.Text.Encoding.UTF8.GetBytes(
-                    builder.Configuration["Jwt:Secret"] ?? "super-secret-key-for-dev-only-min-32-chars!!")),
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
-        };
-    });
+// ── Authentication ─────────────────────────────────────
+builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 
 builder.Services.AddAuthorization(options =>
 {

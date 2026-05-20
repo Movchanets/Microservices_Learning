@@ -86,9 +86,10 @@ export const CatalogStore = signalStore(
           facets: {},
           loading: false,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const e = err as { error?: { error?: string } };
         patchState(store, {
-          error: err?.error?.error ?? 'Failed to load products',
+          error: e?.error?.error ?? 'Failed to load products',
           loading: false,
         });
       }
@@ -119,9 +120,10 @@ export const CatalogStore = signalStore(
           facets: result.facets ?? {},
           loading: false,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const e = err as { error?: { error?: string } };
         patchState(store, {
-          error: err?.error?.error ?? 'Search failed',
+          error: e?.error?.error ?? 'Search failed',
           loading: false,
         });
       }

@@ -2,9 +2,7 @@ using BuildingBlocks.Infrastructure.Middleware;
 using Marketplace.ServiceDefaults;
 using Media.API.Endpoints;
 using Media.API.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using BuildingBlocks.Infrastructure.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,24 +15,8 @@ builder.AddAzureBlobServiceClient("blobs");
 // ── Image processing service ────────────────────────────
 builder.Services.AddScoped<ImageProcessingService>();
 
-// ── Authentication (JWT Bearer) ─────────────────────────
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
-        };
-    });
-
-builder.Services.AddAuthorization();
+// ── Authentication ─────────────────────────────────────
+builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 
 // ── OpenAPI ─────────────────────────────────────────────
 builder.Services.AddOpenApi();

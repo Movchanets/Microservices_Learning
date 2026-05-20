@@ -26,8 +26,9 @@ export const ProfileStore = signalStore(
       try {
         await authService.updateProfile(id, request);
         patchState(store, { updating: false, successMessage: 'Profile updated successfully' });
-      } catch (err: any) {
-        patchState(store, { updating: false, error: err.error?.title || err.message || 'Update failed' });
+      } catch (err: unknown) {
+        const e = err as { error?: { title?: string }; message?: string };
+        patchState(store, { updating: false, error: e.error?.title || e.message || 'Update failed' });
       }
     },
     async changePassword(request: ChangePasswordRequest) {
@@ -35,8 +36,9 @@ export const ProfileStore = signalStore(
       try {
         await authService.changePassword(request);
         patchState(store, { changingPassword: false, successMessage: 'Password changed successfully' });
-      } catch (err: any) {
-        patchState(store, { changingPassword: false, error: err.error?.title || err.message || 'Change password failed' });
+      } catch (err: unknown) {
+        const e = err as { error?: { title?: string }; message?: string };
+        patchState(store, { changingPassword: false, error: e.error?.title || e.message || 'Change password failed' });
       }
     },
     clearMessages() {

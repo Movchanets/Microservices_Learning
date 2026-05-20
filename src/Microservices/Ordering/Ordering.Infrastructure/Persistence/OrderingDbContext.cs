@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedContracts.Abstractions;
+using BuildingBlocks.Infrastructure.Database;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Ordering.Domain.Aggregates;
@@ -6,7 +6,7 @@ using Ordering.Domain.Aggregates;
 namespace Ordering.Infrastructure.Persistence;
 
 public sealed class OrderingDbContext(DbContextOptions<OrderingDbContext> options)
-    : DbContext(options), IUnitOfWork
+    : DomainEventsDbContext(options)
 {
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderState> OrderStates => Set<OrderState>();

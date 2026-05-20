@@ -7,7 +7,6 @@ import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-register',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, LucideAngularModule],
   templateUrl: './register.html',

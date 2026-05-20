@@ -9,7 +9,6 @@ import { AdminStore } from '../admin.store';
 
 @Component({
   selector: 'app-admin-store-detail',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, RouterLink, LucideAngularModule],
   template: `

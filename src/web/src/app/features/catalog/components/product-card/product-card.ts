@@ -6,7 +6,6 @@ import { ProductListItem } from '../../catalog.models';
 
 @Component({
   selector: 'app-product-card',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CurrencyPipe, RouterLink, LucideAngularModule],
   template: `
@@ -69,10 +68,22 @@ import { ProductListItem } from '../../catalog.models';
           <a [routerLink]="['/catalog', product().id]">{{ product().name }}</a>
         </h3>
 
-        <!-- SKU -->
-        <p class="text-xs text-muted mb-4 font-mono">
-          <lucide-icon name="Tag" class="w-3 h-3 inline mr-1"></lucide-icon>
-          {{ product().sku }}
+        <!-- SKU + Store -->
+        <p class="text-xs text-muted mb-4 font-mono flex items-center gap-2">
+          <span>
+            <lucide-icon name="Tag" class="w-3 h-3 inline mr-1"></lucide-icon>
+            {{ product().sku }}
+          </span>
+          @if (product().storeId) {
+            <a
+              [routerLink]="['/stores', product().storeId]"
+              class="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+              (click)="$event.stopPropagation()"
+            >
+              <lucide-icon name="Store" class="w-3 h-3"></lucide-icon>
+              Store
+            </a>
+          }
         </p>
 
         <!-- Spacer pushes price to bottom -->

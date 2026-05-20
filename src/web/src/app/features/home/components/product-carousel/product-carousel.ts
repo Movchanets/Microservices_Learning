@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, ViewChild, ElementRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ElementRef, input, output, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ProductListItem } from '../../../catalog/catalog.models';
@@ -72,13 +72,13 @@ export class ProductCarouselComponent {
   viewAllLink = input<string | null>(null);
   addToCart = output<string>();
 
-  @ViewChild('scrollContainer') scrollContainer!: ElementRef<HTMLDivElement>;
+  scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
   scrollLeft(): void {
-    this.scrollContainer?.nativeElement.scrollBy({ left: -280, behavior: 'smooth' });
+    this.scrollContainer()?.nativeElement.scrollBy({ left: -280, behavior: 'smooth' });
   }
 
   scrollRight(): void {
-    this.scrollContainer?.nativeElement.scrollBy({ left: 280, behavior: 'smooth' });
+    this.scrollContainer()?.nativeElement.scrollBy({ left: 280, behavior: 'smooth' });
   }
 }

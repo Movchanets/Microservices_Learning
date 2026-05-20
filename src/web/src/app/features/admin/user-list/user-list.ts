@@ -9,7 +9,6 @@ import { AdminUser } from '../admin.models';
 
 @Component({
   selector: 'app-user-list',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, LucideAngularModule],
   template: `

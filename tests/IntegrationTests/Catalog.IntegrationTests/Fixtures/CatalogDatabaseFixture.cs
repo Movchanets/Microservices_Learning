@@ -1,3 +1,4 @@
+using BuildingBlocks.Infrastructure.Database.Interceptors;
 using Catalog.Infrastructure.Persistence;
 using MassTransit;
 using MediatR;
@@ -26,11 +27,16 @@ public class CatalogDatabaseFixture : IAsyncLifetime
 
         var services = new ServiceCollection();
 
-        services.AddDbContext<CatalogDbContext>(options =>
+        services.AddSingleton<DomainEventDispatcherInterceptor>();
+
+        services.AddDbContext<CatalogDbContext>((sp, options) =>
+        {
             options.UseNpgsql(
                 _dbContainer.GetConnectionString(),
                 npgsql => npgsql.MigrationsAssembly(typeof(CatalogDbContext).Assembly.FullName))
-            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+            options.AddInterceptors(sp.GetRequiredService<DomainEventDispatcherInterceptor>());
+        });
 
         // Add MediatR and the handlers
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Catalog.Infrastructure.EventPublishing.ProductCreatedDomainEventHandler).Assembly));

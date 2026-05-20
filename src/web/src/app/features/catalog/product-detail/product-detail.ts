@@ -7,6 +7,8 @@ import { InventoryService } from '../../../core/services/inventory.service';
 import { RecentlyViewedService } from '../../../core/services/recently-viewed.service';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ReviewStore } from '../review.store';
+import { StoreService } from '../../seller-dashboard/store.service';
+import { StoreSettings } from '../../seller-dashboard/seller.models';
 import { BuyBoxComponent } from '../components/buy-box/buy-box';
 import { FrequentlyBoughtTogetherComponent } from '../components/frequently-bought-together/frequently-bought-together';
 import { StockIndicatorComponent } from '../../../shared/components/stock-indicator/stock-indicator';
@@ -84,11 +86,20 @@ import { WriteReviewComponent } from '../components/write-review/write-review';
 
               <!-- Product Info -->
               <div class="mt-8">
-                <!-- Breadcrumb / Category -->
-                <div class="flex items-center gap-2 mb-4">
+                <!-- Breadcrumb / Category + Store -->
+                <div class="flex items-center gap-2 mb-4 flex-wrap">
                   <span class="px-3 py-1 bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-800 rounded-full text-sm font-medium">
                     {{ p.categoryName }}
                   </span>
+                  @if (storeInfo(); as si) {
+                    <a
+                      [routerLink]="['/stores', p.storeId]"
+                      class="inline-flex items-center gap-1.5 px-3 py-1 bg-card border border-border rounded-full text-sm text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                    >
+                      <lucide-icon name="Store" class="w-3.5 h-3.5"></lucide-icon>
+                      {{ si.storeName }}
+                    </a>
+                  }
                   <span class="text-muted text-sm font-mono flex items-center">
                     <lucide-icon name="Tag" class="w-3 h-3 mr-1"></lucide-icon>
                     {{ p.sku }}
@@ -218,11 +229,13 @@ export class ProductDetailComponent implements OnInit {
   private catalogService = inject(CatalogService);
   private inventoryService = inject(InventoryService);
   private recentlyViewedService = inject(RecentlyViewedService);
+  private storeService = inject(StoreService);
   protected authStore = inject(AuthStore);
 
   protected reviewStore = inject(ReviewStore);
 
   product = signal<Product | null>(null);
+  storeInfo = signal<StoreSettings | null>(null);
   loading = signal(true);
   error = signal<string | null>(null);
 
@@ -253,12 +266,14 @@ export class ProductDetailComponent implements OnInit {
       this.product.set(p);
       this.recentlyViewedService.trackView(p.id);
 
-      // Load stock, recommendations, and reviews in parallel
+      // Load stock, recommendations, reviews, and store info in parallel
       this.loadStock(p.sku);
       this.loadRecommendations(p.id);
       this.loadReviews(p.id);
-    } catch (err: any) {
-      this.error.set(err?.error?.error ?? 'Failed to load product details');
+      this.loadStoreInfo(p.storeId);
+    } catch (err: unknown) {
+      const e = err as { error?: { error?: string } };
+      this.error.set(e?.error?.error ?? 'Failed to load product details');
     } finally {
       this.loading.set(false);
     }
@@ -291,6 +306,16 @@ export class ProductDetailComponent implements OnInit {
   private loadReviews(productId: string): void {
     this.reviewStore.loadSummary(productId);
     this.reviewStore.loadReviews(productId);
+  }
+
+  private async loadStoreInfo(storeId: string): Promise<void> {
+    try {
+      const info = await this.storeService.getStoreById(storeId);
+      this.storeInfo.set(info);
+    } catch {
+      // Store info is optional — don't break the page
+      this.storeInfo.set(null);
+    }
   }
 
   onBuyNow(): void {

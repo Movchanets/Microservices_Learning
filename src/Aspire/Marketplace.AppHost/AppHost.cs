@@ -101,6 +101,9 @@ var orderingApi = builder.AddProject<Projects.Ordering_API>("ordering-api")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
+// Catalog depends on Ordering for verified-purchase checks
+catalogApi.WithReference(orderingApi).WaitFor(orderingApi);
+
 // Phase 4: Payment.API
 var paymentApi = builder.AddProject<Projects.Payment_API>("payment-api")
     .WithReference(paymentDb)

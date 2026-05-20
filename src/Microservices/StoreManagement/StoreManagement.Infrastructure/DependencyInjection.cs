@@ -1,3 +1,4 @@
+using BuildingBlocks.Infrastructure.Database.Interceptors;
 using BuildingBlocks.SharedContracts.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -14,10 +15,16 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddDbContext<StoreDbContext>(options =>
+        // Domain event dispatcher interceptor
+        services.AddSingleton<DomainEventDispatcherInterceptor>();
+
+        services.AddDbContext<StoreDbContext>((sp, options) =>
+        {
             options.UseNpgsql(
                 configuration.GetConnectionString("store-db"),
-                npgsql => npgsql.MigrationsAssembly(typeof(StoreDbContext).Assembly.FullName)));
+                npgsql => npgsql.MigrationsAssembly(typeof(StoreDbContext).Assembly.FullName));
+            options.AddInterceptors(sp.GetRequiredService<DomainEventDispatcherInterceptor>());
+        });
 
         services.AddScoped<IStoreRepository, StoreRepository>();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<StoreDbContext>());

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using BuildingBlocks.Infrastructure.Database;
 using StoreManagement.Domain.Aggregates;
 using StoreManagement.Domain.Enumerations;
 
@@ -10,33 +11,14 @@ namespace StoreManagement.Infrastructure.Persistence;
 public static class DatabaseMigrationExtensions
 {
     public static WebApplication ApplyMigrations(this WebApplication app)
-    {
-        using var scope = app.Services.CreateScope();
-        var logger = scope.ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("StoreManagement.DatabaseMigration");
+        => app.ApplyMigrations<StoreDbContext>("StoreManagement");
 
-        try
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<StoreDbContext>();
-            logger.LogInformation("Applying StoreManagement database migrations...");
-            dbContext.Database.Migrate();
-            logger.LogInformation("StoreManagement database migrations applied successfully.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, "An error occurred while applying StoreManagement database migrations.");
-            throw;
-        }
-
-        return app;
-    }
 
     /// <summary>
     /// Seeds initial stores for the dev environment.
     /// Must run after Identity seeding (depends on seller user IDs).
     /// </summary>
-    public static WebApplication SeedData(this WebApplication app)
+    public static async Task SeedDataAsync(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<StoreDbContext>();
@@ -47,7 +29,7 @@ public static class DatabaseMigrationExtensions
         if (context.Stores.Any())
         {
             logger.LogInformation("Stores already exist. Skipping seeding.");
-            return app;
+            return;
         }
 
         // Well-known IDs — must match Identity seeder seller IDs and Catalog seeder store IDs.
@@ -67,11 +49,11 @@ public static class DatabaseMigrationExtensions
         homeStore.ClearDomainEvents();
 
         context.Stores.AddRange(techStore, homeStore);
-        context.SaveChangesAsync().GetAwaiter().GetResult();
+        await context.SaveChangesAsync();
 
         logger.LogInformation("Seeded 2 stores: Tech Store ({TechStoreId}), Home Store ({HomeStoreId})",
             techStore.Id, homeStore.Id);
 
-        return app;
+        return;
     }
 }

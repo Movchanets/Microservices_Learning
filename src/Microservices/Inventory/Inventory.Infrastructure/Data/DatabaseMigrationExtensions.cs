@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using BuildingBlocks.Infrastructure.Database;
 using Inventory.Domain.Aggregates;
 
 namespace Inventory.Infrastructure.Data;
@@ -16,38 +17,19 @@ public static class DatabaseMigrationExtensions
     /// Useful for local development and integration tests.
     /// </summary>
     public static WebApplication ApplyMigrations(this WebApplication app)
-    {
-        using var scope = app.Services.CreateScope();
-        var logger = scope.ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("Inventory.DatabaseMigration");
+        => app.ApplyMigrations<InventoryDbContext>("Inventory");
 
-        try
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-            logger.LogInformation("Applying Inventory database migrations...");
-            dbContext.Database.Migrate();
-            logger.LogInformation("Inventory database migrations applied successfully.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, "An error occurred while applying Inventory database migrations.");
-            throw;
-        }
-
-        return app;
-    }
 
     /// <summary>
     /// Seeds inventory stock for development.
     /// Inventory items are created with 0 stock by ProductCreatedConsumer when Catalog
     /// products are seeded. This method adds stock quantities to those items.
+    /// Runs as a background task with retries to handle the race condition where
+    /// ProductCreatedConsumer hasn't processed all catalog events yet on startup.
     /// </summary>
-    public static WebApplication SeedData(this WebApplication app)
+    public static async Task SeedDataAsync(this WebApplication app)
     {
-        using var scope = app.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Inventory.DatabaseSeeding");
+        var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Inventory.DatabaseSeeding");
 
         // Stock quantities for each SKU — must match Catalog seeder products.
         var stockMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
@@ -72,42 +54,60 @@ public static class DatabaseMigrationExtensions
             ["BOOK-DDIA"] = 400,
         };
 
-        var items = context.InventoryItems.ToList();
-        var updated = 0;
-        var created = 0;
+        // Retry for up to 30 seconds — ProductCreatedConsumer needs time to
+        // process catalog events and create inventory items with correct ProductIds.
+        const int maxAttempts = 15;
+        const int delayMs = 2000;
 
-        foreach (var (sku, quantity) in stockMap)
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            var item = items.FirstOrDefault(i => i.Sku.Equals(sku, StringComparison.OrdinalIgnoreCase));
-            if (item == null)
+            // Create a fresh scope+context each attempt so we see newly-created items
+            using var scope = app.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+
+            var items = context.InventoryItems.ToList();
+            var updated = 0;
+            var missing = 0;
+
+            foreach (var (sku, quantity) in stockMap)
             {
-                // Item not yet created by ProductCreatedConsumer (race condition) — create it now
-                // Default to Tech Store for seed data, use SKU hash as stable product placeholder
-                item = InventoryItem.Create(sku, quantity,
-                    Guid.Parse("33333333-3333-3333-3333-333333333333"),
-                    Guid.CreateVersion7());
-                context.InventoryItems.Add(item);
-                created++;
-                logger.LogInformation("Created inventory for SKU {Sku} with {Quantity} units.", sku, quantity);
+                var item = items.FirstOrDefault(i => i.Sku.Equals(sku, StringComparison.OrdinalIgnoreCase));
+                if (item == null)
+                {
+                    missing++;
+                    continue;
+                }
+
+                if (item.AvailableQuantity == 0)
+                {
+                    item.AddStock(quantity);
+                    updated++;
+                    logger.LogInformation("Stocked SKU {Sku} with {Quantity} units.", item.Sku, quantity);
+                }
             }
-            else if (item.AvailableQuantity == 0)
+
+            if (updated > 0)
             {
-                item.AddStock(quantity);
-                updated++;
-                logger.LogInformation("Stocked SKU {Sku} with {Quantity} units.", item.Sku, quantity);
+                await context.SaveChangesAsync();
+                logger.LogInformation("Inventory seed: {UpdatedCount} items stocked.", updated);
+            }
+
+            if (missing == 0)
+            {
+                logger.LogInformation("All inventory items present and stocked.");
+                return;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                logger.LogInformation(
+                    "Inventory seed: {MissingCount} SKUs not yet created by ProductCreatedConsumer. " +
+                    "Retrying in {Delay}ms (attempt {Attempt}/{MaxAttempts})...",
+                    missing, delayMs, attempt, maxAttempts);
+                await Task.Delay(delayMs);
             }
         }
 
-        if (created > 0 || updated > 0)
-        {
-            context.SaveChangesAsync().GetAwaiter().GetResult();
-            logger.LogInformation("Inventory seed: {CreatedCount} created, {UpdatedCount} stocked.", created, updated);
-        }
-        else
-        {
-            logger.LogInformation("Inventory already stocked or no items to stock. Skipping.");
-        }
-
-        return app;
+        logger.LogWarning("Inventory seed: some SKUs were not created after {MaxAttempts} attempts. Seed incomplete.", maxAttempts);
     }
 }

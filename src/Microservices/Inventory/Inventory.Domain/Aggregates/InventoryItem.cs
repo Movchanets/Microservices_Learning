@@ -64,4 +64,15 @@ public sealed class InventoryItem : AggregateRoot
 
         AddDomainEvent(new StockReleasedDomainEvent(Id, StoreId, Sku, quantity));
     }
+
+    /// <summary>
+    /// Corrects the ProductId when seed data created the item with a placeholder.
+    /// Called by ProductCreatedConsumer when the real ProductId becomes available.
+    /// </summary>
+    public void UpdateProductId(Guid productId)
+    {
+        if (productId == Guid.Empty)
+            throw new ArgumentException("ProductId is required", nameof(productId));
+        ProductId = productId;
+    }
 }

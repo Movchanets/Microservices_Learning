@@ -9,16 +9,17 @@ import { ShoppingCart, CheckoutResponse } from './cart.models';
 export class CartService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/cart';
+  private readonly bffCartUrl = '/bff/cart';
 
   async getCart(): Promise<ShoppingCart> {
-    return firstValueFrom(this.http.get<ShoppingCart>(this.baseUrl));
+    return firstValueFrom(this.http.get<ShoppingCart>(this.bffCartUrl));
   }
 
   async deleteCart(): Promise<void> {
     return firstValueFrom(this.http.delete<void>(this.baseUrl));
   }
 
-  async checkout(address?: any): Promise<CheckoutResponse> {
+  async checkout(address?: { addressLine1: string; city: string; state: string; postalCode: string; country: string }): Promise<CheckoutResponse> {
     return firstValueFrom(this.http.post<CheckoutResponse>(`${this.baseUrl}/checkout`, address || {}));
   }
 

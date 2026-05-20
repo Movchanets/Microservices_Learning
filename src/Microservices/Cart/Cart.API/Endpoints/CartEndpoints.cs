@@ -49,12 +49,13 @@ public static class CartEndpoints
 
             var result = await sender.Send(new CheckoutCartCommand(
                 buyerId,
-                request.AddressLine1,
-                request.AddressLine2,
-                request.City,
-                request.State,
-                request.PostalCode,
-                request.Country), ct);
+                new AddressRequest(
+                    request.AddressLine1,
+                    request.AddressLine2,
+                    request.City,
+                    request.State,
+                    request.PostalCode,
+                    request.Country)), ct);
 
             return result.IsSuccess ? Results.Accepted(value: result.Value) : Results.BadRequest(result.Error);
         });

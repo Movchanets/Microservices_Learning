@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedContracts.Abstractions;
+using BuildingBlocks.Infrastructure.Database;
 using Identity.Domain.Aggregates;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +9,7 @@ namespace Identity.Infrastructure.Persistence;
 /// Represents the Entity Framework Core database context for the Identity microservice.
 /// </summary>
 public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> options)
-    : DbContext(options), IUnitOfWork
+    : DomainEventsDbContext(options)
 {
     /// <summary>
     /// Gets the collection of Users in the database.

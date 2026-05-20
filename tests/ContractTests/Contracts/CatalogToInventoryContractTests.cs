@@ -77,10 +77,11 @@ public class CatalogToInventoryContractTests
     {
         // Arrange
         var sku = $"SKU-IDEM-{Guid.NewGuid():N}";
-        var existingItem = InventoryItem.Create(sku, 50);
+        var productId = Guid.NewGuid();
+        var existingItem = InventoryItem.Create(sku, 50, Guid.Parse("33333333-3333-3333-3333-333333333333"), productId);
 
         var @event = new ProductCreatedEvent(
-            ProductId: Guid.NewGuid(),
+            ProductId: productId,
             Name: "Duplicate Product",
             Description: "Desc",
             Price: 10m,
@@ -97,7 +98,7 @@ public class CatalogToInventoryContractTests
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        // SKU already exists
+        // SKU already exists with the same ProductId
         _repositoryMock
             .Setup(r => r.GetBySkuAsync(sku, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingItem);
@@ -115,6 +116,6 @@ public class CatalogToInventoryContractTests
         _uowMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Never,
-            "SaveChangesAsync should not be called when SKU already exists");
+            "SaveChangesAsync should not be called when SKU and ProductId already match");
     }
 }

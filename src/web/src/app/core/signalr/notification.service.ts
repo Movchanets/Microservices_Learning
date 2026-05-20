@@ -29,11 +29,11 @@ export class NotificationService {
     }
 
     this.hubConnection = new HubConnectionBuilder()
-      .withUrl(`/hubs/notifications?buyerId=${encodeURIComponent(buyerId)}`, {
+      .withUrl('/hubs/notifications', {
         transport: HttpTransportType.WebSockets,
         // BFF CookieToBearerMiddleware injects JWT from session cookie.
-        // For direct connections (non-BFF), provide token explicitly:
-        // accessTokenFactory: () => getStoredToken(),
+        // The hub extracts buyerId from ClaimTypes.NameIdentifier — no need
+        // to pass it in the query string.
       })
       .withAutomaticReconnect({
         nextRetryDelayInMilliseconds: (retryContext) => {

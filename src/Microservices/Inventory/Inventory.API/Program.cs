@@ -1,4 +1,4 @@
-using System.Text;
+using BuildingBlocks.Infrastructure.Database.Interceptors;
 using BuildingBlocks.SharedContracts.Abstractions;
 using Inventory.Application.Commands;
 using Inventory.Domain.Aggregates;
@@ -8,15 +8,24 @@ using Inventory.Infrastructure.Repositories;
 using Inventory.API.Endpoints;
 using MassTransit;
 using Marketplace.ServiceDefaults;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+using BuildingBlocks.Infrastructure.Authentication;
+using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
 // Infrastructure
-builder.AddNpgsqlDbContext<InventoryDbContext>("inventory-db");
+// NOTE: Do NOT use AddNpgsqlDbContext here — it uses AddDbContextPool internally,
+// which conflicts with IDbContextOptionsConfiguration<T> being scoped in EF Core 10.
+builder.Services.AddSingleton<DomainEventDispatcherInterceptor>();
+builder.Services.AddDbContext<InventoryDbContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("inventory-db"),
+        npgsql => npgsql.MigrationsAssembly(typeof(InventoryDbContext).Assembly.FullName));
+    options.AddInterceptors(sp.GetRequiredService<DomainEventDispatcherInterceptor>());
+});
 
 builder.Services.AddScoped<IInventoryItemRepository, InventoryItemRepository>();
 builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<InventoryDbContext>());
@@ -39,6 +48,7 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<ReserveInventoryConsumer>();
     x.AddConsumer<CancelReservationConsumer>();
     x.AddConsumer<ProductCreatedConsumer>();
+    x.AddConsumer<ProductUpdatedConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -54,24 +64,8 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// ── Authentication (JWT Bearer) ─────────────────────────
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
-        };
-    });
-
-builder.Services.AddAuthorization();
+// ── Authentication ─────────────────────────────────────
+builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -93,8 +87,31 @@ app.MapInventoryEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
-    app.ApplyMigrations();
-    app.SeedData();
+    // Drop & re-create DB in dev to handle replaced migrations and stale
+    // seed data (old items with placeholder ProductIds).
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+    db.Database.EnsureDeleted();
+    db.Database.Migrate();
 }
 
-app.Run();
+app.ApplyMigrations();
+
+// CRITICAL: Start the app BEFORE seeding. MassTransit consumers must be
+// running so they can process ProductUpdatedEvent from the Catalog service
+// and create inventory items with correct ProductIds. The seed retry loop
+// then finds those items and adds stock quantities.
+await app.StartAsync();
+
+try
+{
+    await app.SeedDataAsync();
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("Inventory.Startup");
+    logger.LogError(ex, "Inventory seed failed — items may lack stock quantities.");
+}
+
+await app.WaitForShutdownAsync();

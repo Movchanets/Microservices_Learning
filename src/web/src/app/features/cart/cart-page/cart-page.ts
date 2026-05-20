@@ -1,13 +1,13 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { CartStore } from '../cart.store';
 
 @Component({
   selector: 'app-cart-page',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule],
+  imports: [DecimalPipe, RouterLink, LucideAngularModule],
   template: `
     <div class="min-h-screen bg-background p-6 pt-10">
       <div class="container mx-auto max-w-4xl">
@@ -46,14 +46,22 @@ import { CartStore } from '../cart.store';
             <ul class="divide-y divide-border">
               @for (item of store.items(); track item.productId) {
                 <li [attr.data-testid]="'cart-item-' + item.productId" class="p-6 flex items-center gap-6">
-                  <!-- In a real app, you would fetch product details by SKU here -->
-                  <div class="w-20 h-20 bg-muted/20 rounded-xl flex items-center justify-center">
-                    <lucide-icon name="Package" class="w-8 h-8 text-muted/50"></lucide-icon>
+                  <div class="w-20 h-20 bg-muted/20 rounded-xl flex items-center justify-center overflow-hidden">
+                    @if (item.imageUrl) {
+                      <img [src]="item.imageUrl" [alt]="item.title" class="w-full h-full object-cover" />
+                    } @else {
+                      <lucide-icon name="Package" class="w-8 h-8 text-muted/50"></lucide-icon>
+                    }
                   </div>
 
                   <div class="flex-1">
-                    <h3 class="font-lexend font-medium text-lg">{{ item.productId }}</h3>
-                    <p class="text-muted text-sm">Quantity: {{ item.quantity }}</p>
+                    <h3 class="font-lexend font-medium text-lg">{{ item.title }}</h3>
+                    <p class="text-muted text-sm">\${{ item.price | number:'1.2-2' }} each</p>
+                  </div>
+
+                  <div class="text-right min-w-[80px]">
+                    <p class="font-lexend font-semibold text-lg">\${{ item.lineTotal | number:'1.2-2' }}</p>
+                    <p class="text-muted text-xs">Qty: {{ item.quantity }}</p>
                   </div>
 
                   <div class="flex items-center gap-3">
@@ -92,6 +100,10 @@ import { CartStore } from '../cart.store';
               <div>
                 <p class="text-muted mb-1">Total Items</p>
                 <p data-testid="cart-total-items" class="text-2xl font-bold font-lexend">{{ store.totalItems() }}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-muted mb-1">Total</p>
+                <p data-testid="cart-total-price" class="text-2xl font-bold font-lexend">\${{ store.totalPrice() | number:'1.2-2' }}</p>
               </div>
               <button
                 data-testid="cart-checkout-btn"

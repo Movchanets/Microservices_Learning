@@ -1,13 +1,11 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ProfileSidebarComponent } from './components/profile-sidebar/profile-sidebar';
 
 @Component({
   selector: 'app-profile',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, RouterModule, ProfileSidebarComponent],
+  imports: [RouterModule, ProfileSidebarComponent],
   template: `
     <div class="min-h-[calc(100vh-80px)] max-w-7xl mx-auto p-4 md:p-8">
       <div class="grid grid-cols-1 md:grid-cols-12 gap-8">

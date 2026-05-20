@@ -12,7 +12,6 @@ interface TimelineStep {
 
 @Component({
   selector: 'app-order-timeline',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideAngularModule],
   template: `

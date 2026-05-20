@@ -8,11 +8,11 @@ export class OrderService {
   private readonly http = inject(HttpClient);
 
   async getOrderById(orderId: string): Promise<Order> {
-    return firstValueFrom(this.http.get<Order>(`/api/orders/${orderId}`));
+    return firstValueFrom(this.http.get<Order>(`/bff/orders/${orderId}`));
   }
 
   async getOrdersByBuyer(buyerId: string): Promise<Order[]> {
-    return firstValueFrom(this.http.get<Order[]>(`/api/orders/buyer/${buyerId}`));
+    return firstValueFrom(this.http.get<Order[]>(`/bff/orders/buyer/${buyerId}`));
   }
 
   async getPaymentStatus(orderId: string): Promise<PaymentStatus> {

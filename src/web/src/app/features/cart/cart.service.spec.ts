@@ -9,7 +9,9 @@ describe('CartService', () => {
 
   const mockCart: ShoppingCart = {
     buyerId: 'test-user',
-    items: [{ productId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', storeId: '33333333-3333-3333-3333-333333333333', quantity: 2, price: 10, lineTotal: 20 }]
+    items: [{ productId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', title: 'Test Product', imageUrl: null, storeId: '33333333-3333-3333-3333-333333333333', quantity: 2, price: 10, lineTotal: 20 }],
+    totalPrice: 20,
+    totalItems: 2,
   };
 
   beforeEach(() => {

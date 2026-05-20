@@ -29,7 +29,7 @@ export class CatalogService {
     if (params.page) httpParams = httpParams.set('page', params.page);
     if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize);
     if (params.categoryId) httpParams = httpParams.set('categoryId', params.categoryId);
-    if (params.sellerId) httpParams = httpParams.set('sellerId', params.sellerId);
+    if (params.storeId) httpParams = httpParams.set('storeId', params.storeId);
     if (params.search) httpParams = httpParams.set('search', params.search);
 
     return firstValueFrom(
@@ -54,7 +54,7 @@ export class CatalogService {
   }
 
   getFeatured(tag?: string): Promise<ProductListItem[]> {
-    const params: any = tag ? { tag } : {};
+    const params: Record<string, string> = tag ? { tag } : {};
     return firstValueFrom(
       this.http.get<ProductListItem[]>('/api/catalog/products/featured', { params }),
     );

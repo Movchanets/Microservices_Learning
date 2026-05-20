@@ -6,6 +6,14 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { StoreSettings, SalesSummary } from './seller.models';
 
+interface StoreApiResponse {
+  id: string;
+  name: string;
+  description: string;
+  logoUrl: string | null;
+  verificationStatus: 'Pending' | 'Verified' | 'Rejected';
+}
+
 @Injectable({ providedIn: 'root' })
 export class StoreService {
   private readonly http = inject(HttpClient);
@@ -13,7 +21,7 @@ export class StoreService {
 
   async getStoreBySellerId(sellerId: string): Promise<StoreSettings> {
     const store = await firstValueFrom(
-      this.http.get<any>(`${this.baseUrl}/seller/${sellerId}`)
+      this.http.get<StoreApiResponse>(`${this.baseUrl}/seller/${sellerId}`)
     );
     return {
       storeId: store.id,
@@ -28,7 +36,7 @@ export class StoreService {
 
   async getStoreById(storeId: string): Promise<StoreSettings> {
     const store = await firstValueFrom(
-      this.http.get<any>(`${this.baseUrl}/${storeId}`)
+      this.http.get<StoreApiResponse>(`${this.baseUrl}/${storeId}`)
     );
     return {
       storeId: store.id,
@@ -43,7 +51,7 @@ export class StoreService {
 
   async createStore(name: string, description: string, sellerId: string): Promise<StoreSettings> {
     const store = await firstValueFrom(
-      this.http.post<any>(this.baseUrl, { sellerId, name, description })
+      this.http.post<StoreApiResponse>(this.baseUrl, { sellerId, name, description })
     );
     return {
       storeId: store.id,
@@ -58,7 +66,7 @@ export class StoreService {
 
   async updateStore(storeId: string, name: string, description: string): Promise<StoreSettings> {
     const store = await firstValueFrom(
-      this.http.put<any>(`${this.baseUrl}/${storeId}`, { name, description })
+      this.http.put<StoreApiResponse>(`${this.baseUrl}/${storeId}`, { name, description })
     );
     return {
       storeId: store.id,

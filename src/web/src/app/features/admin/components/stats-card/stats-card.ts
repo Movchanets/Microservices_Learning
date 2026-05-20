@@ -6,7 +6,6 @@ import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-stats-card',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideAngularModule],
   template: `

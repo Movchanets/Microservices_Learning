@@ -37,6 +37,10 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'stores',
+    loadChildren: () => import('./features/stores/store.routes').then((m) => m.STORE_ROUTES),
+  },
+  {
     path: 'catalog',
     loadChildren: () => import('./features/catalog/catalog.routes').then((m) => m.CATALOG_ROUTES),
   },

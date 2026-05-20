@@ -8,10 +8,10 @@ import {
   withHooks,
 } from '@ngrx/signals';
 import { CartService } from './cart.service';
-import { CartItem } from './cart.models';
+import { CartItemDetails } from './cart.models';
 
 interface CartState {
-  items: CartItem[];
+  items: CartItemDetails[];
   loading: boolean;
   error: string | null;
   checkoutCorrelationId: string | null;
@@ -55,7 +55,7 @@ export const CartStore = signalStore(
       try {
         const cart = await cartService.getCart();
         patchState(store, { items: cart.items, loading: false });
-      } catch (err: any) {
+      } catch (err: unknown) {
         patchState(store, { error: 'Failed to load cart', loading: false });
       }
     },
@@ -63,11 +63,12 @@ export const CartStore = signalStore(
     async addToCart(productId: string, quantity: number = 1): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.addItem(productId, quantity);
-        patchState(store, { items: updatedCart.items, loading: false, isDrawerOpen: true });
-      } catch (err: any) {
-        patchState(store, { error: 'Failed to add item to cart', loading: false });
+        await cartService.addItem(productId, quantity);
+        // Re-fetch enriched cart from BFF (mutation response lacks product details)
         await this.loadCart();
+        patchState(store, { isDrawerOpen: true });
+      } catch (err: unknown) {
+        patchState(store, { error: 'Failed to add item to cart', loading: false });
       }
     },
 
@@ -79,26 +80,26 @@ export const CartStore = signalStore(
 
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.updateItem(productId, quantity);
-        patchState(store, { items: updatedCart.items, loading: false });
-      } catch (err: any) {
-        patchState(store, { error: 'Failed to update quantity', loading: false });
+        await cartService.updateItem(productId, quantity);
+        // Re-fetch enriched cart from BFF
         await this.loadCart();
+      } catch (err: unknown) {
+        patchState(store, { error: 'Failed to update quantity', loading: false });
       }
     },
 
     async removeFromCart(productId: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.removeItem(productId);
-        patchState(store, { items: updatedCart.items, loading: false });
-      } catch (err: any) {
-        patchState(store, { error: 'Failed to remove item', loading: false });
+        await cartService.removeItem(productId);
+        // Re-fetch enriched cart from BFF
         await this.loadCart();
+      } catch (err: unknown) {
+        patchState(store, { error: 'Failed to remove item', loading: false });
       }
     },
 
-    async checkout(address?: any): Promise<void> {
+    async checkout(address?: { addressLine1: string; city: string; state: string; postalCode: string; country: string }): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         const response = await cartService.checkout(address);
@@ -108,7 +109,7 @@ export const CartStore = signalStore(
           loading: false,
           isDrawerOpen: false,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         patchState(store, { error: 'Checkout failed', loading: false });
       }
     },

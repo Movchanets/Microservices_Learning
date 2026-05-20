@@ -4,13 +4,11 @@ using FluentValidation;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+using BuildingBlocks.Infrastructure.Authentication;
 using StoreManagement.API.Endpoints;
 using StoreManagement.Application.Commands.CreateStore;
 using StoreManagement.Infrastructure;
 using StoreManagement.Infrastructure.Persistence;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,22 +49,8 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// ── Authentication (JWT Bearer) ─────────────────────────
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
-        };
-    });
+// ── Authentication ─────────────────────────────────────
+builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 
 builder.Services.AddAuthorization(options =>
 {
@@ -98,7 +82,7 @@ app.MapStoreEndpoints();
 if (app.Environment.IsDevelopment())
 {
     app.ApplyMigrations();
-    app.SeedData();
+    await app.SeedDataAsync();
 }
 
 app.Run();

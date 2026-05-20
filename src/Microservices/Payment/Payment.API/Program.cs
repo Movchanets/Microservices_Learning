@@ -1,12 +1,12 @@
-using System.Text;
 using BuildingBlocks.Infrastructure.Behaviors;
 using BuildingBlocks.Infrastructure.Middleware;
 using FluentValidation;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+using BuildingBlocks.Infrastructure.Authentication;
+using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Payment.API.Endpoints;
 using Payment.Application.Commands.ProcessPayment;
 using Payment.Application.Commands.RefundPayment;
@@ -21,7 +21,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // ── Database ────────────────────────────────────────────
-builder.AddNpgsqlDbContext<PaymentDbContext>("payment-db");
+// NOTE: Do NOT use AddNpgsqlDbContext here — it uses AddDbContextPool internally,
+// which conflicts with IDbContextOptionsConfiguration<T> being scoped in EF Core 10.
+builder.Services.AddDbContext<PaymentDbContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("payment-db"),
+        npgsql => npgsql.MigrationsAssembly(typeof(PaymentDbContext).Assembly.FullName));
+});
 
 // ── Payment Infrastructure ──────────────────────────────
 builder.Services.AddPaymentInfrastructure();
@@ -58,24 +64,8 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// ── Authentication (JWT Bearer) ─────────────────────────
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
-        };
-    });
-
-builder.Services.AddAuthorization();
+// ── Authentication ─────────────────────────────────────
+builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 
 // ── OpenAPI ─────────────────────────────────────────────
 builder.Services.AddOpenApi();

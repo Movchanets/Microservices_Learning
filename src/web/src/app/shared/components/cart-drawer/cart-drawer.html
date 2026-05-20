@@ -1,4 +1,5 @@
-<div class="cart-overlay" *ngIf="cartStore.isDrawerOpen()" (click)="close()">
+@if (cartStore.isDrawerOpen()) {
+<div class="cart-overlay" (click)="close()">
   <div data-testid="cart-drawer" class="cart-drawer" (click)="$event.stopPropagation()">
     <div class="cart-header">
       <h2>Your Cart ({{ cartStore.totalItems() }})</h2>
@@ -7,22 +8,37 @@
       </button>
     </div>
 
-    <div class="free-shipping-progress" *ngIf="!cartStore.isEmpty()">
-      <p *ngIf="amountAwayFromFreeShipping() > 0">
+    @if (!cartStore.isEmpty()) {
+    <div class="free-shipping-progress">
+      @if (amountAwayFromFreeShipping() > 0) {
+      <p>
         Add <strong>${{ amountAwayFromFreeShipping() | number:'1.2-2' }}</strong> more to unlock free shipping!
       </p>
-      <p *ngIf="amountAwayFromFreeShipping() === 0" class="success">
+      }
+      @if (amountAwayFromFreeShipping() === 0) {
+      <p class="success">
         You've unlocked free shipping!
       </p>
+      }
       <div class="progress-bar-container">
         <div class="progress-bar" [style.width.%]="freeShippingPercentage()"></div>
       </div>
     </div>
+    }
 
-    <div class="cart-items" *ngIf="!cartStore.isEmpty()">
-      <div class="cart-item" *ngFor="let item of cartStore.items(); trackBy: trackByCartItem">
+    @if (!cartStore.isEmpty()) {
+    <div class="cart-items">
+      @for (item of cartStore.items(); track item.productId) {
+      <div class="cart-item">
+        <div class="item-thumbnail">
+          @if (item.imageUrl) {
+            <img [src]="item.imageUrl" [alt]="item.title" />
+          } @else {
+            <lucide-icon [img]="PackageIcon" size="24"></lucide-icon>
+          }
+        </div>
         <div class="item-details">
-          <h3>{{ item.productId }}</h3>
+          <h3>{{ item.title }}</h3>
           <p class="price">${{ item.price | number:'1.2-2' }}</p>
         </div>
         <div class="item-controls">
@@ -40,14 +56,19 @@
           </button>
         </div>
       </div>
+      }
     </div>
+    }
 
-    <div data-testid="cart-drawer-empty" class="empty-cart" *ngIf="cartStore.isEmpty()">
+    @if (cartStore.isEmpty()) {
+    <div data-testid="cart-drawer-empty" class="empty-cart">
       <p>Your cart is empty.</p>
       <button class="primary-btn" (click)="close()" routerLink="/catalog">Continue Shopping</button>
     </div>
+    }
 
-    <div class="cart-footer" *ngIf="!cartStore.isEmpty()">
+    @if (!cartStore.isEmpty()) {
+    <div class="cart-footer">
       <div class="total-row">
         <span>Subtotal</span>
         <span data-testid="cart-total">${{ cartStore.totalPrice() | number:'1.2-2' }}</span>
@@ -57,5 +78,7 @@
         <button data-testid="cart-drawer-checkout" class="primary-btn" (click)="close()" routerLink="/checkout">Checkout</button>
       </div>
     </div>
+    }
   </div>
 </div>
+}
