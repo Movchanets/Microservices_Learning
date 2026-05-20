@@ -104,7 +104,7 @@ export class FrequentlyBoughtTogetherComponent {
 
   async addAllToCart(): Promise<void> {
     for (const product of this.products()) {
-      await this.cartStore.addToCart(product.sku, 1);
+      await this.cartStore.addToCart(product.id, 1);
     }
   }
 }

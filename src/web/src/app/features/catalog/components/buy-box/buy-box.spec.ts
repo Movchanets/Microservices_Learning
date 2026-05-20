@@ -16,7 +16,7 @@ describe('BuyBoxComponent', () => {
       updateCart: vi.fn().mockResolvedValue(undefined),
       deleteCart: vi.fn().mockResolvedValue(undefined),
       checkout: vi.fn().mockResolvedValue({ correlationId: 'test' }),
-      addItem: vi.fn().mockResolvedValue({ buyerId: 'test', items: [{ sku: 'SKU-1', quantity: 1, price: 10, lineTotal: 10 }] }),
+      addItem: vi.fn().mockResolvedValue({ buyerId: 'test', items: [{ productId: 'SKU-1', storeId: 'store-1', quantity: 1, price: 10, lineTotal: 10 }] }),
       updateItem: vi.fn().mockResolvedValue({ buyerId: 'test', items: [] }),
       removeItem: vi.fn().mockResolvedValue({ buyerId: 'test', items: [] }),
     };
@@ -35,6 +35,7 @@ describe('BuyBoxComponent', () => {
     fixture.componentRef.setInput('sku', 'SKU-1');
     fixture.componentRef.setInput('price', 29.99);
     fixture.componentRef.setInput('currency', 'USD');
+    fixture.componentRef.setInput('productId', 'prod-1');
   });
 
   it('should create', () => {
@@ -133,7 +134,7 @@ describe('BuyBoxComponent', () => {
 
     await component.onAddToCart();
 
-    expect(mockCartService.addItem).toHaveBeenCalledWith('SKU-1', 1, undefined);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('prod-1', 1);
   });
 
   it('should emit buyNow event', () => {

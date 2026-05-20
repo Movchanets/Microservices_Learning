@@ -25,6 +25,9 @@ public sealed class User : AggregateRoot
     /// <summary>Gets the role assigned to the user.</summary>
     public UserRole Role { get; private set; }
 
+    /// <summary>Gets the store ID associated with this user (for sellers).</summary>
+    public Guid? StoreId { get; private set; }
+
     /// <summary>Gets the current refresh token assigned to the user.</summary>
     public RefreshToken? CurrentRefreshToken { get; private set; }
 
@@ -95,6 +98,15 @@ public sealed class User : AggregateRoot
         Role = newRole;
 
         AddDomainEvent(new UserRoleChangedEvent(Id, oldRole, newRole.ToString()));
+    }
+
+    /// <summary>
+    /// Associates a store with this user (for sellers).
+    /// </summary>
+    /// <param name="storeId">The store ID to associate.</param>
+    public void SetStoreId(Guid storeId)
+    {
+        StoreId = storeId;
     }
 
     /// <summary>

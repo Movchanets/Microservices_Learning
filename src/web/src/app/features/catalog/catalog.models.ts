@@ -12,7 +12,7 @@ export interface Product {
   categoryName: string;
   status: ProductStatus;
   imageUrl: string | null;
-  sellerId: string;
+  storeId: string;
   tags: string[];
   createdAt: string;
   updatedAt: string | null;
@@ -31,6 +31,7 @@ export interface ProductListItem {
   categoryName: string;
   status: string;
   imageUrl: string | null;
+  storeId: string;
   createdAt: string;
 }
 

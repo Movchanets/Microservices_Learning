@@ -8,11 +8,12 @@ public sealed class ProductPrice : Entity
     public string Name { get; private set; } = default!;
     public decimal Price { get; private set; }
     public string Currency { get; private set; } = "USD";
+    public Guid StoreId { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
     private ProductPrice() { }
 
-    public static ProductPrice Create(Guid productId, string sku, string name, decimal price, string currency)
+    public static ProductPrice Create(Guid productId, string sku, string name, decimal price, string currency, Guid storeId)
     {
         return new ProductPrice
         {
@@ -21,6 +22,7 @@ public sealed class ProductPrice : Entity
             Name = name,
             Price = price,
             Currency = currency,
+            StoreId = storeId,
             UpdatedAt = DateTime.UtcNow
         };
     }

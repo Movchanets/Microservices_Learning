@@ -24,7 +24,7 @@ public sealed class ProductCreatedConsumer(
         }
 
         // Create new inventory item with 0 stock
-        var inventoryItem = InventoryItem.Create(product.Sku, 0);
+        var inventoryItem = InventoryItem.Create(product.Sku, 0, product.StoreId, product.ProductId);
         repository.Add(inventoryItem);
 
         await uow.SaveChangesAsync();

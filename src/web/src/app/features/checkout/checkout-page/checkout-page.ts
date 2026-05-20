@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, ChevronDown, CheckCircle, CreditCard, Truck, MapPin, ShoppingBag } from 'lucide-angular';
@@ -6,6 +6,7 @@ import { CartStore } from '../../cart/cart.store';
 import { CheckoutStore } from '../checkout.store';
 import { OrderStore } from '../../orders/order.store';
 import { AuthStore } from '../../../core/auth/auth.store';
+import { NotificationService } from '../../../core/signalr/notification.service';
 import { CheckoutSummaryComponent } from '../checkout-summary/checkout-summary';
 import { CheckoutStatusComponent } from '../checkout-status/checkout-status';
 import { AddressFormComponent, Address } from '../address-form/address-form';
@@ -24,11 +25,11 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   readonly checkoutStore = inject(CheckoutStore);
   private readonly orderStore = inject(OrderStore);
   private readonly authStore = inject(AuthStore);
+  private readonly notifications = inject(NotificationService);
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   submitted = signal(false);
   pollingExpired = signal(false);
-  private polling = false;
 
   // Accordion state
   activeSection = signal<'address' | 'shipping' | 'summary' | 'payment'>('address');
@@ -39,6 +40,23 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   readonly TruckIcon = Truck;
   readonly MapPinIcon = MapPin;
   readonly BagIcon = ShoppingBag;
+
+  constructor() {
+    // React to SignalR order status updates — no polling needed
+    effect(() => {
+      const update = this.notifications.orderUpdates();
+      if (update && this.submitted() && !this.checkoutStore.hasOrder()) {
+        // SignalR notified us of an order update — fetch the order directly
+        this.orderStore.loadOrderById(update.orderId).then(() => {
+          const order = this.orderStore.selectedOrder();
+          if (order) {
+            this.checkoutStore.setOrder(order);
+            this.stopPolling();
+          }
+        });
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.checkoutStore.reset();
@@ -65,68 +83,40 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   }
 
   async onConfirm(): Promise<void> {
-    // Set submitted BEFORE the async call to prevent race condition
-    // where cart empties but submitted is still false → "empty cart" flash
     this.submitted.set(true);
-    this.startPolling();
 
     await this.checkoutStore.submitCheckout();
 
     if (this.checkoutStore.error()) {
       this.submitted.set(false);
-      this.stopPolling();
+      return;
     }
-  }
 
-  private startPolling(): void {
-    const buyerId = this.authStore.user()?.id || '';
-    let attempts = 0;
-    const maxAttempts = 15;
-
-    const poll = async () => {
-      if (this.polling) return; // Skip if previous request still in-flight
-      this.polling = true;
-      attempts++;
+    // Start a single fallback check after 8s in case SignalR misses it
+    this.pollTimer = setTimeout(async () => {
+      if (this.checkoutStore.hasOrder()) return;
 
       try {
+        const buyerId = this.authStore.user()?.id || '';
         if (buyerId) {
           await this.orderStore.loadOrders(buyerId);
+          const orders = this.orderStore.orders();
+          const correlationId = this.cartStore.checkoutCorrelationId();
+          const order = correlationId
+            ? orders.find((o) => o.id === correlationId)
+            : orders[0];
+          if (order) {
+            this.checkoutStore.setOrder(order);
+            return;
+          }
         }
+      } catch { /* ignore */ }
 
-        const orders = this.orderStore.orders();
-        const correlationId = this.cartStore.checkoutCorrelationId();
-
-        const order = correlationId
-          ? orders.find((o) => o.id === correlationId)
-          : orders[0];
-
-        if (order) {
-          this.checkoutStore.setOrder(order);
-          this.stopPolling();
-          return;
-        }
-      } catch {
-        // Transient error — continue polling
-      } finally {
-        this.polling = false;
-      }
-
-      if (attempts >= maxAttempts) {
-        this.pollingExpired.set(true);
-        this.stopPolling();
-        return;
-      }
-
-      // Schedule next poll AFTER current one completed
-      this.pollTimer = setTimeout(poll, 2000);
-    };
-
-    // First poll after short delay
-    this.pollTimer = setTimeout(poll, 1000);
+      this.pollingExpired.set(true);
+    }, 8000);
   }
 
   private stopPolling(): void {
-    this.polling = false;
     if (this.pollTimer) {
       clearTimeout(this.pollTimer);
       this.pollTimer = null;

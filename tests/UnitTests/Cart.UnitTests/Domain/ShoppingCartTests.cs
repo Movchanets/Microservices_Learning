@@ -5,59 +5,29 @@ namespace Cart.UnitTests.Domain;
 
 public class ShoppingCartTests
 {
+    private static readonly Guid StoreId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    private static readonly Guid ProductId1 = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly Guid ProductId2 = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
     [Fact]
-    public void AddItem_WhenNewSku_ShouldAddNewItem()
+    public void AddItem_WhenNewProduct_ShouldAddNewItem()
     {
-        // Arrange
         var cart = new ShoppingCart("buyer-1");
+        cart.AddItem(ProductId1, 2, StoreId, 10m);
 
-        // Act
-        cart.AddItem("sku-1", 2);
-
-        // Assert
         cart.Items.Should().ContainSingle();
-        cart.Items.First().Sku.Should().Be("sku-1");
+        cart.Items.First().ProductId.Should().Be(ProductId1);
         cart.Items.First().Quantity.Should().Be(2);
+        cart.Items.First().StoreId.Should().Be(StoreId);
     }
 
     [Fact]
-    public void AddItem_WithShopId_ShouldPropagateShopId()
+    public void AddItem_WhenExistingProduct_ShouldIncrementQuantity()
     {
-        // Arrange
         var cart = new ShoppingCart("buyer-1");
+        cart.AddItem(ProductId1, 2, StoreId, 10m);
+        cart.AddItem(ProductId1, 3, StoreId, 10m);
 
-        // Act
-        cart.AddItem("sku-1", 2, 10m, "seller-42");
-
-        // Assert
-        cart.Items.Should().ContainSingle();
-        cart.Items.First().ShopId.Should().Be("seller-42");
-    }
-
-    [Fact]
-    public void AddItem_WithoutShopId_ShouldHaveNullShopId()
-    {
-        // Arrange
-        var cart = new ShoppingCart("buyer-1");
-
-        // Act
-        cart.AddItem("sku-1", 2, 10m);
-
-        // Assert
-        cart.Items.First().ShopId.Should().BeNull();
-    }
-
-    [Fact]
-    public void AddItem_WhenExistingSku_ShouldIncrementQuantity()
-    {
-        // Arrange
-        var cart = new ShoppingCart("buyer-1");
-        cart.AddItem("sku-1", 2);
-
-        // Act
-        cart.AddItem("sku-1", 3);
-
-        // Assert
         cart.Items.Should().ContainSingle();
         cart.Items.First().Quantity.Should().Be(5);
     }
@@ -65,14 +35,11 @@ public class ShoppingCartTests
     [Fact]
     public void UpdateQuantity_WhenGreaterThanZero_ShouldUpdateQuantity()
     {
-        // Arrange
         var cart = new ShoppingCart("buyer-1");
-        cart.AddItem("sku-1", 2);
+        cart.AddItem(ProductId1, 2, StoreId, 10m);
 
-        // Act
-        cart.UpdateQuantity("sku-1", 5);
+        cart.UpdateQuantity(ProductId1, 5);
 
-        // Assert
         cart.Items.Should().ContainSingle();
         cart.Items.First().Quantity.Should().Be(5);
     }
@@ -80,31 +47,38 @@ public class ShoppingCartTests
     [Fact]
     public void UpdateQuantity_WhenZeroOrLess_ShouldRemoveItem()
     {
-        // Arrange
         var cart = new ShoppingCart("buyer-1");
-        cart.AddItem("sku-1", 2);
-        cart.AddItem("sku-2", 1);
+        cart.AddItem(ProductId1, 2, StoreId, 10m);
+        cart.AddItem(ProductId2, 1, StoreId, 20m);
 
-        // Act
-        cart.UpdateQuantity("sku-1", 0);
-        cart.UpdateQuantity("sku-2", -1);
+        cart.UpdateQuantity(ProductId1, 0);
+        cart.UpdateQuantity(ProductId2, -1);
 
-        // Assert
         cart.Items.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RemoveItem_ShouldRemoveTheItem()
+    {
+        var cart = new ShoppingCart("buyer-1");
+        cart.AddItem(ProductId1, 2, StoreId, 10m);
+        cart.AddItem(ProductId2, 1, StoreId, 20m);
+
+        cart.RemoveItem(ProductId1);
+
+        cart.Items.Should().ContainSingle();
+        cart.Items.First().ProductId.Should().Be(ProductId2);
     }
 
     [Fact]
     public void Clear_ShouldRemoveAllItems()
     {
-        // Arrange
         var cart = new ShoppingCart("buyer-1");
-        cart.AddItem("sku-1", 2);
-        cart.AddItem("sku-2", 1);
+        cart.AddItem(ProductId1, 2, StoreId, 10m);
+        cart.AddItem(ProductId2, 1, StoreId, 20m);
 
-        // Act
         cart.Clear();
 
-        // Assert
         cart.Items.Should().BeEmpty();
     }
 }

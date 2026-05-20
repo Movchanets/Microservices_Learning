@@ -7,6 +7,9 @@ namespace Inventory.UnitTests.Domain;
 
 public class InventoryItemTests
 {
+    private static readonly Guid TestStoreId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    private static readonly Guid TestProductId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
     [Fact]
     public void Create_WithValidData_InitializesCorrectly()
     {
@@ -15,18 +18,20 @@ public class InventoryItemTests
         var initialQuantity = 10;
 
         // Act
-        var item = InventoryItem.Create(sku, initialQuantity);
+        var item = InventoryItem.Create(sku, initialQuantity, TestStoreId, TestProductId);
 
         // Assert
         item.Sku.Should().Be("TEST-SKU");
         item.AvailableQuantity.Should().Be(10);
+        item.StoreId.Should().Be(TestStoreId);
+        item.ProductId.Should().Be(TestProductId);
     }
 
     [Fact]
     public void Reserve_WithAvailableStock_DeductsQuantityAndGeneratesEvent()
     {
         // Arrange
-        var item = InventoryItem.Create("TEST-SKU", 10);
+        var item = InventoryItem.Create("TEST-SKU", 10, TestStoreId, TestProductId);
         item.ClearDomainEvents();
 
         // Act
@@ -45,7 +50,7 @@ public class InventoryItemTests
     public void Reserve_WhenQuantityExceedsAvailable_ThrowsOutOfStockException()
     {
         // Arrange
-        var item = InventoryItem.Create("TEST-SKU", 5);
+        var item = InventoryItem.Create("TEST-SKU", 5, TestStoreId, TestProductId);
         item.ClearDomainEvents();
 
         // Act
@@ -61,7 +66,7 @@ public class InventoryItemTests
     public void Release_AddsQuantityBackAndGeneratesEvent()
     {
         // Arrange
-        var item = InventoryItem.Create("TEST-SKU", 5);
+        var item = InventoryItem.Create("TEST-SKU", 5, TestStoreId, TestProductId);
         item.ClearDomainEvents();
 
         // Act

@@ -12,10 +12,10 @@ public sealed class ProductUpdatedConsumer(
     public async Task Consume(ConsumeContext<ProductUpdatedEvent> context)
     {
         var evt = context.Message;
-        logger.LogInformation("Product updated: {ProductId}, SKU={Sku}, Price={Price}",
-            evt.ProductId, evt.Sku, evt.Price);
+        logger.LogInformation("Product updated: {ProductId}, SKU={Sku}, Price={Price}, StoreId={StoreId}",
+            evt.ProductId, evt.Sku, evt.Price, evt.StoreId);
 
         await priceRepository.UpsertAsync(
-            evt.ProductId, evt.Sku, evt.Name, evt.Price, "USD", context.CancellationToken);
+            evt.ProductId, evt.Sku, evt.Name, evt.Price, evt.Currency, evt.StoreId, context.CancellationToken);
     }
 }

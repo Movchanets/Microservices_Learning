@@ -89,7 +89,7 @@ export class HomePageComponent implements OnInit {
     const allProducts = [...this.homeStore.featuredProducts(), ...this.homeStore.newArrivals()];
     const product = allProducts.find((p) => p.id === productId);
     if (product) {
-      this.cartStore.addToCart(product.sku, 1);
+      this.cartStore.addToCart(product.id, 1);
     }
   }
 }

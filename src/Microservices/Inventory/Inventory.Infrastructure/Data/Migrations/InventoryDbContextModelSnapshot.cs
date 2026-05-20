@@ -31,10 +31,16 @@ namespace Inventory.Infrastructure.Data.Migrations
                     b.Property<int>("AvailableQuantity")
                         .HasColumnType("integer");
 
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Sku")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uuid");
 
                     b.Property<byte[]>("Version")
                         .IsConcurrencyToken()
@@ -45,7 +51,7 @@ namespace Inventory.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Sku")
+                    b.HasIndex("ProductId")
                         .IsUnique();
 
                     b.ToTable("InventoryItems");

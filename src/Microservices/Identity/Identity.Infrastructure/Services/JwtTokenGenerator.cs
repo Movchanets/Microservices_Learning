@@ -28,15 +28,21 @@ public sealed class JwtTokenGenerator(IConfiguration configuration) : IJwtTokenG
 
         // Rationale: Include essential claims (Sub, Email, Role) to allow downstream services
         // to authorize actions without querying the Identity service.
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email.Value),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim("firstName", user.FirstName),
-            new Claim("lastName", user.LastName)
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email.Value),
+            new(ClaimTypes.Role, user.Role.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("firstName", user.FirstName),
+            new("lastName", user.LastName)
         };
+
+        // Include StoreId for sellers so downstream services can verify store ownership.
+        if (user.StoreId.HasValue)
+        {
+            claims.Add(new Claim("StoreId", user.StoreId.Value.ToString()));
+        }
 
         var token = new JwtSecurityToken(
             issuer: configuration["Jwt:Issuer"] ?? "marketplace-identity",

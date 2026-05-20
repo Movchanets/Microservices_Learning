@@ -94,10 +94,11 @@ app.UseAuthorization();
 // ── Endpoints ───────────────────────────────────────────
 app.MapStoreEndpoints();
 
-// ── Auto-migrate in development ─────────────────────────
+// ── Auto-migrate + seed in development ──────────────────
 if (app.Environment.IsDevelopment())
 {
     app.ApplyMigrations();
+    app.SeedData();
 }
 
 app.Run();

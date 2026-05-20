@@ -14,7 +14,7 @@ public sealed class CreateOrderValidator : AbstractValidator<CreateOrderCommand>
 
         RuleForEach(x => x.Items).ChildRules(item =>
         {
-            item.RuleFor(x => x.Sku).NotEmpty().WithMessage("SKU is required");
+            item.RuleFor(x => x.ProductId).NotEmpty().WithMessage("ProductId is required");
             item.RuleFor(x => x.ProductName).NotEmpty().WithMessage("ProductName is required");
             item.RuleFor(x => x.UnitPrice).GreaterThan(0).WithMessage("UnitPrice must be positive");
             item.RuleFor(x => x.Quantity).GreaterThan(0).WithMessage("Quantity must be positive");

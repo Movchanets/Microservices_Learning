@@ -10,9 +10,8 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
     {
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Sku)
-            .IsRequired()
-            .HasMaxLength(50);
+        builder.Property(x => x.ProductId)
+            .IsRequired();
 
         builder.Property(x => x.ProductName)
             .IsRequired()
@@ -22,6 +21,9 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
             .HasColumnType("decimal(18,2)");
 
         builder.Property(x => x.Quantity)
+            .IsRequired();
+
+        builder.Property(x => x.StoreId)
             .IsRequired();
 
         builder.Ignore(x => x.TotalPrice);

@@ -19,7 +19,7 @@ public static class InventoryEndpoints
             [FromServices] IUnitOfWork uow,
             CancellationToken ct) =>
         {
-            var item = InventoryItem.Create(request.Sku, request.InitialQuantity);
+            var item = InventoryItem.Create(request.Sku, request.InitialQuantity, request.StoreId, request.ProductId);
             repository.Add(item);
             await uow.SaveChangesAsync(ct);
             return Results.Created($"/api/inventory/items/{item.Id}", item.Id);
@@ -74,6 +74,6 @@ public static class InventoryEndpoints
     }
 }
 
-public record CreateInventoryItemRequest(string Sku, int InitialQuantity);
+public record CreateInventoryItemRequest(string Sku, int InitialQuantity, Guid StoreId, Guid ProductId);
 public record AddStockRequest(int Quantity);
 public record BatchInventoryRequest(List<string> Skus);

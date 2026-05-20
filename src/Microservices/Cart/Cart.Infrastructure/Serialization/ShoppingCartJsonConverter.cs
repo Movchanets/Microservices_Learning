@@ -8,34 +8,29 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
 {
     public override ShoppingCart? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType == JsonTokenType.Null)
-            return null;
+        if (reader.TokenType == JsonTokenType.Null) return null;
 
         using var doc = JsonDocument.ParseValue(ref reader);
         var root = doc.RootElement;
 
-        // Support both PascalCase and camelCase
         var buyerId = GetStringProperty(root, "BuyerId", "buyerId");
         var id = GetNullableGuidProperty(root, "Id", "id");
 
         var cart = new ShoppingCart(buyerId);
-
-        // Restore the original Id so CartItem.CartId stays consistent after cache round-trip
         if (id.HasValue)
         {
-            var idProp = typeof(ShoppingCart).GetProperty("Id")!;
-            idProp.SetValue(cart, id.Value);
+            typeof(ShoppingCart).GetProperty("Id")!.SetValue(cart, id.Value);
         }
 
         if (TryGetProperty(root, "Items", "items", out var itemsElement))
         {
             foreach (var item in itemsElement.EnumerateArray())
             {
-                var sku = GetStringProperty(item, "Sku", "sku");
+                var productId = GetGuidProperty(item, "ProductId", "productId");
                 var quantity = GetInt32Property(item, "Quantity", "quantity");
                 var price = GetDecimalProperty(item, "Price", "price");
-                var shopId = GetNullableStringProperty(item, "ShopId", "shopId");
-                cart.AddItem(sku, quantity, price, shopId);
+                var storeId = GetGuidProperty(item, "StoreId", "storeId");
+                cart.AddItem(productId, quantity, storeId, price);
             }
         }
 
@@ -44,88 +39,46 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
 
     public override void Write(Utf8JsonWriter writer, ShoppingCart value, JsonSerializerOptions options)
     {
-        var namingPolicy = options.PropertyNamingPolicy;
-
+        var p = options.PropertyNamingPolicy;
         writer.WriteStartObject();
+        writer.WriteString(ConvertName(p, "Id"), value.Id);
+        writer.WriteString(ConvertName(p, "BuyerId"), value.BuyerId);
+        writer.WriteNumber(ConvertName(p, "Version"), value.Version);
+        writer.WriteString(ConvertName(p, "CreatedAt"), value.CreatedAt);
+        writer.WriteString(ConvertName(p, "UpdatedAt"), value.UpdatedAt);
 
-        writer.WriteString(ConvertName(namingPolicy, "Id"), value.Id);
-        writer.WriteString(ConvertName(namingPolicy, "BuyerId"), value.BuyerId);
-        writer.WriteNumber(ConvertName(namingPolicy, "Version"), value.Version);
-        writer.WriteString(ConvertName(namingPolicy, "CreatedAt"), value.CreatedAt);
-        writer.WriteString(ConvertName(namingPolicy, "UpdatedAt"), value.UpdatedAt);
-
-        writer.WritePropertyName(ConvertName(namingPolicy, "Items"));
+        writer.WritePropertyName(ConvertName(p, "Items"));
         writer.WriteStartArray();
         foreach (var item in value.Items)
         {
             writer.WriteStartObject();
-            writer.WriteString(ConvertName(namingPolicy, "Sku"), item.Sku);
-            writer.WriteNumber(ConvertName(namingPolicy, "Quantity"), item.Quantity);
-            writer.WriteNumber(ConvertName(namingPolicy, "Price"), item.Price);
-            if (item.ShopId is not null)
-                writer.WriteString(ConvertName(namingPolicy, "ShopId"), item.ShopId);
+            writer.WriteString(ConvertName(p, "ProductId"), item.ProductId);
+            writer.WriteString(ConvertName(p, "StoreId"), item.StoreId);
+            writer.WriteNumber(ConvertName(p, "Quantity"), item.Quantity);
+            writer.WriteNumber(ConvertName(p, "Price"), item.Price);
             writer.WriteEndObject();
         }
         writer.WriteEndArray();
-
         writer.WriteEndObject();
     }
 
-    private static string ConvertName(JsonNamingPolicy? policy, string name) =>
-        policy?.ConvertName(name) ?? name;
-
-    private static string GetStringProperty(JsonElement element, string name1, string name2)
+    private static string ConvertName(JsonNamingPolicy? policy, string name) => policy?.ConvertName(name) ?? name;
+    private static string GetStringProperty(JsonElement el, string n1, string n2) =>
+        el.TryGetProperty(n1, out var p) ? p.GetString()! : el.TryGetProperty(n2, out p) ? p.GetString()! : "";
+    private static int GetInt32Property(JsonElement el, string n1, string n2) =>
+        el.TryGetProperty(n1, out var p) ? p.GetInt32() : el.TryGetProperty(n2, out p) ? p.GetInt32() : 0;
+    private static decimal GetDecimalProperty(JsonElement el, string n1, string n2) =>
+        el.TryGetProperty(n1, out var p) ? p.GetDecimal() : el.TryGetProperty(n2, out p) ? p.GetDecimal() : 0m;
+    private static Guid GetGuidProperty(JsonElement el, string n1, string n2) =>
+        el.TryGetProperty(n1, out var p) && p.TryGetGuid(out var g) ? g :
+        el.TryGetProperty(n2, out p) && p.TryGetGuid(out g) ? g : Guid.Empty;
+    private static Guid? GetNullableGuidProperty(JsonElement el, string n1, string n2) =>
+        el.TryGetProperty(n1, out var p) && p.TryGetGuid(out var g) ? g :
+        el.TryGetProperty(n2, out p) && p.TryGetGuid(out g) ? g : null;
+    private static bool TryGetProperty(JsonElement el, string n1, string n2, out JsonElement v)
     {
-        if (element.TryGetProperty(name1, out var prop))
-            return prop.GetString()!;
-        if (element.TryGetProperty(name2, out prop))
-            return prop.GetString()!;
-        return string.Empty;
-    }
-
-    private static int GetInt32Property(JsonElement element, string name1, string name2)
-    {
-        if (element.TryGetProperty(name1, out var prop))
-            return prop.GetInt32();
-        if (element.TryGetProperty(name2, out prop))
-            return prop.GetInt32();
-        return 0;
-    }
-
-    private static decimal GetDecimalProperty(JsonElement element, string name1, string name2)
-    {
-        if (element.TryGetProperty(name1, out var prop))
-            return prop.GetDecimal();
-        if (element.TryGetProperty(name2, out prop))
-            return prop.GetDecimal();
-        return 0m;
-    }
-
-    private static string? GetNullableStringProperty(JsonElement element, string name1, string name2)
-    {
-        if (element.TryGetProperty(name1, out var prop))
-            return prop.GetString();
-        if (element.TryGetProperty(name2, out prop))
-            return prop.GetString();
-        return null;
-    }
-
-    private static bool TryGetProperty(JsonElement element, string name1, string name2, out JsonElement value)
-    {
-        if (element.TryGetProperty(name1, out value))
-            return true;
-        if (element.TryGetProperty(name2, out value))
-            return true;
-        value = default;
-        return false;
-    }
-
-    private static Guid? GetNullableGuidProperty(JsonElement element, string name1, string name2)
-    {
-        if (element.TryGetProperty(name1, out var prop) && prop.TryGetGuid(out var g1))
-            return g1;
-        if (element.TryGetProperty(name2, out prop) && prop.TryGetGuid(out var g2))
-            return g2;
-        return null;
+        if (el.TryGetProperty(n1, out v)) return true;
+        if (el.TryGetProperty(n2, out v)) return true;
+        v = default; return false;
     }
 }

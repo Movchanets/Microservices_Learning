@@ -13,7 +13,7 @@ public sealed record OrderDto(
 
 public sealed record OrderItemDto(
     Guid Id,
-    string Sku,
+    Guid ProductId,
     string ProductName,
     decimal UnitPrice,
     int Quantity,

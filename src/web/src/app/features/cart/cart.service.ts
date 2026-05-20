@@ -14,10 +14,6 @@ export class CartService {
     return firstValueFrom(this.http.get<ShoppingCart>(this.baseUrl));
   }
 
-  async updateCart(cart: ShoppingCart): Promise<ShoppingCart> {
-    return firstValueFrom(this.http.post<ShoppingCart>(this.baseUrl, cart));
-  }
-
   async deleteCart(): Promise<void> {
     return firstValueFrom(this.http.delete<void>(this.baseUrl));
   }
@@ -26,19 +22,15 @@ export class CartService {
     return firstValueFrom(this.http.post<CheckoutResponse>(`${this.baseUrl}/checkout`, address || {}));
   }
 
-  async addItem(sku: string, quantity: number, shopId?: string): Promise<ShoppingCart> {
-    return firstValueFrom(this.http.post<ShoppingCart>(`${this.baseUrl}/items`, { sku, quantity, shopId }));
+  async addItem(productId: string, quantity: number): Promise<ShoppingCart> {
+    return firstValueFrom(this.http.post<ShoppingCart>(`${this.baseUrl}/items`, { productId, quantity }));
   }
 
-  async updateItem(sku: string, quantity: number, shopId?: string): Promise<ShoppingCart> {
-    const params: Record<string, string> = {};
-    if (shopId) params['shopId'] = shopId;
-    return firstValueFrom(this.http.put<ShoppingCart>(`${this.baseUrl}/items/${sku}`, { quantity }, { params }));
+  async updateItem(productId: string, quantity: number): Promise<ShoppingCart> {
+    return firstValueFrom(this.http.put<ShoppingCart>(`${this.baseUrl}/items/${productId}`, { quantity }));
   }
 
-  async removeItem(sku: string, shopId?: string): Promise<ShoppingCart> {
-    const params: Record<string, string> = {};
-    if (shopId) params['shopId'] = shopId;
-    return firstValueFrom(this.http.delete<ShoppingCart>(`${this.baseUrl}/items/${sku}`, { params }));
+  async removeItem(productId: string): Promise<ShoppingCart> {
+    return firstValueFrom(this.http.delete<ShoppingCart>(`${this.baseUrl}/items/${productId}`));
   }
 }

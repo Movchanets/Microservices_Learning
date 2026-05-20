@@ -63,12 +63,12 @@ public static class OrderEndpoints
             return Results.Ok(result.Value);
         });
 
-        group.MapGet("/seller/{sellerId}", async (
-            string sellerId,
-            [FromServices] ISender sender,
+        group.MapGet("/store/{storeId:guid}", async (
+            Guid storeId,
+            ISender sender,
             CancellationToken ct) =>
         {
-            var result = await sender.Send(new ListOrdersBySellerQuery(sellerId), ct);
+            var result = await sender.Send(new ListOrdersBySellerQuery(storeId), ct);
             return Results.Ok(result.Value);
         })
         .RequireAuthorization("Seller");

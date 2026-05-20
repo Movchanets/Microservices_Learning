@@ -22,11 +22,11 @@ public sealed class OrderRepository(OrderingDbContext dbContext) : IOrderReposit
             .ToListAsync(ct);
     }
 
-    public async Task<List<Order>> GetBySellerIdAsync(string sellerId, CancellationToken ct = default)
+    public async Task<List<Order>> GetByStoreIdAsync(Guid storeId, CancellationToken ct = default)
     {
         return await dbContext.Orders
             .Include(o => o.Items)
-            .Where(o => o.Items.Any(i => i.SellerId == sellerId))
+            .Where(o => o.Items.Any(i => i.StoreId == storeId))
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync(ct);
     }

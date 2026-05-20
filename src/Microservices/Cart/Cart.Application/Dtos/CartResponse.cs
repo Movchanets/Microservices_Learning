@@ -10,18 +10,18 @@ public sealed record CartResponse(
     DateTime UpdatedAt);
 
 public sealed record CartItemResponse(
-    string Sku,
+    Guid ProductId,
+    Guid StoreId,
     int Quantity,
     decimal Price,
-    decimal LineTotal,
-    string? ShopId);
+    decimal LineTotal);
 
 public static class CartMapper
 {
     public static CartResponse ToResponse(ShoppingCart cart) => new(
         cart.BuyerId,
         cart.Items.Select(i => new CartItemResponse(
-            i.Sku, i.Quantity, i.Price, i.Price * i.Quantity, i.ShopId)).ToList(),
+            i.ProductId, i.StoreId, i.Quantity, i.Price, i.Price * i.Quantity)).ToList(),
         cart.Items.Sum(i => i.Price * i.Quantity),
         cart.Items.Sum(i => i.Quantity),
         cart.UpdatedAt);

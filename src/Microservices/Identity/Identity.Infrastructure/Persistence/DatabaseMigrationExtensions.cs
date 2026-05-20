@@ -94,6 +94,7 @@ public static class DatabaseMigrationExtensions
                 "Store",
                 Identity.Domain.Enums.UserRole.Seller,
                 userId: storeSellerOneId);
+            techStoreSeller.SetStoreId(Guid.Parse("33333333-3333-3333-3333-333333333333"));
             context.Users.Add(techStoreSeller);
         }
 
@@ -107,6 +108,7 @@ public static class DatabaseMigrationExtensions
                 "Store",
                 Identity.Domain.Enums.UserRole.Seller,
                 userId: storeSellerTwoId);
+            homeStoreSeller.SetStoreId(Guid.Parse("44444444-4444-4444-4444-444444444444"));
             context.Users.Add(homeStoreSeller);
         }
 

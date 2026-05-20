@@ -40,18 +40,18 @@ public sealed class Order : AggregateRoot
         };
     }
 
-    public void AddItem(string sku, string productName, decimal unitPrice, int quantity, string? sellerId = null)
+    public void AddItem(Guid productId, string productName, decimal unitPrice, int quantity, Guid storeId)
     {
         if (Status != OrderStatus.Submitted)
             throw new DomainException("Cannot add items to an order that is not in Submitted status");
 
-        var existingItem = _items.FirstOrDefault(i => i.Sku == sku);
+        var existingItem = _items.FirstOrDefault(i => i.ProductId == productId);
         if (existingItem != null)
         {
             _items.Remove(existingItem);
         }
 
-        _items.Add(new OrderItem(sku, productName, unitPrice, quantity, sellerId));
+        _items.Add(new OrderItem(productId, productName, unitPrice, quantity, storeId));
     }
 
     public void MarkInventoryReserved()

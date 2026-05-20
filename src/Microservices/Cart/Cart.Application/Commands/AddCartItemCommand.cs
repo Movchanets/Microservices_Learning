@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Cart.Application.Commands;
 
-public record AddCartItemCommand(string BuyerId, string Sku, int Quantity, string? ShopId = null) : IRequest<Result<CartResponse>>;
+public record AddCartItemCommand(string BuyerId, Guid ProductId, int Quantity) : IRequest<Result<CartResponse>>;
 
 public sealed class AddCartItemCommandHandler(
     ICartRepository repository,
@@ -14,12 +14,12 @@ public sealed class AddCartItemCommandHandler(
 {
     public async Task<Result<CartResponse>> Handle(AddCartItemCommand request, CancellationToken cancellationToken)
     {
-        var productPrice = await priceRepository.GetBySkuAsync(request.Sku, cancellationToken);
+        var productPrice = await priceRepository.GetByIdAsync(request.ProductId, cancellationToken);
         if (productPrice is null)
-            return Result<CartResponse>.Failure($"Product with SKU '{request.Sku}' not found");
+            return Result<CartResponse>.Failure($"Product '{request.ProductId}' not found");
 
         var cart = await repository.GetOrCreateTrackedCartAsync(request.BuyerId, cancellationToken);
-        cart.AddItem(request.Sku, request.Quantity, productPrice.Price, request.ShopId);
+        cart.AddItem(request.ProductId, request.Quantity, productPrice.StoreId, productPrice.Price);
 
         await repository.SaveCartAsync(cart, cancellationToken);
         return Result<CartResponse>.Success(CartMapper.ToResponse(cart));

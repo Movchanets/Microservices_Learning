@@ -12,7 +12,7 @@ describe('CheckoutStore', () => {
   let store: any;
 
   const mockCartStore = {
-    items: signal([{ sku: 'PROD-1', quantity: 2 }]),
+    items: signal([{ productId: 'PROD-1', quantity: 2 }]),
     isEmpty: signal(false),
     checkout: vi.fn().mockResolvedValue(undefined),
     checkoutCorrelationId: signal('test-correlation-id'),
@@ -28,7 +28,7 @@ describe('CheckoutStore', () => {
 
     store = TestBed.inject(CheckoutStore);
     store.reset();
-    mockCartStore.items.set([{ sku: 'PROD-1', quantity: 2 }]);
+    mockCartStore.items.set([{ productId: 'PROD-1', quantity: 2 }]);
     mockCartStore.checkout.mockResolvedValue(undefined);
     vi.clearAllMocks();
   });

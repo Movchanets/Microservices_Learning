@@ -10,7 +10,7 @@ public sealed class ListOrdersBySellerHandler(
 {
     public async Task<Result<List<OrderDto>>> Handle(ListOrdersBySellerQuery request, CancellationToken ct)
     {
-        var orders = await repository.GetBySellerIdAsync(request.SellerId, ct);
+        var orders = await repository.GetByStoreIdAsync(request.StoreId, ct);
 
         var dtos = orders.Select(order => new OrderDto(
             order.Id,
@@ -20,7 +20,7 @@ public sealed class ListOrdersBySellerHandler(
             order.CreatedAt,
             order.CompletedAt,
             order.Items.Select(i => new OrderItemDto(
-                i.Id, i.Sku, i.ProductName, i.UnitPrice, i.Quantity, i.TotalPrice)).ToList())).ToList();
+                i.Id, i.ProductId, i.ProductName, i.UnitPrice, i.Quantity, i.TotalPrice)).ToList())).ToList();
 
         return Result<List<OrderDto>>.Success(dtos);
     }

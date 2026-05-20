@@ -47,6 +47,9 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasConversion<string>()
             .HasMaxLength(20);
 
+        builder.Property(u => u.StoreId)
+            .IsRequired(false);
+
         builder.Property(u => u.IsActive)
             .HasDefaultValue(true);
 

@@ -33,7 +33,9 @@ public class ProductUpdatedConsumerTests
             49.99m, "EUR", "SKU-002",
             categoryId, "Books",
             new List<string> { "fiction" },
-            "http://new-img.jpg", true, updatedAt);
+            "http://new-img.jpg",
+            Guid.NewGuid(), // StoreId
+            true, updatedAt);
 
         var consumeContext = new Mock<ConsumeContext<ProductUpdatedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
@@ -77,7 +79,10 @@ public class ProductUpdatedConsumerTests
             productId, "Product", "Desc",
             10m, "USD", "SKU-X",
             Guid.NewGuid(), "Cat",
-            new List<string>(), null, false, DateTime.UtcNow);
+            new List<string>(),
+            null,
+            Guid.NewGuid(), // StoreId
+            false, DateTime.UtcNow);
 
         var consumeContext = new Mock<ConsumeContext<ProductUpdatedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);

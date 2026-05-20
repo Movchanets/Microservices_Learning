@@ -207,13 +207,13 @@ namespace Ordering.Infrastructure.Persistence.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<string>("SellerId")
-                        .HasColumnType("text");
-
                     b.Property<string>("Sku")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,2)");

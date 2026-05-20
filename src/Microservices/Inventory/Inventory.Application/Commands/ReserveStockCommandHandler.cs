@@ -12,15 +12,20 @@ public sealed class ReserveStockCommandHandler(
 {
     public async Task<Result<bool>> Handle(ReserveStockCommand request, CancellationToken cancellationToken)
     {
-        var skus = request.Items.Select(i => i.Sku).ToList();
-        var items = await repository.GetBySkusAsync(skus, cancellationToken);
+        var productIds = request.Items.Select(i => i.ProductId).ToList();
+        var items = new List<InventoryItem>();
+        foreach (var pid in productIds)
+        {
+            var item = await repository.GetByProductIdAsync(pid, cancellationToken);
+            if (item is not null) items.Add(item);
+        }
 
         foreach (var requestedItem in request.Items)
         {
-            var inventoryItem = items.FirstOrDefault(i => i.Sku == requestedItem.Sku);
+            var inventoryItem = items.FirstOrDefault(i => i.ProductId == requestedItem.ProductId);
             if (inventoryItem == null)
             {
-                return Result<bool>.Failure($"Inventory item not found for SKU {requestedItem.Sku}");
+                return Result<bool>.Failure($"Inventory item not found for product {requestedItem.ProductId}");
             }
 
             try

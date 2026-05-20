@@ -73,6 +73,7 @@ public sealed class ProductUpdatedDomainEventHandler(
             category?.Name ?? "",
             product.Tags,
             product.ImageUrl,
+            product.StoreId,
             product.IsActive,
             product.UpdatedAt ?? DateTime.UtcNow), cancellationToken);
 

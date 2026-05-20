@@ -10,7 +10,6 @@ public sealed class ShoppingCart : AggregateRoot
 
     /// <summary>
     /// Row version used for optimistic concurrency. Mapped to PostgreSQL xmin system column.
-    /// Automatically managed by the database — never set manually.
     /// </summary>
     public uint Version { get; private set; }
 
@@ -29,16 +28,18 @@ public sealed class ShoppingCart : AggregateRoot
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void AddItem(string sku, int quantity, decimal price = 0m, string? shopId = null)
+    public void AddItem(Guid productId, int quantity, Guid storeId, decimal price = 0m)
     {
-        if (string.IsNullOrWhiteSpace(sku))
-            throw new ArgumentException("SKU cannot be empty", nameof(sku));
+        if (productId == Guid.Empty)
+            throw new ArgumentException("ProductId is required", nameof(productId));
         if (quantity <= 0)
             throw new ArgumentException("Quantity must be greater than zero", nameof(quantity));
         if (price < 0)
             throw new ArgumentException("Price cannot be negative", nameof(price));
+        if (storeId == Guid.Empty)
+            throw new ArgumentException("StoreId is required", nameof(storeId));
 
-        var existingItem = _items.FirstOrDefault(i => i.MatchesKey(sku, shopId));
+        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId));
         if (existingItem != null)
         {
             existingItem.AddQuantity(quantity);
@@ -48,15 +49,15 @@ public sealed class ShoppingCart : AggregateRoot
             if (_items.Count >= MaxItems)
                 throw new InvalidOperationException($"Cart cannot exceed {MaxItems} items");
 
-            _items.Add(new CartItem(Id, sku, quantity, price, shopId));
+            _items.Add(new CartItem(Id, productId, quantity, price, storeId));
         }
 
         Touch();
     }
 
-    public void UpdateQuantity(string sku, int quantity, string? shopId = null)
+    public void UpdateQuantity(Guid productId, int quantity)
     {
-        var existingItem = _items.FirstOrDefault(i => i.MatchesKey(sku, shopId));
+        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId));
         if (existingItem != null)
         {
             if (quantity <= 0)
@@ -72,9 +73,9 @@ public sealed class ShoppingCart : AggregateRoot
         }
     }
 
-    public void RemoveItem(string sku, string? shopId = null)
+    public void RemoveItem(Guid productId)
     {
-        var existingItem = _items.FirstOrDefault(i => i.MatchesKey(sku, shopId));
+        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId));
         if (existingItem != null)
         {
             _items.Remove(existingItem);

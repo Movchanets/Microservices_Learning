@@ -30,7 +30,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { PLATFORM_ID } from '@angular/core';
 
 export const CartStore = signalStore(
-  { providedIn: 'root' }, // Global store accessible everywhere
+  { providedIn: 'root' },
   withState(initialState),
 
   withComputed((store) => ({
@@ -60,10 +60,10 @@ export const CartStore = signalStore(
       }
     },
 
-    async addToCart(sku: string, quantity: number = 1, shopId?: string): Promise<void> {
+    async addToCart(productId: string, quantity: number = 1): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.addItem(sku, quantity, shopId);
+        const updatedCart = await cartService.addItem(productId, quantity);
         patchState(store, { items: updatedCart.items, loading: false, isDrawerOpen: true });
       } catch (err: any) {
         patchState(store, { error: 'Failed to add item to cart', loading: false });
@@ -71,15 +71,15 @@ export const CartStore = signalStore(
       }
     },
 
-    async updateQuantity(sku: string, quantity: number, shopId?: string): Promise<void> {
+    async updateQuantity(productId: string, quantity: number): Promise<void> {
       if (quantity <= 0) {
-        await this.removeFromCart(sku, shopId);
+        await this.removeFromCart(productId);
         return;
       }
 
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.updateItem(sku, quantity, shopId);
+        const updatedCart = await cartService.updateItem(productId, quantity);
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
         patchState(store, { error: 'Failed to update quantity', loading: false });
@@ -87,10 +87,10 @@ export const CartStore = signalStore(
       }
     },
 
-    async removeFromCart(sku: string, shopId?: string): Promise<void> {
+    async removeFromCart(productId: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.removeItem(sku, shopId);
+        const updatedCart = await cartService.removeItem(productId);
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
         patchState(store, { error: 'Failed to remove item', loading: false });
@@ -118,7 +118,6 @@ export const CartStore = signalStore(
     onInit(store) {
       const platformId = inject(PLATFORM_ID);
       if (isPlatformBrowser(platformId)) {
-        // Load cart data when the application starts in browser
         store.loadCart();
       }
     },

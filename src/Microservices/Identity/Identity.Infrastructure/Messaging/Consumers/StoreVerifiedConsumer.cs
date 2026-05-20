@@ -35,6 +35,7 @@ public sealed class StoreVerifiedConsumer(
         }
 
         user.ChangeRole(UserRole.Seller);
+        user.SetStoreId(evt.StoreId);
         await unitOfWork.SaveChangesAsync(context.CancellationToken);
 
         logger.LogInformation("User {SellerId} role updated to Seller", evt.SellerId);

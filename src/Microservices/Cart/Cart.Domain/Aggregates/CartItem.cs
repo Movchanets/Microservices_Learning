@@ -5,43 +5,36 @@ namespace Cart.Domain.Aggregates;
 public sealed class CartItem : Entity
 {
     public Guid CartId { get; private set; }
-    public string Sku { get; private set; } = string.Empty;
+    public Guid ProductId { get; private set; }
     public int Quantity { get; private set; }
     public decimal Price { get; private set; }
-    public string? ShopId { get; private set; }
+    public Guid StoreId { get; private set; }
 
     private CartItem() { } // EF Core
 
-    internal CartItem(Guid cartId, string sku, int quantity, decimal price = 0m, string? shopId = null)
+    internal CartItem(Guid cartId, Guid productId, int quantity, decimal price, Guid storeId)
     {
         if (cartId == Guid.Empty)
             throw new ArgumentException("CartId cannot be empty", nameof(cartId));
-        ArgumentException.ThrowIfNullOrWhiteSpace(sku);
+        if (productId == Guid.Empty)
+            throw new ArgumentException("ProductId cannot be empty", nameof(productId));
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(quantity);
+        if (storeId == Guid.Empty)
+            throw new ArgumentException("StoreId is required", nameof(storeId));
 
         CartId = cartId;
-        Sku = sku;
+        ProductId = productId;
         Quantity = quantity;
         Price = price;
-        ShopId = shopId;
+        StoreId = storeId;
     }
 
     /// <summary>
-    /// Matches this item against a (Sku, ShopId) composite key.
-    /// When ShopId is null on either side, falls back to SKU-only matching
-    /// for backward compatibility with single-seller products.
+    /// Matches this item against a ProductId.
     /// </summary>
-    internal bool MatchesKey(string sku, string? shopId)
+    internal bool MatchesProduct(Guid productId)
     {
-        if (!string.Equals(Sku, sku, StringComparison.Ordinal))
-            return false;
-
-        // Both have ShopId → must match exactly
-        if (ShopId is not null && shopId is not null)
-            return string.Equals(ShopId, shopId, StringComparison.Ordinal);
-
-        // At least one side has no ShopId → SKU-only match (backward compat)
-        return true;
+        return ProductId == productId;
     }
 
     public void AddQuantity(int quantity)

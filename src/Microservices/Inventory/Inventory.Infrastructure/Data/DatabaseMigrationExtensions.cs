@@ -82,7 +82,10 @@ public static class DatabaseMigrationExtensions
             if (item == null)
             {
                 // Item not yet created by ProductCreatedConsumer (race condition) — create it now
-                item = InventoryItem.Create(sku, quantity);
+                // Default to Tech Store for seed data, use SKU hash as stable product placeholder
+                item = InventoryItem.Create(sku, quantity,
+                    Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                    Guid.CreateVersion7());
                 context.InventoryItems.Add(item);
                 created++;
                 logger.LogInformation("Created inventory for SKU {Sku} with {Quantity} units.", sku, quantity);

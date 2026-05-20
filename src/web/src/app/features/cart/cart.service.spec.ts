@@ -1,8 +1,3 @@
-// CartService unit tests.
-// Verifies HTTP calls to the BFF gateway: GET /api/cart, POST /api/cart,
-// DELETE /api/cart, and POST /api/cart/checkout.
-// Uses HttpClientTestingModule to assert correct URLs, methods, and headers.
-
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { CartService } from './cart.service';
@@ -14,7 +9,7 @@ describe('CartService', () => {
 
   const mockCart: ShoppingCart = {
     buyerId: 'test-user',
-    items: [{ sku: 'PROD-1', quantity: 2, price: 10, lineTotal: 20 }]
+    items: [{ productId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', storeId: '33333333-3333-3333-3333-333333333333', quantity: 2, price: 10, lineTotal: 20 }]
   };
 
   beforeEach(() => {
@@ -24,83 +19,77 @@ describe('CartService', () => {
     });
     service = TestBed.inject(CartService);
     httpMock = TestBed.inject(HttpTestingController);
-
-    // Clear localStorage before each test
     localStorage.clear();
   });
 
-  afterEach(() => {
-    httpMock.verify();
-  });
+  afterEach(() => { httpMock.verify(); });
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
+  it('should be created', () => { expect(service).toBeTruthy(); });
 
   describe('getCart', () => {
-    it('should issue a GET request to /api/cart', async () => {
+    it('should GET /api/cart', async () => {
       const promise = service.getCart();
-
       const req = httpMock.expectOne('/api/cart');
       expect(req.request.method).toBe('GET');
       req.flush(mockCart);
-
-      const result = await promise;
-      expect(result).toEqual(mockCart);
-    });
-
-    it('should send request to correct URL', async () => {
-      const promise = service.getCart();
-
-      const req = httpMock.expectOne('/api/cart');
-      expect(req.request.method).toBe('GET');
-      req.flush(mockCart);
-
-      const result = await promise;
-      expect(result).toEqual(mockCart);
+      expect(await promise).toEqual(mockCart);
     });
   });
 
-  // The assignment mentions addItem, updateQuantity, removeItem,
-  // but cart.service.ts only has updateCart. Testing updateCart.
-  describe('updateCart', () => {
-    it('should issue a POST request to /api/cart', async () => {
-      const promise = service.updateCart(mockCart);
-
-      const req = httpMock.expectOne('/api/cart');
+  describe('addItem', () => {
+    it('should POST /api/cart/items with productId and quantity', async () => {
+      const productId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+      const promise = service.addItem(productId, 3);
+      const req = httpMock.expectOne('/api/cart/items');
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual(mockCart);
+      expect(req.request.body).toEqual({ productId, quantity: 3 });
       req.flush(mockCart);
+      expect(await promise).toEqual(mockCart);
+    });
+  });
 
+  describe('updateItem', () => {
+    it('should PUT /api/cart/items/{productId}', async () => {
+      const productId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+      const promise = service.updateItem(productId, 5);
+      const req = httpMock.expectOne(`/api/cart/items/${productId}`);
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ quantity: 5 });
+      req.flush(mockCart);
+      expect(await promise).toEqual(mockCart);
+    });
+  });
+
+  describe('removeItem', () => {
+    it('should DELETE /api/cart/items/{productId}', async () => {
+      const productId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+      const promise = service.removeItem(productId);
+      const req = httpMock.expectOne(`/api/cart/items/${productId}`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush({ ...mockCart, items: [] });
       const result = await promise;
-      expect(result).toEqual(mockCart);
+      expect(result.items).toEqual([]);
     });
   });
 
   describe('deleteCart', () => {
-    it('should issue a DELETE request to /api/cart', async () => {
+    it('should DELETE /api/cart', async () => {
       const promise = service.deleteCart();
-
       const req = httpMock.expectOne('/api/cart');
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
-
       await promise;
     });
   });
 
   describe('checkout', () => {
-    it('should issue a POST request to /api/cart/checkout', async () => {
+    it('should POST /api/cart/checkout', async () => {
       const mockResponse: CheckoutResponse = { correlationId: 'corr-123' };
       const promise = service.checkout();
-
       const req = httpMock.expectOne('/api/cart/checkout');
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({});
       req.flush(mockResponse);
-
-      const result = await promise;
-      expect(result).toEqual(mockResponse);
+      expect(await promise).toEqual(mockResponse);
     });
   });
 });

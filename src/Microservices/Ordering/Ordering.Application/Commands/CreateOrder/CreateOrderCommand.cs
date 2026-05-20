@@ -14,7 +14,8 @@ public sealed record CreateOrderCommand(
     string? ShippingCountry) : IRequest<Result<Guid>>;
 
 public sealed record CreateOrderItemDto(
-    string Sku,
+    Guid ProductId,
     string ProductName,
     decimal UnitPrice,
-    int Quantity);
+    int Quantity,
+    Guid StoreId);

@@ -26,6 +26,7 @@ public sealed class ProductUpdatedConsumer(
             CategoryName = msg.CategoryName,
             Tags = msg.Tags,
             ImageUrl = msg.ImageUrl,
+            StoreId = msg.StoreId,
             IsActive = msg.IsActive,
             UpdatedAt = msg.UpdatedAt,
             Brand = msg.Brand,

@@ -1,9 +1,9 @@
 export interface CartItem {
-  sku: string;
+  productId: string;
+  storeId: string;
   quantity: number;
   price: number;
   lineTotal: number;
-  shopId?: string;
 }
 
 export interface ShoppingCart {

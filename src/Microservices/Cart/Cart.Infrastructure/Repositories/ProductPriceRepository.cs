@@ -7,13 +7,6 @@ namespace Cart.Infrastructure.Repositories;
 
 public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepository
 {
-    public async Task<ProductPrice?> GetBySkuAsync(string sku, CancellationToken ct = default)
-    {
-        return await dbContext.ProductPrices
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Sku == sku, ct);
-    }
-
     public async Task<ProductPrice?> GetByIdAsync(Guid productId, CancellationToken ct = default)
     {
         return await dbContext.ProductPrices
@@ -22,7 +15,7 @@ public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepo
     }
 
     public async Task UpsertAsync(
-        Guid productId, string sku, string name, decimal price, string currency, CancellationToken ct = default)
+        Guid productId, string sku, string name, decimal price, string currency, Guid storeId, CancellationToken ct = default)
     {
         // Pure EF Core upsert — no raw SQL. Handles TOCTOU race between
         // ProductCreatedConsumer and ProductUpdatedConsumer via catch-and-retry.
@@ -39,7 +32,7 @@ public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepo
         }
 
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, sku, name, price, currency));
+            ProductPrice.Create(productId, sku, name, price, currency, storeId));
 
         try
         {
@@ -78,4 +71,3 @@ public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepo
         dbContext.ProductPrices.Remove(productPrice);
     }
 }
-

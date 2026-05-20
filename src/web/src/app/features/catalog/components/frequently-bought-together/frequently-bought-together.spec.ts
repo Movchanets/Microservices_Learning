@@ -13,9 +13,9 @@ describe('FrequentlyBoughtTogetherComponent', () => {
   let mockCartService: any;
 
   const mockProducts: ProductListItem[] = [
-    { id: '1', name: 'Camera', price: 499, currency: 'USD', sku: 'CAM-1', categoryName: 'Electronics', status: 'Active', imageUrl: null, createdAt: '2026-01-01' },
-    { id: '2', name: 'Memory Card', price: 29, currency: 'USD', sku: 'MEM-1', categoryName: 'Electronics', status: 'Active', imageUrl: null, createdAt: '2026-01-01' },
-    { id: '3', name: 'Camera Case', price: 49, currency: 'USD', sku: 'CASE-1', categoryName: 'Electronics', status: 'Active', imageUrl: null, createdAt: '2026-01-01' },
+    { id: '1', name: 'Camera', price: 499, currency: 'USD', sku: 'CAM-1', categoryName: 'Electronics', status: 'Active', imageUrl: null, storeId: 'store-1', createdAt: '2026-01-01' },
+    { id: '2', name: 'Memory Card', price: 29, currency: 'USD', sku: 'MEM-1', categoryName: 'Electronics', status: 'Active', imageUrl: null, storeId: 'store-1', createdAt: '2026-01-01' },
+    { id: '3', name: 'Camera Case', price: 49, currency: 'USD', sku: 'CASE-1', categoryName: 'Electronics', status: 'Active', imageUrl: null, storeId: 'store-1', createdAt: '2026-01-01' },
   ];
 
   beforeEach(async () => {
@@ -122,8 +122,8 @@ describe('FrequentlyBoughtTogetherComponent', () => {
     await component.addAllToCart();
 
     expect(mockCartService.addItem).toHaveBeenCalledTimes(3);
-    expect(mockCartService.addItem).toHaveBeenCalledWith('CAM-1', 1, undefined);
-    expect(mockCartService.addItem).toHaveBeenCalledWith('MEM-1', 1, undefined);
-    expect(mockCartService.addItem).toHaveBeenCalledWith('CASE-1', 1, undefined);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('1', 1);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('2', 1);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('3', 1);
   });
 });

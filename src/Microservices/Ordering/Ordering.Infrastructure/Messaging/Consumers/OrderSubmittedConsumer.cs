@@ -40,7 +40,7 @@ public sealed class OrderSubmittedConsumer(
 
         foreach (var item in evt.Items)
         {
-            order.AddItem(item.Sku, item.Sku, item.Price, item.Quantity, item.ShopId);
+            order.AddItem(item.ProductId, item.ProductId.ToString(), item.Price, item.Quantity, item.StoreId);
         }
 
         repository.Add(order);

@@ -27,19 +27,6 @@ public static class CartEndpoints
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
-        group.MapPost("/", async (
-            ClaimsPrincipal user,
-            [FromBody] UpdateCartRequest request,
-            [FromServices] ISender sender,
-            CancellationToken ct) =>
-        {
-            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var items = request.Items.Select(i => new CartItemDto(i.Sku, i.Quantity, i.Price, i.ShopId)).ToList();
-            var result = await sender.Send(new UpdateCartCommand(buyerId, items), ct);
-            return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
-        });
-
         group.MapDelete("/", async (
             ClaimsPrincipal user,
             [FromServices] ISender sender,
@@ -80,42 +67,38 @@ public static class CartEndpoints
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new AddCartItemCommand(buyerId, request.Sku, request.Quantity, request.ShopId), ct);
+            var result = await sender.Send(new AddCartItemCommand(buyerId, request.ProductId, request.Quantity), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
-        group.MapPut("/items/{sku}", async (
+        group.MapPut("/items/{productId:guid}", async (
             ClaimsPrincipal user,
-            string sku,
+            Guid productId,
             [FromBody] UpdateCartItemRequest request,
-            [FromQuery] string? shopId,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new UpdateCartItemCommand(buyerId, sku, request.Quantity, shopId), ct);
+            var result = await sender.Send(new UpdateCartItemCommand(buyerId, productId, request.Quantity), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
-        group.MapDelete("/items/{sku}", async (
+        group.MapDelete("/items/{productId:guid}", async (
             ClaimsPrincipal user,
-            string sku,
-            [FromQuery] string? shopId,
+            Guid productId,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new RemoveCartItemCommand(buyerId, sku, shopId), ct);
+            var result = await sender.Send(new RemoveCartItemCommand(buyerId, productId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
     }
 }
 
-public record UpdateCartRequest(List<CartItemRequest> Items);
-public record CartItemRequest(string Sku, int Quantity, decimal Price, string? ShopId = null);
-public record AddCartItemRequest(string Sku, int Quantity, string? ShopId = null);
+public record AddCartItemRequest(Guid ProductId, int Quantity);
 public record UpdateCartItemRequest(int Quantity);
 public record CheckoutRequest(
     string? AddressLine1,
