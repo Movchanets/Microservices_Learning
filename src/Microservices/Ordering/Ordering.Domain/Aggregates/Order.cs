@@ -29,10 +29,11 @@ public sealed class Order : AggregateRoot
 
     private Order() { }
 
-    public static Order Create(string buyerId, Address? shippingAddress = null)
+    public static Order Create(string buyerId, Address? shippingAddress = null, Guid? orderId = null)
     {
         return new Order
         {
+            Id = orderId ?? Guid.NewGuid(),
             BuyerId = buyerId,
             ShippingAddress = shippingAddress,
             CreatedAt = DateTime.UtcNow

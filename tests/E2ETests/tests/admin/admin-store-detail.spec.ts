@@ -15,13 +15,13 @@ test.describe('Admin: Store Verification', () => {
 
     // Navigate to admin verifications
     await page.goto('/admin/verifications');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Look for the store in the verification list
     const storeLink = page.getByText(store.name);
     if (await storeLink.isVisible()) {
       await storeLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should see store detail
       await expect(storeDetailPage.storeNameHeading).toBeVisible();
@@ -40,15 +40,15 @@ test.describe('Admin: Store Verification', () => {
     const storeDetailPage = new AdminStoreDetailPage(page);
 
     await page.goto('/admin/verifications');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const storeLink = page.getByText(store.name);
     if (await storeLink.isVisible()) {
       await storeLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await storeDetailPage.approveStore();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should show approved status
       const statusText = await page.getByText(/approved|verified/i).isVisible().catch(() => false);

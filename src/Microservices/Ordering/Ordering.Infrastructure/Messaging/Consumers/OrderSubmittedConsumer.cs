@@ -36,7 +36,7 @@ public sealed class OrderSubmittedConsumer(
             evt.ShippingCity, evt.ShippingState,
             evt.ShippingPostalCode, evt.ShippingCountry);
 
-        var order = Order.Create(evt.BuyerId, address);
+        var order = Order.Create(evt.BuyerId, address, orderId: evt.CorrelationId);
 
         foreach (var item in evt.Items)
         {

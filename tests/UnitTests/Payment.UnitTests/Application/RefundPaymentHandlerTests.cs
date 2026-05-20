@@ -5,6 +5,8 @@
 using FluentAssertions;
 using Moq;
 using BuildingBlocks.SharedContracts.Abstractions;
+using BuildingBlocks.SharedContracts.Events.Payment;
+using MassTransit;
 using Payment.Application.Commands.RefundPayment;
 using Payment.Domain.Aggregates;
 using Payment.Domain.Enumerations;
@@ -16,6 +18,7 @@ public class RefundPaymentHandlerTests
     private readonly Mock<IPaymentTransactionRepository> _transactionRepoMock = new();
     private readonly Mock<IRefundRepository> _refundRepoMock = new();
     private readonly Mock<IUnitOfWork> _uowMock = new();
+    private readonly Mock<IPublishEndpoint> _publishEndpointMock = new();
     private readonly RefundPaymentHandler _handler;
 
     public RefundPaymentHandlerTests()
@@ -23,7 +26,8 @@ public class RefundPaymentHandlerTests
         _handler = new RefundPaymentHandler(
             _transactionRepoMock.Object,
             _refundRepoMock.Object,
-            _uowMock.Object);
+            _uowMock.Object,
+            _publishEndpointMock.Object);
     }
 
     [Fact]
@@ -48,6 +52,7 @@ public class RefundPaymentHandlerTests
         result.Value.Should().NotBeEmpty();
         transaction.Status.Should().Be(PaymentStatus.Refunded);
         _refundRepoMock.Verify(r => r.Add(It.IsAny<Refund>()), Times.Once);
+        _publishEndpointMock.Verify(p => p.Publish(It.IsAny<PaymentRefundedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -157,6 +162,7 @@ public class RefundPaymentHandlerTests
         capturedRefund.Reason.Should().Be("Item defective");
         capturedRefund.Status.Should().Be(RefundStatus.Processed);
         capturedRefund.GatewayRefundId.Should().StartWith("ref_");
+        _publishEndpointMock.Verify(p => p.Publish(It.IsAny<PaymentRefundedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -187,6 +193,7 @@ public class RefundPaymentHandlerTests
         capturedRefund.Should().NotBeNull();
         capturedRefund!.Amount.Should().Be(40m);
         transaction.Status.Should().Be(PaymentStatus.Completed); // Not refunded yet
+        _publishEndpointMock.Verify(p => p.Publish(It.IsAny<PaymentRefundedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

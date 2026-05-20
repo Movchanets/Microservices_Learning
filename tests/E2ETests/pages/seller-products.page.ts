@@ -19,7 +19,7 @@ export class SellerProductsPage extends BasePage {
 
   async goto() {
     await super.goto('/seller/products');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   async getProductCount(): Promise<number> {

@@ -71,9 +71,6 @@ public static class PaymentEndpoints
             Guid transactionId,
             [FromBody] RefundRequest request,
             [FromServices] ISender sender,
-            [FromServices] IRefundRepository refundRepo,
-            [FromServices] IUnitOfWork uow,
-            [FromServices] IPublishEndpoint publishEndpoint,
             CancellationToken ct) =>
         {
             var cmd = new RefundPaymentCommand(transactionId, request.Reason, request.Amount);
@@ -98,23 +95,6 @@ public static class PaymentEndpoints
 
             if (!result.IsSuccess)
                 return Results.BadRequest(new { result.Error });
-
-            // Fetch the created refund to get full details for the integration event
-            var refund = await refundRepo.GetByIdAsync(result.Value, ct);
-            if (refund is not null)
-            {
-                await publishEndpoint.Publish(new PaymentRefundedEvent(
-                    CorrelationId: refund.OrderId,
-                    OrderId: refund.OrderId,
-                    TransactionId: refund.TransactionId,
-                    RefundId: refund.Id,
-                    Amount: refund.Amount,
-                    Reason: refund.Reason), ct);
-
-                // Flush outbox: the EF outbox queues the publish in memory,
-                // SaveChangesAsync persists it to the outbox table atomically.
-                await uow.SaveChangesAsync(ct);
-            }
 
             return Results.Created($"/api/payments/refund/{result.Value}", new { refundId = result.Value });
         }).RequireAuthorization("Admin");

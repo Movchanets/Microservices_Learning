@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradients -->
+    <radialGradient id="bgGradient" cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#141B41"/>
+      <stop offset="60%" stop-color="#0A0E29"/>
+      <stop offset="100%" stop-color="#05071A"/>
+    </radialGradient>
+    
+    <!-- Retro Planet Gradient -->
+    <radialGradient id="planetGrad" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#00F5FF" stop-opacity="0.25"/>
+      <stop offset="40%" stop-color="#005F9E" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#05071A" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Metallic Body Gradient -->
+    <linearGradient id="metalBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#9CA3AF"/>
+      <stop offset="25%" stop-color="#E5E7EB"/>
+      <stop offset="50%" stop-color="#F9FAFB"/>
+      <stop offset="85%" stop-color="#D1D5DB"/>
+      <stop offset="100%" stop-color="#4B5563"/>
+    </linearGradient>
+    
+    <!-- Window Glass Gradient -->
+    <linearGradient id="windowGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="50%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#1E3A8A"/>
+    </linearGradient>
+    
+    <!-- Speed Trail Gradient (linearGradient from yellow near nozzle to transparent) -->
+    <linearGradient id="trailGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE600" stop-opacity="1"/>
+      <stop offset="15%" stop-color="#FF9E00" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#FF5D00" stop-opacity="0.7"/>
+      <stop offset="75%" stop-color="#FF0055" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#7C00FF" stop-opacity="0"/>
+    </linearGradient>
+    
+    <!-- Fin Red Gradient -->
+    <linearGradient id="finRed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="50%" stop-color="#DC2626"/>
+      <stop offset="100%" stop-color="#991B1B"/>
+    </linearGradient>
+    
+    <!-- Soft Glow Filter for Stars -->
+    <filter id="starGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 1. Background (500x500 dark blue square) -->
+  <rect width="500" height="500" fill="url(#bgGradient)"/>
+  
+  <!-- Retro-futuristic Grid Planet Background Element -->
+  <circle cx="250" cy="250" r="150" fill="url(#planetGrad)"/>
+  <!-- Planet Ring / Orbit -->
+  <ellipse cx="250" cy="250" rx="190" ry="70" fill="none" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="6 8" opacity="0.35" transform="rotate(-30, 250, 250)"/>
+  <ellipse cx="250" cy="250" rx="220" ry="80" fill="none" stroke="#00F5FF" stroke-width="0.75" opacity="0.15" transform="rotate(-30, 250, 250)"/>
+
+  <!-- 2. Stars (5-7 four-cornered stars with white glow) -->
+  <!-- Star 1 (Top Left) -->
+  <g transform="translate(90, 100) scale(0.95)" filter="url(#starGlow)">
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" opacity="0.12"/>
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF" opacity="0.25"/>
+    <path d="M 0 -15 Q 0 0, 5 0 Q 0 0, 0 15 Q 0 0, -5 0 Q 0 0, 0 -15 Z" fill="#FFFFFF"/>
+  </g>
+  
+  <!-- Star 2 (Top Right) -->
+  <g transform="translate(410, 85) scale(1.1)" filter="url(#starGlow)">
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" opacity="0.12"/>
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF" opacity="0.25"/>
+    <path d="M 0 -15 Q 0 0, 5 0 Q 0 0, 0 15 Q 0 0, -5 0 Q 0 0, 0 -15 Z" fill="#FFFFFF"/>
+  </g>
+  
+  <!-- Star 3 (Middle Right) -->
+  <g transform="translate(425, 260) scale(0.75)" filter="url(#starGlow)">
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" opacity="0.12"/>
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF" opacity="0.25"/>
+    <path d="M 0 -15 Q 0 0, 5 0 Q 0 0, 0 15 Q 0 0, -5 0 Q 0 0, 0 -15 Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Star 4 (Middle Left) -->
+  <g transform="translate(75, 290) scale(1.0)" filter="url(#starGlow)">
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" opacity="0.12"/>
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF" opacity="0.25"/>
+    <path d="M 0 -15 Q 0 0, 5 0 Q 0 0, 0 15 Q 0 0, -5 0 Q 0 0, 0 -15 Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Star 5 (Top Center-Left) -->
+  <g transform="translate(200, 60) scale(0.7)" filter="url(#starGlow)">
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" opacity="0.12"/>
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF" opacity="0.25"/>
+    <path d="M 0 -15 Q 0 0, 5 0 Q 0 0, 0 15 Q 0 0, -5 0 Q 0 0, 0 -15 Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Star 6 (Bottom Right) -->
+  <g transform="translate(370, 390) scale(0.85)" filter="url(#starGlow)">
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" opacity="0.12"/>
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF" opacity="0.25"/>
+    <path d="M 0 -15 Q 0 0, 5 0 Q 0 0, 0 15 Q 0 0, -5 0 Q 0 0, 0 -15 Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Star 7 (Bottom Left) -->
+  <g transform="translate(110, 410) scale(0.65)" filter="url(#starGlow)">
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" opacity="0.12"/>
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF" opacity="0.25"/>
+    <path d="M 0 -15 Q 0 0, 5 0 Q 0 0, 0 15 Q 0 0, -5 0 Q 0 0, 0 -15 Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- 3. ROCKET GROUP (Rotated 45 degrees to point top-right) -->
+  <g transform="rotate(45, 250, 250)">
+    
+    <!-- A. Speed Trails (Шлейф - Behind the rocket, bottom-left in final rotation) -->
+    <!-- Center Trail (longest) -->
+    <path d="M 245 320 Q 250 360, 250 480 Q 250 360, 255 320 Z" fill="url(#trailGrad)"/>
+    <!-- Left Trail -->
+    <path d="M 237 320 Q 230 360, 215 440 Q 234 360, 243 320 Z" fill="url(#trailGrad)"/>
+    <!-- Right Trail -->
+    <path d="M 257 320 Q 270 360, 285 440 Q 266 360, 263 320 Z" fill="url(#trailGrad)"/>
+    
+    <!-- Flame Core Highlights (adds intense heat effect near nozzle) -->
+    <path d="M 247 320 Q 250 340, 250 390 Q 250 340, 253 320 Z" fill="#FFFFFF" opacity="0.9"/>
+    <path d="M 241 320 Q 237 340, 227 375 Q 237 340, 243 320 Z" fill="#FFFFFF" opacity="0.6"/>
+    <path d="M 259 320 Q 263 340, 273 375 Q 263 340, 257 320 Z" fill="#FFFFFF" opacity="0.6"/>
+
+    <!-- B. Rocket Wings (Fins) -->
+    <!-- Left Fin -->
+    <path d="M 230 240 C 205 250, 185 280, 190 325 C 205 325, 220 318, 230 310 Z" fill="url(#finRed)" stroke="#B91C1C" stroke-width="1" stroke-linejoin="round"/>
+    <!-- Right Fin -->
+    <path d="M 270 240 C 295 250, 315 280, 310 325 C 295 325, 280 318, 270 310 Z" fill="url(#finRed)" stroke="#B91C1C" stroke-width="1" stroke-linejoin="round"/>
+    
+    <!-- C. Rocket Engine Nozzle -->
+    <path d="M 240 310 L 234 322 L 266 322 L 260 310 Z" fill="#374151" stroke="#1F2937" stroke-width="1.5"/>
+
+    <!-- D. Main Streamlined Rocket Hull (Bezier curves) -->
+    <path d="M 250 100 C 270 150, 278 250, 270 310 L 230 310 C 222 250, 230 150, 250 100 Z" fill="url(#metalBody)" stroke="#4B5563" stroke-width="2" stroke-linejoin="round"/>
+
+    <!-- E. Design Details on Rocket Body -->
+    <!-- Curved Retro Stripe (Red) -->
+    <path d="M 231.5 250 C 242 254, 258 254, 268.5 250 L 269.5 260 C 259 264, 241 264, 230.5 260 Z" fill="#EF4444" opacity="0.9"/>
+    <!-- Sleek Body Paneling Lines (Thin grey) -->
+    <path d="M 250 100 L 250 155" stroke="#9CA3AF" stroke-width="1" opacity="0.6"/>
+    <path d="M 250 245 L 250 310" stroke="#9CA3AF" stroke-width="1" opacity="0.6"/>
+    
+    <!-- F. Round Window (Porthole) -->
+    <!-- Outer Metal Rim -->
+    <circle cx="250" cy="195" r="21" fill="#4B5563"/>
+    <circle cx="250" cy="195" r="18" fill="none" stroke="#D1D5DB" stroke-width="2.5"/>
+    <circle cx="250" cy="195" r="18" fill="none" stroke="#1F2937" stroke-width="0.5"/>
+    <!-- Glass with beautiful cyan/blue space reflection -->
+    <circle cx="250" cy="195" r="15" fill="url(#windowGlass)"/>
+    <!-- Inner shine arc -->
+    <path d="M 238 188 A 15 15 0 0 1 262 188" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.75"/>
+    <!-- Window shine gloss -->
+    <path d="M 239 191 Q 242 184, 250 183 Q 244 191, 239 191 Z" fill="#FFFFFF" opacity="0.4"/>
+
+    <!-- G. Envelope Symbol flying next to the rocket (or on the wing/body) -->
+    <!-- Let's put a stylized white envelope flying alongside (Left side in rotated space) -->
+    <g transform="translate(142, 170) rotate(-15)">
+      <!-- Motion Trails for envelope -->
+      <path d="M -5 4 L -15 2" stroke="#FFFFFF" stroke-width="1.5" opacity="0.6" stroke-linecap="round"/>
+      <path d="M -8 10 L -22 8" stroke="#FFFFFF" stroke-width="2" opacity="0.7" stroke-linecap="round"/>
+      <path d="M -5 16 L -17 14" stroke="#FFFFFF" stroke-width="1.5" opacity="0.6" stroke-linecap="round"/>
+      
+      <!-- Envelope shape -->
+      <rect x="0" y="0" width="32" height="20" rx="3" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1" filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.35))"/>
+      <path d="M 0 0 L 16 11 L 32 0" fill="none" stroke="#0F172A" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M 0 20 L 11 11" stroke="#E2E8F0" stroke-width="1.5"/>
+      <path d="M 32 20 L 21 11" stroke="#E2E8F0" stroke-width="1.5"/>
+    </g>
+
+    <!-- Small Envelope Icon on Left Wing itself (for double implementation) -->
+    <g transform="translate(204, 290) scale(0.35) rotate(-10)">
+      <rect x="0" y="0" width="30" height="18" rx="2" fill="#FFFFFF"/>
+      <path d="M 0 0 L 15 10 L 30 0" fill="none" stroke="#DC2626" stroke-width="2" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- 4. Text - Center Bottom "SPACE POST" -->
+  <!-- Subtle back glow for text -->
+  <text x="250" y="446" text-anchor="middle" font-family="'Montserrat', 'Inter', 'Outfit', 'Helvetica Neue', sans-serif" font-size="28" font-weight="900" fill="#00E5FF" opacity="0.3" filter="url(#starGlow)" letter-spacing="8">SPACE POST</text>
+  <!-- Foreground Crisp Text -->
+  <text x="250" y="445" text-anchor="middle" font-family="'Montserrat', 'Inter', 'Outfit', 'Helvetica Neue', sans-serif" font-size="28" font-weight="900" letter-spacing="8">
+    <tspan fill="#FFFFFF">SPACE </tspan>
+    <tspan fill="#FFD700">POST</tspan>
+  </text>
+</svg>

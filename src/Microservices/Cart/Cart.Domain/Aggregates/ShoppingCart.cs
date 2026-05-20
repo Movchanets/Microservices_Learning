@@ -29,7 +29,7 @@ public sealed class ShoppingCart : AggregateRoot
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void AddItem(string sku, int quantity, decimal price = 0m,  string? shopId = null)
+    public void AddItem(string sku, int quantity, decimal price = 0m, string? shopId = null)
     {
         if (string.IsNullOrWhiteSpace(sku))
             throw new ArgumentException("SKU cannot be empty", nameof(sku));
@@ -38,7 +38,7 @@ public sealed class ShoppingCart : AggregateRoot
         if (price < 0)
             throw new ArgumentException("Price cannot be negative", nameof(price));
 
-        var existingItem = _items.FirstOrDefault(i => i.Sku == sku);
+        var existingItem = _items.FirstOrDefault(i => i.MatchesKey(sku, shopId));
         if (existingItem != null)
         {
             existingItem.AddQuantity(quantity);
@@ -48,15 +48,15 @@ public sealed class ShoppingCart : AggregateRoot
             if (_items.Count >= MaxItems)
                 throw new InvalidOperationException($"Cart cannot exceed {MaxItems} items");
 
-            _items.Add(new CartItem(Id,sku, quantity, price, shopId));
+            _items.Add(new CartItem(Id, sku, quantity, price, shopId));
         }
 
         Touch();
     }
 
-    public void UpdateQuantity(string sku, int quantity)
+    public void UpdateQuantity(string sku, int quantity, string? shopId = null)
     {
-        var existingItem = _items.FirstOrDefault(i => i.Sku == sku);
+        var existingItem = _items.FirstOrDefault(i => i.MatchesKey(sku, shopId));
         if (existingItem != null)
         {
             if (quantity <= 0)
@@ -72,9 +72,9 @@ public sealed class ShoppingCart : AggregateRoot
         }
     }
 
-    public void RemoveItem(string sku)
+    public void RemoveItem(string sku, string? shopId = null)
     {
-        var existingItem = _items.FirstOrDefault(i => i.Sku == sku);
+        var existingItem = _items.FirstOrDefault(i => i.MatchesKey(sku, shopId));
         if (existingItem != null)
         {
             _items.Remove(existingItem);

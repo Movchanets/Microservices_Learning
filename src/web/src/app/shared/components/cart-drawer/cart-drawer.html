@@ -20,22 +20,23 @@
     </div>
 
     <div class="cart-items" *ngIf="!cartStore.isEmpty()">
-      <div class="cart-item" *ngFor="let item of cartStore.items()">
+      <div class="cart-item" *ngFor="let item of cartStore.items(); trackBy: trackByCartItem">
         <div class="item-details">
           <h3>{{ item.sku }}</h3>
+          <p class="shop" *ngIf="item.shopId">Seller: {{ item.shopId }}</p>
           <p class="price">${{ item.price | number:'1.2-2' }}</p>
         </div>
         <div class="item-controls">
           <div class="quantity-control">
-            <button (click)="updateQuantity(item.sku, item.quantity - 1)" [disabled]="cartStore.loading()">
+            <button (click)="updateQuantity(item.sku, item.quantity - 1, item.shopId)" [disabled]="cartStore.loading()">
               <lucide-icon [img]="MinusIcon" size="16"></lucide-icon>
             </button>
             <span>{{ item.quantity }}</span>
-            <button (click)="updateQuantity(item.sku, item.quantity + 1)" [disabled]="cartStore.loading()">
+            <button (click)="updateQuantity(item.sku, item.quantity + 1, item.shopId)" [disabled]="cartStore.loading()">
               <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
             </button>
           </div>
-          <button class="remove-btn" (click)="removeItem(item.sku)" [disabled]="cartStore.loading()">
+          <button class="remove-btn" (click)="removeItem(item.sku, item.shopId)" [disabled]="cartStore.loading()">
             <lucide-icon [img]="TrashIcon" size="18"></lucide-icon>
           </button>
         </div>

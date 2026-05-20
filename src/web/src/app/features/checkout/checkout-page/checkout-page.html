@@ -8,17 +8,27 @@
         [correlationId]="cartStore.checkoutCorrelationId()" />
     } @else if (submitted()) {
       <div class="bg-card rounded-3xl border border-border p-8 text-center">
-        <div class="animate-pulse">
-          <lucide-icon name="Clock" class="w-16 h-16 mx-auto mb-4 text-primary"></lucide-icon>
-          <h2 data-testid="checkout-order-submitted" class="text-2xl font-bold font-lexend mb-2">Order Submitted</h2>
-          <p class="text-muted mb-6">Your order is being created...</p>
-        </div>
-        <div class="mt-4">
-          <p class="text-sm text-muted mb-2">Correlation ID</p>
-          <p data-testid="checkout-correlation-id" class="font-mono text-xs text-muted bg-muted/10 inline-block px-3 py-1 rounded-lg">
-            {{ cartStore.checkoutCorrelationId() }}
-          </p>
-        </div>
+        @if (pollingExpired()) {
+          <lucide-icon name="AlertTriangle" class="w-16 h-16 mx-auto mb-4 text-yellow-500"></lucide-icon>
+          <h2 class="text-2xl font-bold font-lexend mb-2">Order Processing</h2>
+          <p class="text-muted mb-6">Your order is taking longer than expected. Check your orders page for updates.</p>
+          <a routerLink="/orders"
+             class="inline-block px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors">
+            View Orders
+          </a>
+        } @else {
+          <div class="animate-pulse">
+            <lucide-icon name="Clock" class="w-16 h-16 mx-auto mb-4 text-primary"></lucide-icon>
+            <h2 data-testid="checkout-order-submitted" class="text-2xl font-bold font-lexend mb-2">Order Submitted</h2>
+            <p class="text-muted mb-6">Your order is being created...</p>
+          </div>
+          <div class="mt-4">
+            <p class="text-sm text-muted mb-2">Correlation ID</p>
+            <p data-testid="checkout-correlation-id" class="font-mono text-xs text-muted bg-muted/10 inline-block px-3 py-1 rounded-lg">
+              {{ cartStore.checkoutCorrelationId() }}
+            </p>
+          </div>
+        }
       </div>
     } @else if (cartStore.isEmpty()) {
       <div data-testid="checkout-empty" class="text-center py-16 bg-card rounded-3xl border border-border">

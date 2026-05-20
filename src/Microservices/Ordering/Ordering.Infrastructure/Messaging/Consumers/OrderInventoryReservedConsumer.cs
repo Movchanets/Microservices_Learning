@@ -17,13 +17,7 @@ public sealed class OrderInventoryReservedConsumer(
     public async Task Consume(ConsumeContext<InventoryReservedEvent> context)
     {
         var evt = context.Message;
-        var order = await OrderConsumerHelpers.LoadOrderAsync(repository, evt.OrderId, context.CancellationToken);
-
-        if (order is null)
-        {
-            logger.LogWarning("Order {OrderId} not found while applying InventoryReservedEvent", evt.OrderId);
-            return;
-        }
+        var order = await OrderConsumerHelpers.LoadOrderOrThrowAsync(repository, evt.OrderId, context.CancellationToken);
 
         if (order.Status != OrderStatus.Submitted)
         {

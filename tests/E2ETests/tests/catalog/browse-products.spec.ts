@@ -37,7 +37,7 @@ test.describe('Catalog: Browse Products', () => {
     await catalogPage.search('iPhone');
 
     // Wait for results to update
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Should have fewer or equal products
     const filteredCount = await catalogPage.productCards.count();
@@ -56,7 +56,7 @@ test.describe('Catalog: Browse Products', () => {
       return;
     }
     await categoryBtn.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Products should be filtered
     const productCount = await catalogPage.productCards.count();

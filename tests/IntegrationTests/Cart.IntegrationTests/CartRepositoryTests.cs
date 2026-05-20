@@ -205,4 +205,52 @@ public class CartRepositoryTests
         var cachedCart = await repo2.GetCartAsync(buyerId);
         cachedCart.Items.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task SaveCartAsync_OnConcurrencyException_InvalidatesCacheAndThrows()
+    {
+        // Arrange
+        var buyerId = $"buyer-conc-{Guid.NewGuid():N}";
+        
+        // Setup: create and save initial cart
+        using (var setupScope = _fixture.CreateScope())
+        {
+            var repo = setupScope.ServiceProvider.GetRequiredService<CartRepository>();
+            var cart = await repo.GetOrCreateTrackedCartAsync(buyerId);
+            cart.AddItem("PROD-INIT", 1, 10m);
+            await repo.SaveCartAsync(cart);
+        }
+
+        // Scope 1 loads cart
+        using var scope1 = _fixture.CreateScope();
+        var repo1 = scope1.ServiceProvider.GetRequiredService<CartRepository>();
+        var cart1 = await repo1.GetOrCreateTrackedCartAsync(buyerId);
+
+        // Scope 2 loads cart (stale relative to scope 1's future changes)
+        using var scope2 = _fixture.CreateScope();
+        var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
+        var cart2 = await repo2.GetOrCreateTrackedCartAsync(buyerId);
+
+        // Scope 1 updates and saves successfully
+        cart1.AddItem("PROD-A", 1, 20m);
+        await repo1.SaveCartAsync(cart1);
+
+        // Scope 2 updates and tries to save (should throw DbUpdateConcurrencyException)
+        cart2.AddItem("PROD-B", 1, 30m);
+        
+        Func<Task> act = async () => await repo2.SaveCartAsync(cart2);
+        
+        // Assert - throws concurrency exception
+        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
+
+        // Assert - cache is evicted/invalidated, so GetCartAsync fetches the latest database state (scope 1's state)
+        using var checkScope = _fixture.CreateScope();
+        var checkRepo = checkScope.ServiceProvider.GetRequiredService<CartRepository>();
+        var finalCart = await checkRepo.GetCartAsync(buyerId);
+
+        finalCart.Should().NotBeNull();
+        finalCart.Items.Should().HaveCount(2); // PROD-INIT and PROD-A
+        finalCart.Items.Should().Contain(i => i.Sku == "PROD-A");
+        finalCart.Items.Should().NotContain(i => i.Sku == "PROD-B");
+    }
 }

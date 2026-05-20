@@ -35,11 +35,15 @@ export class CartDrawer {
     this.cartStore.hideDrawer();
   }
 
-  updateQuantity(sku: string, newQuantity: number) {
-    this.cartStore.updateQuantity(sku, newQuantity);
+  updateQuantity(sku: string, newQuantity: number, shopId?: string) {
+    this.cartStore.updateQuantity(sku, newQuantity, shopId);
   }
 
-  removeItem(sku: string) {
-    this.cartStore.removeFromCart(sku);
+  removeItem(sku: string, shopId?: string) {
+    this.cartStore.removeFromCart(sku, shopId);
+  }
+
+  trackByCartItem(_index: number, item: { sku: string; shopId?: string }): string {
+    return item.sku + (item.shopId ?? '');
   }
 }

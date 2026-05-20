@@ -29,7 +29,7 @@ test.describe('Full Checkout Flow', () => {
 
     // Navigate to catalog to establish the session
     await page.goto('/catalog');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // --- Step 2: Add product to cart via API ---
     await addItemToCart(buyerApi, 1);
@@ -46,7 +46,7 @@ test.describe('Full Checkout Flow', () => {
 
     // --- Step 4: Proceed to checkout ---
     await cartPage.proceedToCheckout();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/checkout/);
 
     // --- Step 5: Fill shipping address and save ---
@@ -58,7 +58,7 @@ test.describe('Full Checkout Flow', () => {
       country: 'US',
     });
     await checkoutEnhancedPage.saveAddress();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // --- Step 6: Select express shipping (to trigger change event) ---
     await checkoutEnhancedPage.selectExpressShipping();
@@ -74,7 +74,7 @@ test.describe('Full Checkout Flow', () => {
     await checkoutEnhancedPage.placeOrder();
 
     // --- Step 9: Verify order was submitted ---
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const submittedVisible = await checkoutEnhancedPage.orderSubmittedHeading.isVisible().catch(() => false);
     const completedVisible = await checkoutEnhancedPage.isCompleted().catch(() => false);

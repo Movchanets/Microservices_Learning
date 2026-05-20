@@ -71,41 +71,25 @@ public sealed class CartRepository(
     /// <summary>
     /// Persists tracked changes and invalidates the cache.
     /// Handles optimistic concurrency via xmin: if another request modified the row,
-    /// we clear the tracker, reload the cart, and retry.
+    /// we catch the DbUpdateConcurrencyException, immediately evict the cache entry
+    /// to prevent database-to-cache desynchronization, and re-throw the exception.
     /// </summary>
     public async Task SaveCartAsync(ShoppingCart cart, CancellationToken ct = default)
     {
-        const int maxRetries = 3;
-
-        for (var attempt = 0; attempt < maxRetries; attempt++)
+        try
         {
-            try
-            {
-                await dbContext.SaveChangesAsync(ct);
-                await UpdateCacheAsync(cart, ct);
-                return;
-            }
-            catch (DbUpdateConcurrencyException) when (attempt < maxRetries - 1)
-            {
-                dbContext.ChangeTracker.Clear();
-                // Reload the cart so the caller's next operation has fresh state
-                var reloaded = await dbContext.ShoppingCarts
-                    .Include(c => c.Items)
-                    .FirstOrDefaultAsync(c => c.BuyerId == cart.BuyerId, ct);
-                if (reloaded is not null)
-                {
-                    // Re-apply the caller's intended state onto the reloaded entity
-                    // (the caller must re-invoke domain methods after this throws)
-                    logger.LogWarning(
-                        "Concurrency conflict on cart {BuyerId}, attempt {Attempt}/{Max}",
-                        cart.BuyerId, attempt + 1, maxRetries);
-                }
-            }
+            await dbContext.SaveChangesAsync(ct);
+            await UpdateCacheAsync(cart, ct);
         }
-
-        // Final attempt — let exception propagate if all retries exhausted
-        await dbContext.SaveChangesAsync(ct);
-        await UpdateCacheAsync(cart, ct);
+        catch (DbUpdateConcurrencyException ex)
+        {
+            logger.LogWarning(ex, "Concurrency conflict detected when saving cart for buyer {BuyerId}. Evicting cache and throwing.", cart.BuyerId);
+            
+            // Invalidate the cache immediately to prevent desynchronization
+            await cache.RemoveAsync(cart.BuyerId, ct);
+            
+            throw;
+        }
     }
 
     public async Task DeleteCartAsync(string buyerId, CancellationToken ct = default)

@@ -9,22 +9,22 @@ test.describe('Plan 09: Seller Orders Management', () => {
 
     await registerPage.goto('/auth/register');
     await registerPage.register('Seller', 'User', email, password);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     if (page.url().includes('/auth/login')) {
       await loginPage.login(email, password);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     }
   });
 
   test('should display seller orders tab', async ({ page }) => {
     await page.goto('/seller');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const ordersTab = page.getByRole('link', { name: /orders/i });
     await expect(ordersTab).toBeVisible({ timeout: 10000 });
     await ordersTab.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const hasTable = await page.locator('table').isVisible();
     const isEmpty = await page.getByText('No orders yet').isVisible();
     expect(hasTable || isEmpty).toBe(true);
@@ -32,12 +32,12 @@ test.describe('Plan 09: Seller Orders Management', () => {
 
   test('should show orders table with status', async ({ page }) => {
     await page.goto('/seller');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const ordersTab = page.getByRole('link', { name: /orders/i });
     await expect(ordersTab).toBeVisible({ timeout: 10000 });
     await ordersTab.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const hasTable = await page.locator('table').isVisible();
     const isEmpty = await page.getByText('No orders yet').isVisible();
     expect(hasTable || isEmpty).toBe(true);
@@ -50,12 +50,12 @@ test.describe('Plan 09: Seller Orders Management', () => {
 
   test('should show status update buttons for seller', async ({ page }) => {
     await page.goto('/seller');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const ordersTab = page.getByRole('link', { name: /orders/i });
     await expect(ordersTab).toBeVisible({ timeout: 10000 });
     await ordersTab.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const updateBtns = page.getByRole('button', { name: /mark|update/i });
     const count = await updateBtns.count();
     expect(count).toBeGreaterThan(0); // Should have at least 1 order item
@@ -65,7 +65,7 @@ test.describe('Plan 09: Seller Orders Management', () => {
     await page.context().clearCookies();
     await page.evaluate(() => localStorage.clear());
     await page.goto('/seller/orders');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/auth\/login/);
   });
 });

@@ -57,6 +57,11 @@ import {
   ThumbsUp,
   ThumbsDown,
   MessageSquare,
+  Users,
+  UserX,
+  Home,
+  Check,
+  Bookmark,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -132,6 +137,11 @@ export const appConfig: ApplicationConfig = {
         ThumbsUp,
         ThumbsDown,
         MessageSquare,
+        Users,
+        UserX,
+        Home,
+        Check,
+        Bookmark,
       }),
     ),
   ],

@@ -14,23 +14,24 @@ export class CartDrawerComponent {
 
   constructor(page: Page) {
     this.page = page;
-    this.drawer = page.locator('app-mini-cart');
-    this.heading = page.getByRole('heading', { name: 'Shopping Cart' });
-    this.closeBtn = this.drawer.locator('button').filter({ has: page.locator('lucide-icon[name="X"]') });
-    this.emptyMessage = page.getByText('Your cart is empty');
-    this.itemsList = this.drawer.locator('ul');
-    this.items = this.itemsList.locator('li');
-    this.totalText = this.drawer.getByTestId('cart-total');
-    this.viewCartLink = page.getByRole('link', { name: 'View Full Cart' });
-    this.checkoutLink = page.getByRole('link', { name: 'Go to Checkout' });
+    this.drawer = page.locator('app-cart-drawer');
+    this.heading = page.getByRole('heading', { name: /Your Cart/ });
+    this.closeBtn = page.getByTestId('cart-drawer-close');
+    this.emptyMessage = page.getByText('Your cart is empty.');
+    this.itemsList = this.drawer.locator('.cart-items');
+    this.items = this.drawer.locator('.cart-item');
+    this.totalText = page.getByTestId('cart-total');
+    this.viewCartLink = page.getByRole('link', { name: 'View Cart' });
+    this.checkoutLink = page.getByRole('link', { name: 'Checkout' });
   }
 
   async waitForOpen() {
-    await expect(this.drawer).toBeVisible();
+    // The drawer overlay appears when isDrawerOpen() is true
+    await expect(this.heading).toBeVisible({ timeout: 10000 });
   }
 
   async waitForClose() {
-    await expect(this.drawer).toBeHidden();
+    await expect(this.heading).toBeHidden({ timeout: 5000 });
   }
 
   async close() {
@@ -47,7 +48,7 @@ export class CartDrawerComponent {
 
   async removeItem(sku: string) {
     const item = await this.getItemBySku(sku);
-    await item.locator('button').filter({ has: this.page.locator('lucide-icon[name="Trash2"]') }).click();
+    await item.locator('.remove-btn').click();
   }
 
   async getTotal(): Promise<string> {

@@ -43,23 +43,23 @@ test.describe('Plan 10: Seller Order Correlation', () => {
       expect(checkoutResult.correlationId).toBeTruthy();
 
       // 4. Wait for order to be processed (saga completes)
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // 5. Login as seller in browser
       await page.goto('/auth/login');
       await page.getByPlaceholder('name@company.com').fill(users.sellerUser.email);
       await page.getByPlaceholder('••••••••').fill(users.sellerUser.password);
       await page.getByRole('button', { name: /sign in/i }).click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // 6. Navigate to seller dashboard -> Orders tab
       await page.goto('/seller');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
     const ordersTab = page.getByRole('link', { name: /orders/i });
     await expect(ordersTab).toBeVisible({ timeout: 10000 });
     await ordersTab.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // 7. Verify order appears in seller order list
     const hasTable = await page.locator('table').isVisible();
@@ -93,23 +93,23 @@ test.describe('Plan 10: Seller Order Correlation', () => {
     );
 
     try {
-      // Add product to cart with sellerId
+      // Add product to cart with shopId
       const cartResponse = await buyerApi.post('/api/cart/items', {
         data: {
           sku: testProduct.sku,
           quantity: 1,
-          sellerId: testStore.sellerId,
+          shopId: testStore.sellerId,
         },
       });
 
       expect(cartResponse.ok()).toBeTruthy();
 
-      // Verify cart item has sellerId
+      // Verify cart item has shopId
       const getCartResponse = await buyerApi.get('/api/cart');
       expect(getCartResponse.ok()).toBeTruthy();
       const cart = await getCartResponse.json();
       expect(cart.items).toHaveLength(1);
-      expect(cart.items[0].sellerId).toBe(testStore.sellerId);
+      expect(cart.items[0].shopId).toBe(testStore.sellerId);
     } finally {
       await buyerApi.dispose();
     }

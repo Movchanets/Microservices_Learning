@@ -44,7 +44,7 @@ import { CartStore } from '../cart.store';
         } @else {
           <div class="bg-card rounded-3xl border border-border overflow-hidden">
             <ul class="divide-y divide-border">
-              @for (item of store.items(); track item.sku) {
+              @for (item of store.items(); track item.sku + (item.shopId ?? '')) {
                 <li [attr.data-testid]="'cart-item-' + item.sku" class="p-6 flex items-center gap-6">
                   <!-- In a real app, you would fetch product details by SKU here -->
                   <div class="w-20 h-20 bg-muted/20 rounded-xl flex items-center justify-center">
@@ -53,13 +53,16 @@ import { CartStore } from '../cart.store';
 
                   <div class="flex-1">
                     <h3 class="font-lexend font-medium text-lg">{{ item.sku }}</h3>
+                    @if (item.shopId) {
+                      <p class="text-muted text-xs">Seller: {{ item.shopId }}</p>
+                    }
                     <p class="text-muted text-sm">Quantity: {{ item.quantity }}</p>
                   </div>
 
                   <div class="flex items-center gap-3">
                     <button
                       data-testid="cart-item-decrease"
-                      (click)="store.updateQuantity(item.sku, item.quantity - 1)"
+                      (click)="store.updateQuantity(item.sku, item.quantity - 1, item.shopId)"
                       class="p-2 hover:bg-muted/20 rounded-lg transition-colors"
                       [disabled]="store.loading()"
                     >
@@ -68,7 +71,7 @@ import { CartStore } from '../cart.store';
                     <span data-testid="cart-item-quantity" class="w-8 text-center font-medium">{{ item.quantity }}</span>
                     <button
                       data-testid="cart-item-increase"
-                      (click)="store.updateQuantity(item.sku, item.quantity + 1)"
+                      (click)="store.updateQuantity(item.sku, item.quantity + 1, item.shopId)"
                       class="p-2 hover:bg-muted/20 rounded-lg transition-colors"
                       [disabled]="store.loading()"
                     >
@@ -78,7 +81,7 @@ import { CartStore } from '../cart.store';
 
                   <button
                     data-testid="cart-item-remove"
-                    (click)="store.removeFromCart(item.sku)"
+                    (click)="store.removeFromCart(item.sku, item.shopId)"
                     class="p-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors ml-4"
                     [disabled]="store.loading()"
                   >

@@ -94,7 +94,7 @@ describe('CartStore', () => {
       await store.updateQuantity('PROD-1', 5);
 
       expect(store.items()).toEqual([{ sku: 'PROD-1', quantity: 5, price: 10, lineTotal: 50 }]);
-      expect(mockCartService.updateItem).toHaveBeenCalledWith('PROD-1', 5);
+      expect(mockCartService.updateItem).toHaveBeenCalledWith('PROD-1', 5, undefined);
     });
 
     it('should remove the item if quantity is 0', async () => {
@@ -131,7 +131,7 @@ describe('CartStore', () => {
 
       expect(store.items()).toEqual([]);
       expect(store.isEmpty()).toBe(true);
-      expect(mockCartService.removeItem).toHaveBeenCalledWith('PROD-1');
+      expect(mockCartService.removeItem).toHaveBeenCalledWith('PROD-1', undefined);
     });
   });
 

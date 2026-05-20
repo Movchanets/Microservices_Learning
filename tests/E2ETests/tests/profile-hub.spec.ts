@@ -12,7 +12,7 @@ test.describe('Plan 02: User Profile Hub', () => {
 
     await registerPage.goto('/auth/register');
     await registerPage.register('Test', 'User', testEmail, testPassword);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     if (page.url().includes('/auth/login')) {
       await loginPage.login(testEmail, testPassword);
@@ -31,11 +31,11 @@ test.describe('Plan 02: User Profile Hub', () => {
     await profileHubPage.waitForPageLoad();
 
     await profileHubPage.navigateToOrders();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/profile\/orders/);
 
     await profileHubPage.navigateToSettings();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/profile\/settings/);
   });
 

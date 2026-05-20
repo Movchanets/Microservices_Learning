@@ -12,7 +12,7 @@ export async function loginApi(
   email: string,
   password: string
 ): Promise<APIRequestContext> {
-  const baseUrl = 'http://localhost:4200';
+  const baseUrl = process.env.BASE_URL || 'http://localhost:4200';
 
   const tempCtx = await (requestFactory as any).newContext({ baseURL: baseUrl }) as APIRequestContext;
 
@@ -155,6 +155,23 @@ export async function getCategories(
   return response.json();
 }
 
+// ── Inventory API ──
+
+export async function createInventoryItem(
+  api: APIRequestContext,
+  sku: string,
+  initialQuantity: number
+): Promise<void> {
+  const response = await api.post('/api/inventory/items', {
+    data: { sku, initialQuantity },
+  });
+  if (!response.ok()) {
+    // Ignore 409 Conflict — item may already exist
+    if (response.status() === 409) return;
+    throw new Error(`Create inventory item failed: ${response.status()} ${await response.text()}`);
+  }
+}
+
 // ── Identity API ──
 
 export async function getCurrentUser(
@@ -179,7 +196,7 @@ export async function registerApi(
   email: string,
   password: string
 ): Promise<APIRequestContext> {
-  const baseUrl = 'http://localhost:4200';
+  const baseUrl = process.env.BASE_URL || 'http://localhost:4200';
 
   const tempCtx = await (requestFactory as any).newContext({ baseURL: baseUrl }) as APIRequestContext;
 
@@ -228,28 +245,28 @@ export async function addToCart(
   sku: string,
   quantity: number,
   price: number,
-  sellerId?: string
+  shopId?: string
 ): Promise<void> {
   // Get current cart to preserve existing items
   const cartResponse = await api.get('/api/cart');
-  let existingItems: Array<{ sku: string; quantity: number; price: number; sellerId?: string }> = [];
+  let existingItems: Array<{ sku: string; quantity: number; price: number; shopId?: string }> = [];
 
   if (cartResponse.ok()) {
     const cart = await cartResponse.json();
     existingItems = (cart.items || []).map((i: any) => ({
       sku: i.sku,
       quantity: i.quantity,
-      price: i.unitPrice ?? i.price ?? 0,
-      sellerId: i.sellerId ?? undefined,
+      price: i.price ?? 0,
+      shopId: i.shopId ?? undefined,
     }));
   }
 
   // Add or update the new item
-  const existingIndex = existingItems.findIndex((i) => i.sku === sku);
+  const existingIndex = existingItems.findIndex((i) => i.sku === sku && i.shopId === shopId);
   if (existingIndex >= 0) {
     existingItems[existingIndex].quantity += quantity;
   } else {
-    existingItems.push({ sku, quantity, price, sellerId });
+    existingItems.push({ sku, quantity, price, shopId });
   }
 
   const response = await api.post('/api/cart/', {

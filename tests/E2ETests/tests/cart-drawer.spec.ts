@@ -9,7 +9,7 @@ test.describe('Plan 03: Cart Drawer & Checkout', () => {
 
     await registerPage.goto('/auth/register');
     await registerPage.register('Test', 'User', email, password);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     if (page.url().includes('/auth/login')) {
       await loginPage.login(email, password);
@@ -42,7 +42,7 @@ test.describe('Plan 03: Cart Drawer & Checkout', () => {
     const addBtn = page.getByRole('button', { name: /add to cart/i }).first();
     await expect(addBtn).toBeVisible({ timeout: 10000 });
     await addBtn.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await header.openCart();
     await cartDrawer.waitForOpen();
     const itemCount = await cartDrawer.getItemCount();

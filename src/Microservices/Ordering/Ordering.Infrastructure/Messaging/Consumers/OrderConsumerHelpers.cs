@@ -4,7 +4,7 @@ namespace Ordering.Infrastructure.Messaging.Consumers;
 
 internal static class OrderConsumerHelpers
 {
-    public static async Task<Order?> LoadOrderAsync(
+    public static async Task<Order> LoadOrderOrThrowAsync(
         IOrderRepository repository,
         Guid orderId,
         CancellationToken cancellationToken)
@@ -23,6 +23,6 @@ internal static class OrderConsumerHelpers
             }
         }
 
-        return null;
+        throw new InvalidOperationException($"Order {orderId} was not found after retries. Postponing message consumption.");
     }
 }

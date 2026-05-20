@@ -9,19 +9,12 @@ namespace Ordering.Infrastructure.Messaging.Consumers;
 
 public sealed class OrderCompletedProjectionConsumer(
     IOrderRepository repository,
-    IUnitOfWork uow,
-    ILogger<OrderCompletedProjectionConsumer> logger) : IConsumer<OrderCompletedEvent>
+    IUnitOfWork uow) : IConsumer<OrderCompletedEvent>
 {
     public async Task Consume(ConsumeContext<OrderCompletedEvent> context)
     {
         var evt = context.Message;
-        var order = await OrderConsumerHelpers.LoadOrderAsync(repository, evt.OrderId, context.CancellationToken);
-
-        if (order is null)
-        {
-            logger.LogWarning("Order {OrderId} not found while applying OrderCompletedEvent", evt.OrderId);
-            return;
-        }
+        var order = await OrderConsumerHelpers.LoadOrderOrThrowAsync(repository, evt.OrderId, context.CancellationToken);
 
         if (order.Status == OrderStatus.Completed)
         {

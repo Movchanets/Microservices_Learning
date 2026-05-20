@@ -109,7 +109,7 @@ describe('CartPageComponent', () => {
     );
 
     if (minusBtn) (minusBtn as HTMLElement).click();
-    expect(mockCartStore.updateQuantity).toHaveBeenCalledWith('PROD-1', 1);
+    expect(mockCartStore.updateQuantity).toHaveBeenCalledWith('PROD-1', 1, undefined);
   });
 
   it('should call removeFromCart when clicking trash button', () => {
@@ -124,6 +124,6 @@ describe('CartPageComponent', () => {
     );
 
     if (trashBtn) (trashBtn as HTMLElement).click();
-    expect(mockCartStore.removeFromCart).toHaveBeenCalledWith('PROD-1');
+    expect(mockCartStore.removeFromCart).toHaveBeenCalledWith('PROD-1', undefined);
   });
 });

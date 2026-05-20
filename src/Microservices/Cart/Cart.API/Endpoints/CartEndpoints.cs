@@ -88,24 +88,26 @@ public static class CartEndpoints
             ClaimsPrincipal user,
             string sku,
             [FromBody] UpdateCartItemRequest request,
+            [FromQuery] string? shopId,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new UpdateCartItemCommand(buyerId, sku, request.Quantity), ct);
+            var result = await sender.Send(new UpdateCartItemCommand(buyerId, sku, request.Quantity, shopId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
         group.MapDelete("/items/{sku}", async (
             ClaimsPrincipal user,
             string sku,
+            [FromQuery] string? shopId,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new RemoveCartItemCommand(buyerId, sku), ct);
+            var result = await sender.Send(new RemoveCartItemCommand(buyerId, sku, shopId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
     }

@@ -45,16 +45,21 @@ async function loginAndSaveState(
   await ensureStorageDir();
   const statePath = path.join(STORAGE_DIR, `${label}.json`);
 
-  // Reuse cached state if fresh (< 30 min old)
+  // Reuse cached state if fresh (< 30 min old) and valid
   try {
     const stat = await fs.promises.stat(statePath);
     const ageMinutes = (Date.now() - stat.mtimeMs) / 60_000;
-    if (ageMinutes < 30) {
-      const api = await loginApi(requestFactory, email, password);
-      return { statePath, api };
+    if (ageMinutes < 30 && stat.size > 10) {
+      // Validate the file is valid JSON with cookies
+      const content = await fs.promises.readFile(statePath, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (parsed.cookies && parsed.cookies.length > 0) {
+        const api = await loginApi(requestFactory, email, password);
+        return { statePath, api };
+      }
     }
   } catch {
-    // File doesn't exist — proceed with login
+    // File doesn't exist or is invalid — proceed with login
   }
 
   const api = await loginApi(requestFactory, email, password);

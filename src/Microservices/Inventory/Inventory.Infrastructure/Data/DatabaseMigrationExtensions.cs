@@ -74,12 +74,20 @@ public static class DatabaseMigrationExtensions
 
         var items = context.InventoryItems.ToList();
         var updated = 0;
+        var created = 0;
 
-        foreach (var item in items)
+        foreach (var (sku, quantity) in stockMap)
         {
-            if (item.AvailableQuantity > 0) continue;
-
-            if (stockMap.TryGetValue(item.Sku, out var quantity))
+            var item = items.FirstOrDefault(i => i.Sku.Equals(sku, StringComparison.OrdinalIgnoreCase));
+            if (item == null)
+            {
+                // Item not yet created by ProductCreatedConsumer (race condition) — create it now
+                item = InventoryItem.Create(sku, quantity);
+                context.InventoryItems.Add(item);
+                created++;
+                logger.LogInformation("Created inventory for SKU {Sku} with {Quantity} units.", sku, quantity);
+            }
+            else if (item.AvailableQuantity == 0)
             {
                 item.AddStock(quantity);
                 updated++;
@@ -87,10 +95,10 @@ public static class DatabaseMigrationExtensions
             }
         }
 
-        if (updated > 0)
+        if (created > 0 || updated > 0)
         {
             context.SaveChangesAsync().GetAwaiter().GetResult();
-            logger.LogInformation("Inventory seed stocked {UpdatedCount} items.", updated);
+            logger.LogInformation("Inventory seed: {CreatedCount} created, {UpdatedCount} stocked.", created, updated);
         }
         else
         {

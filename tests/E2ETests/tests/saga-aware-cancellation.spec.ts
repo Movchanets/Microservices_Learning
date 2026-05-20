@@ -34,7 +34,7 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
     await page.context().addCookies(storageState.cookies);
 
     await page.goto('/catalog');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // --- Add product to cart via API ---
     await addItemToCart(buyerApi, 1);
@@ -47,7 +47,7 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
     expect(isEmpty).toBe(false);
 
     await cartPage.proceedToCheckout();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/checkout/);
 
     // --- Fill address and proceed ---
@@ -59,7 +59,7 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
       country: 'US',
     });
     await checkoutEnhancedPage.saveAddress();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await checkoutEnhancedPage.selectExpressShipping();
     await expect(checkoutEnhancedPage.continueToPaymentBtn).toBeVisible({ timeout: 10000 });
@@ -68,7 +68,7 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
 
     // --- Place order ---
     await checkoutEnhancedPage.placeOrder();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for order to complete (saga processes quickly)
     const submittedVisible = await checkoutEnhancedPage.orderSubmittedHeading.isVisible().catch(() => false);
@@ -78,12 +78,12 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
 
     // --- Navigate to order detail ---
     await page.goto('/orders');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
     await expect(orderLink).toBeVisible({ timeout: 10000 });
     await orderLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await orderDetailEnhancedPage.waitForLoaded();
 
     // Completed orders should NOT have a cancel button
@@ -152,7 +152,7 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
 
     if (cancelSucceeded) {
       // Wait for saga to process the cancellation
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Verify order status via API
       const orderDetailResponse = await buyerApi.get(`/api/orders/${orderId}`);
@@ -219,11 +219,11 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
 
     if (cancelResponse.ok()) {
       // Wait for saga to process
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Navigate to orders page in browser
       await page.goto('/orders');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for the cancelled order in the list
       const cancelledBadge = page.getByText(/cancelled/i).first();
@@ -238,7 +238,7 @@ test.describe('Plan 11: Saga-Aware Order Cancellation', () => {
       const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
       await expect(orderLink).toBeVisible({ timeout: 10000 });
       await orderLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await orderDetailEnhancedPage.waitForLoaded();
 
       // Verify status badge shows Cancelled

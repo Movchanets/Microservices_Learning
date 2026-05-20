@@ -54,7 +54,7 @@ test.describe('Payment Refund Flow', () => {
     );
 
     // Login as admin (pre-seeded)
-    adminApi = await loginApi(request, 'admin@marketplace.com', 'Admin123!');
+    adminApi = await loginApi(request, 'admin@marketplace.com', 'P@ssw0rd123!');
 
     // Create store and verify it
     const sellerUser = await getCurrentUser(sellerApi);
@@ -77,21 +77,19 @@ test.describe('Payment Refund Flow', () => {
     // Add to cart and checkout
     await addToCart(buyerApi, product.sku, 1, product.price, store.sellerId);
 
-    const checkoutResponse = await buyerApi.post('/api/checkout', {
+    const checkoutResponse = await buyerApi.post('/api/cart/checkout', {
       data: {
-        shippingAddress: {
-          street: '123 Refund St',
-          city: 'Testville',
-          state: 'TS',
-          zipCode: '12345',
-          country: 'US',
-        },
+        addressLine1: '123 Refund St',
+        city: 'Testville',
+        state: 'TS',
+        postalCode: '12345',
+        country: 'US',
       },
     });
 
     expect(checkoutResponse.ok()).toBeTruthy();
     const checkoutResult = await checkoutResponse.json();
-    orderId = checkoutResult.orderId;
+    orderId = checkoutResult.correlationId;
     expect(orderId).toBeTruthy();
 
     // Poll for payment completion instead of fixed sleep

@@ -25,8 +25,10 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   private readonly orderStore = inject(OrderStore);
   private readonly authStore = inject(AuthStore);
 
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
   submitted = signal(false);
+  pollingExpired = signal(false);
+  private polling = false;
 
   // Accordion state
   activeSection = signal<'address' | 'shipping' | 'summary' | 'payment'>('address');
@@ -40,6 +42,8 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.checkoutStore.reset();
+    this.submitted.set(false);
+    this.pollingExpired.set(false);
   }
 
   ngOnDestroy(): void {
@@ -61,38 +65,70 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   }
 
   async onConfirm(): Promise<void> {
+    // Set submitted BEFORE the async call to prevent race condition
+    // where cart empties but submitted is still false → "empty cart" flash
+    this.submitted.set(true);
+    this.startPolling();
+
     await this.checkoutStore.submitCheckout();
 
-    if (!this.checkoutStore.error()) {
-      this.submitted.set(true);
-      this.startPolling();
+    if (this.checkoutStore.error()) {
+      this.submitted.set(false);
+      this.stopPolling();
     }
   }
 
   private startPolling(): void {
     const buyerId = this.authStore.user()?.id || '';
+    let attempts = 0;
+    const maxAttempts = 15;
 
-    this.pollTimer = setInterval(async () => {
-      if (buyerId) {
-        await this.orderStore.loadOrders(buyerId);
+    const poll = async () => {
+      if (this.polling) return; // Skip if previous request still in-flight
+      this.polling = true;
+      attempts++;
+
+      try {
+        if (buyerId) {
+          await this.orderStore.loadOrders(buyerId);
+        }
+
+        const orders = this.orderStore.orders();
+        const correlationId = this.cartStore.checkoutCorrelationId();
+
+        const order = correlationId
+          ? orders.find((o) => o.id === correlationId)
+          : orders[0];
+
+        if (order) {
+          this.checkoutStore.setOrder(order);
+          this.stopPolling();
+          return;
+        }
+      } catch {
+        // Transient error — continue polling
+      } finally {
+        this.polling = false;
       }
-      const orders = this.orderStore.orders();
-      const correlationId = this.cartStore.checkoutCorrelationId();
 
-      const order = orders.find((o) => o.id === correlationId) ?? orders[0];
-
-      if (order) {
-        this.checkoutStore.setOrder(order);
+      if (attempts >= maxAttempts) {
+        this.pollingExpired.set(true);
         this.stopPolling();
+        return;
       }
-    }, 2000);
 
-    setTimeout(() => this.stopPolling(), 30_000);
+      // Schedule next poll AFTER current one completed
+      this.pollTimer = setTimeout(poll, 2000);
+    };
+
+    // First poll after short delay
+    this.pollTimer = setTimeout(poll, 1000);
   }
 
   private stopPolling(): void {
+    this.polling = false;
     if (this.pollTimer) {
-      clearInterval(this.pollTimer);
+      clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }
   }

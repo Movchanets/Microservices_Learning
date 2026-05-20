@@ -1,5 +1,7 @@
 using BuildingBlocks.Infrastructure.Models;
 using BuildingBlocks.SharedContracts.Abstractions;
+using BuildingBlocks.SharedContracts.Events.Payment;
+using MassTransit;
 using MediatR;
 using Payment.Domain.Aggregates;
 using Payment.Domain.Enumerations;
@@ -9,7 +11,8 @@ namespace Payment.Application.Commands.RefundPayment;
 public sealed class RefundPaymentHandler(
     IPaymentTransactionRepository transactionRepo,
     IRefundRepository refundRepo,
-    IUnitOfWork uow) : IRequestHandler<RefundPaymentCommand, Result<Guid>>
+    IUnitOfWork uow,
+    IPublishEndpoint publishEndpoint) : IRequestHandler<RefundPaymentCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(RefundPaymentCommand request, CancellationToken ct)
     {
@@ -39,6 +42,15 @@ public sealed class RefundPaymentHandler(
 
         if (totalRefunded + refundAmount >= transaction.Amount)
             transaction.MarkRefunded();
+
+        // Publish event to Outbox before transaction commits
+        await publishEndpoint.Publish(new PaymentRefundedEvent(
+            CorrelationId: refund.OrderId,
+            OrderId: refund.OrderId,
+            TransactionId: refund.TransactionId,
+            RefundId: refund.Id,
+            Amount: refund.Amount,
+            Reason: refund.Reason), ct);
 
         await uow.SaveChangesAsync(ct);
 

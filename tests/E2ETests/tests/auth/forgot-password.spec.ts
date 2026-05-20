@@ -4,7 +4,7 @@ test.describe('Auth: Forgot Password', () => {
 
   test('should display forgot password form', async ({ page, forgotPasswordPage }) => {
     await page.goto('/auth/forgot-password');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(forgotPasswordPage.emailInput).toBeVisible();
     await expect(forgotPasswordPage.forgotSubmitBtn).toBeVisible();
@@ -12,7 +12,7 @@ test.describe('Auth: Forgot Password', () => {
 
   test('should show success message after submitting valid email', async ({ page, forgotPasswordPage }) => {
     await page.goto('/auth/forgot-password');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await forgotPasswordPage.resetPassword('admin@marketplace.com');
 
@@ -22,7 +22,7 @@ test.describe('Auth: Forgot Password', () => {
 
   test('should show error for non-existent email', async ({ page, forgotPasswordPage }) => {
     await page.goto('/auth/forgot-password');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await forgotPasswordPage.resetPassword('nonexistent@example.com');
 
@@ -34,9 +34,9 @@ test.describe('Auth: Forgot Password', () => {
 
   test('should navigate back to login', async ({ page }) => {
     await page.goto('/auth/forgot-password');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
-    const backLink = page.getByRole('link', { name: /back.*login|sign in/i });
+    const backLink = page.getByRole('link', { name: /back.*sign in/i });
     if (await backLink.isVisible()) {
       await backLink.click();
       await expect(page).toHaveURL(/\/auth\/login/);

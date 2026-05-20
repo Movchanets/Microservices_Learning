@@ -71,15 +71,15 @@ export const CartStore = signalStore(
       }
     },
 
-    async updateQuantity(sku: string, quantity: number): Promise<void> {
+    async updateQuantity(sku: string, quantity: number, shopId?: string): Promise<void> {
       if (quantity <= 0) {
-        await this.removeFromCart(sku);
+        await this.removeFromCart(sku, shopId);
         return;
       }
 
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.updateItem(sku, quantity);
+        const updatedCart = await cartService.updateItem(sku, quantity, shopId);
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
         patchState(store, { error: 'Failed to update quantity', loading: false });
@@ -87,10 +87,10 @@ export const CartStore = signalStore(
       }
     },
 
-    async removeFromCart(sku: string): Promise<void> {
+    async removeFromCart(sku: string, shopId?: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const updatedCart = await cartService.removeItem(sku);
+        const updatedCart = await cartService.removeItem(sku, shopId);
         patchState(store, { items: updatedCart.items, loading: false });
       } catch (err: any) {
         patchState(store, { error: 'Failed to remove item', loading: false });

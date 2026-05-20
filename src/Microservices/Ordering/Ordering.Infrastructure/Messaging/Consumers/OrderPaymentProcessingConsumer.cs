@@ -17,13 +17,7 @@ public sealed class OrderPaymentProcessingConsumer(
     public async Task Consume(ConsumeContext<ProcessPaymentCommand> context)
     {
         var cmd = context.Message;
-        var order = await OrderConsumerHelpers.LoadOrderAsync(repository, cmd.OrderId, context.CancellationToken);
-
-        if (order is null)
-        {
-            logger.LogWarning("Order {OrderId} not found while applying ProcessPaymentCommand", cmd.OrderId);
-            return;
-        }
+        var order = await OrderConsumerHelpers.LoadOrderOrThrowAsync(repository, cmd.OrderId, context.CancellationToken);
 
         if (order.Status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Faulted)
         {

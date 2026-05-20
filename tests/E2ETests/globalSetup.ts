@@ -5,7 +5,7 @@ import * as fs from 'fs';
 
 async function globalSetup(config: FullConfig) {
   const frontendURL = config.projects[0].use.baseURL || 'http://localhost:4200';
-  const probeTimeoutMs = 3000;
+  const probeTimeoutMs = 5000;
   let appHostPid: number | undefined;
 
   // Check if frontend is already running (AppHost started externally)
@@ -54,6 +54,12 @@ async function globalSetup(config: FullConfig) {
     }
 
     if (!ready) throw new Error(`Frontend failed to start at ${frontendURL} within ${timeout}ms`);
+    console.log('Frontend is ready!');
+
+    // Wait additional time for backend services to stabilize
+    // The frontend (Angular SSR) responds before backend APIs are fully ready
+    console.log('Waiting for backend services to stabilize...');
+    await new Promise(r => setTimeout(r, 10_000));
     console.log('Server is ready!');
   }
 

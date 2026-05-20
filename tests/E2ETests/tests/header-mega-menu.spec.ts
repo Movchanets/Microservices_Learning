@@ -10,7 +10,7 @@ test.describe('Plan 01: Header & Mega-Menu', () => {
 
     await registerPage.goto('/auth/register');
     await registerPage.register('Test', 'User', email, password);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // If redirected to login, login
     if (page.url().includes('/auth/login')) {
@@ -31,7 +31,7 @@ test.describe('Plan 01: Header & Mega-Menu', () => {
     const rootCategories = await megaMenu.getRootCategoryNames();
     if (rootCategories.length > 0) {
       await megaMenu.clickCategory(rootCategories[0]);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page).toHaveURL(/\/catalog/);
     }
   });
@@ -56,7 +56,7 @@ test.describe('Plan 01: Header & Mega-Menu', () => {
     const addBtn = page.getByRole('button', { name: /add to cart/i }).first();
     await expect(addBtn).toBeVisible({ timeout: 10000 });
     await addBtn.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const hasBadge = await header.hasCartBadge();
     expect(hasBadge).toBe(true);
   });
