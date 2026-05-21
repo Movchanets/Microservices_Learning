@@ -21,15 +21,15 @@ public class GetCartQueryHandlerTests
     public async Task Handle_ShouldReturnCartResponseFromRepository()
     {
         // Arrange
-        var buyerId = "buyer-1";
+        Guid? buyerId = Guid.NewGuid();
         var cart = new ShoppingCart(buyerId);
         var productId = Guid.NewGuid();
         var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         cart.AddItem(productId, 1, storeId, 10m);
-        _repositoryMock.Setup(r => r.GetCartAsync(buyerId, It.IsAny<CancellationToken>()))
+        _repositoryMock.Setup(r => r.GetCartAsync(buyerId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cart);
 
-        var query = new GetCartQuery(buyerId);
+        var query = new GetCartQuery(buyerId, null);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);

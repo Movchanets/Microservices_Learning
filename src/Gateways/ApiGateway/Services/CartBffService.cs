@@ -15,7 +15,8 @@ public sealed class CartBffService(
     /// Returns enriched cart for the given buyer. Combines cart data with product metadata.
     /// </summary>
     public async Task<CartDto> GetCartWithDetailsAsync(
-        string buyerId,
+        string? buyerId,
+        string? cartIdHeader,
         string? bearerToken,
         CancellationToken ct = default)
     {
@@ -23,12 +24,14 @@ public sealed class CartBffService(
         var cartClient = httpClientFactory.CreateClient("cart-api");
         if (!string.IsNullOrEmpty(bearerToken))
             cartClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+        if (!string.IsNullOrEmpty(cartIdHeader))
+            cartClient.DefaultRequestHeaders.Add("X-Cart-Id", cartIdHeader);
 
         var rawCart = await cartClient.GetFromJsonAsync<RawCartResponse>(
             "/api/cart", ct);
 
         if (rawCart is null || rawCart.Items.Count == 0)
-            return new CartDto(buyerId, [], 0, 0);
+            return new CartDto(null, Guid.Empty, [], 0, 0);
 
         // 2. Collect unique product IDs
         var productIds = rawCart.Items
@@ -77,7 +80,8 @@ public sealed class CartBffService(
         }).ToList();
 
         return new CartDto(
-            buyerId,
+            rawCart.BuyerId,
+            rawCart.CartId,
             itemDtos,
             itemDtos.Sum(x => x.LineTotal),
             itemDtos.Sum(x => x.Quantity));

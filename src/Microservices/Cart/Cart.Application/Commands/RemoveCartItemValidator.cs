@@ -6,7 +6,7 @@ public class RemoveCartItemValidator : AbstractValidator<RemoveCartItemCommand>
 {
     public RemoveCartItemValidator()
     {
-        RuleFor(x => x.BuyerId).NotEmpty();
+        // BuyerId is optional — anonymous users have no BuyerId
         RuleFor(x => x.ProductId).NotEmpty();
     }
 }

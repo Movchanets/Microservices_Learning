@@ -27,17 +27,17 @@ public class AddCartItemCommandHandlerTests
     [Fact]
     public async Task Handle_FirstItemToNewCart_ShouldCreateCartAndAddItem()
     {
-        var buyerId = "buyer-new";
+        Guid? buyerId = Guid.NewGuid();
         var price = 29.99m;
 
         _priceRepositoryMock.Setup(r => r.GetByIdAsync(TestProductId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(ProductPrice.Create(TestProductId, "PROD-001", "Test Product", price, "USD", TestStoreId));
 
         var freshCart = new ShoppingCart(buyerId);
-        _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(buyerId, It.IsAny<CancellationToken>()))
+        _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(buyerId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(freshCart);
 
-        var command = new AddCartItemCommand(buyerId, TestProductId, 2);
+        var command = new AddCartItemCommand(buyerId, null, TestProductId, 2);
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -54,7 +54,7 @@ public class AddCartItemCommandHandlerTests
         _priceRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ProductPrice?)null);
 
-        var command = new AddCartItemCommand("buyer-1", TestProductId, 1);
+        var command = new AddCartItemCommand(Guid.NewGuid(), null, TestProductId, 1);
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();

@@ -22,7 +22,7 @@ public class CartRepositoryTests
     public async Task GetCartAsync_CacheMiss_LoadsFromDbAndCaches()
     {
         // Arrange
-        var buyerId = $"buyer-cache-miss-{Guid.NewGuid():N}";
+        Guid? buyerId = Guid.NewGuid();
         using var scope = _fixture.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
         var context = scope.ServiceProvider.GetRequiredService<CartDbContext>();
@@ -61,7 +61,7 @@ public class CartRepositoryTests
     public async Task GetOrCreateTrackedCartAsync_NewCart_CreatesAndTracks()
     {
         // Arrange — mimics real flow: first add-to-cart for a new user
-        var buyerId = $"buyer-new-{Guid.NewGuid():N}";
+        Guid? buyerId = Guid.NewGuid();
 
         using var scope = _fixture.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
@@ -78,7 +78,7 @@ public class CartRepositoryTests
     public async Task AddItem_FirstItem_PersistsToDbAndCache()
     {
         // Arrange — exact replica of AddCartItemCommandHandler flow
-        var buyerId = $"buyer-first-add-{Guid.NewGuid():N}";
+        Guid? buyerId = Guid.NewGuid();
         var prodId = Guid.NewGuid();
 
         using var scope = _fixture.CreateScope();
@@ -117,7 +117,7 @@ public class CartRepositoryTests
     public async Task AddItem_SameSkuTwice_IncrementsQuantity()
     {
         // Arrange — mimics user adding same product twice
-        var buyerId = $"buyer-same-sku-{Guid.NewGuid():N}";
+        Guid? buyerId = Guid.NewGuid();
         var prodId = Guid.NewGuid();
 
         using var scope = _fixture.CreateScope();
@@ -152,7 +152,7 @@ public class CartRepositoryTests
     public async Task AddItem_DifferentSkus_KeepsBothItems()
     {
         // Arrange — mimics user adding different products
-        var buyerId = $"buyer-multi-sku-{Guid.NewGuid():N}";
+        Guid? buyerId = Guid.NewGuid();
         var prodAId = Guid.NewGuid();
         var prodBId = Guid.NewGuid();
 
@@ -189,7 +189,7 @@ public class CartRepositoryTests
     public async Task DeleteCartAsync_RemovesFromDbAndCache()
     {
         // Arrange
-        var buyerId = $"buyer-delete-{Guid.NewGuid():N}";
+        Guid? buyerId = Guid.NewGuid();
         using var scope = _fixture.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
 
@@ -217,7 +217,7 @@ public class CartRepositoryTests
     public async Task SaveCartAsync_OnConcurrencyException_InvalidatesCacheAndThrows()
     {
         // Arrange
-        var buyerId = $"buyer-conc-{Guid.NewGuid():N}";
+        Guid? buyerId = Guid.NewGuid();
         var prodInitId = Guid.NewGuid();
         var prodAId = Guid.NewGuid();
         var prodBId = Guid.NewGuid();
@@ -262,5 +262,168 @@ public class CartRepositoryTests
         finalCart.Items.Should().HaveCount(2); // PROD-INIT and PROD-A
         finalCart.Items.Should().Contain(i => i.ProductId == prodAId);
         finalCart.Items.Should().NotContain(i => i.ProductId == prodBId);
+    }
+
+    [Fact]
+    public async Task AnonymousCart_NoBuyerId_UsesCartIdAsKey()
+    {
+        // Arrange — anonymous user, no BuyerId
+        using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
+
+        // Act — create anonymous cart
+        var cart = await repo.GetOrCreateTrackedCartAsync(null);
+        var prodId = Guid.NewGuid();
+        cart.AddItem(prodId, 1, StoreId, 15m);
+        await repo.SaveCartAsync(cart);
+
+        // Assert — BuyerId is null, cart has items
+        cart.BuyerId.Should().BeNull();
+        cart.Items.Should().ContainSingle();
+
+        // Act — retrieve anonymous cart by cartId
+        using var scope2 = _fixture.CreateScope();
+        var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
+        var retrieved = await repo2.GetCartAsync(null, cart.Id);
+
+        // Assert
+        retrieved.BuyerId.Should().BeNull();
+        retrieved.Items.Should().ContainSingle();
+        retrieved.Items.First().ProductId.Should().Be(prodId);
+    }
+
+    [Fact]
+    public async Task AnonymousCart_MultipleItems_PersistsCorrectly()
+    {
+        // Arrange
+        using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
+
+        // Act — add multiple items to anonymous cart
+        var cart = await repo.GetOrCreateTrackedCartAsync(null);
+        var prod1Id = Guid.NewGuid();
+        var prod2Id = Guid.NewGuid();
+        var prod3Id = Guid.NewGuid();
+        cart.AddItem(prod1Id, 1, StoreId, 10m);
+        cart.AddItem(prod2Id, 2, StoreId, 20m);
+        cart.AddItem(prod3Id, 3, StoreId, 30m);
+        await repo.SaveCartAsync(cart);
+
+        // Assert — retrieve by cartId
+        using var scope2 = _fixture.CreateScope();
+        var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
+        var retrieved = await repo2.GetCartAsync(null, cart.Id);
+
+        retrieved.Items.Should().HaveCount(3);
+        retrieved.Items.Should().Contain(i => i.ProductId == prod1Id && i.Quantity == 1);
+        retrieved.Items.Should().Contain(i => i.ProductId == prod2Id && i.Quantity == 2);
+        retrieved.Items.Should().Contain(i => i.ProductId == prod3Id && i.Quantity == 3);
+    }
+
+    [Fact]
+    public async Task AnonymousCart_DeleteByCartId_RemovesFromDbAndCache()
+    {
+        // Arrange
+        using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
+
+        var cart = await repo.GetOrCreateTrackedCartAsync(null);
+        cart.AddItem(Guid.NewGuid(), 1, StoreId, 10m);
+        await repo.SaveCartAsync(cart);
+        var cartId = cart.Id;
+
+        // Act — delete by cartId
+        await repo.DeleteCartAsync(null, cartId);
+
+        // Assert — DB should be empty
+        var context = scope.ServiceProvider.GetRequiredService<CartDbContext>();
+        context.ChangeTracker.Clear();
+        var dbCart = await context.ShoppingCarts.FirstOrDefaultAsync(c => c.Id == cartId);
+        dbCart.Should().BeNull();
+
+        // Assert — cache should return empty cart
+        using var scope2 = _fixture.CreateScope();
+        var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
+        var cachedCart = await repo2.GetCartAsync(null, cartId);
+        cachedCart.Items.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AnonymousCart_MultipleAnonCarts_CanCoexist()
+    {
+        // Arrange — two separate anonymous users
+        using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
+
+        // Act — create two anonymous carts
+        var cart1 = await repo.GetOrCreateTrackedCartAsync(null);
+        var prod1Id = Guid.NewGuid();
+        cart1.AddItem(prod1Id, 1, StoreId, 10m);
+        await repo.SaveCartAsync(cart1);
+
+        using var scope2 = _fixture.CreateScope();
+        var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
+        var cart2 = await repo2.GetOrCreateTrackedCartAsync(null);
+        var prod2Id = Guid.NewGuid();
+        cart2.AddItem(prod2Id, 2, StoreId, 20m);
+        await repo2.SaveCartAsync(cart2);
+
+        // Assert — both carts exist independently
+        cart1.Id.Should().NotBe(cart2.Id);
+        cart1.BuyerId.Should().BeNull();
+        cart2.BuyerId.Should().BeNull();
+
+        // Verify each is retrievable by its own cartId
+        using var scope3 = _fixture.CreateScope();
+        var repo3 = scope3.ServiceProvider.GetRequiredService<CartRepository>();
+        var retrieved1 = await repo3.GetCartAsync(null, cart1.Id);
+        var retrieved2 = await repo3.GetCartAsync(null, cart2.Id);
+
+        retrieved1.Items.Should().ContainSingle();
+        retrieved1.Items.First().ProductId.Should().Be(prod1Id);
+        retrieved2.Items.Should().ContainSingle();
+        retrieved2.Items.First().ProductId.Should().Be(prod2Id);
+    }
+
+    [Fact]
+    public async Task AnonymousCart_UpdateQuantity_WorksCorrectly()
+    {
+        // Arrange
+        using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
+
+        var cart = await repo.GetOrCreateTrackedCartAsync(null);
+        var prodId = Guid.NewGuid();
+        cart.AddItem(prodId, 1, StoreId, 10m);
+        await repo.SaveCartAsync(cart);
+
+        // Act — update quantity in new scope
+        using var scope2 = _fixture.CreateScope();
+        var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
+        var cart2 = await repo2.GetOrCreateTrackedCartAsync(null, cart.Id);
+        cart2.UpdateQuantity(prodId, 5);
+        await repo2.SaveCartAsync(cart2);
+
+        // Assert
+        using var scope3 = _fixture.CreateScope();
+        var repo3 = scope3.ServiceProvider.GetRequiredService<CartRepository>();
+        var retrieved = await repo3.GetCartAsync(null, cart.Id);
+        retrieved.Items.Should().ContainSingle();
+        retrieved.Items.First().Quantity.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task AnonymousCart_GetCartAsync_NoBuyerIdNoCartId_ReturnsEmptyCart()
+    {
+        // Arrange
+        using var scope = _fixture.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
+
+        // Act — no identity at all
+        var cart = await repo.GetCartAsync(null, null);
+
+        // Assert — returns empty transient cart
+        cart.BuyerId.Should().BeNull();
+        cart.Items.Should().BeEmpty();
     }
 }

@@ -12,7 +12,7 @@ public class ShoppingCartTests
     [Fact]
     public void AddItem_WhenNewProduct_ShouldAddNewItem()
     {
-        var cart = new ShoppingCart("buyer-1");
+        var cart = new ShoppingCart(Guid.NewGuid());
         cart.AddItem(ProductId1, 2, StoreId, 10m);
 
         cart.Items.Should().ContainSingle();
@@ -24,7 +24,7 @@ public class ShoppingCartTests
     [Fact]
     public void AddItem_WhenExistingProduct_ShouldIncrementQuantity()
     {
-        var cart = new ShoppingCart("buyer-1");
+        var cart = new ShoppingCart(Guid.NewGuid());
         cart.AddItem(ProductId1, 2, StoreId, 10m);
         cart.AddItem(ProductId1, 3, StoreId, 10m);
 
@@ -35,7 +35,7 @@ public class ShoppingCartTests
     [Fact]
     public void UpdateQuantity_WhenGreaterThanZero_ShouldUpdateQuantity()
     {
-        var cart = new ShoppingCart("buyer-1");
+        var cart = new ShoppingCart(Guid.NewGuid());
         cart.AddItem(ProductId1, 2, StoreId, 10m);
 
         cart.UpdateQuantity(ProductId1, 5);
@@ -47,7 +47,7 @@ public class ShoppingCartTests
     [Fact]
     public void UpdateQuantity_WhenZeroOrLess_ShouldRemoveItem()
     {
-        var cart = new ShoppingCart("buyer-1");
+        var cart = new ShoppingCart(Guid.NewGuid());
         cart.AddItem(ProductId1, 2, StoreId, 10m);
         cart.AddItem(ProductId2, 1, StoreId, 20m);
 
@@ -60,7 +60,7 @@ public class ShoppingCartTests
     [Fact]
     public void RemoveItem_ShouldRemoveTheItem()
     {
-        var cart = new ShoppingCart("buyer-1");
+        var cart = new ShoppingCart(Guid.NewGuid());
         cart.AddItem(ProductId1, 2, StoreId, 10m);
         cart.AddItem(ProductId2, 1, StoreId, 20m);
 
@@ -73,7 +73,7 @@ public class ShoppingCartTests
     [Fact]
     public void Clear_ShouldRemoveAllItems()
     {
-        var cart = new ShoppingCart("buyer-1");
+        var cart = new ShoppingCart(Guid.NewGuid());
         cart.AddItem(ProductId1, 2, StoreId, 10m);
         cart.AddItem(ProductId2, 1, StoreId, 20m);
 

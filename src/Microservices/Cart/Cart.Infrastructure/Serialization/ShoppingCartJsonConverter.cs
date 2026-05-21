@@ -13,7 +13,7 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
         using var doc = JsonDocument.ParseValue(ref reader);
         var root = doc.RootElement;
 
-        var buyerId = GetStringProperty(root, "BuyerId", "buyerId");
+        var buyerId = GetNullableGuidProperty(root, "BuyerId", "buyerId");
         var id = GetNullableGuidProperty(root, "Id", "id");
 
         var cart = new ShoppingCart(buyerId);
@@ -42,7 +42,10 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
         var p = options.PropertyNamingPolicy;
         writer.WriteStartObject();
         writer.WriteString(ConvertName(p, "Id"), value.Id);
-        writer.WriteString(ConvertName(p, "BuyerId"), value.BuyerId);
+        if (value.BuyerId.HasValue)
+            writer.WriteString(ConvertName(p, "BuyerId"), value.BuyerId.Value);
+        else
+            writer.WriteNull(ConvertName(p, "BuyerId"));
         writer.WriteNumber(ConvertName(p, "Version"), value.Version);
         writer.WriteString(ConvertName(p, "CreatedAt"), value.CreatedAt);
         writer.WriteString(ConvertName(p, "UpdatedAt"), value.UpdatedAt);
@@ -63,8 +66,6 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
     }
 
     private static string ConvertName(JsonNamingPolicy? policy, string name) => policy?.ConvertName(name) ?? name;
-    private static string GetStringProperty(JsonElement el, string n1, string n2) =>
-        el.TryGetProperty(n1, out var p) ? p.GetString()! : el.TryGetProperty(n2, out p) ? p.GetString()! : "";
     private static int GetInt32Property(JsonElement el, string n1, string n2) =>
         el.TryGetProperty(n1, out var p) ? p.GetInt32() : el.TryGetProperty(n2, out p) ? p.GetInt32() : 0;
     private static decimal GetDecimalProperty(JsonElement el, string n1, string n2) =>
@@ -73,7 +74,9 @@ public sealed class ShoppingCartJsonConverter : JsonConverter<ShoppingCart>
         el.TryGetProperty(n1, out var p) && p.TryGetGuid(out var g) ? g :
         el.TryGetProperty(n2, out p) && p.TryGetGuid(out g) ? g : Guid.Empty;
     private static Guid? GetNullableGuidProperty(JsonElement el, string n1, string n2) =>
-        el.TryGetProperty(n1, out var p) && p.TryGetGuid(out var g) ? g :
+        el.TryGetProperty(n1, out var p) && p.ValueKind == JsonValueKind.Null ? null :
+        el.TryGetProperty(n1, out p) && p.TryGetGuid(out var g) ? g :
+        el.TryGetProperty(n2, out p) && p.ValueKind == JsonValueKind.Null ? null :
         el.TryGetProperty(n2, out p) && p.TryGetGuid(out g) ? g : null;
     private static bool TryGetProperty(JsonElement el, string n1, string n2, out JsonElement v)
     {

@@ -4,7 +4,7 @@ namespace Cart.Domain.Aggregates;
 
 public sealed class ShoppingCart : AggregateRoot
 {
-    public string BuyerId { get; private set; } = string.Empty;
+    public Guid? BuyerId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -20,9 +20,8 @@ public sealed class ShoppingCart : AggregateRoot
 
     private ShoppingCart() { } // EF Core
 
-    public ShoppingCart(string buyerId)
+    public ShoppingCart(Guid? buyerId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(buyerId);
         BuyerId = buyerId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
@@ -86,6 +85,19 @@ public sealed class ShoppingCart : AggregateRoot
     public void Clear()
     {
         _items.Clear();
+        Touch();
+    }
+
+    /// <summary>
+    /// Claims this anonymous cart for an authenticated user.
+    /// Sets the BuyerId on a cart that was created without one.
+    /// </summary>
+    public void Claim(Guid buyerId)
+    {
+        if (BuyerId.HasValue)
+            throw new InvalidOperationException("Cart is already claimed by a buyer.");
+
+        BuyerId = buyerId;
         Touch();
     }
 

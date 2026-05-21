@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cart.Infrastructure.Migrations
 {
     [DbContext(typeof(CartDbContext))]
-    [Migration("20260520203151_InitialCreate")]
+    [Migration("20260521144347_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -59,9 +59,8 @@ namespace Cart.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("BuyerId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid?>("BuyerId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -78,7 +77,8 @@ namespace Cart.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BuyerId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"BuyerId\" IS NOT NULL");
 
                     b.ToTable("ShoppingCarts");
                 });

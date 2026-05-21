@@ -26,11 +26,11 @@ public class UpdateCartCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldClearAndAddItemsAndSave()
     {
-        var buyerId = "buyer-1";
+        Guid? buyerId = Guid.NewGuid();
         var existingCart = new ShoppingCart(buyerId);
         existingCart.AddItem(OldProductId, 1, StoreId1, 5m);
 
-        _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(buyerId, It.IsAny<CancellationToken>()))
+        _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(buyerId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingCart);
 
         var newItems = new List<CartItemDto>
@@ -38,7 +38,7 @@ public class UpdateCartCommandHandlerTests
             new(ProductId1, 2, 10m, StoreId1),
             new(ProductId2, 3, 20m, StoreId2)
         };
-        var command = new UpdateCartCommand(buyerId, newItems);
+        var command = new UpdateCartCommand(buyerId, null, newItems);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 

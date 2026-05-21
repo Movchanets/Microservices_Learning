@@ -4,7 +4,8 @@ namespace ApiGateway.Contracts;
 /// Enriched cart DTO returned to Angular. Contains product details from the Catalog service.
 /// </summary>
 public sealed record CartDto(
-    string BuyerId,
+    Guid? BuyerId,
+    Guid CartId,
     List<CartItemDetailsDto> Items,
     decimal TotalPrice,
     int TotalItems);
@@ -25,7 +26,8 @@ public sealed record CartItemDetailsDto(
 /// Raw cart response from cart-api (mirrors Cart.Application.Dtos.CartResponse).
 /// </summary>
 internal sealed record RawCartResponse(
-    string BuyerId,
+    Guid? BuyerId,
+    Guid CartId,
     List<RawCartItemResponse> Items,
     decimal TotalPrice,
     int TotalItems,

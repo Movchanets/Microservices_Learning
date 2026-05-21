@@ -32,7 +32,7 @@ public sealed class CartItem : Entity
     /// <summary>
     /// Matches this item against a ProductId.
     /// </summary>
-    internal bool MatchesProduct(Guid productId)
+    public bool MatchesProduct(Guid productId)
     {
         return ProductId == productId;
     }

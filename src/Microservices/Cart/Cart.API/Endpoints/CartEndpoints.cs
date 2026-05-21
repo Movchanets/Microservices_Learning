@@ -13,89 +13,133 @@ public static class CartEndpoints
     {
         var group = app.MapGroup("/api/cart")
             .WithTags("Cart")
-            .WithOpenApi()
-            .RequireAuthorization();
+            .WithOpenApi();
 
+        // GET /api/cart — anonymous OK
         group.MapGet("/", async (
             ClaimsPrincipal user,
+            HttpRequest request,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
-            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new GetCartQuery(buyerId), ct);
+            var (buyerId, cartId) = GetCartIdentity(user, request);
+            if (buyerId is null && cartId is null)
+                return Results.Ok(new CartResponse(null, Guid.Empty, [], 0m, 0, DateTime.UtcNow));
+
+            var result = await sender.Send(new GetCartQuery(buyerId, cartId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
+        // DELETE /api/cart — anonymous OK
         group.MapDelete("/", async (
             ClaimsPrincipal user,
+            HttpRequest request,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
-            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new DeleteCartCommand(buyerId), ct);
+            var (buyerId, cartId) = GetCartIdentity(user, request);
+            if (buyerId is null && cartId is null)
+                return Results.BadRequest("No cart identity provided.");
+
+            var result = await sender.Send(new DeleteCartCommand(buyerId, cartId), ct);
             return result.IsSuccess ? Results.NoContent() : Results.BadRequest(result.Error);
         });
 
+        // POST /api/cart/checkout — AUTH REQUIRED
         group.MapPost("/checkout", async (
             ClaimsPrincipal user,
-            [FromBody] CheckoutRequest request,
+            HttpRequest request,
+            [FromBody] CheckoutRequest req,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
-            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
+            var claim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(claim, out var buyerId))
+                return Results.Unauthorized();
+
+            // Extract X-Cart-Id for anonymous→authenticated cart merge
+            Guid? cartId = null;
+            if (request.Headers.TryGetValue("X-Cart-Id", out var cartIdHeader)
+                && Guid.TryParse(cartIdHeader, out var parsedCartId))
+                cartId = parsedCartId;
 
             var result = await sender.Send(new CheckoutCartCommand(
                 buyerId,
+                cartId,
                 new AddressRequest(
-                    request.AddressLine1,
-                    request.AddressLine2,
-                    request.City,
-                    request.State,
-                    request.PostalCode,
-                    request.Country)), ct);
+                    req.AddressLine1,
+                    req.AddressLine2,
+                    req.City,
+                    req.State,
+                    req.PostalCode,
+                    req.Country)), ct);
 
             return result.IsSuccess ? Results.Accepted(value: result.Value) : Results.BadRequest(result.Error);
-        });
+        }).RequireAuthorization();
 
+        // POST /api/cart/items — anonymous OK
         group.MapPost("/items", async (
             ClaimsPrincipal user,
-            [FromBody] AddCartItemRequest request,
+            HttpRequest request,
+            [FromBody] AddCartItemRequest req,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
-            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new AddCartItemCommand(buyerId, request.ProductId, request.Quantity), ct);
+            var (buyerId, cartId) = GetCartIdentity(user, request);
+            var result = await sender.Send(new AddCartItemCommand(buyerId, cartId, req.ProductId, req.Quantity), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
+        // PUT /api/cart/items/{productId} — anonymous OK
         group.MapPut("/items/{productId:guid}", async (
             ClaimsPrincipal user,
+            HttpRequest request,
             Guid productId,
-            [FromBody] UpdateCartItemRequest request,
+            [FromBody] UpdateCartItemRequest req,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
-            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new UpdateCartItemCommand(buyerId, productId, request.Quantity), ct);
+            var (buyerId, cartId) = GetCartIdentity(user, request);
+            if (buyerId is null && cartId is null)
+                return Results.BadRequest("No cart identity provided.");
+
+            var result = await sender.Send(new UpdateCartItemCommand(buyerId, cartId, productId, req.Quantity), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
+        // DELETE /api/cart/items/{productId} — anonymous OK
         group.MapDelete("/items/{productId:guid}", async (
             ClaimsPrincipal user,
+            HttpRequest request,
             Guid productId,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
-            var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
-            var result = await sender.Send(new RemoveCartItemCommand(buyerId, productId), ct);
+            var (buyerId, cartId) = GetCartIdentity(user, request);
+            if (buyerId is null && cartId is null)
+                return Results.BadRequest("No cart identity provided.");
+
+            var result = await sender.Send(new RemoveCartItemCommand(buyerId, cartId, productId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
+    }
+
+    /// <summary>
+    /// Extracts BuyerId from JWT claims (authenticated) and CartId from X-Cart-Id header (anonymous).
+    /// </summary>
+    private static (Guid? buyerId, Guid? cartId) GetCartIdentity(ClaimsPrincipal user, HttpRequest request)
+    {
+        Guid? buyerId = null;
+        var claim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (Guid.TryParse(claim, out var parsedBuyer))
+            buyerId = parsedBuyer;
+
+        Guid? cartId = null;
+        if (request.Headers.TryGetValue("X-Cart-Id", out var cartIdHeader)
+            && Guid.TryParse(cartIdHeader, out var parsedCartId))
+            cartId = parsedCartId;
+
+        return (buyerId, cartId);
     }
 }
 

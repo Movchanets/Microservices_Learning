@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { User, LoginCredentials, RegisterCredentials } from './auth.models';
 import { Router } from '@angular/router';
 import { NotificationService } from '../signalr/notification.service';
+import { CartStore } from '../../features/cart/cart.store';
 
 type AuthState = {
   user: User | null;
@@ -26,6 +27,7 @@ export const AuthStore = signalStore(
     authService = inject(AuthService),
     router = inject(Router),
     notificationService = inject(NotificationService),
+    cartStore = inject(CartStore),
     platformId = inject(PLATFORM_ID)) => ({
     async login(credentials: LoginCredentials) {
       patchState(store, { loading: true, error: null });
@@ -40,6 +42,8 @@ export const AuthStore = signalStore(
           await notificationService.start(user.id);
         }
         patchState(store, { user, loading: false });
+        // Merge anonymous cart into authenticated cart
+        await cartStore.refreshAfterLogin();
         router.navigate(['/catalog']);
       } catch (err: unknown) {
         const e = err as { error?: { error?: string } };
@@ -59,6 +63,8 @@ export const AuthStore = signalStore(
           await notificationService.start(user.id);
         }
         patchState(store, { user, loading: false });
+        // Merge anonymous cart into authenticated cart
+        await cartStore.refreshAfterLogin();
         router.navigate(['/catalog']);
       } catch (err: unknown) {
         const e = err as { error?: { error?: string } };

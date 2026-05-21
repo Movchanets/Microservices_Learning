@@ -28,9 +28,9 @@ public class CheckoutCartCommandHandlerTests
     [Fact]
     public async Task Handle_WhenCartIsEmpty_ShouldReturnFailure()
     {
-        var buyerId = "buyer-1";
+        var buyerId = Guid.NewGuid();
         var emptyCart = new ShoppingCart(buyerId);
-        _repositoryMock.Setup(r => r.GetCartAsync(buyerId, It.IsAny<CancellationToken>()))
+        _repositoryMock.Setup(r => r.GetCartAsync(buyerId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(emptyCart);
 
         var command = new CheckoutCartCommand(buyerId);
@@ -43,11 +43,11 @@ public class CheckoutCartCommandHandlerTests
     [Fact]
     public async Task Handle_WhenCartHasItems_ShouldPublishEventDeleteCartAndReturnSuccess()
     {
-        var buyerId = "buyer-1";
+        var buyerId = Guid.NewGuid();
         var cart = new ShoppingCart(buyerId);
         cart.AddItem(TestProductId1, 2, TestStoreId1, 10m);
         cart.AddItem(TestProductId2, 3, TestStoreId2, 20m);
-        _repositoryMock.Setup(r => r.GetCartAsync(buyerId, It.IsAny<CancellationToken>()))
+        _repositoryMock.Setup(r => r.GetCartAsync(buyerId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cart);
 
         var command = new CheckoutCartCommand(buyerId);
@@ -57,12 +57,12 @@ public class CheckoutCartCommandHandlerTests
 
         _publishEndpointMock.Verify(p => p.Publish(
             It.Is<OrderSubmittedEvent>(e =>
-                e.BuyerId == buyerId &&
+                e.BuyerId == buyerId.ToString() &&
                 e.Items.Count == 2 &&
                 e.Items.Any(i => i.StoreId == TestStoreId1) &&
                 e.Items.Any(i => i.StoreId == TestStoreId2)),
             It.IsAny<CancellationToken>()), Times.Once);
 
-        _repositoryMock.Verify(r => r.DeleteCartAsync(buyerId, It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.DeleteCartAsync(buyerId, null, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

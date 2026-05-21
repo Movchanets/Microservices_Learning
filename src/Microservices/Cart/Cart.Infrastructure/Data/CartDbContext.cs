@@ -18,8 +18,10 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
         {
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedNever();
-            b.Property(x => x.BuyerId).IsRequired();
-            b.HasIndex(x => x.BuyerId).IsUnique();
+            b.Property(x => x.BuyerId);
+            b.HasIndex(x => x.BuyerId)
+             .IsUnique()
+             .HasFilter("\"BuyerId\" IS NOT NULL");
             b.Property(x => x.Version).IsRowVersion();
             b.Property(x => x.CreatedAt).IsRequired();
             b.Property(x => x.UpdatedAt).IsRequired();

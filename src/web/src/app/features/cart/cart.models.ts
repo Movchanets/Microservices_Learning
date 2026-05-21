@@ -9,7 +9,8 @@ export interface CartItemDetails {
 }
 
 export interface ShoppingCart {
-  buyerId?: string;
+  buyerId: string | null;
+  cartId: string;
   items: CartItemDetails[];
   totalPrice: number;
   totalItems: number;

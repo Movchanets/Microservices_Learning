@@ -9,7 +9,8 @@ namespace Cart.Application.Commands;
 
 public record CheckoutResponseDto(Guid CorrelationId);
 public record CheckoutCartCommand(
-    string BuyerId,
+    Guid BuyerId,
+    Guid? CartId = null,
     AddressRequest? Address = null) : IRequest<Result<CheckoutResponseDto>>;
 
 public sealed class CheckoutCartCommandHandler(
@@ -18,7 +19,7 @@ public sealed class CheckoutCartCommandHandler(
 {
     public async Task<Result<CheckoutResponseDto>> Handle(CheckoutCartCommand request, CancellationToken cancellationToken)
     {
-        var cart = await repository.GetCartAsync(request.BuyerId, cancellationToken);
+        var cart = await repository.GetCartAsync(request.BuyerId, request.CartId, cancellationToken);
 
         if (cart.Items.Count == 0)
         {
@@ -30,7 +31,7 @@ public sealed class CheckoutCartCommandHandler(
 
         var orderSubmittedEvent = new OrderSubmittedEvent(
             correlationId,
-            request.BuyerId,
+            request.BuyerId.ToString(),
             itemsContract,
             DateTime.UtcNow,
             request.Address?.AddressLine1,
@@ -43,7 +44,7 @@ public sealed class CheckoutCartCommandHandler(
 
         await publishEndpoint.Publish(orderSubmittedEvent, cancellationToken);
 
-        await repository.DeleteCartAsync(request.BuyerId, cancellationToken);
+        await repository.DeleteCartAsync(request.BuyerId, request.CartId, cancellationToken);
 
         return Result<CheckoutResponseDto>.Success(new CheckoutResponseDto(correlationId));
     }

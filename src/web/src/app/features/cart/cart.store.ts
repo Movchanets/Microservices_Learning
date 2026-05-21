@@ -12,6 +12,7 @@ import { CartItemDetails } from './cart.models';
 
 interface CartState {
   items: CartItemDetails[];
+  cartId: string | null;
   loading: boolean;
   error: string | null;
   checkoutCorrelationId: string | null;
@@ -20,6 +21,7 @@ interface CartState {
 
 const initialState: CartState = {
   items: [],
+  cartId: null,
   loading: false,
   error: null,
   checkoutCorrelationId: null,
@@ -54,7 +56,14 @@ export const CartStore = signalStore(
       patchState(store, { loading: true, error: null });
       try {
         const cart = await cartService.getCart();
-        patchState(store, { items: cart.items, loading: false });
+        if (cart.buyerId) {
+          // User is authenticated — clear anonymous cartId (merge happened server-side)
+          cartService.clearCartId();
+        } else if (cart.cartId) {
+          // Anonymous user — persist cartId for subsequent requests
+          cartService.setCartId(cart.cartId);
+        }
+        patchState(store, { items: cart.items, cartId: cart.cartId, loading: false });
       } catch (err: unknown) {
         patchState(store, { error: 'Failed to load cart', loading: false });
       }
@@ -63,7 +72,11 @@ export const CartStore = signalStore(
     async addToCart(productId: string, quantity: number = 1): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        await cartService.addItem(productId, quantity);
+        const response = await cartService.addItem(productId, quantity);
+        // Persist cartId for anonymous users
+        if (!response.buyerId && response.cartId) {
+          cartService.setCartId(response.cartId);
+        }
         // Re-fetch enriched cart from BFF (mutation response lacks product details)
         await this.loadCart();
         patchState(store, { isDrawerOpen: true });
@@ -103,8 +116,11 @@ export const CartStore = signalStore(
       patchState(store, { loading: true, error: null });
       try {
         const response = await cartService.checkout(address);
+        // Clear anonymous cart ID after successful checkout
+        cartService.clearCartId();
         patchState(store, {
           items: [],
+          cartId: null,
           checkoutCorrelationId: response.correlationId,
           loading: false,
           isDrawerOpen: false,
@@ -112,6 +128,22 @@ export const CartStore = signalStore(
       } catch (err: unknown) {
         patchState(store, { error: 'Checkout failed', loading: false });
       }
+    },
+
+    /**
+     * Clears the anonymous cart ID (e.g. after login when cart is merged).
+     */
+    clearAnonymousCart(): void {
+      cartService.clearCartId();
+      patchState(store, { cartId: null, items: [] });
+    },
+
+    /**
+     * Call after login to merge anonymous cart into authenticated cart.
+     * loadCart() sends X-Cart-Id header → backend merges → response has buyerId → clears localStorage.
+     */
+    async refreshAfterLogin(): Promise<void> {
+      await this.loadCart();
     },
   })),
 

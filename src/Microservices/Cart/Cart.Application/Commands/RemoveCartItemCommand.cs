@@ -5,13 +5,13 @@ using MediatR;
 
 namespace Cart.Application.Commands;
 
-public record RemoveCartItemCommand(string BuyerId, Guid ProductId) : IRequest<Result<CartResponse>>;
+public record RemoveCartItemCommand(Guid? BuyerId, Guid? CartId, Guid ProductId) : IRequest<Result<CartResponse>>;
 
 public sealed class RemoveCartItemCommandHandler(ICartRepository repository) : IRequestHandler<RemoveCartItemCommand, Result<CartResponse>>
 {
     public async Task<Result<CartResponse>> Handle(RemoveCartItemCommand request, CancellationToken cancellationToken)
     {
-        var cart = await repository.GetOrCreateTrackedCartAsync(request.BuyerId, cancellationToken);
+        var cart = await repository.GetOrCreateTrackedCartAsync(request.BuyerId, request.CartId, cancellationToken);
         cart.RemoveItem(request.ProductId);
 
         await repository.SaveCartAsync(cart, cancellationToken);

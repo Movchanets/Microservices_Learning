@@ -6,7 +6,7 @@ public class AddCartItemValidator : AbstractValidator<AddCartItemCommand>
 {
     public AddCartItemValidator()
     {
-        RuleFor(x => x.BuyerId).NotEmpty();
+        // BuyerId is optional — anonymous users have no BuyerId
         RuleFor(x => x.ProductId).NotEmpty();
         RuleFor(x => x.Quantity).GreaterThan(0);
     }

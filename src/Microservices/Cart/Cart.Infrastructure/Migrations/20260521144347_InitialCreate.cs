@@ -33,7 +33,7 @@ namespace Cart.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    BuyerId = table.Column<string>(type: "text", nullable: false),
+                    BuyerId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     xmin = table.Column<uint>(type: "xid", rowVersion: true, nullable: false)
@@ -81,7 +81,8 @@ namespace Cart.Infrastructure.Migrations
                 name: "IX_ShoppingCarts_BuyerId",
                 table: "ShoppingCarts",
                 column: "BuyerId",
-                unique: true);
+                unique: true,
+                filter: "\"BuyerId\" IS NOT NULL");
         }
 
         /// <inheritdoc />

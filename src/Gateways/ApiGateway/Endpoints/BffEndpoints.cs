@@ -137,18 +137,21 @@ public static class BffEndpoints
         {
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier)
                        ?? user.FindFirstValue("sub");
-            if (string.IsNullOrEmpty(buyerId))
-                return Results.Unauthorized();
 
             // Forward the Bearer token (set by CookieToBearerMiddleware) to downstream services
             var bearerToken = ctx.Request.Headers.Authorization.ToString();
             if (bearerToken.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 bearerToken = bearerToken["Bearer ".Length..];
 
-            var cart = await cartBffService.GetCartWithDetailsAsync(buyerId, bearerToken, ct);
+            // Forward X-Cart-Id for anonymous cart support
+            var cartIdHeader = ctx.Request.Headers["X-Cart-Id"].FirstOrDefault();
+
+            if (string.IsNullOrEmpty(buyerId) && string.IsNullOrEmpty(cartIdHeader))
+                return Results.Ok(new CartDto(null, Guid.Empty, [], 0, 0));
+
+            var cart = await cartBffService.GetCartWithDetailsAsync(buyerId, cartIdHeader, bearerToken, ct);
             return Results.Ok(cart);
         })
-        .RequireAuthorization()
         .WithTags("Cart")
         .WithOpenApi();
 
