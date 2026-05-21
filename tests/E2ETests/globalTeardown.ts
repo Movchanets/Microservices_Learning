@@ -10,7 +10,7 @@ function execSafe(cmd: string): string {
     return '';
   }
 
-  // Step 4: Safety net — clean up any orphaned Docker containers from this AppHost run.
+  // Safety net — clean up any orphaned Docker containers from this AppHost run.
   // Aspire containers that survive a hard kill have no parent process to stop them.
   console.log('Cleaning up orphaned Docker containers...');
   const aspireContainers = execSafe(
