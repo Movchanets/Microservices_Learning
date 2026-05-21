@@ -130,18 +130,6 @@ importers:
         specifier: ^5.4.0
         version: 5.9.3
 
-  tests/E2ETests:
-    devDependencies:
-      '@playwright/test':
-        specifier: ^1.43.0
-        version: 1.59.1
-      '@types/node':
-        specifier: ^20.0.0
-        version: 20.19.40
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-
 packages:
 
   '@acemir/cssom@0.9.31':
