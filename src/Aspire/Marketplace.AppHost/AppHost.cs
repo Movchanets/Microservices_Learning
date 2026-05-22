@@ -170,6 +170,9 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(redis)
     .WaitFor(redis)
     .WithEnvironment("Identity__ApiBaseUrl", "http://identity-api")
+    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
+    .WithEnvironment("Jwt__Audience", "marketplace-api")
+    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!")
     .WithExternalHttpEndpoints();
 
 // ──────────────────────────────────────────────

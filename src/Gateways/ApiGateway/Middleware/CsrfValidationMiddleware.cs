@@ -19,8 +19,14 @@ public sealed class CsrfValidationMiddleware(RequestDelegate next)
     /// <param name="context">The HttpContext for the current request.</param>
     public async Task InvokeAsync(HttpContext context)
     {
+        // Bearer token requests are CSRF-immune — the token is set explicitly
+        // by the caller, not auto-attached by the browser like cookies.
+        var hasBearerToken = context.Request.Headers.Authorization
+            .FirstOrDefault()?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true;
+
         if (MutatingMethods.Contains(context.Request.Method) &&
             context.User.Identity?.IsAuthenticated == true &&
+            !hasBearerToken &&
             !context.Request.Path.StartsWithSegments("/hubs"))
         {
             var cookieToken = context.Request.Cookies["XSRF-TOKEN"];

@@ -1,9 +1,13 @@
+using System.Text;
 using ApiGateway.Endpoints;
 using ApiGateway.Extensions;
 using ApiGateway.Middleware;
 using ApiGateway.Services;
 using Marketplace.ServiceDefaults;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,10 +20,15 @@ builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
     .AddServiceDiscoveryDestinationResolver();
 
-// ── Authentication (Cookie session) ─────────────────────
-builder.Services.AddAuthentication(options =>
+// ── Authentication (Cookie session + dev JWT for seeder) ──
+var authBuilder = builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = "Cookies";
+    options.DefaultScheme = builder.Environment.IsDevelopment()
+        ? "DevPolicyScheme"
+        : "Cookies";
+    options.DefaultChallengeScheme = builder.Environment.IsDevelopment()
+        ? "DevPolicyScheme"
+        : "Cookies";
 })
 .AddCookie("Cookies", options =>
 {
@@ -32,6 +41,37 @@ builder.Services.AddAuthentication(options =>
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
 });
+
+// In dev, also accept JWT Bearer tokens (e.g. from Seeder.App).
+// Production traffic is cookie-only via the SPA.
+if (builder.Environment.IsDevelopment())
+{
+    authBuilder
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                ValidAudience = builder.Configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
+            };
+        })
+        .AddPolicyScheme("DevPolicyScheme", "Cookie or Bearer", options =>
+        {
+            options.ForwardDefaultSelector = context =>
+            {
+                var auth = context.Request.Headers.Authorization.ToString();
+                return auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                    ? JwtBearerDefaults.AuthenticationScheme
+                    : "Cookies";
+            };
+        });
+}
 
 builder.Services.AddAuthorization(options =>
 {
