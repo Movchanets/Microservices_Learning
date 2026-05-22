@@ -4,6 +4,7 @@ using Catalog.Application.Commands.ActivateProduct;
 using Catalog.Application.Commands.ChangePrice;
 using Catalog.Application.Commands.CreateProduct;
 using Catalog.Application.Commands.CreateReview;
+using Catalog.Application.Commands.DeactivateProduct;
 using Catalog.Application.Commands.DeleteProduct;
 using Catalog.Application.Commands.SellerResponse;
 using Catalog.Application.Commands.UpdateProduct;
@@ -184,6 +185,22 @@ public static class ProductEndpoints
                 : Results.NotFound();
         })
         .WithName("ActivateProduct")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Authorized: deactivate product
+        group.MapPut("/{id:guid}/deactivate", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new DeactivateProductCommand(id), ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.NotFound();
+        })
+        .WithName("DeactivateProduct")
         .RequireAuthorization()
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status404NotFound);

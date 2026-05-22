@@ -6,6 +6,7 @@ import { User, LoginCredentials, RegisterCredentials } from './auth.models';
 import { Router } from '@angular/router';
 import { NotificationService } from '../signalr/notification.service';
 import { CartStore } from '../../features/cart/cart.store';
+import { extractHttpError } from '../utils/http.utils';
 
 type AuthState = {
   user: User | null;
@@ -28,88 +29,91 @@ export const AuthStore = signalStore(
     router = inject(Router),
     notificationService = inject(NotificationService),
     cartStore = inject(CartStore),
-    platformId = inject(PLATFORM_ID)) => ({
-    async login(credentials: LoginCredentials) {
-      patchState(store, { loading: true, error: null });
-      try {
-        await authService.login(credentials);
-        await authService.ensureCsrf();
-        const user = await authService.getUser();
-        if (user) {
-          if (isPlatformBrowser(platformId)) {
-            localStorage.setItem('buyerId', user.id);
+    platformId = inject(PLATFORM_ID)) => {
+
+    // ── Shared helpers (DRY login/register post-auth flow) ─────
+
+    async function setupUser(user: User): Promise<void> {
+      if (isPlatformBrowser(platformId)) {
+        localStorage.setItem('buyerId', user.id);
+      }
+      await notificationService.start(user.id);
+    }
+
+    async function cleanupAuth(): Promise<void> {
+      if (isPlatformBrowser(platformId)) {
+        localStorage.removeItem('buyerId');
+      }
+      await notificationService.stop();
+      patchState(store, { user: null, loading: false });
+      router.navigate(['/auth/login']);
+    }
+
+    async function handlePostAuth(): Promise<void> {
+      await authService.ensureCsrf();
+      const user = await authService.getUser();
+      if (user) {
+        await setupUser(user);
+      }
+      patchState(store, { user, loading: false });
+      await cartStore.refreshAfterLogin();
+      router.navigate(['/catalog']);
+    }
+
+    // ── Public API ─────────────────────────────────────────────
+
+    return {
+      async login(credentials: LoginCredentials): Promise<void> {
+        patchState(store, { loading: true, error: null });
+        try {
+          await authService.login(credentials);
+          await handlePostAuth();
+        } catch (err: unknown) {
+          patchState(store, {
+            error: extractHttpError(err, 'Invalid credentials'),
+            loading: false,
+          });
+        }
+      },
+
+      async register(credentials: RegisterCredentials): Promise<void> {
+        patchState(store, { loading: true, error: null });
+        try {
+          await authService.register(credentials);
+          await handlePostAuth();
+        } catch (err: unknown) {
+          patchState(store, {
+            error: extractHttpError(err, 'Registration failed'),
+            loading: false,
+          });
+        }
+      },
+
+      async logout(): Promise<void> {
+        patchState(store, { loading: true });
+        try {
+          await authService.ensureCsrf();
+          await authService.logout();
+        } catch {
+          // Logout should always clean up locally, even if the API call fails
+        } finally {
+          await cleanupAuth();
+        }
+      },
+
+      async checkAuth(): Promise<void> {
+        patchState(store, { loading: true });
+        try {
+          await authService.ensureCsrf();
+          const user = await authService.getUser();
+          if (user) {
+            await setupUser(user);
           }
-          await notificationService.start(user.id);
+          patchState(store, { user, loading: false });
+        } catch {
+          await cleanupAuth();
         }
-        patchState(store, { user, loading: false });
-        // Merge anonymous cart into authenticated cart
-        await cartStore.refreshAfterLogin();
-        router.navigate(['/catalog']);
-      } catch (err: unknown) {
-        const e = err as { error?: { error?: string } };
-        patchState(store, { error: e.error?.error || 'Invalid credentials', loading: false });
-      }
-    },
-    async register(credentials: RegisterCredentials) {
-      patchState(store, { loading: true, error: null });
-      try {
-        await authService.register(credentials);
-        await authService.ensureCsrf();
-        const user = await authService.getUser();
-        if (user) {
-          if (isPlatformBrowser(platformId)) {
-            localStorage.setItem('buyerId', user.id);
-          }
-          await notificationService.start(user.id);
-        }
-        patchState(store, { user, loading: false });
-        // Merge anonymous cart into authenticated cart
-        await cartStore.refreshAfterLogin();
-        router.navigate(['/catalog']);
-      } catch (err: unknown) {
-        const e = err as { error?: { error?: string } };
-        patchState(store, { error: e.error?.error || 'Registration failed', loading: false });
-      }
-    },
-    async logout() {
-      patchState(store, { loading: true });
-      try {
-        if (isPlatformBrowser(platformId)) {
-          localStorage.removeItem('buyerId');
-        }
-        await notificationService.stop();
-        await authService.ensureCsrf();
-        await authService.logout();
-        patchState(store, { user: null, loading: false });
-        router.navigate(['/auth/login']);
-      } catch {
-        if (isPlatformBrowser(platformId)) {
-          localStorage.removeItem('buyerId');
-        }
-        await notificationService.stop();
-        patchState(store, { user: null, loading: false });
-        router.navigate(['/auth/login']);
-      }
-    },
-    async checkAuth() {
-      patchState(store, { loading: true });
-      try {
-        await authService.ensureCsrf();
-        const user = await authService.getUser();
-        if (user) {
-          if (isPlatformBrowser(platformId)) {
-            localStorage.setItem('buyerId', user.id);
-          }
-          await notificationService.start(user.id);
-        }
-        patchState(store, { user, loading: false });
-      } catch {
-        if (isPlatformBrowser(platformId)) {
-          localStorage.removeItem('buyerId');
-        }
-        await notificationService.stop();
-        patchState(store, { user: null, loading: false });
-      }
-    },
-  })),
+      },
+    };
+  }),
 );

@@ -51,6 +51,9 @@
               class="w-full bg-input border-border rounded-xl py-3 pl-12 pr-4 transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary placeholder:text-muted-foreground/40 text-foreground"
             />
           </div>
+          @if (registerForm.controls.firstName.touched && registerForm.controls.firstName.hasError('required')) {
+            <p class="text-xs text-red-500 mt-2 ml-1" aria-live="polite" i18n>First name is required</p>
+          }
         </div>
         <div class="space-y-2">
           <label
@@ -77,6 +80,9 @@
               class="w-full bg-input border-border rounded-xl py-3 pl-12 pr-4 transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary placeholder:text-muted-foreground/40 text-foreground"
             />
           </div>
+          @if (registerForm.controls.lastName.touched && registerForm.controls.lastName.hasError('required')) {
+            <p class="text-xs text-red-500 mt-2 ml-1" aria-live="polite" i18n>Last name is required</p>
+          }
         </div>
       </div>
 
@@ -106,6 +112,12 @@
             class="w-full bg-input border-border rounded-xl py-3 pl-12 pr-4 transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary placeholder:text-muted-foreground/40 text-foreground"
           />
         </div>
+        @if (registerForm.controls.email.touched && registerForm.controls.email.hasError('required')) {
+          <p class="text-xs text-red-500 mt-2 ml-1" aria-live="polite" i18n>Email is required</p>
+        }
+        @if (registerForm.controls.email.touched && registerForm.controls.email.hasError('email')) {
+          <p class="text-xs text-red-500 mt-2 ml-1" aria-live="polite" i18n>Please enter a valid email</p>
+        }
       </div>
 
       <div class="space-y-2">
@@ -139,9 +151,14 @@
             <lucide-icon [name]="showPassword() ? 'eye-off' : 'eye'" class="w-5 h-5"></lucide-icon>
           </button>
         </div>
-        @if (registerForm.controls.password.dirty && registerForm.controls.password.invalid) {
+        @if (registerForm.controls.password.touched && registerForm.controls.password.hasError('minlength')) {
           <p class="text-xs text-red-500 mt-2 px-1" aria-live="polite">
-            Min 8 chars, 1 upper, 1 lower, 1 digit, 1 special.
+            Password must be at least 8 characters.
+          </p>
+        }
+        @if (registerForm.controls.password.touched && registerForm.controls.password.hasError('pattern')) {
+          <p class="text-xs text-red-500 mt-2 px-1" aria-live="polite">
+            Must contain 1 uppercase, 1 lowercase, 1 digit, and 1 special character.
           </p>
         }
       </div>

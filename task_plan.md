@@ -1,153 +1,87 @@
-# Seeder.Worker Gap Analysis & Fix Plan
+# Task Plan: Store Dashboard — Store Creation + Product Management
 
-## Current Seeder Flow (Worker.cs)
-```
-1. Login admin (seeded by Identity migration)
-2. Register sellers via POST /api/identity/auth/register
-3. Promote sellers via PUT /api/identity/users/{id}/role
-4. Login sellers to get tokens
-5. Create stores via POST /api/stores (needs seller token + SellerId)
-6. Verify stores via POST /api/stores/{id}/verify (admin token)
-7. Create categories via POST /api/catalog/categories (admin token)
-8. Create products via POST /api/catalog/products (seller token + categoryId + storeId)
-9. Poll inventory for consumer-created items, then add stock
-```
+## Goal
+Build a complete Store Dashboard on the Angular frontend where sellers can create their store, create products (with category, tags, image), manage product lifecycle (activate/deactivate/edit/delete), and view inventory — all wired to the existing StoreManagement and Catalog backend APIs.
 
----
+## Current Phase
+Phase 7 (all complete)
 
-## GAP 1 (CRITICAL): PromoteSellersAsync sends wrong JSON field
+## Phases
 
-**File:** `src/ToolsSeeder.App/Seeders/UserSeeder.cs:65`
-**Code:**
-```csharp
-var roleResponse = await _client.PutAsJsonAsync(
-    $"/api/identity/users/{existingUser.Id}/role",
-    new { NewRole = "Seller" }, ct);
-```
-**Problem:** Sends `{ "newRole": "Seller" }` (camelCase via System.Net.Http.Json).
-But `UpdateUserRoleCommand` has property `Role`, not `NewRole`.
-Minimal API model binding fails → 400 Bad Request → sellers stay as Buyers.
-→ `POST /api/stores` fails with 403 (requires "Seller" policy).
-→ No stores → products skip (storeId == null).
+### Phase 1: Research & Gap Analysis
+- [x] Map StoreManagement backend (Domain, API, Application)
+- [x] Map Catalog backend (Product aggregate, endpoints, commands)
+- [x] Map frontend seller-dashboard (routes, stores, services, components)
+- [x] Identify gaps between backend capabilities and frontend UI
+- **Status:** complete
 
-**Fix:** Change `new { NewRole = "Seller" }` → `new { Role = "Seller" }`
+### Phase 2: Backend — DeactivateProduct Endpoint
+- [x] `GET /api/catalog/categories` already existed
+- [x] Added `DeactivateProductCommand` + handler
+- [x] Added `PUT /{id}/deactivate` endpoint
+- **Status:** complete
 
----
+### Phase 3: Frontend — Store Creation Flow
+- [x] Dashboard shows welcome screen when no store
+- [x] Store creation form with name + description
+- [x] StoreId persisted to localStorage on create/load
+- [x] Dashboard shows tabs + router-outlet after store exists
+- **Status:** complete
 
-## GAP 2 (BLOCKING): No GET /api/catalog/products/sku/{sku} endpoint
+### Phase 4: Frontend — Product Form Enhancements
+- [x] CategoryService created, category dropdown in form
+- [x] Tags input (comma-separated)
+- [x] Image URL field with preview
+- [x] All fields wired to Create/Update requests
+- [x] Edit mode populates form via effect() on selectedProduct
+- [x] Price changes use separate ChangePrice endpoint
+- **Status:** complete
 
-**File:** `src/Tools/Seeder.App/Seeders/ProductSeeder.cs:24`
-**Code:**
-```csharp
-var getResponse = await _client.GetAsync($"/api/catalog/products/sku/{product.Sku}", ct);
-```
-**Problem:** Catalog ProductEndpoints has no SKU-based lookup route.
-Call always returns 404 → seeder always tries to create (which is actually OK for first run).
-But idempotency check fails on re-run → duplicate SKU errors.
+### Phase 5: Frontend — Product Lifecycle Actions
+- [x] Activate/deactivate buttons on product list
+- [x] Wired to activate + deactivate endpoints
+- [x] Status badges with color coding
+- [x] Toast notifications on actions
+- **Status:** complete
 
-**Fix:** Add `GetProductBySkuQuery` + endpoint in Catalog.API.
+### Phase 6: Frontend — Store Settings Improvements
+- [x] Creation date + verified date displayed
+- [x] Verification status banner with icon + message + rejection reason
+- [x] Logo URL input with preview
+- [x] setLogo method in store + service
+- **Status:** complete
 
----
+### Phase 7: Testing & Verification
+- [x] Backend builds with 0 errors
+- [x] All 70 seller-dashboard tests pass
+- [x] 11 pre-existing failures in orders/cart (not related)
+- **Status:** complete
 
-## GAP 3 (DESIGN): ProductItem creation relies on eventual consistency
+## Key Questions
+1. **Category selection**: Backend has Category entity but no public list endpoint. Need to add one?
+   → YES. Add `GET /api/catalog/categories` to Catalog API.
+2. **Product deactivation**: Backend has `Deactivate()` on Product but no endpoint/command. Need to add?
+   → YES. Add `DeactivateProductCommand` + `PUT /{id}/deactivate` endpoint.
+3. **StoreId type mismatch**: Store.Id is Guid, Product.StoreId is Guid. SellerId is string (Identity). No issue — storeId flows correctly.
+4. **Image upload**: Media service exists? Need to check. For now, use image URL field.
+   → Deferred. Use URL input for now, file upload can be Phase 2.
 
-**Current flow:**
-- Catalog publishes `ProductCreatedEvent` on product creation
-- Inventory `ProductCreatedConsumer` creates `InventoryItem` (sku, qty=0)
-- Cart `ProductCreatedConsumer` creates `ProductPrice` entry
-- Seeder polls `GET /api/inventory/items/{sku}` with 2s retry, 15 max retries
-- Then calls `POST /api/inventory/items/{sku}/add-stock`
-
-**Status:** This actually works correctly! The consumers handle creation.
-The seeder's polling approach (wait for consumer) is a valid pattern.
-No changes needed here — just needs GAPs 1 & 2 fixed so products get created.
-
----
-
-## GAP 4 (MINOR): Store listing with seller token
-
-**File:** `src/Tools/Seeder.App/Seeders/StoreSeeder.cs:27`
-**Code:**
-```csharp
-var getStoresResponse = await _client.GetAsync("/api/stores", ct);
-```
-**Problem:** `GET /api/stores` is public, returns `ListStoresQuery(status)`.
-The seller token is set in the header but not required for this endpoint.
-This works fine — no fix needed.
-
----
-
-## GAP 5 (MINOR): CreateStoreCommand SellerId type
-
-**File:** `src/Tools/Seeder.App/Seeders/StoreSeeder.cs:52`
-**Code:**
-```csharp
-var requestBody = new { SellerId = sellerId.ToString(), store.Name, store.Description };
-```
-**Status:** `CreateStoreCommand.SellerId` is `string`. The seeder sends Guid as string.
-This is correct — no fix needed.
-
----
-
-## Implementation Plan
-
-### Phase 1: Fix PromoteSellersAsync (CRITICAL)
-- [ ] 1.1 Fix `UserSeeder.cs:65`: `new { NewRole = "Seller" }` → `new { Role = "Seller" }`
-
-### Phase 2: Add SKU lookup endpoint (BLOCKING for idempotency)
-- [ ] 2.1 Create `Catalog.Application/Queries/GetProductBySku/GetProductBySkuQuery.cs`
-- [ ] 2.2 Create `Catalog.Application/Queries/GetProductBySku/GetProductBySkuHandler.cs`
-- [ ] 2.3 Add route `GET /api/catalog/products/sku/{sku}` to `ProductEndpoints.cs`
-
-### Phase 3: Verify end-to-end (no code changes)
-- [ ] 3.1 Run Aspire, verify seeder completes all 6 steps
-- [ ] 3.2 Verify Inventory items created by consumer (polling works)
-- [ ] 3.3 Verify Cart ProductPrice entries created by consumer
-
----
-
-## Consumers & Events Audit
-
-### Integration Events (SharedContracts)
-| Event | Publisher | Consumers |
-|-------|-----------|-----------|
-| ProductCreatedEvent | Catalog.API | Inventory, Cart, Search |
-| ProductUpdatedEvent | Catalog.API | Inventory, Cart, Search |
-| ProductDeletedEvent | Catalog.API | Cart, Search |
-| ProductPriceChangedEvent | Catalog.API | Cart |
-| StoreVerifiedEvent | StoreManagement | Identity |
-| OrderSubmittedEvent | Cart | Ordering |
-| OrderStatusChangedEvent | Ordering | Notification |
-| InventoryReservedEvent | Inventory | Ordering |
-| PaymentCompletedEvent | Payment | Ordering |
-
-### Consumers per service
-| Service | Consumers |
-|---------|-----------|
-| Inventory | ProductCreatedConsumer, ProductUpdatedConsumer, ReserveInventoryConsumer, CancelReservationConsumer |
-| Cart | ProductCreatedConsumer, ProductUpdatedConsumer, ProductDeletedConsumer, ProductPriceChangedConsumer |
-| Search | ProductCreatedConsumer, ProductUpdatedConsumer, ProductDeletedConsumer |
-| Ordering | OrderSubmittedConsumer, OrderInventoryReservedConsumer, OrderPaymentProcessingConsumer, OrderCancelledProjectionConsumer, OrderCompletedProjectionConsumer |
-| Identity | StoreVerifiedConsumer |
-| Notification | OrderStatusChangedConsumer, OrderCancelledConsumer, OrderCompletedConsumer |
-| Payment | ProcessPaymentConsumer, RefundPaymentConsumer |
-
-### Seeder → Consumer chain
-```
-POST /api/catalog/products
-  → ProductCreatedEvent published
-    → Inventory.ProductCreatedConsumer creates InventoryItem (qty=0)
-    → Cart.ProductCreatedConsumer creates ProductPrice
-    → Search.ProductCreatedConsumer indexes product
-  → Seeder polls Inventory until item exists
-  → POST /api/inventory/items/{sku}/add-stock
-```
-
----
+## Decisions Made
+| Decision | Rationale |
+|----------|-----------|
+| Add GET /categories endpoint | Product form needs category dropdown; no public endpoint exists |
+| Add DeactivateProduct command | Product.Deactivate() exists in domain but no API endpoint |
+| Use URL for images (not upload) | Media service integration is separate; URL field is MVP |
+| Keep storeId in localStorage | Already used by SellerProductStore and InventoryStore; consistent |
+| Category dropdown in product form | Required for CreateProductCommand.CategoryId |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
-| LINQ: `p.Sku.Value == sku` not translatable | 1 | Use `Sku.Create(sku)` + `p.Sku == skuVo` (matches domain repo pattern) |
-| BadHttpRequest: verify endpoint expects body, seeder sends null | 1 | Changed `PostAsync(..., null)` to `PostAsJsonAsync(..., new { })` |
-| MassTransit queue collision: Inventory + Cart + Search all had `ProductCreatedConsumer` with same queue name | 1 | Added `KebabCaseEndpointNameFormatter("service", false)` to `ConfigureEndpoints` in all 3 services |
+| (none yet) | | |
+
+## Notes
+- Backend is largely complete. Gaps: category list endpoint, deactivate product endpoint.
+- Frontend has skeleton but product form is incomplete (missing category, tags, image).
+- Store creation exists in settings but dashboard page doesn't handle "no store" state.
+- SellerProductStore.loadProducts reads storeId from localStorage — must be set after store creation.

@@ -2,11 +2,14 @@
 // NgRx SignalStore managing store settings and sales summary.
 // Uses StoreManagement.API via StoreService.
 
-import { computed, inject } from '@angular/core';
+import { computed, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { StoreService } from './store.service';
 import { StoreSettings, SalesSummary } from './seller.models';
 import { AuthStore } from '../../core/auth/auth.store';
+import { extractHttpError } from '../../core/utils/http.utils';
 
 interface StoreSettingsState {
   settings: StoreSettings | null;
@@ -31,9 +34,12 @@ export const StoreSettingsStore = signalStore(
     storeId: computed(() => store.settings()?.storeId || null),
   })),
 
-  withMethods((store, storeService = inject(StoreService), authStore = inject(AuthStore)) => ({
+  withMethods((store, storeService = inject(StoreService), authStore = inject(AuthStore), platformId = inject(PLATFORM_ID)) => ({
 
     async loadSettings(): Promise<void> {
+      // Skip if already loaded or currently loading
+      if (store.settings() !== null || store.loading()) return;
+
       patchState(store, { loading: true, error: null });
       try {
         const user = authStore.user();
@@ -43,10 +49,12 @@ export const StoreSettingsStore = signalStore(
         }
         const settings = await storeService.getStoreBySellerId(user.id);
         patchState(store, { settings, loading: false });
+        if (isPlatformBrowser(platformId) && settings.storeId) {
+          localStorage.setItem('storeId', settings.storeId);
+        }
       } catch (err: unknown) {
-        const e = err as { status?: number; error?: { error?: string } };
-        // If 404, seller has no store yet — not an error
-        if (e?.status === 404) {
+        // 404 means seller has no store yet — not an error
+        if (err instanceof HttpErrorResponse && err.status === 404) {
           patchState(store, { settings: null, loading: false });
         } else {
           patchState(store, { error: 'Failed to load store settings', loading: false });
@@ -64,10 +72,15 @@ export const StoreSettingsStore = signalStore(
         }
         const settings = await storeService.createStore(name, description, user.id);
         patchState(store, { settings, loading: false });
+        if (isPlatformBrowser(platformId) && settings.storeId) {
+          localStorage.setItem('storeId', settings.storeId);
+        }
         return true;
       } catch (err: unknown) {
-        const e = err as { error?: { error?: string } };
-        patchState(store, { error: e?.error?.error || 'Failed to create store', loading: false });
+        patchState(store, {
+          error: extractHttpError(err, 'Failed to create store'),
+          loading: false,
+        });
         return false;
       }
     },
@@ -84,8 +97,30 @@ export const StoreSettingsStore = signalStore(
         patchState(store, { settings, loading: false });
         return true;
       } catch (err: unknown) {
-        const e = err as { error?: { error?: string } };
-        patchState(store, { error: e?.error?.error || 'Failed to update store settings', loading: false });
+        patchState(store, {
+          error: extractHttpError(err, 'Failed to update store settings'),
+          loading: false,
+        });
+        return false;
+      }
+    },
+
+    async setLogo(logoUrl: string): Promise<boolean> {
+      const currentSettings = store.settings();
+      if (!currentSettings?.storeId) {
+        patchState(store, { error: 'No store found', loading: false });
+        return false;
+      }
+      patchState(store, { loading: true, error: null });
+      try {
+        await storeService.setLogo(currentSettings.storeId, logoUrl);
+        patchState(store, {
+          settings: { ...currentSettings, logoUrl },
+          loading: false,
+        });
+        return true;
+      } catch {
+        patchState(store, { error: 'Failed to update logo', loading: false });
         return false;
       }
     },

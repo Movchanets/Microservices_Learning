@@ -49,6 +49,7 @@ builder.Services.AddMassTransit(x =>
     x.SetKebabCaseEndpointNameFormatter();
 
     x.AddConsumer<StoreVerifiedConsumer>();
+    x.AddConsumer<StoreCreatedConsumer>();
 
     x.AddEntityFrameworkOutbox<IdentityDbContext>(o =>
     {

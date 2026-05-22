@@ -1,5 +1,5 @@
 // Seller product list component.
-// Displays all products for the current seller with edit/delete actions.
+// Displays all products for the current seller with edit/delete/activate/deactivate actions.
 // Loads products from SellerProductStore on init.
 
 import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
@@ -8,6 +8,17 @@ import { CurrencyPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { SellerProductStore } from '../seller-product.store';
 import { SellerProduct } from '../seller.models';
+import { ToastService } from '../../../core/services/toast.service';
+
+function statusClass(status: string): string {
+  switch (status) {
+    case 'Active': return 'bg-green-500/10 text-green-500';
+    case 'Draft': return 'bg-yellow-500/10 text-yellow-500';
+    case 'Inactive': return 'bg-orange-500/10 text-orange-500';
+    case 'Deleted': return 'bg-red-500/10 text-red-500';
+    default: return 'bg-muted/10 text-muted';
+  }
+}
 
 @Component({
   selector: 'app-seller-product-list',
@@ -39,18 +50,40 @@ import { SellerProduct } from '../seller.models';
           @for (product of store.products(); track product.id) {
             <li class="p-4 flex items-center justify-between hover:bg-muted/5 transition-colors">
               <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-muted/20 rounded-xl flex items-center justify-center">
-                  <lucide-icon name="Package" class="w-6 h-6 text-muted/50"></lucide-icon>
-                </div>
+                @if (product.imageUrl) {
+                  <img [src]="product.imageUrl" class="w-12 h-12 rounded-xl object-cover" alt="" />
+                } @else {
+                  <div class="w-12 h-12 bg-muted/20 rounded-xl flex items-center justify-center">
+                    <lucide-icon name="Package" class="w-6 h-6 text-muted/50"></lucide-icon>
+                  </div>
+                }
                 <div>
                   <p class="font-medium">{{ product.name }}</p>
                   <p class="text-sm text-muted">{{ product.sku }} &middot; {{ product.price | currency }}</p>
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                @if (product.status !== 'Active') {
-                  <span class="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-500 rounded-full">{{ product.status }}</span>
+                <span [class]="statusClass(product.status)"
+                      class="text-xs px-2.5 py-1 rounded-full font-medium">
+                  {{ product.status }}
+                </span>
+
+                @if (product.status === 'Active') {
+                  <button (click)="onDeactivate(product)"
+                          data-testid="product-deactivate"
+                          class="p-2 rounded-lg hover:bg-orange-500/10 transition-colors cursor-pointer"
+                          title="Deactivate">
+                    <lucide-icon name="XCircle" class="w-4 h-4 text-orange-500"></lucide-icon>
+                  </button>
+                } @else if (product.status === 'Draft' || product.status === 'Inactive') {
+                  <button (click)="onActivate(product)"
+                          data-testid="product-activate"
+                          class="p-2 rounded-lg hover:bg-green-500/10 transition-colors cursor-pointer"
+                          title="Activate">
+                    <lucide-icon name="CheckCircle" class="w-4 h-4 text-green-500"></lucide-icon>
+                  </button>
                 }
+
                 <a [routerLink]="['/seller/products', product.id, 'edit']"
                    class="p-2 rounded-lg hover:bg-muted/10 transition-colors">
                   <lucide-icon name="Pencil" class="w-4 h-4 text-muted"></lucide-icon>
@@ -69,14 +102,42 @@ import { SellerProduct } from '../seller.models';
 })
 export class SellerProductListComponent implements OnInit {
   readonly store = inject(SellerProductStore);
+  private readonly toast = inject(ToastService);
 
   ngOnInit(): void {
     this.store.loadProducts();
   }
 
+  statusClass(status: string): string {
+    return statusClass(status);
+  }
+
+  async onActivate(product: SellerProduct): Promise<void> {
+    const success = await this.store.activateProduct(product.id);
+    if (success) {
+      this.toast.success(`"${product.name}" activated`);
+    } else {
+      this.toast.error('Failed to activate product');
+    }
+  }
+
+  async onDeactivate(product: SellerProduct): Promise<void> {
+    const success = await this.store.deactivateProduct(product.id);
+    if (success) {
+      this.toast.success(`"${product.name}" deactivated`);
+    } else {
+      this.toast.error('Failed to deactivate product');
+    }
+  }
+
   async onDelete(product: SellerProduct): Promise<void> {
     if (confirm(`Delete "${product.name}"?`)) {
-      await this.store.deleteProduct(product.id);
+      const success = await this.store.deleteProduct(product.id);
+      if (success) {
+        this.toast.success(`"${product.name}" deleted`);
+      } else {
+        this.toast.error('Failed to delete product');
+      }
     }
   }
 }

@@ -13,10 +13,11 @@ describe('CartPageComponent', () => {
   const mockLoading = signal(false);
   const mockIsEmpty = signal(true);
   const mockTotalItems = signal(0);
+  const mockTotalPrice = signal(0);
 
   const mockCartStore = {
     items: mockItems, loading: mockLoading, error: signal<string | null>(null),
-    isEmpty: mockIsEmpty, totalItems: mockTotalItems,
+    isEmpty: mockIsEmpty, totalItems: mockTotalItems, totalPrice: mockTotalPrice,
     checkoutCorrelationId: signal<string | null>(null),
     updateQuantity: vi.fn(), removeFromCart: vi.fn(), checkout: vi.fn(),
   };
@@ -28,7 +29,7 @@ describe('CartPageComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(CartPageComponent);
     component = fixture.componentInstance;
-    mockItems.set([]); mockIsEmpty.set(true); mockTotalItems.set(0);
+    mockItems.set([]); mockIsEmpty.set(true); mockTotalItems.set(0); mockTotalPrice.set(0);
     vi.clearAllMocks();
     fixture.detectChanges();
   });
@@ -42,26 +43,35 @@ describe('CartPageComponent', () => {
 
   it('should render items', () => {
     mockIsEmpty.set(false);
-    mockItems.set([{ productId: 'PROD-1', storeId: 's1', quantity: 2 }, { productId: 'PROD-2', storeId: 's1', quantity: 1 }]);
-    mockTotalItems.set(3); fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('PROD-1');
+    mockItems.set([
+      { productId: 'PROD-1', storeId: 's1', quantity: 2, title: 'Widget', price: 10, lineTotal: 20, imageUrl: null },
+      { productId: 'PROD-2', storeId: 's1', quantity: 1, title: 'Gadget', price: 15, lineTotal: 15, imageUrl: null },
+    ]);
+    mockTotalItems.set(3);
+    mockTotalPrice.set(35);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Widget');
   });
 
   it('should call updateQuantity on minus click', () => {
     mockIsEmpty.set(false);
-    mockItems.set([{ productId: 'PROD-1', storeId: 's1', quantity: 2 }]); fixture.detectChanges();
-    const btn = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
-      (b: any) => b.querySelector('lucide-icon[name="Minus"]'));
-    if (btn) (btn as HTMLElement).click();
+    mockItems.set([{ productId: 'PROD-1', storeId: 's1', quantity: 2, title: 'Widget', price: 10, lineTotal: 20, imageUrl: null }]);
+    mockTotalItems.set(2);
+    mockTotalPrice.set(20);
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('[data-testid="cart-item-decrease"]');
+    if (btn) btn.click();
     expect(mockCartStore.updateQuantity).toHaveBeenCalledWith('PROD-1', 1);
   });
 
   it('should call removeFromCart on trash click', () => {
     mockIsEmpty.set(false);
-    mockItems.set([{ productId: 'PROD-1', storeId: 's1', quantity: 2 }]); fixture.detectChanges();
-    const btn = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
-      (b: any) => b.querySelector('lucide-icon[name="Trash2"]'));
-    if (btn) (btn as HTMLElement).click();
+    mockItems.set([{ productId: 'PROD-1', storeId: 's1', quantity: 2, title: 'Widget', price: 10, lineTotal: 20, imageUrl: null }]);
+    mockTotalItems.set(2);
+    mockTotalPrice.set(20);
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('[data-testid="cart-item-remove"]');
+    if (btn) btn.click();
     expect(mockCartStore.removeFromCart).toHaveBeenCalledWith('PROD-1');
   });
 });

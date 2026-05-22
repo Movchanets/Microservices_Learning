@@ -17,7 +17,7 @@ export interface CategoryTree {
   providedIn: 'root'
 })
 export class CategoryTreeService {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
   
   // Public signal holding the tree
   readonly categoryTree = signal<CategoryTree[]>([]);

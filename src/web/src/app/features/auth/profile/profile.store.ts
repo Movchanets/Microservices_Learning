@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
 import { AuthService } from '../../../core/auth/auth.service';
 import { UpdateProfileRequest, ChangePasswordRequest } from '../../../core/auth/auth.models';
+import { extractHttpError } from '../../../core/utils/http.utils';
 
 interface ProfileState {
   updating: boolean;
@@ -27,8 +28,10 @@ export const ProfileStore = signalStore(
         await authService.updateProfile(id, request);
         patchState(store, { updating: false, successMessage: 'Profile updated successfully' });
       } catch (err: unknown) {
-        const e = err as { error?: { title?: string }; message?: string };
-        patchState(store, { updating: false, error: e.error?.title || e.message || 'Update failed' });
+        patchState(store, {
+          updating: false,
+          error: extractHttpError(err, 'Update failed'),
+        });
       }
     },
     async changePassword(request: ChangePasswordRequest) {
@@ -37,8 +40,10 @@ export const ProfileStore = signalStore(
         await authService.changePassword(request);
         patchState(store, { changingPassword: false, successMessage: 'Password changed successfully' });
       } catch (err: unknown) {
-        const e = err as { error?: { title?: string }; message?: string };
-        patchState(store, { changingPassword: false, error: e.error?.title || e.message || 'Change password failed' });
+        patchState(store, {
+          changingPassword: false,
+          error: extractHttpError(err, 'Change password failed'),
+        });
       }
     },
     clearMessages() {

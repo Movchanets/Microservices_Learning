@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ProfileStore } from '../../profile.store';
 import { UpdateProfileRequest, ChangePasswordRequest } from '../../../../../core/auth/auth.models';
@@ -44,6 +44,9 @@ import { LucideAngularModule, Save, Key, User, Mail, Lock } from 'lucide-angular
                   class="w-full bg-background border border-input rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
                 >
               </div>
+              @if (profileForm.controls.firstName.touched && profileForm.controls.firstName.hasError('required')) {
+                <p class="text-xs text-red-500 mt-1" aria-live="polite">First name is required.</p>
+              }
             </div>
             
             <div class="space-y-2">
@@ -56,6 +59,9 @@ import { LucideAngularModule, Save, Key, User, Mail, Lock } from 'lucide-angular
                   class="w-full bg-background border border-input rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
                 >
               </div>
+              @if (profileForm.controls.lastName.touched && profileForm.controls.lastName.hasError('required')) {
+                <p class="text-xs text-red-500 mt-1" aria-live="polite">Last name is required.</p>
+              }
             </div>
           </div>
           
@@ -69,6 +75,12 @@ import { LucideAngularModule, Save, Key, User, Mail, Lock } from 'lucide-angular
                 class="w-full bg-background border border-input rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
               >
             </div>
+            @if (profileForm.controls.email.touched && profileForm.controls.email.hasError('required')) {
+              <p class="text-xs text-red-500 mt-1" aria-live="polite">Email is required.</p>
+            }
+            @if (profileForm.controls.email.touched && profileForm.controls.email.hasError('email')) {
+              <p class="text-xs text-red-500 mt-1" aria-live="polite">Please enter a valid email.</p>
+            }
           </div>
           
           <div class="flex justify-end pt-2">
@@ -122,6 +134,12 @@ import { LucideAngularModule, Save, Key, User, Mail, Lock } from 'lucide-angular
                   class="w-full bg-background border border-input rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
                 >
               </div>
+              @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.hasError('minlength')) {
+                <p class="text-xs text-red-500 mt-1" aria-live="polite">Must be at least 8 characters.</p>
+              }
+              @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.hasError('pattern')) {
+                <p class="text-xs text-red-500 mt-1" aria-live="polite">Must contain 1 uppercase, 1 lowercase, 1 digit, and 1 special character.</p>
+              }
             </div>
             
             <div class="space-y-2">
@@ -134,13 +152,16 @@ import { LucideAngularModule, Save, Key, User, Mail, Lock } from 'lucide-angular
                   class="w-full bg-background border border-input rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
                 >
               </div>
+              @if (passwordsMismatch()) {
+                <p class="text-xs text-red-500 mt-1" aria-live="polite">Passwords do not match.</p>
+              }
             </div>
           </div>
           
           <div class="flex justify-end pt-2">
             <button 
               type="submit" 
-              [disabled]="passwordForm.invalid || profileStore.changingPassword()"
+              [disabled]="passwordForm.invalid || passwordsMismatch() || profileStore.changingPassword()"
               class="flex items-center gap-2 bg-foreground text-background px-6 py-2 rounded-xl font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <lucide-icon [name]="KeyIcon" class="w-4 h-4"></lucide-icon>
@@ -174,9 +195,10 @@ export class ProfileSettingsComponent implements OnInit {
     email: ['', [Validators.required, Validators.email]]
   });
 
-  passwordForm = this.fb.group({
+  passwordForm = this.fb.nonNullable.group({
     currentPassword: ['', [Validators.required]],
-    newPassword: ['', [Validators.required, Validators.minLength(8)]],
+    newPassword: ['', [Validators.required, Validators.minLength(8),
+      Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)]],
     confirmPassword: ['', [Validators.required]]
   });
 
@@ -197,18 +219,20 @@ export class ProfileSettingsComponent implements OnInit {
     const user = this.authStore.user();
     if (!user?.id) return;
 
-    await this.profileStore.updateProfile(user.id, this.profileForm.value as UpdateProfileRequest);
+    await this.profileStore.updateProfile(user.id, this.profileForm.getRawValue() as UpdateProfileRequest);
   }
+
+  readonly passwordsMismatch = computed(() => {
+    const form = this.passwordForm;
+    return form.controls.newPassword.value !== form.controls.confirmPassword.value
+      && form.controls.confirmPassword.touched;
+  });
 
   async onChangePassword() {
     if (this.passwordForm.invalid) return;
-    if (this.passwordForm.value.newPassword !== this.passwordForm.value.confirmPassword) {
-      // Basic validation for matching passwords
-      alert("New passwords do not match.");
-      return;
-    }
-    
-    await this.profileStore.changePassword(this.passwordForm.value as ChangePasswordRequest);
+    if (this.passwordsMismatch()) return;
+
+    await this.profileStore.changePassword(this.passwordForm.getRawValue());
     if (!this.profileStore.error()) {
       this.passwordForm.reset();
     }

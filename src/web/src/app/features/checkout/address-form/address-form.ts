@@ -1,6 +1,5 @@
-import { Component, ChangeDetectionStrategy, OnInit, inject, output, PLATFORM_ID } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, output, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 
 export interface Address {
@@ -19,13 +18,11 @@ export interface Address {
   templateUrl: './address-form.html',
   styleUrl: './address-form.css',
 })
-export class AddressFormComponent implements OnInit {
-  private fb = inject(FormBuilder);
-  private platformId = inject(PLATFORM_ID);
+export class AddressFormComponent {
+  private readonly fb = inject(FormBuilder);
+  private readonly platformId = inject(PLATFORM_ID);
 
   addressSaved = output<Address>();
-
-  addressForm!: FormGroup;
 
   countries = [
     { code: 'US', name: 'United States' },
@@ -37,21 +34,23 @@ export class AddressFormComponent implements OnInit {
     { code: 'UA', name: 'Ukraine' },
   ];
 
-  ngOnInit() {
-    let initialAddress: Record<string, unknown> = {};
-    if (isPlatformBrowser(this.platformId)) {
-      const savedAddress = localStorage.getItem('marketplace_shipping_address');
-      initialAddress = savedAddress ? JSON.parse(savedAddress) : {};
-    }
+  private readonly initialAddress = this.loadSavedAddress();
 
-    this.addressForm = this.fb.group({
-      addressLine1: [initialAddress['addressLine1'] || '', [Validators.required]],
-      addressLine2: [initialAddress['addressLine2'] || ''],
-      city: [initialAddress['city'] || '', [Validators.required]],
-      state: [initialAddress['state'] || '', [Validators.required]],
-      postalCode: [initialAddress['postalCode'] || '', [Validators.required, Validators.pattern(/^[0-9A-Z\s-]+$/i)]],
-      country: [initialAddress['country'] || 'US', [Validators.required]],
-    });
+  addressForm: FormGroup = this.fb.group({
+    addressLine1: [this.initialAddress['addressLine1'] || '', [Validators.required, Validators.maxLength(250)]],
+    addressLine2: [this.initialAddress['addressLine2'] || ''],
+    city: [this.initialAddress['city'] || '', [Validators.required, Validators.maxLength(100)]],
+    state: [this.initialAddress['state'] || '', [Validators.required, Validators.maxLength(100)]],
+    postalCode: [this.initialAddress['postalCode'] || '', [Validators.required, Validators.pattern(/^[0-9A-Z\s-]{3,10}$/i)]],
+    country: [this.initialAddress['country'] || 'US', [Validators.required]],
+  });
+
+  private loadSavedAddress(): Record<string, unknown> {
+    if (isPlatformBrowser(this.platformId)) {
+      const saved = localStorage.getItem('marketplace_shipping_address');
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
   }
 
   submit() {

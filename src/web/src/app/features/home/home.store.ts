@@ -1,8 +1,7 @@
 import { signalStore, withState, withMethods, patchState } from '@ngrx/signals';
 import { inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { ProductListItem, Category } from '../catalog/catalog.models';
+import { CatalogService } from '../catalog/catalog.service';
 
 interface HomeState {
   featuredProducts: ProductListItem[];
@@ -23,16 +22,12 @@ const initialState: HomeState = {
 export const HomeStore = signalStore(
   { providedIn: 'root' },
   withState<HomeState>(initialState),
-  withMethods((store) => {
-    const http = inject(HttpClient);
-
+  withMethods((store, catalogService = inject(CatalogService)) => {
     return {
       async loadFeatured(): Promise<void> {
         patchState(store, { loading: true, error: null });
         try {
-          const products = await firstValueFrom(
-            http.get<ProductListItem[]>('/api/catalog/products/featured'),
-          );
+          const products = await catalogService.getFeatured();
           patchState(store, { featuredProducts: products, loading: false });
         } catch {
           patchState(store, { error: 'Failed to load featured products', loading: false });
@@ -41,11 +36,7 @@ export const HomeStore = signalStore(
 
       async loadNewArrivals(): Promise<void> {
         try {
-          const result = await firstValueFrom(
-            http.get<{ items: ProductListItem[] }>('/api/catalog/products', {
-              params: { page: 1, pageSize: 8, sort: 'newest' },
-            }),
-          );
+          const result = await catalogService.getProducts({ page: 1, pageSize: 8 });
           patchState(store, { newArrivals: result.items });
         } catch {
           // Non-critical; silently fail
@@ -54,9 +45,7 @@ export const HomeStore = signalStore(
 
       async loadCategories(): Promise<void> {
         try {
-          const categories = await firstValueFrom(
-            http.get<Category[]>('/api/catalog/categories'),
-          );
+          const categories = await catalogService.getCategories();
           patchState(store, { categories: categories.filter(c => c.isActive).slice(0, 8) });
         } catch {
           // Non-critical; silently fail

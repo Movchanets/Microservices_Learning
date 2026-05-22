@@ -10,7 +10,7 @@ export interface InventoryItemResponse {
 
 @Injectable({ providedIn: 'root' })
 export class SellerInventoryService {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   getInventoryBySkus(skus: string[]): Promise<InventoryItemResponse[]> {
     return firstValueFrom(

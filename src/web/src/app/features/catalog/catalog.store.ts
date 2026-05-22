@@ -2,6 +2,7 @@ import { computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { CatalogService } from './catalog.service';
 import { ProductListItem, Category, FacetValue, PagedResult, SearchResult } from './catalog.models';
+import { extractHttpError } from '../../core/utils/http.utils';
 
 interface CatalogState {
   /** Product items from either Catalog.API or Search.API */
@@ -87,9 +88,8 @@ export const CatalogStore = signalStore(
           loading: false,
         });
       } catch (err: unknown) {
-        const e = err as { error?: { error?: string } };
         patchState(store, {
-          error: e?.error?.error ?? 'Failed to load products',
+          error: extractHttpError(err, 'Failed to load products'),
           loading: false,
         });
       }
@@ -121,9 +121,8 @@ export const CatalogStore = signalStore(
           loading: false,
         });
       } catch (err: unknown) {
-        const e = err as { error?: { error?: string } };
         patchState(store, {
-          error: e?.error?.error ?? 'Search failed',
+          error: extractHttpError(err, 'Search failed'),
           loading: false,
         });
       }

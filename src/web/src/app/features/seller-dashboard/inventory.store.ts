@@ -1,8 +1,8 @@
-import { computed, inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { SellerInventoryService, InventoryItemResponse } from './inventory.service';
 import { SellerProductService } from './seller-product.service';
+import { StoreSettingsStore } from './store-settings.store';
 
 export interface InventoryDisplayItem {
   sku: string;
@@ -38,16 +38,17 @@ export const InventoryStore = signalStore(
       store.items().filter(i => i.status === 'low-stock' || i.status === 'out-of-stock').length,
     ),
   })),
-  withMethods((store, platformId = inject(PLATFORM_ID)) => {
-    const inventoryService = inject(SellerInventoryService);
-    const productService = inject(SellerProductService);
+  withMethods((store, storeSettingsStore = inject(StoreSettingsStore), inventoryService = inject(SellerInventoryService), productService = inject(SellerProductService)) => {
 
     return {
       async loadInventory(): Promise<void> {
         patchState(store, { loading: true, error: null });
         try {
-          // Get seller's products first
-          const storeId = isPlatformBrowser(platformId) ? (localStorage.getItem('storeId') || '') : '';
+          const storeId = storeSettingsStore.storeId() ?? '';
+          if (!storeId) {
+            patchState(store, { items: [], loading: false });
+            return;
+          }
           const products = await productService.getMyProducts(storeId);
           const skus = products.map(p => p.sku);
 

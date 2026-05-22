@@ -9,7 +9,7 @@ export interface InventoryItem {
 
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   checkStock(sku: string): Promise<InventoryItem> {
     return firstValueFrom(

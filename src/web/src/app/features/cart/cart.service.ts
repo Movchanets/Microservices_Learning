@@ -1,5 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { ShoppingCart, CheckoutResponse } from './cart.models';
 
@@ -10,13 +11,16 @@ const CART_ID_KEY = 'anon_cart_id';
 })
 export class CartService {
   private readonly http = inject(HttpClient);
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly baseUrl = '/api/cart';
   private readonly bffCartUrl = '/bff/cart';
 
   /**
    * Returns stored anonymous cart ID from localStorage, or null.
+   * Guards against SSR where localStorage is unavailable.
    */
   getCartId(): string | null {
+    if (!isPlatformBrowser(this.platformId)) return null;
     try {
       return localStorage.getItem(CART_ID_KEY);
     } catch {
@@ -28,10 +32,11 @@ export class CartService {
    * Persists anonymous cart ID to localStorage.
    */
   setCartId(cartId: string): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     try {
       localStorage.setItem(CART_ID_KEY, cartId);
     } catch {
-      // SSR or storage quota — ignore
+      // Storage quota exceeded — ignore
     }
   }
 
@@ -39,6 +44,7 @@ export class CartService {
    * Clears stored anonymous cart ID (e.g. after login/merge).
    */
   clearCartId(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     try {
       localStorage.removeItem(CART_ID_KEY);
     } catch {

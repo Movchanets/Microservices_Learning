@@ -5,7 +5,7 @@ import { Review, ReviewSummary, CreateReviewRequest, PagedResult } from './catal
 
 @Injectable({ providedIn: 'root' })
 export class ReviewService {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   getReviews(
     productId: string,

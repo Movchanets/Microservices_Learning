@@ -48,6 +48,9 @@ export interface StoreSettings {
   contactEmail: string;
   isActive: boolean;
   verificationStatus?: 'Pending' | 'Verified' | 'Rejected';
+  rejectionReason?: string | null;
+  createdAt?: string;
+  verifiedAt?: string | null;
 }
 
 export interface SalesSummary {

@@ -3,9 +3,11 @@
 // and addStock functionality.
 
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { InventoryStore } from './inventory.store';
 import { SellerInventoryService } from './inventory.service';
 import { SellerProductService } from './seller-product.service';
+import { StoreSettingsStore } from './store-settings.store';
 
 describe('InventoryStore', () => {
   let store: InstanceType<typeof InventoryStore>;
@@ -32,18 +34,23 @@ describe('InventoryStore', () => {
     mockProductService = {
       getMyProducts: vi.fn().mockResolvedValue(mockProducts),
     };
+    const mockStoreSettingsStore = {
+      storeId: signal('store-1'),
+      settings: signal({ storeId: 'store-1' }),
+      hasSettings: signal(true),
+      loading: signal(false),
+    };
 
     TestBed.configureTestingModule({
       providers: [
         { provide: SellerInventoryService, useValue: mockInventoryService },
         { provide: SellerProductService, useValue: mockProductService },
+        { provide: StoreSettingsStore, useValue: mockStoreSettingsStore },
       ],
     });
 
     store = TestBed.inject(InventoryStore);
     vi.clearAllMocks();
-    // Mock localStorage
-    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('store-1');
   });
 
   it('should be created', () => {

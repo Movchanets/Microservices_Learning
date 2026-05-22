@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { AuthStore } from '../../../../../core/auth/auth.store';
-import { LucideAngularModule, User, ShoppingBag, Settings, LogOut } from 'lucide-angular';
+import { LucideAngularModule, User, ShoppingBag, Settings, LogOut, Store } from 'lucide-angular';
 
 @Component({
   selector: 'app-profile-sidebar',
@@ -40,6 +40,18 @@ import { LucideAngularModule, User, ShoppingBag, Settings, LogOut } from 'lucide
           <lucide-icon [name]="SettingsIcon" class="w-5 h-5 group-[.active]:text-primary-foreground"></lucide-icon>
           <span>Settings</span>
         </a>
+
+        @if (user()?.role === 'Seller' || user()?.role === 'Admin') {
+          <a 
+            routerLink="/seller" 
+            routerLinkActive="bg-primary text-primary-foreground font-medium"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all group"
+            data-testid="nav-seller"
+          >
+            <lucide-icon [name]="StoreIcon" class="w-5 h-5 group-[.active]:text-primary-foreground"></lucide-icon>
+            <span>Seller Dashboard</span>
+          </a>
+        }
       </nav>
 
       <div class="mt-8 pt-6 border-t border-border">
@@ -62,6 +74,7 @@ export class ProfileSidebarComponent {
   readonly ShoppingBagIcon = ShoppingBag;
   readonly SettingsIcon = Settings;
   readonly LogOutIcon = LogOut;
+  readonly StoreIcon = Store;
 
   onLogout() {
     this.authStore.logout();

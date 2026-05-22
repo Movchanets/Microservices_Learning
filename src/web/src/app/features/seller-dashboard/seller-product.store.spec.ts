@@ -6,6 +6,8 @@
 import { TestBed } from '@angular/core/testing';
 import { SellerProductStore } from './seller-product.store';
 import { SellerProductService } from './seller-product.service';
+import { StoreSettingsStore } from './store-settings.store';
+import { signal } from '@angular/core';
 
 describe('SellerProductStore', () => {
   let store: InstanceType<typeof SellerProductStore>;
@@ -16,11 +18,18 @@ describe('SellerProductStore', () => {
     updateProduct: vi.fn().mockResolvedValue(null),
     deleteProduct: vi.fn().mockResolvedValue(undefined),
   };
+  const mockStoreSettingsStore = {
+    storeId: signal('store-1'),
+    settings: signal({ storeId: 'store-1' }),
+    hasSettings: signal(true),
+    loading: signal(false),
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
         { provide: SellerProductService, useValue: mockProductService },
+        { provide: StoreSettingsStore, useValue: mockStoreSettingsStore },
       ],
     });
 

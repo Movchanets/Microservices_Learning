@@ -8,6 +8,18 @@ import { isPlatformBrowser } from '@angular/common';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthStore } from './auth.store';
 
+/** Wait for a signal predicate to become true, with timeout. */
+function waitFor(predicate: () => boolean, timeoutMs = 5000, intervalMs = 50): Promise<boolean> {
+  return new Promise(resolve => {
+    if (predicate()) { resolve(true); return; }
+    const start = Date.now();
+    const timer = setInterval(() => {
+      if (predicate()) { clearInterval(timer); resolve(true); }
+      else if (Date.now() - start >= timeoutMs) { clearInterval(timer); resolve(false); }
+    }, intervalMs);
+  });
+}
+
 export const roleGuard = (...roles: string[]): CanActivateFn => {
   return async () => {
     const platformId = inject(PLATFORM_ID);
@@ -20,13 +32,8 @@ export const roleGuard = (...roles: string[]): CanActivateFn => {
     const authStore = inject(AuthStore);
     const router = inject(Router);
 
-    // Wait for auth to load if still loading
-    if (authStore.loading()) {
-      for (let i = 0; i < 100; i++) {
-        await new Promise(r => setTimeout(r, 100));
-        if (!authStore.loading()) break;
-      }
-    }
+    // Wait for auth to finish loading
+    await waitFor(() => !authStore.loading());
 
     const user = authStore.user();
 

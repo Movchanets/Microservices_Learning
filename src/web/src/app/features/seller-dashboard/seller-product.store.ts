@@ -1,12 +1,12 @@
 // Seller product store.
 // NgRx SignalStore managing seller product CRUD operations.
-// Loads products filtered by sellerId, handles create/update/delete.
+// Loads products filtered by sellerId, handles create/update/delete/activate/deactivate.
 
-import { computed, inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { SellerProductService } from './seller-product.service';
 import { SellerProduct, CreateProductRequest, UpdateProductRequest } from './seller.models';
+import { StoreSettingsStore } from './store-settings.store';
 
 interface SellerProductState {
   products: SellerProduct[];
@@ -32,12 +32,16 @@ export const SellerProductStore = signalStore(
     hasProducts: computed(() => store.products().length > 0),
   })),
 
-  withMethods((store, productService = inject(SellerProductService), platformId = inject(PLATFORM_ID)) => ({
+  withMethods((store, productService = inject(SellerProductService), storeSettingsStore = inject(StoreSettingsStore)) => ({
 
     async loadProducts(): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const storeId = isPlatformBrowser(platformId) ? (localStorage.getItem('storeId') || '') : '';
+        const storeId = storeSettingsStore.storeId() ?? '';
+        if (!storeId) {
+          patchState(store, { products: [], loading: false });
+          return;
+        }
         const products = await productService.getMyProducts(storeId);
         patchState(store, { products, loading: false });
       } catch {
@@ -70,18 +74,52 @@ export const SellerProductStore = signalStore(
       }
     },
 
-    async updateProduct(id: string, request: UpdateProductRequest): Promise<boolean> {
+    async updateProduct(id: string, request: UpdateProductRequest, newPrice?: number, currency?: string): Promise<boolean> {
       patchState(store, { loading: true, error: null });
       try {
         const updated = await productService.updateProduct(id, request);
+        // If price changed, call the separate price change endpoint
+        if (newPrice !== undefined && currency) {
+          await productService.changePrice(id, newPrice, currency);
+        }
+        // Reload to get fresh data including price change
+        const fresh = newPrice !== undefined ? await productService.getProductById(id) : updated;
         patchState(store, {
-          products: store.products().map(p => p.id === id ? updated : p),
-          selectedProduct: store.selectedProduct()?.id === id ? updated : store.selectedProduct(),
+          products: store.products().map(p => p.id === id ? fresh : p),
+          selectedProduct: store.selectedProduct()?.id === id ? fresh : store.selectedProduct(),
           loading: false,
         });
         return true;
       } catch {
         patchState(store, { error: 'Failed to update product', loading: false });
+        return false;
+      }
+    },
+
+    async activateProduct(id: string): Promise<boolean> {
+      patchState(store, { error: null });
+      try {
+        await productService.activateProduct(id);
+        patchState(store, {
+          products: store.products().map(p => p.id === id ? { ...p, status: 'Active' as const } : p),
+        });
+        return true;
+      } catch {
+        patchState(store, { error: 'Failed to activate product' });
+        return false;
+      }
+    },
+
+    async deactivateProduct(id: string): Promise<boolean> {
+      patchState(store, { error: null });
+      try {
+        await productService.deactivateProduct(id);
+        patchState(store, {
+          products: store.products().map(p => p.id === id ? { ...p, status: 'Inactive' as const } : p),
+        });
+        return true;
+      } catch {
+        patchState(store, { error: 'Failed to deactivate product' });
         return false;
       }
     },

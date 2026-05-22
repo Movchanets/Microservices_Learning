@@ -12,6 +12,10 @@ interface StoreApiResponse {
   description: string;
   logoUrl: string | null;
   verificationStatus: 'Pending' | 'Verified' | 'Rejected';
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  verifiedAt: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -23,60 +27,34 @@ export class StoreService {
     const store = await firstValueFrom(
       this.http.get<StoreApiResponse>(`${this.baseUrl}/seller/${sellerId}`)
     );
-    return {
-      storeId: store.id,
-      storeName: store.name,
-      description: store.description,
-      logoUrl: store.logoUrl,
-      contactEmail: '',
-      isActive: store.verificationStatus === 'Verified',
-      verificationStatus: store.verificationStatus,
-    };
+    return this.mapToSettings(store);
   }
 
   async getStoreById(storeId: string): Promise<StoreSettings> {
     const store = await firstValueFrom(
       this.http.get<StoreApiResponse>(`${this.baseUrl}/${storeId}`)
     );
-    return {
-      storeId: store.id,
-      storeName: store.name,
-      description: store.description,
-      logoUrl: store.logoUrl,
-      contactEmail: '',
-      isActive: store.verificationStatus === 'Verified',
-      verificationStatus: store.verificationStatus,
-    };
+    return this.mapToSettings(store);
   }
 
   async createStore(name: string, description: string, sellerId: string): Promise<StoreSettings> {
     const store = await firstValueFrom(
       this.http.post<StoreApiResponse>(this.baseUrl, { sellerId, name, description })
     );
-    return {
-      storeId: store.id,
-      storeName: store.name,
-      description: store.description,
-      logoUrl: store.logoUrl,
-      contactEmail: '',
-      isActive: false, // New stores start as Pending
-      verificationStatus: store.verificationStatus,
-    };
+    return this.mapToSettings(store);
   }
 
   async updateStore(storeId: string, name: string, description: string): Promise<StoreSettings> {
     const store = await firstValueFrom(
       this.http.put<StoreApiResponse>(`${this.baseUrl}/${storeId}`, { name, description })
     );
-    return {
-      storeId: store.id,
-      storeName: store.name,
-      description: store.description,
-      logoUrl: store.logoUrl,
-      contactEmail: '',
-      isActive: store.verificationStatus === 'Verified',
-      verificationStatus: store.verificationStatus,
-    };
+    return this.mapToSettings(store);
+  }
+
+  async setLogo(storeId: string, logoUrl: string): Promise<void> {
+    await firstValueFrom(
+      this.http.put<void>(`${this.baseUrl}/${storeId}/logo`, { logoUrl })
+    );
   }
 
   async getSalesSummary(): Promise<SalesSummary> {
@@ -86,6 +64,21 @@ export class StoreService {
       totalRevenue: 0,
       pendingOrders: 0,
       completedOrders: 0,
+    };
+  }
+
+  private mapToSettings(store: StoreApiResponse): StoreSettings {
+    return {
+      storeId: store.id,
+      storeName: store.name,
+      description: store.description,
+      logoUrl: store.logoUrl,
+      contactEmail: '',
+      isActive: store.verificationStatus === 'Verified',
+      verificationStatus: store.verificationStatus,
+      rejectionReason: store.rejectionReason,
+      createdAt: store.createdAt,
+      verifiedAt: store.verifiedAt,
     };
   }
 }

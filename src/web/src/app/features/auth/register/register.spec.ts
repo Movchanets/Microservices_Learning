@@ -64,7 +64,7 @@ describe('RegisterComponent', () => {
     form.controls.firstName.setValue('John');
     form.controls.lastName.setValue('Doe');
     form.controls.email.setValue('john@example.com');
-    form.controls.password.setValue('password');
+    form.controls.password.setValue('Password1!');
 
     expect(form.valid).toBe(true);
   });
@@ -79,7 +79,7 @@ describe('RegisterComponent', () => {
     component.registerForm.controls.firstName.setValue('John');
     component.registerForm.controls.lastName.setValue('Doe');
     component.registerForm.controls.email.setValue('john@example.com');
-    component.registerForm.controls.password.setValue('password');
+    component.registerForm.controls.password.setValue('Password1!');
     fixture.detectChanges();
 
     const submitButton = fixture.nativeElement.querySelector('button[type="submit"]');
@@ -90,7 +90,7 @@ describe('RegisterComponent', () => {
     component.registerForm.controls.firstName.setValue('John');
     component.registerForm.controls.lastName.setValue('Doe');
     component.registerForm.controls.email.setValue('john@example.com');
-    component.registerForm.controls.password.setValue('password');
+    component.registerForm.controls.password.setValue('Password1!');
 
     await component.onSubmit();
 
@@ -98,7 +98,7 @@ describe('RegisterComponent', () => {
       firstName: 'John',
       lastName: 'Doe',
       email: 'john@example.com',
-      password: 'password'
+      password: 'Password1!'
     });
   });
 
@@ -106,7 +106,7 @@ describe('RegisterComponent', () => {
     component.registerForm.controls.firstName.setValue('John');
     component.registerForm.controls.lastName.setValue('Doe');
     component.registerForm.controls.email.setValue('john@example.com');
-    component.registerForm.controls.password.setValue('password');
+    component.registerForm.controls.password.setValue('Password1!');
 
     // Defer the resolution to check the intermediate state
     let resolveRegister: any;

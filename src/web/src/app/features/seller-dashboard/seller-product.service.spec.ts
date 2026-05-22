@@ -31,11 +31,12 @@ describe('SellerProductService', () => {
   describe('getMyProducts', () => {
     it('should GET /api/catalog/products?storeId={storeId}', async () => {
       const mockProducts = [{ id: 'prod-1', name: 'Widget' }];
+      const mockPaged = { items: mockProducts, totalCount: 1, page: 1, pageSize: 20, totalPages: 1, hasPrevious: false, hasNext: false };
       const promise = service.getMyProducts('store-1');
 
       const req = httpMock.expectOne('/api/catalog/products?storeId=store-1');
       expect(req.request.method).toBe('GET');
-      req.flush(mockProducts);
+      req.flush(mockPaged);
 
       const result = await promise;
       expect(result).toEqual(mockProducts);

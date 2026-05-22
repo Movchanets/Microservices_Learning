@@ -31,9 +31,7 @@ const initialState: ReviewState = {
 
 export const ReviewStore = signalStore(
   withState<ReviewState>(initialState),
-  withMethods((store) => {
-    const reviewService = inject(ReviewService);
-
+  withMethods((store, reviewService = inject(ReviewService)) => {
     return {
       async loadReviews(productId: string): Promise<void> {
         patchState(store, { loading: true, error: null });
