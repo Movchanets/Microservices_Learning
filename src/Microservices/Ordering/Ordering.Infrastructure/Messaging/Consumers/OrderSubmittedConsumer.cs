@@ -1,8 +1,10 @@
 using BuildingBlocks.SharedContracts.Abstractions;
 using BuildingBlocks.SharedContracts.Events.Cart;
+using BuildingBlocks.SharedContracts.Events.Ordering;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Ordering.Domain.Aggregates;
+using Ordering.Domain.Enumerations;
 using Ordering.Domain.ValueObjects;
 
 namespace Ordering.Infrastructure.Messaging.Consumers;
@@ -15,6 +17,7 @@ namespace Ordering.Infrastructure.Messaging.Consumers;
 public sealed class OrderSubmittedConsumer(
     IOrderRepository repository,
     IUnitOfWork uow,
+    IPublishEndpoint publishEndpoint,
     ILogger<OrderSubmittedConsumer> logger) : IConsumer<OrderSubmittedEvent>
 {
     public async Task Consume(ConsumeContext<OrderSubmittedEvent> context)
@@ -45,6 +48,15 @@ public sealed class OrderSubmittedConsumer(
 
         repository.Add(order);
         await uow.SaveChangesAsync(context.CancellationToken);
+
+        // Publish Submitted status so SignalR notifies the frontend immediately.
+        // Without this, the frontend has no real-time update until InventoryReserved.
+        await publishEndpoint.Publish(new OrderStatusChangedEvent(
+            order.Id,
+            order.BuyerId,
+            OrderStatus.Submitted.ToString(),
+            null,
+            DateTime.UtcNow), context.CancellationToken);
 
         logger.LogInformation("Order entity created: OrderId={OrderId}", order.Id);
     }

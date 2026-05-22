@@ -9,7 +9,11 @@ internal static class OrderConsumerHelpers
         Guid orderId,
         CancellationToken cancellationToken)
     {
-        for (var attempt = 0; attempt < 5; attempt++)
+        // 10 attempts × 500ms = 5 seconds total window.
+        // The OrderSubmittedConsumer may race with saga-driven consumers
+        // (InventoryReserved, ProcessPayment) — the order entity must exist
+        // before projection consumers can update it.
+        for (var attempt = 0; attempt < 10; attempt++)
         {
             var order = await repository.GetByIdAsync(orderId, cancellationToken);
             if (order is not null)
@@ -17,9 +21,9 @@ internal static class OrderConsumerHelpers
                 return order;
             }
 
-            if (attempt < 4)
+            if (attempt < 9)
             {
-                await Task.Delay(200, cancellationToken);
+                await Task.Delay(500, cancellationToken);
             }
         }
 

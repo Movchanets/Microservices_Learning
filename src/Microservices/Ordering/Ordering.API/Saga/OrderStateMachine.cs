@@ -69,6 +69,15 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                     ctx.Saga.OrderId,
                     ctx.Saga.TotalAmount,
                     ctx.Saga.BuyerId))
+                // Publish status event so the Ordering projection consumer
+                // can update the Order entity — this MUST be a separate event,
+                // NOT ProcessPaymentCommand which is consumed by the Payment service.
+                .Publish(ctx => new OrderStatusChangedEvent(
+                    ctx.Saga.OrderId,
+                    ctx.Saga.BuyerId,
+                    "PaymentProcessing",
+                    null,
+                    DateTime.UtcNow))
                 .TransitionTo(ProcessingPayment),
 
             When(InventoryFailed)

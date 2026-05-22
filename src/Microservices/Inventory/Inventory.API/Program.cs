@@ -44,7 +44,6 @@ builder.Services.AddMassTransit(x =>
     x.AddEntityFrameworkOutbox<InventoryDbContext>(o =>
     {
         o.UsePostgres();
-        o.UseBusOutbox();
     });
 
     x.AddConsumer<ReserveInventoryConsumer>();

@@ -127,6 +127,7 @@ export const CartStore = signalStore(
         });
       } catch (err: unknown) {
         patchState(store, { error: 'Checkout failed', loading: false });
+        throw err; // Re-throw so CheckoutStore.submitCheckout() can handle it
       }
     },
 

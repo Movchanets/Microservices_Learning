@@ -135,6 +135,25 @@ public class Worker : BackgroundService
                 await inventorySeeder.EnsureInventoryStockedAsync(product, token, ids.StoreId, ids.ProductId, stoppingToken);
             }
 
+            // 7. Run end-to-end order flow (add to cart → checkout → poll status)
+            _logger.LogInformation("Waiting for inventory events to propagate...");
+            await Task.Delay(3000, stoppingToken);
+
+            var buyerUser = users.First(u => u.Role == "Buyer");
+            var orderFlowSeeder = new OrderFlowSeeder(httpClient, _logger);
+
+            try
+            {
+                var (buyerToken, buyerId) = await orderFlowSeeder.EnsureBuyerAsync(buyerUser, stoppingToken);
+                _logger.LogInformation("Buyer ready: {BuyerId}", buyerId);
+
+                await orderFlowSeeder.RunOrderFlowAsync(buyerToken, productIds, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Order flow seeder failed (non-fatal — seeding already complete).");
+            }
+
             _logger.LogInformation("Seeding completed successfully.");
         }
         catch (Exception ex)

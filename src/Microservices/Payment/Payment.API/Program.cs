@@ -54,7 +54,6 @@ builder.Services.AddMassTransit(x =>
     x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>
     {
         o.UsePostgres();
-        o.UseBusOutbox();
     });
 
     x.UsingRabbitMq((context, cfg) =>

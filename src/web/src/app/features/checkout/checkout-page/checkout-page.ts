@@ -27,8 +27,6 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   private readonly notifications = inject(NotificationService);
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  submitted = signal(false);
-  pollingExpired = signal(false);
 
   // Accordion state
   activeSection = signal<'address' | 'shipping' | 'summary' | 'payment'>('address');
@@ -47,7 +45,7 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
     // so the UI always reflects the real status, even if the BFF is down.
     effect(() => {
       const update = this.notifications.orderUpdates();
-      if (update && this.submitted()) {
+      if (update && this.checkoutStore.submitted()) {
         if (!this.checkoutStore.hasOrder()) {
           // First update — create order directly from SignalR data
           this.checkoutStore.setOrder({
@@ -85,10 +83,8 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
     // Only reset if there's no in-flight checkout. If an order is already
     // tracked (from SignalR or fallback poll) or submission is in progress,
     // preserve the state so the user sees the status after navigation.
-    if (!this.checkoutStore.hasOrder() && !this.submitted()) {
+    if (!this.checkoutStore.hasOrder() && !this.checkoutStore.submitted()) {
       this.checkoutStore.reset();
-      this.submitted.set(false);
-      this.pollingExpired.set(false);
     }
   }
 
@@ -111,16 +107,12 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   }
 
   onConfirm(): void {
-    this.submitted.set(true);
-
     // Fire checkout without blocking UI — the endpoint returns 202 Accepted
     // almost immediately. SignalR delivers the real order status updates.
+    // submitCheckout() sets submitted=true internally on success.
     this.checkoutStore.submitCheckout().then(() => {
-      // If the HTTP call returned an error (e.g. 400 Bad Request), reset
-      // so the user can fix their input and try again.
-      if (this.checkoutStore.error()) {
-        this.submitted.set(false);
-      }
+      // If the HTTP call returned an error, submitCheckout already set
+      // submitted=false in its catch block, so the user can retry.
     });
 
     // Fallback: poll after 15s in case SignalR misses the update
@@ -143,13 +135,12 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
         }
       } catch { /* ignore */ }
 
-      this.pollingExpired.set(true);
+      this.checkoutStore.setPollingExpired(true);
     }, 15000);
   }
 
   retryCheckout(): void {
-    this.submitted.set(false);
-    this.pollingExpired.set(false);
+    this.checkoutStore.retryCheckout();
   }
 
   private stopPolling(): void {

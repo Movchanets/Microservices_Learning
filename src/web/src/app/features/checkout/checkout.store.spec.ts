@@ -1,7 +1,7 @@
 // CheckoutStore unit tests.
 // Tests the checkout submission flow: delegates to CartStore.checkout(), tracks
-// submitting/error state, handles empty cart validation and checkout failures.
-// Also covers setOrder and reset state management.
+// submitting/error/submitted state, handles empty cart validation and checkout failures.
+// Also covers setOrder, reset, retryCheckout, and setPollingExpired state management.
 
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
@@ -39,6 +39,8 @@ describe('CheckoutStore', () => {
     expect(store.order()).toBeNull();
     expect(store.hasOrder()).toBe(false);
     expect(store.orderStatus()).toBeNull();
+    expect(store.submitted()).toBe(false);
+    expect(store.pollingExpired()).toBe(false);
   });
 
   describe('submitCheckout', () => {
@@ -51,6 +53,7 @@ describe('CheckoutStore', () => {
       expect(mockCartStore.checkout).toHaveBeenCalled();
       expect(store.submitting()).toBe(false);
       expect(store.error()).toBeNull();
+      expect(store.submitted()).toBe(true);
     });
 
     it('should set submitting during checkout', async () => {
@@ -86,7 +89,7 @@ describe('CheckoutStore', () => {
       expect(mockCartStore.checkout).not.toHaveBeenCalled();
     });
 
-    it('should set error when checkout fails', async () => {
+    it('should set error and reset submitted when checkout fails', async () => {
       store.setAddress(testAddress);
       mockCartStore.checkout.mockRejectedValueOnce(new Error('Network error'));
 
@@ -94,6 +97,7 @@ describe('CheckoutStore', () => {
 
       expect(store.error()).toBe('Checkout failed. Please try again.');
       expect(store.submitting()).toBe(false);
+      expect(store.submitted()).toBe(false);
     });
   });
 
@@ -109,6 +113,26 @@ describe('CheckoutStore', () => {
     });
   });
 
+  describe('retryCheckout', () => {
+    it('should reset submitted, pollingExpired, and error', () => {
+      store.retryCheckout();
+
+      expect(store.submitted()).toBe(false);
+      expect(store.pollingExpired()).toBe(false);
+      expect(store.error()).toBeNull();
+    });
+  });
+
+  describe('setPollingExpired', () => {
+    it('should set pollingExpired flag', () => {
+      store.setPollingExpired(true);
+      expect(store.pollingExpired()).toBe(true);
+
+      store.setPollingExpired(false);
+      expect(store.pollingExpired()).toBe(false);
+    });
+  });
+
   describe('reset', () => {
     it('should reset to initial state', () => {
       store.setOrder({ id: 'order-1' } as any);
@@ -117,6 +141,8 @@ describe('CheckoutStore', () => {
       expect(store.order()).toBeNull();
       expect(store.submitting()).toBe(false);
       expect(store.error()).toBeNull();
+      expect(store.submitted()).toBe(false);
+      expect(store.pollingExpired()).toBe(false);
     });
   });
 });

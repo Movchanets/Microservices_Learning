@@ -56,7 +56,7 @@ builder.Services.AddMassTransit(x =>
     // Consumer that creates Order entity from OrderSubmittedEvent
     x.AddConsumer<OrderSubmittedConsumer>();
     x.AddConsumer<OrderInventoryReservedConsumer>();
-    x.AddConsumer<OrderPaymentProcessingConsumer>();
+    x.AddConsumer<OrderStatusProjectionConsumer>();
     x.AddConsumer<OrderCompletedProjectionConsumer>();
     x.AddConsumer<OrderCancelledProjectionConsumer>();
 
@@ -72,7 +72,6 @@ builder.Services.AddMassTransit(x =>
     x.AddEntityFrameworkOutbox<OrderingDbContext>(o =>
     {
         o.UsePostgres();
-        o.UseBusOutbox();
     });
 
     x.UsingRabbitMq((context, cfg) =>

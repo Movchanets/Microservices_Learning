@@ -35,11 +35,15 @@ describe('CheckoutPageComponent', () => {
     shippingMethod: signal<'standard' | 'express'>('standard'),
     hasOrder: signal(false),
     orderStatus: signal<string | null>(null),
+    submitted: signal(false),
+    pollingExpired: signal(false),
     submitCheckout: vi.fn().mockResolvedValue(undefined),
     reset: vi.fn(),
     setOrder: vi.fn(),
     setAddress: vi.fn(),
     setShippingMethod: vi.fn(),
+    retryCheckout: vi.fn(),
+    setPollingExpired: vi.fn(),
   };
 
   const mockOrderStore = {
@@ -96,33 +100,15 @@ describe('CheckoutPageComponent', () => {
     expect(mockCheckoutStore.reset).toHaveBeenCalled();
   });
 
-  it('should set submitted and fire checkout without blocking', () => {
+  it('should fire checkout without blocking', () => {
     // onConfirm should return immediately (void, not Promise)
     const result = component.onConfirm();
     expect(result).toBeUndefined();
-    expect(component.submitted()).toBe(true);
     expect(mockCheckoutStore.submitCheckout).toHaveBeenCalled();
   });
 
-  it('should reset submitted on checkout error', async () => {
-    mockCheckoutStore.submitCheckout.mockResolvedValueOnce(undefined);
-    mockCheckoutStore.error = signal('Cart is empty');
-
-    component.onConfirm();
-    expect(component.submitted()).toBe(true);
-
-    // Wait for the .then() callback
-    await new Promise((r) => setTimeout(r, 0));
-    expect(component.submitted()).toBe(false);
-  });
-
-  it('should reset state on retryCheckout', () => {
-    component.submitted.set(true);
-    component.pollingExpired.set(true);
-
+  it('should delegate retryCheckout to store', () => {
     component.retryCheckout();
-
-    expect(component.submitted()).toBe(false);
-    expect(component.pollingExpired()).toBe(false);
+    expect(mockCheckoutStore.retryCheckout).toHaveBeenCalled();
   });
 });

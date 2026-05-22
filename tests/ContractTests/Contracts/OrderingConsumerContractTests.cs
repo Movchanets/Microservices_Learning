@@ -66,7 +66,7 @@ public class OrderingConsumerContractTests
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         var consumer = new OrderSubmittedConsumer(
-            repositoryMock.Object, uowMock.Object, Mock.Of<ILogger<OrderSubmittedConsumer>>());
+            repositoryMock.Object, uowMock.Object, Mock.Of<IPublishEndpoint>(), Mock.Of<ILogger<OrderSubmittedConsumer>>());
 
         // Act
         await consumer.Consume(consumeContext.Object);
@@ -112,7 +112,7 @@ public class OrderingConsumerContractTests
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         var consumer = new OrderSubmittedConsumer(
-            repositoryMock.Object, uowMock.Object, Mock.Of<ILogger<OrderSubmittedConsumer>>());
+            repositoryMock.Object, uowMock.Object, Mock.Of<IPublishEndpoint>(), Mock.Of<ILogger<OrderSubmittedConsumer>>());
 
         // Act
         await consumer.Consume(consumeContext.Object);
@@ -156,7 +156,7 @@ public class OrderingConsumerContractTests
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         var consumer = new OrderSubmittedConsumer(
-            repositoryMock.Object, uowMock.Object, Mock.Of<ILogger<OrderSubmittedConsumer>>());
+            repositoryMock.Object, uowMock.Object, Mock.Of<IPublishEndpoint>(), Mock.Of<ILogger<OrderSubmittedConsumer>>());
 
         // Act
         await consumer.Consume(consumeContext.Object);

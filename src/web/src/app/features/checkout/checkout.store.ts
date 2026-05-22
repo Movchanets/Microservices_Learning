@@ -9,6 +9,8 @@ interface CheckoutState {
   submitting: boolean;
   error: string | null;
   order: Order | null;
+  submitted: boolean;
+  pollingExpired: boolean;
 }
 
 const initialState: CheckoutState = {
@@ -17,6 +19,8 @@ const initialState: CheckoutState = {
   submitting: false,
   error: null,
   order: null,
+  submitted: false,
+  pollingExpired: false,
 };
 
 export const CheckoutStore = signalStore(
@@ -51,7 +55,7 @@ export const CheckoutStore = signalStore(
         return;
       }
 
-      patchState(store, { submitting: true, error: null });
+      patchState(store, { submitting: true, error: null, submitted: true });
 
       try {
         await cartStore.checkout(address);
@@ -60,12 +64,21 @@ export const CheckoutStore = signalStore(
         patchState(store, {
           error: 'Checkout failed. Please try again.',
           submitting: false,
+          submitted: false,
         });
       }
     },
 
     setOrder(order: Order): void {
       patchState(store, { order });
+    },
+
+    setPollingExpired(expired: boolean): void {
+      patchState(store, { pollingExpired: expired });
+    },
+
+    retryCheckout(): void {
+      patchState(store, { submitted: false, pollingExpired: false, error: null });
     },
 
     reset(): void {

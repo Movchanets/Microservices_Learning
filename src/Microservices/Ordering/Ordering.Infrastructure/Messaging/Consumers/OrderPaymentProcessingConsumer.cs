@@ -29,7 +29,20 @@ public sealed class OrderPaymentProcessingConsumer(
 
         if (order.Status == OrderStatus.Submitted)
         {
+            // Compensation: OrderInventoryReservedConsumer failed (e.g., race condition).
+            // Fast-forward the status so the order doesn't get stuck.
+            logger.LogWarning(
+                "Order {OrderId} is still Submitted when ProcessPayment arrived — fast-forwarding to InventoryReserved",
+                order.Id);
             order.MarkInventoryReserved();
+
+            // Publish the missed InventoryReserved event so the frontend gets the SignalR update
+            await publishEndpoint.Publish(new OrderStatusChangedEvent(
+                order.Id,
+                order.BuyerId,
+                OrderStatus.InventoryReserved.ToString(),
+                null,
+                DateTime.UtcNow), context.CancellationToken);
         }
 
         if (order.Status == OrderStatus.InventoryReserved)
