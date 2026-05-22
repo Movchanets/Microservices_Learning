@@ -39,7 +39,7 @@ builder.Services.AddMassTransit(x =>
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration.GetConnectionString("messaging"));
-        cfg.ConfigureEndpoints(context);
+        cfg.ConfigureEndpoints(context, new KebabCaseEndpointNameFormatter("search", false));
     });
 });
 

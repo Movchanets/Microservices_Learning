@@ -48,6 +48,8 @@ builder.Services.AddValidatorsFromAssembly(typeof(CheckoutCartCommand).Assembly)
 // MassTransit
 builder.Services.AddMassTransit(x =>
 {
+    x.SetKebabCaseEndpointNameFormatter();
+
     // Product price sync consumers from Catalog events
     x.AddConsumer<ProductCreatedConsumer>();
     x.AddConsumer<ProductUpdatedConsumer>();
@@ -64,7 +66,13 @@ builder.Services.AddMassTransit(x =>
             cfg.Host(connectionString);
         }
 
-        cfg.ConfigureEndpoints(context);
+        cfg.UseMessageRetry(r =>
+        {
+            r.Incremental(5, TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100));
+            r.Handle<DbUpdateException>();
+        });
+
+        cfg.ConfigureEndpoints(context, new KebabCaseEndpointNameFormatter("cart", false));
     });
 });
 

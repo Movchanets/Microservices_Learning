@@ -95,15 +95,13 @@ public static class StoreEndpoints
         .Produces<StoreDto>()
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Verify/reject seller (admin only)
+        // Verify seller (admin only)
         group.MapPost("/{id:guid}/verify", async (
             Guid id,
-            VerifySellerCommand command,
             ISender sender,
             CancellationToken ct) =>
         {
-            var cmd = command with { StoreId = id };
-            var result = await sender.Send(cmd, ct);
+            var result = await sender.Send(new VerifySellerCommand(id, true, null), ct);
             return result.IsSuccess
                 ? Results.Ok(new { StoreId = result.Value })
                 : Results.BadRequest(new { result.Error, result.ErrorCode });

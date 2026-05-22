@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\Microservices\Notification\Notification.Worker\Notification.Worker.csproj" />
     <ProjectReference Include="..\..\Microservices\StoreManagement\StoreManagement.API\StoreManagement.API.csproj" />
     <ProjectReference Include="..\..\Microservices\Media\Media.API\Media.API.csproj" />
+    <ProjectReference Include="..\..\Tools\Seeder.App\Seeder.App.csproj" />
   </ItemGroup>
 
 </Project>

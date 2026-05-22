@@ -2,6 +2,7 @@ using BuildingBlocks.Infrastructure.Models;
 using Catalog.Application.DTOs;
 using Catalog.Application.Interfaces;
 using Catalog.Domain.Enums;
+using Catalog.Domain.ValueObjects;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,31 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
             .AsNoTracking()
             .Include(p => p.Category)
             .Where(p => p.Id == id && p.Status != ProductStatus.Deleted)
+            .Select(p => new ProductDto(
+                p.Id,
+                p.Name,
+                p.Description,
+                p.Price.Amount,
+                p.Price.Currency,
+                p.Sku.Value,
+                p.CategoryId,
+                p.Category != null ? p.Category.Name : "",
+                p.Status.ToString(),
+                p.ImageUrl,
+                p.StoreId,
+                p.Tags,
+                p.CreatedAt,
+                p.UpdatedAt))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<ProductDto?> GetBySkuAsync(string sku, CancellationToken ct = default)
+    {
+        var skuVo = Sku.Create(sku);
+        return await context.Products
+            .AsNoTracking()
+            .Include(p => p.Category)
+            .Where(p => p.Sku == skuVo && p.Status != ProductStatus.Deleted)
             .Select(p => new ProductDto(
                 p.Id,
                 p.Name,

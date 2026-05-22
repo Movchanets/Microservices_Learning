@@ -94,4 +94,7 @@
     <Project Path="tests/UnitTests/Search.UnitTests/Search.UnitTests.csproj" />
     <Project Path="tests/UnitTests/StoreManagement.UnitTests/StoreManagement.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/src/Tools/">
+    <Project Path="src/Tools/Seeder.App/Seeder.App.csproj" />
+  </Folder>
 </Solution>

@@ -39,6 +39,8 @@ builder.Services.AddMediatR(cfg =>
 // MassTransit
 builder.Services.AddMassTransit(x =>
 {
+    x.SetKebabCaseEndpointNameFormatter();
+
     x.AddEntityFrameworkOutbox<InventoryDbContext>(o =>
     {
         o.UsePostgres();
@@ -60,7 +62,7 @@ builder.Services.AddMassTransit(x =>
             cfg.Host(connectionString);
         }
 
-        cfg.ConfigureEndpoints(context);
+        cfg.ConfigureEndpoints(context, new KebabCaseEndpointNameFormatter("inventory", false));
     });
 });
 
@@ -85,33 +87,6 @@ app.UseAuthorization();
 
 app.MapInventoryEndpoints();
 
-if (app.Environment.IsDevelopment())
-{
-    // Drop & re-create DB in dev to handle replaced migrations and stale
-    // seed data (old items with placeholder ProductIds).
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-    db.Database.EnsureDeleted();
-    db.Database.Migrate();
-}
-
 app.ApplyMigrations();
 
-// CRITICAL: Start the app BEFORE seeding. MassTransit consumers must be
-// running so they can process ProductUpdatedEvent from the Catalog service
-// and create inventory items with correct ProductIds. The seed retry loop
-// then finds those items and adds stock quantities.
-await app.StartAsync();
-
-try
-{
-    await app.SeedDataAsync();
-}
-catch (Exception ex)
-{
-    var logger = app.Services.GetRequiredService<ILoggerFactory>()
-        .CreateLogger("Inventory.Startup");
-    logger.LogError(ex, "Inventory seed failed — items may lack stock quantities.");
-}
-
-await app.WaitForShutdownAsync();
+app.Run();

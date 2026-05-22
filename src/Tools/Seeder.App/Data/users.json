@@ -1,0 +1,6 @@
+[
+  { "Email": "admin@marketplace.com", "Password": "P@ssw0rd123!", "FirstName": "Admin", "LastName": "User", "Role": "Admin" },
+  { "Email": "buyer@marketplace.com", "Password": "P@ssw0rd123!", "FirstName": "Test", "LastName": "Buyer", "Role": "Buyer" },
+  { "Email": "store.tech@marketplace.com", "Password": "P@ssw0rd123!", "FirstName": "Tech", "LastName": "Store", "Role": "Seller" },
+  { "Email": "store.home@marketplace.com", "Password": "P@ssw0rd123!", "FirstName": "Home", "LastName": "Store", "Role": "Seller" }
+]

@@ -59,11 +59,6 @@ var app = builder.Build();
 
 app.ApplyMigrations();
 
-if (app.Environment.IsDevelopment())
-{
-    await app.SeedDataAsync();
-}
-
 // ── Middleware pipeline ─────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.MapDefaultEndpoints(); // health checks

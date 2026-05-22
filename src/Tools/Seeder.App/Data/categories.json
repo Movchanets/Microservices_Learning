@@ -1,0 +1,7 @@
+[
+  { "Name": "Electronics", "Description": "Devices and gadgets" },
+  { "Name": "Home & Kitchen", "Description": "Home essentials and kitchen tools" },
+  { "Name": "Clothing", "Description": "Apparel and accessories" },
+  { "Name": "Sports & Outdoors", "Description": "Fitness gear and outdoor equipment" },
+  { "Name": "Books", "Description": "Fiction, non-fiction, and technical books" }
+]

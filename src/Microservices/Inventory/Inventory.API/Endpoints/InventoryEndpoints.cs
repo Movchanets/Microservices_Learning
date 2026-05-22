@@ -71,9 +71,35 @@ public static class InventoryEndpoints
             return Results.Ok(items.Select(i => new { i.Id, i.Sku, i.AvailableQuantity }));
         })
         .RequireAuthorization();
+
+        // Idempotent: upsert stock quantity by SKU (creates item if not exists)
+        group.MapPut("/items/{sku}/stock", async (
+            string sku,
+            [FromBody] SetStockRequest request,
+            [FromServices] IInventoryItemRepository repository,
+            [FromServices] IUnitOfWork uow,
+            CancellationToken ct) =>
+        {
+            var item = await repository.GetBySkuAsync(sku, ct);
+            if (item is null)
+            {
+                item = InventoryItem.Create(sku, request.Quantity, request.StoreId, request.ProductId);
+                repository.Add(item);
+            }
+            else
+            {
+                var diff = request.Quantity - item.AvailableQuantity;
+                if (diff > 0) item.AddStock(diff);
+            }
+
+            await uow.SaveChangesAsync(ct);
+            return Results.Ok();
+        })
+        .RequireAuthorization();
     }
 }
 
 public record CreateInventoryItemRequest(string Sku, int InitialQuantity, Guid StoreId, Guid ProductId);
 public record AddStockRequest(int Quantity);
+public record SetStockRequest(int Quantity, Guid StoreId, Guid ProductId);
 public record BatchInventoryRequest(List<string> Skus);

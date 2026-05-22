@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BuildingBlocks.Infrastructure.Models;
+using Catalog.Application.Commands.ActivateProduct;
 using Catalog.Application.Commands.ChangePrice;
 using Catalog.Application.Commands.CreateProduct;
 using Catalog.Application.Commands.CreateReview;
@@ -55,6 +56,21 @@ public static class ProductEndpoints
         .WithName("GetProductsByIds")
         .Produces<List<ProductListDto>>()
         .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // Public: get product by SKU
+        group.MapGet("/sku/{sku}", async (
+            string sku,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var product = await sender.Send(new GetProductBySkuQuery(sku), ct);
+            return product is not null
+                ? Results.Ok(product)
+                : Results.NotFound();
+        })
+        .WithName("GetProductBySku")
+        .Produces<ProductDto>()
+        .ProducesProblem(StatusCodes.Status404NotFound);
 
         // Public: list products
         group.MapGet("/", async (
@@ -155,6 +171,22 @@ public static class ProductEndpoints
         })
         .WithName("GetProductRecommendations")
         .Produces<List<ProductListDto>>();
+
+        // Authorized: activate product
+        group.MapPut("/{id:guid}/activate", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new ActivateProductCommand(id), ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.NotFound();
+        })
+        .WithName("ActivateProduct")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound);
 
         // Authorized: soft-delete product
         group.MapDelete("/{id:guid}", async (

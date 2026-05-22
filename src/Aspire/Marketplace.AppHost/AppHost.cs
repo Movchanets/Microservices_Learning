@@ -26,7 +26,7 @@ var redis = builder.AddRedis("redis")
 // RabbitMQ — message broker for MassTransit
 var messaging = builder.AddRabbitMQ("messaging")
     .WithManagementPlugin();
-    
+
 
 // ──────────────────────────────────────────────
 // Elasticsearch — used by Search.API
@@ -64,7 +64,6 @@ var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
     .WaitFor(catalogDb)
     .WithReference(messaging)
     .WaitFor(messaging)
-    .WaitFor(searchApi)
     .WithEnvironment("Jwt__Issuer", "marketplace-identity")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
@@ -212,5 +211,10 @@ var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
     // port: 4201 exposes the Aspire proxy on localhost:4201 so they don't clash.
     .WithHttpEndpoint(targetPort: 4200, port: 4201, name: "http")
     .WithExternalHttpEndpoints();
+
+var seederApp = builder.AddProject<Projects.Seeder_App>("seeder-app")
+    .WithReference(gateway)
+    .WaitFor(gateway)
+    .WithEnvironment("ApiBaseUrl", gateway.GetEndpoint("http"));
 
 builder.Build().Run();
