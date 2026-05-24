@@ -69,6 +69,7 @@ builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("Seller", policy => policy.RequireRole("Seller", "Admin"));
 });
 
 // ── OpenAPI ─────────────────────────────────────────────

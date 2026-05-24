@@ -31,9 +31,14 @@ export class HomePage extends BasePage {
     return tiles.count();
   }
 
-  async clickCategoryTile(name: string) {
-    const tile = this.categoryTiles.getByRole('button', { name }).or(this.categoryTiles.getByRole('link', { name }));
-    await tile.click();
+  async clickCategoryTile(nameOrIndex: string | number) {
+    if (typeof nameOrIndex === 'number') {
+      const tile = this.categoryTiles.locator('a, button').nth(nameOrIndex);
+      await tile.click();
+    } else {
+      const tile = this.categoryTiles.getByRole('button', { name: nameOrIndex }).or(this.categoryTiles.getByRole('link', { name: nameOrIndex }));
+      await tile.click();
+    }
   }
 
   async getFeaturedProductCount(): Promise<number> {

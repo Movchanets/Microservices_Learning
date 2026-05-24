@@ -89,8 +89,8 @@ public static class AuthEndpoints
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             var result = await sender.Send(command with { UserId = Guid.Parse(userId!) }, ct);
-            return result.IsSuccess 
-                ? Results.Ok() 
+            return result.IsSuccess
+                ? Results.Ok()
                 : Results.BadRequest(new { result.Error, result.ErrorCode });
         })
         .WithName("ChangePassword")

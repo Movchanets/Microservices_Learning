@@ -18,19 +18,11 @@ export class RegisterPage extends BasePage {
   }
 
   async register(firstName: string, lastName: string, email: string, password: string) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await this.fillStable(this.firstNameInput, firstName);
-      await this.fillStable(this.lastNameInput, lastName);
-      await this.fillStable(this.emailInput, email);
-      await this.fillStable(this.passwordInput, password);
-
-      if (await this.registerSubmitBtn.isEnabled()) {
-        await this.registerSubmitBtn.click();
-        return;
-      }
-    }
-
-    await expect(this.registerSubmitBtn).toBeEnabled({ timeout: 3000 });
-    await this.registerSubmitBtn.click();
+    await this.submitWithRetry(this.registerSubmitBtn, [
+      { input: this.firstNameInput, value: firstName },
+      { input: this.lastNameInput, value: lastName },
+      { input: this.emailInput, value: email },
+      { input: this.passwordInput, value: password },
+    ]);
   }
 }

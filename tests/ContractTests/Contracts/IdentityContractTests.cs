@@ -48,7 +48,7 @@ public class IdentityContractTests
         await consumer.Consume(consumeContext.Object);
 
         // Assert
-        user.Role.Should().Be(UserRole.Seller);
+        user.Role.Should().HaveFlag(UserRole.Seller);
         uowMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -140,7 +140,7 @@ public class IdentityContractTests
         await consumer.Consume(consumeContext.Object);
 
         // Assert - only role changed
-        user.Role.Should().Be(UserRole.Seller);
+        user.Role.Should().HaveFlag(UserRole.Seller);
         user.Email.Value.Should().Be(originalEmail);
         user.FirstName.Should().Be(originalFirstName);
     }

@@ -40,7 +40,7 @@ export class ProductDetailEnhancedPage extends BasePage {
     // Buy box
     this.buyBox = page.locator('app-buy-box');
     this.quantityInput = page.getByTestId('quantity-input').or(this.buyBox.locator('input[type="number"]'));
-    this.addToCartBtn = page.getByRole('button', { name: /add to cart/i });
+    this.addToCartBtn = this.buyBox.getByRole('button', { name: /add to cart/i });
     this.stockIndicator = page.locator('app-stock-indicator');
 
     // Reviews

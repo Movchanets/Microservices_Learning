@@ -101,16 +101,18 @@ public sealed class UserTests
     }
 
     /// <summary>
-    /// Tests that a <see cref="UserRoleChangedEvent"/> is raised when the user's role is successfully changed.
+    /// Tests that a <see cref="UserRoleChangedEvent"/> is raised when a role is added to the user.
     /// </summary>
     [Fact]
-    public void ChangeRole_WhenRoleChanges_ShouldRaiseUserRoleChangedEvent()
+    public void AddRole_WhenRoleAdded_ShouldRaiseUserRoleChangedEvent()
     {
         var user = User.Create("buyer@example.com", "hashed-password", "Jane", "Doe");
 
-        user.ChangeRole(UserRole.Seller);
+        user.AddRole(UserRole.Seller);
 
-        user.Role.Should().Be(UserRole.Seller);
+        user.Role.Should().Be(UserRole.Buyer | UserRole.Seller);
+        user.Role.HasFlag(UserRole.Seller).Should().BeTrue();
+        user.Role.HasFlag(UserRole.Buyer).Should().BeTrue();
         var roleChangedEvent = user.DomainEvents
             .Should().ContainSingle(x => x is UserRoleChangedEvent)
             .Which
@@ -118,7 +120,7 @@ public sealed class UserTests
             .Subject;
         roleChangedEvent.UserId.Should().Be(user.Id);
         roleChangedEvent.OldRole.Should().Be(nameof(UserRole.Buyer));
-        roleChangedEvent.NewRole.Should().Be(nameof(UserRole.Seller));
+        roleChangedEvent.NewRole.Should().Contain("Seller");
     }
 
     /// <summary>

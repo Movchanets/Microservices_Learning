@@ -30,7 +30,7 @@ public static class OrderEndpoints
             var buyerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(buyerId)) return Results.Unauthorized();
             var cmd = new CreateOrderCommand(
-                buyerId, 
+                buyerId,
                 request.Items,
                 request.ShippingAddressLine1,
                 request.ShippingAddressLine2,

@@ -93,17 +93,31 @@ public sealed class User : AggregateRoot
     }
 
     /// <summary>
-    /// Changes the role of the user.
+    /// Adds a role to the user (bitwise OR). Users can hold multiple roles.
     /// </summary>
-    /// <param name="newRole">The new role to assign to the user.</param>
-    public void ChangeRole(UserRole newRole)
+    /// <param name="roleToAdd">The role to add.</param>
+    public void AddRole(UserRole roleToAdd)
     {
-        if (Role == newRole) return;
+        if (Role.HasFlag(roleToAdd)) return;
 
-        var oldRole = Role.ToString();
-        Role = newRole;
+        var oldRoles = Role.ToString();
+        Role |= roleToAdd;
 
-        AddDomainEvent(new UserRoleChangedEvent(Id, oldRole, newRole.ToString()));
+        AddDomainEvent(new UserRoleChangedEvent(Id, oldRoles, Role.ToString()));
+    }
+
+    /// <summary>
+    /// Removes a role from the user (bitwise AND NOT).
+    /// </summary>
+    /// <param name="roleToRemove">The role to remove.</param>
+    public void RemoveRole(UserRole roleToRemove)
+    {
+        if (!Role.HasFlag(roleToRemove)) return;
+
+        var oldRoles = Role.ToString();
+        Role &= ~roleToRemove;
+
+        AddDomainEvent(new UserRoleChangedEvent(Id, oldRoles, Role.ToString()));
     }
 
     /// <summary>

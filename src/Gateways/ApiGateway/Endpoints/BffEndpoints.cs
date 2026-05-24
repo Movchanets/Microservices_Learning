@@ -2,6 +2,7 @@ using ApiGateway.Contracts;
 using ApiGateway.Helpers;
 using ApiGateway.Services;
 using Microsoft.AspNetCore.Authentication;
+using System.Linq;
 using System.Security.Claims;
 
 namespace ApiGateway.Endpoints;
@@ -114,7 +115,7 @@ public static class BffEndpoints
                 email = ctx.User.FindFirstValue("email") ?? ctx.User.FindFirstValue(ClaimTypes.Email),
                 firstName = ctx.User.FindFirstValue("firstName"),
                 lastName = ctx.User.FindFirstValue("lastName"),
-                role = ctx.User.FindFirstValue(ClaimTypes.Role)
+                role = string.Join(", ", ctx.User.FindAll(ClaimTypes.Role).Select(c => c.Value))
             });
         })
         .RequireAuthorization()

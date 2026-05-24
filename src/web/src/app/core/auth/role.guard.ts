@@ -37,8 +37,12 @@ export const roleGuard = (...roles: string[]): CanActivateFn => {
 
     const user = authStore.user();
 
-    if (user && roles.includes(user.role)) {
-      return true;
+    if (user) {
+      // Multi-role: user.role is comma-separated (e.g., "Buyer, Seller")
+      const userRoles = user.role.split(',').map(r => r.trim());
+      if (roles.some(required => userRoles.includes(required))) {
+        return true;
+      }
     }
 
     return router.createUrlTree(['/']);

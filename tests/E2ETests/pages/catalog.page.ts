@@ -39,7 +39,7 @@ export class CatalogPage extends BasePage {
     this.priceMaxInput = this.searchFacets.getByPlaceholder(/max/i);
     this.inStockCheckbox = this.searchFacets.getByRole('checkbox');
     this.productCount = page.getByText(/\d+ product/i);
-    this.emptyState = page.getByText(/no products found|no results/i);
+    this.emptyState = page.getByText(/no products found|no results|no items found|nothing found/i);
     this.loadingSkeleton = page.locator('.animate-pulse');
 
     // Pagination

@@ -49,7 +49,7 @@ public class CategorySeeder
         {
             return await response.Content.ReadFromJsonAsync<List<CategoryDto>>(cancellationToken: ct) ?? new List<CategoryDto>();
         }
-        
+
         var error = await response.Content.ReadAsStringAsync(ct);
         _logger.LogWarning("Failed to fetch existing categories: {StatusCode} - {Error}", response.StatusCode, error);
         return new List<CategoryDto>();

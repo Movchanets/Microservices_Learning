@@ -27,7 +27,7 @@ public sealed class UpdateUserRoleHandler(
             return Result<UserDto>.Failure($"Invalid role: {request.Role}", "INVALID_ROLE");
         }
 
-        user.ChangeRole(newRole);
+        user.AddRole(newRole);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<UserDto>.Success(new UserDto(

@@ -94,8 +94,8 @@ public static class UserEndpoints
             CancellationToken ct) =>
         {
             var result = await sender.Send(command with { UserId = id }, ct);
-            return result.IsSuccess 
-                ? Results.Ok(result.Value) 
+            return result.IsSuccess
+                ? Results.Ok(result.Value)
                 : Results.BadRequest(new { result.Error, result.ErrorCode });
         })
         .WithName("UpdateProfile")

@@ -51,8 +51,8 @@ public class UserSeeder
         var response = await _client.GetAsync("/api/identity/users", ct);
         if (!response.IsSuccessStatusCode)
         {
-             _logger.LogWarning("Failed to list users to promote sellers.");
-             return;
+            _logger.LogWarning("Failed to list users to promote sellers.");
+            return;
         }
 
         var allUsers = await response.Content.ReadFromJsonAsync<List<UserDto>>(cancellationToken: ct) ?? new List<UserDto>();

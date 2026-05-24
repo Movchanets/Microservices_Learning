@@ -36,7 +36,7 @@ export class ProfileHubPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.pageHeading = page.getByRole('heading', { name: /my account|profile/i });
+    this.pageHeading = page.getByRole('heading', { name: /my account|profile|my orders/i });
     this.sidebar = page.locator('aside, nav').filter({ hasText: /orders|settings|messages/i });
     this.ordersTab = page.getByRole('link', { name: /orders/i }).or(page.getByRole('button', { name: /orders/i }));
     this.settingsTab = page.getByRole('link', { name: /settings/i }).or(page.getByRole('button', { name: /settings/i }));
@@ -50,14 +50,14 @@ export class ProfileHubPage extends BasePage {
     this.orderItems = this.ordersList.locator('li, tr').filter({ has: page.locator('a') });
     this.emptyOrdersMessage = page.getByText(/no orders|no recent orders/i);
 
-    this.firstNameInput = page.getByLabel(/first name/i).or(page.getByPlaceholder(/first name/i));
-    this.lastNameInput = page.getByLabel(/last name/i).or(page.getByPlaceholder(/last name/i));
+    this.firstNameInput = page.locator('input[formcontrolname="firstName"]');
+    this.lastNameInput = page.locator('input[formcontrolname="lastName"]');
     this.emailInput = page.getByLabel(/email/i).or(page.getByPlaceholder(/email/i));
     this.saveProfileBtn = page.getByRole('button', { name: /save|update profile/i });
     this.changePasswordBtn = page.getByRole('button', { name: /change password/i });
-    this.currentPasswordInput = page.getByLabel(/current password/i);
-    this.newPasswordInput = page.getByLabel(/new password/i);
-    this.confirmPasswordInput = page.getByLabel(/confirm password/i);
+    this.currentPasswordInput = page.locator('input[formcontrolname="currentPassword"]');
+    this.newPasswordInput = page.locator('input[formcontrolname="newPassword"]');
+    this.confirmPasswordInput = page.locator('input[formcontrolname="confirmPassword"]');
     this.updatePasswordBtn = page.getByRole('button', { name: /update password/i });
 
     // Feedback messages

@@ -91,7 +91,11 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
     await catalogPage.waitForPageLoad();
 
     await catalogPage.search('zzzznonexistentproduct12345');
-    await page.waitForLoadState('domcontentloaded');
+
+    // Wait for the search API response to settle
+    await page.waitForResponse(resp => resp.url().includes('/api/catalog') || resp.url().includes('/api/search'))
+      .catch(() => {});
+    await page.waitForLoadState('networkidle').catch(() => {});
 
     const isEmpty = await catalogPage.isEmpty();
     const count = await catalogPage.getProductCount();

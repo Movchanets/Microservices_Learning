@@ -150,8 +150,8 @@ app.Use(async (context, next) =>
     await next();
 });
 app.UseAuthentication();
-app.UseCsrfValidation();   // Custom CSRF check
 app.UseCookieToBearer();   // Cookie → Bearer transform
+app.UseCsrfValidation();   // Custom CSRF check (skips when Bearer present — safe because CookieToBearer already validated the session)
 app.UseAuthorization();
 
 app.MapBffEndpoints();

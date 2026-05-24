@@ -133,6 +133,11 @@ namespace Identity.Infrastructure.Migrations
                         principalColumn: "OutboxId");
                 });
 
+            migrationBuilder.InsertData(
+                table: "users",
+                columns: new[] { "Id", "CreatedAt", "Email", "FirstName", "IsActive", "LastName", "PasswordHash", "PasswordResetToken", "PasswordResetTokenExpiresAt", "Role", "StoreId" },
+                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "admin@marketplace.com", "Admin", true, "User", "AQAAAAIAAYagAAAAEB4zoEmVNsVqNQ4IB/O/kd7FdPcJFluki3ytGV1Ef2gu7whx+k4iRXDLQHenIWjyjg==", null, null, "Admin", null });
+
             migrationBuilder.CreateIndex(
                 name: "IX_InboxState_Delivered",
                 table: "InboxState",

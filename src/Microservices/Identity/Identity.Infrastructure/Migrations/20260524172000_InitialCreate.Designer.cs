@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Identity.Infrastructure.Migrations
 {
     [DbContext(typeof(IdentityDbContext))]
-    [Migration("20260520203114_InitialCreate")]
+    [Migration("20260524172000_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -110,6 +110,19 @@ namespace Identity.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("users", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "admin@marketplace.com",
+                            FirstName = "Admin",
+                            IsActive = true,
+                            LastName = "User",
+                            PasswordHash = "AQAAAAIAAYagAAAAEB4zoEmVNsVqNQ4IB/O/kd7FdPcJFluki3ytGV1Ef2gu7whx+k4iRXDLQHenIWjyjg==",
+                            Role = "Admin"
+                        });
                 });
 
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>

@@ -34,7 +34,7 @@ public sealed class StoreVerifiedConsumer(
             return;
         }
 
-        user.ChangeRole(UserRole.Seller);
+        user.AddRole(UserRole.Seller);
         user.SetStoreId(evt.StoreId);
         await unitOfWork.SaveChangesAsync(context.CancellationToken);
 

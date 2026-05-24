@@ -48,7 +48,7 @@ public class Worker : BackgroundService
 
             await userSeeder.EnsureUserExistsAsync(techSeller, stoppingToken);
             await userSeeder.EnsureUserExistsAsync(homeSeller, stoppingToken);
-            
+
             // Promote sellers using the Admin token
             await userSeeder.PromoteSellersAsync(users, adminToken, stoppingToken);
 

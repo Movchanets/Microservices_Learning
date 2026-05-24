@@ -4,13 +4,13 @@ using MediatR;
 
 namespace Catalog.Application.Queries;
 
-public class GetCategoryTreeHandler(ICategoryRepository categoryRepository) 
+public class GetCategoryTreeHandler(ICategoryRepository categoryRepository)
     : IRequestHandler<GetCategoryTreeQuery, List<CategoryTreeDto>>
 {
     public async Task<List<CategoryTreeDto>> Handle(GetCategoryTreeQuery request, CancellationToken cancellationToken)
     {
         var activeCategoriesFromDb = await categoryRepository.GetActiveAsync(cancellationToken);
-        
+
         var activeCategories = activeCategoriesFromDb
             .Select(CategoryTreeDto.FromEntity)
             .ToList();

@@ -42,4 +42,28 @@ export abstract class BasePage {
     await input.fill(value);
     await expect(input).toHaveValue(value, { timeout: 3000 });
   }
+
+  /**
+   * Clicks a submit button with retry logic for reactive forms.
+   * Fills all provided inputs via fillStable, then waits for the button
+   * to become enabled before clicking. Retries up to 3 times.
+   */
+  protected async submitWithRetry(
+    submitBtn: Locator,
+    fields: Array<{ input: Locator; value: string }>
+  ): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      for (const { input, value } of fields) {
+        await this.fillStable(input, value);
+      }
+
+      if (await submitBtn.isEnabled()) {
+        await submitBtn.click();
+        return;
+      }
+    }
+
+    await expect(submitBtn).toBeEnabled({ timeout: 3000 });
+    await submitBtn.click();
+  }
 }

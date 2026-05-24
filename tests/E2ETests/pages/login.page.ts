@@ -16,18 +16,10 @@ export class LoginPage extends BasePage {
   }
 
   async login(email: string, password: string) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await this.fillStable(this.emailInput, email);
-      await this.fillStable(this.passwordInput, password);
-
-      if (await this.loginSubmitBtn.isEnabled()) {
-        await this.loginSubmitBtn.click();
-        return;
-      }
-    }
-
-    await expect(this.loginSubmitBtn).toBeEnabled({ timeout: 3000 });
-    await this.loginSubmitBtn.click();
+    await this.submitWithRetry(this.loginSubmitBtn, [
+      { input: this.emailInput, value: email },
+      { input: this.passwordInput, value: password },
+    ]);
   }
 
   async expectErrorMessage(message: string) {

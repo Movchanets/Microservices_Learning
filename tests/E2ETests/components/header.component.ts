@@ -37,8 +37,8 @@ export class HeaderComponent {
     this.logoutLink = page.getByTestId('nav-logout');
     this.adminLink = page.getByTestId('nav-admin');
 
-    // Mega menu
-    this.megaMenu = page.locator('app-mega-menu');
+    // Mega menu — target the visible panel div, not the host element (which has 0 dimensions)
+    this.megaMenu = page.getByTestId('mega-menu-panel');
     this.megaMenuToggle = page.getByRole('button', { name: /catalog/i }).first();
 
     // Search — scope to header to avoid matching standalone search bar on catalog page
