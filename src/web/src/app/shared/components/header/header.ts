@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/cor
 import { RouterLink, Router } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { CartStore } from '../../../features/cart/cart.store';
-import { LucideAngularModule, User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Globe } from 'lucide-angular';
+import { LucideAngularModule, User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart } from 'lucide-angular';
 import { MegaMenu } from '../mega-menu/mega-menu';
 import { SearchBarComponent } from '../search-bar/search-bar';
 
@@ -30,7 +30,6 @@ export class Header {
   readonly MenuIcon = Menu;
   readonly CartIcon = ShoppingCart;
   readonly HeartIcon = Heart;
-  readonly GlobeIcon = Globe;
 
   toggleMenu() {
     this.isMenuOpen.update((v) => !v);

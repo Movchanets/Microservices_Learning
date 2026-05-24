@@ -11,7 +11,7 @@ export default defineConfig({
 
   reporter: process.env.CI
     ? [["html"], ["junit", { outputFile: "results/junit.xml" }]]
-    : "html",
+    : [["list"], ["html"]],
 
   use: {
     baseURL: process.env.BASE_URL || "http://localhost:4200",

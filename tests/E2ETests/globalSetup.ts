@@ -59,7 +59,7 @@ async function globalSetup(config: FullConfig) {
     // Wait additional time for backend services to stabilize
     // The frontend (Angular SSR) responds before backend APIs are fully ready
     console.log('Waiting for backend services to stabilize...');
-    await new Promise(r => setTimeout(r, 10_000));
+    await new Promise(r => setTimeout(r, 30_000));
     console.log('Server is ready!');
   }
 

@@ -23,27 +23,27 @@ export class CartPage extends BasePage {
     await this.page.goto('/cart');
   }
 
-  async getCartItem(sku: string): Promise<Locator> {
-    return this.page.locator(`[data-testid="cart-item-${sku}"]`);
+  async getCartItem(productId: string): Promise<Locator> {
+    return this.page.locator(`[data-testid="cart-item-${productId}"]`);
   }
 
-  async increaseQuantity(sku: string) {
-    const item = await this.getCartItem(sku);
+  async increaseQuantity(productId: string) {
+    const item = await this.getCartItem(productId);
     await item.getByTestId('cart-item-increase').click();
   }
 
-  async decreaseQuantity(sku: string) {
-    const item = await this.getCartItem(sku);
+  async decreaseQuantity(productId: string) {
+    const item = await this.getCartItem(productId);
     await item.getByTestId('cart-item-decrease').click();
   }
 
-  async removeItem(sku: string) {
-    const item = await this.getCartItem(sku);
+  async removeItem(productId: string) {
+    const item = await this.getCartItem(productId);
     await item.getByTestId('cart-item-remove').click();
   }
 
-  async getQuantity(sku: string): Promise<string> {
-    const item = await this.getCartItem(sku);
+  async getQuantity(productId: string): Promise<string> {
+    const item = await this.getCartItem(productId);
     return item.getByTestId('cart-item-quantity').innerText();
   }
 

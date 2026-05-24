@@ -1,12 +1,12 @@
 import { checkoutTest as test, expect } from '../fixtures/checkout.fixture';
 import { createTestData, runCheckoutFlow, addToCart } from '../utils/api-helpers';
+import { CartPage } from '../pages/cart.page';
+import { CheckoutEnhancedPage } from '../pages/checkout-enhanced.page';
 
 test.describe('Full Checkout Flow', () => {
   test('register, add product to cart via API, checkout and pay', async ({
-    page,
+    browser,
     playwright,
-    cartPage,
-    checkoutEnhancedPage,
   }) => {
     // --- Step 1: Create test data environment ---
     const data = await createTestData(playwright.request, {
@@ -14,11 +14,13 @@ test.describe('Full Checkout Flow', () => {
       stockPerProduct: 50,
     });
 
-    // Copy auth cookies to the browser context
+    // Create browser context with pre-authenticated storageState
     const storageState = await data.buyerApi.storageState();
-    await page.context().addCookies(storageState.cookies);
-    await page.goto('/catalog');
-    await page.waitForLoadState('domcontentloaded');
+    const context = await browser.newContext({ storageState });
+    const page = await context.newPage();
+
+    const cartPage = new CartPage(page);
+    const checkoutEnhancedPage = new CheckoutEnhancedPage(page);
 
     // --- Step 2: Add product to cart via API ---
     await addToCart(data.buyerApi, data.products[0].sku, 1, data.products[0].price, data.store.sellerId);
@@ -27,10 +29,10 @@ test.describe('Full Checkout Flow', () => {
     await cartPage.goto();
     await cartPage.waitForPageLoad();
 
-    const isEmpty = await cartPage.isEmpty();
-    expect(isEmpty).toBe(false);
+    // Wait for hydration and cart items to load: the empty cart message should disappear
+    await expect(cartPage.emptyCartMessage).toBeHidden({ timeout: 15000 });
 
-    const cartItem = await cartPage.getCartItem(data.products[0].sku);
+    const cartItem = await cartPage.getCartItem(data.products[0].id);
     await expect(cartItem).toBeVisible({ timeout: 5000 });
 
     // --- Step 4: Proceed to checkout ---
@@ -61,25 +63,35 @@ test.describe('Full Checkout Flow', () => {
     await checkoutEnhancedPage.placeOrder();
     await page.waitForLoadState('domcontentloaded');
 
-    // --- Step 9: Verify order was submitted ---
-    const submittedVisible = await checkoutEnhancedPage.orderSubmittedHeading.isVisible().catch(() => false);
+    // --- Step 9: Verify order was submitted/processing or completed ---
+    // Wait for any of the active/terminal order status screens to appear to avoid race conditions with async API
+    await expect(
+      checkoutEnhancedPage.orderSubmittedHeading
+        .or(checkoutEnhancedPage.statusProcessing)
+        .or(checkoutEnhancedPage.statusCompleted)
+        .or(checkoutEnhancedPage.statusFaulted)
+        .or(checkoutEnhancedPage.statusCancelled)
+    ).toBeVisible({ timeout: 20000 });
+
+    const submittedVisible = await checkoutEnhancedPage.isSubmitted().catch(() => false);
+    const processingVisible = await checkoutEnhancedPage.isProcessing().catch(() => false);
     const completedVisible = await checkoutEnhancedPage.isCompleted().catch(() => false);
     const faultedVisible = await checkoutEnhancedPage.isFaulted().catch(() => false);
 
     expect(faultedVisible).toBe(false);
-    expect(submittedVisible || completedVisible).toBe(true);
+    expect(submittedVisible || processingVisible || completedVisible).toBe(true);
 
-    if (submittedVisible && !completedVisible) {
+    if ((submittedVisible || processingVisible) && !completedVisible) {
       await expect(checkoutEnhancedPage.statusCompleted).toBeVisible({ timeout: 35000 });
     }
 
     // Cleanup
     await data.buyerApi.dispose();
-    await data.sellerApi.dispose();
+    await data.sellerApiFresh.dispose();
     await data.adminApi.dispose();
   });
 
-  test('full checkout via API helpers (runCheckoutFlow)', async ({ playwright, testProduct, testStore }) => {
+  test('full checkout via API helpers (runCheckoutFlow)', async ({ playwright }) => {
     const data = await createTestData(playwright.request, { productCount: 1 });
 
     const { correlationId, finalOrder } = await runCheckoutFlow(
@@ -99,7 +111,7 @@ test.describe('Full Checkout Flow', () => {
     expect(finalOrder!.statusName).toBe('Completed');
 
     await data.buyerApi.dispose();
-    await data.sellerApi.dispose();
+    await data.sellerApiFresh.dispose();
     await data.adminApi.dispose();
   });
 });

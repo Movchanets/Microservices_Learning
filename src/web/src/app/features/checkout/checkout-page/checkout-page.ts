@@ -79,11 +79,7 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
       const update = trigger();
       if (!update) return;
 
-      console.log('[Checkout] SignalR effect triggered', {
-        orderId: update.orderId,
-        status: update.status,
-        reason: update.reason,
-      });
+
 
       // Use untracked() so store reads don't become effect dependencies.
       // Without this, setOrder() inside the effect would re-trigger it.
@@ -93,9 +89,7 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
 
         if (!hasOrder) {
           // No optimistic order yet — set the full order from SignalR.
-          console.log('[Checkout] → first update (no optimistic order), setting from SignalR', {
-            status: update.status,
-          });
+
           this.checkoutStore.setOrder({
             id: update.orderId,
             buyerId: update.buyerId,
@@ -111,22 +105,12 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
           const idMatches = currentOrder && currentOrder.id === update.orderId;
           const statusChanged = currentOrder && currentOrder.status !== update.status;
 
-          console.log('[Checkout] → subsequent update', {
-            currentId: currentOrder?.id,
-            signalrId: update.orderId,
-            idMatches,
-            currentStatus: currentOrder?.status,
-            newStatus: update.status,
-            statusChanged,
-          });
+
 
           if (!idMatches && currentOrder) {
             // The backend's real orderId differs from our correlationId placeholder.
             // Replace the order with the real ID and update status.
-            console.log('[Checkout] → replacing correlationId with real orderId', {
-              correlationId: currentOrder.id,
-              realOrderId: update.orderId,
-            });
+
             this.checkoutStore.setOrder({
               ...currentOrder,
               id: update.orderId,
@@ -142,12 +126,12 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
 
         // Stop polling on terminal statuses
         if (!ACTIVE_STATUSES.includes(update.status)) {
-          console.log('[Checkout] → non-active status, stopping polling', { status: update.status });
+
           this.stopPolling();
         }
 
         if (TERMINAL_FAILURE_STATUSES.includes(update.status)) {
-          console.log('[Checkout] → terminal failure', { reason: update.reason });
+
           this.checkoutStore.markTerminalFailure(update.reason);
         }
       });
@@ -165,20 +149,14 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
     const orderStatus = order?.status;
     const isTerminal = orderStatus && !ACTIVE_STATUSES.includes(orderStatus);
 
-    console.log('[Checkout] ngOnInit', {
-      hasOrder, submitted, error,
-      orderStatus: orderStatus ?? null,
-      isTerminal,
-      signalrConnected,
-      signalrUpdate: signalrUpdate ? { orderId: signalrUpdate.orderId, status: signalrUpdate.status } : null,
-    });
+
 
     if ((!hasOrder && !submitted) || isTerminal) {
-      console.log('[Checkout] ngOnInit → resetting store (no active checkout or order is terminal)', { isTerminal });
+
       this.checkoutStore.reset();
       this.notifications.clearOrderUpdates();
     } else {
-      console.log('[Checkout] ngOnInit → preserving state (active checkout detected)');
+
     }
   }
 
@@ -202,11 +180,11 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
 
   async onConfirm(): Promise<void> {
     if (this.submittingCheckout) {
-      console.log('[Checkout] onConfirm → blocked (already submitting)');
+
       return;
     }
     this.submittingCheckout = true;
-    console.log('[Checkout] onConfirm → starting checkout');
+
 
     try {
       this.notifications.clearOrderUpdates();
@@ -215,16 +193,11 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
       // dropped (e.g. network hiccup), reconnect so live status updates arrive.
       if (!this.notifications.connected()) {
         const buyerId = this.authStore.user()?.id;
-        console.warn('[Checkout] onConfirm → SignalR not connected, reconnecting', { buyerId });
         if (buyerId) {
           // Fire-and-forget: don't block checkout on SignalR reconnect.
           // Polling acts as fallback if WebSocket reconnection is slow.
-          this.notifications.start(buyerId).catch((err) =>
-            console.error('[Checkout] onConfirm → SignalR reconnect failed', err)
-          );
+          this.notifications.start(buyerId).catch(() => {});
         }
-      } else {
-        console.log('[Checkout] onConfirm → SignalR already connected');
       }
 
       await this.checkoutStore.submitCheckout();
@@ -233,23 +206,12 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
       const submitted = this.checkoutStore.submitted();
       const correlationId = this.checkoutStore.order()?.id ?? this.cartStore.checkoutCorrelationId();
 
-      console.log('[Checkout] onConfirm → after submitCheckout', {
-        error,
-        submitted,
-        correlationId,
-        signalrConnected: this.notifications.connected(),
-      });
-
       if (error || !submitted) {
-        console.warn('[Checkout] onConfirm → aborting', { error, submitted });
         return;
       }
 
       if (correlationId) {
-        console.log('[Checkout] onConfirm → starting polling fallback', { correlationId });
         this.startStatusPolling(correlationId);
-      } else {
-        console.warn('[Checkout] onConfirm → NO correlationId! Polling cannot start. Relying on SignalR only.');
       }
     } finally {
       this.submittingCheckout = false;
@@ -268,14 +230,14 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
    */
   private startStatusPolling(orderId: string): void {
     this.stopPolling(); // Prevent double-polling
-    console.log('[Checkout] startStatusPolling', { orderId });
+
 
     const maxAttempts = 30; // 30 × 2s = 60s max
     let attempt = 0;
 
     const poll = async () => {
       if (this.destroyed) {
-        console.log('[Checkout] poll → destroyed, stopping');
+
         return;
       }
 
@@ -284,21 +246,21 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
       // Stop if the order already reached a terminal state via SignalR
       const currentStatus = this.checkoutStore.orderStatus();
       if (currentStatus && !ACTIVE_STATUSES.includes(currentStatus)) {
-        console.log('[Checkout] poll → order already terminal via SignalR', { currentStatus, attempt });
+
         this.stopPolling();
         return;
       }
 
       try {
-        console.log('[Checkout] poll → fetching', { orderId, attempt });
+
         const order = await this.orderService.getOrderById(orderId);
 
         if (order) {
-          console.log('[Checkout] poll → got order', { attempt, status: order.status, orderId: order.id });
+
           this.checkoutStore.setOrder(order);
 
           if (!ACTIVE_STATUSES.includes(order.status)) {
-            console.log('[Checkout] poll → terminal status reached', { status: order.status });
+
             this.stopPolling();
             if (TERMINAL_FAILURE_STATUSES.includes(order.status)) {
               this.checkoutStore.markTerminalFailure(null);
@@ -306,17 +268,17 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
             return;
           }
         } else {
-          console.log('[Checkout] poll → order not found (404)', { attempt, orderId });
+
         }
       } catch (err: unknown) {
         const status = (err as { status?: number })?.status;
-        console.error('[Checkout] poll → error', { err, status, attempt });
+
       }
 
       if (attempt < maxAttempts) {
         this.pollTimer = setTimeout(poll, 2000);
       } else {
-        console.warn('[Checkout] poll → max attempts reached, setting pollingExpired');
+
         this.checkoutStore.setPollingExpired(true);
         this.stopPolling();
       }
@@ -333,14 +295,14 @@ export class CheckoutPageComponent implements OnInit, OnDestroy {
   private restartPollingWithId(newOrderId: string): void {
     const currentStatus = this.checkoutStore.orderStatus();
     if (currentStatus && ACTIVE_STATUSES.includes(currentStatus)) {
-      console.log('[Checkout] restartPollingWithId', { newOrderId, currentStatus });
+
       this.startStatusPolling(newOrderId);
     }
   }
 
   private stopPolling(): void {
     if (this.pollTimer) {
-      console.log('[Checkout] stopPolling → clearing timer');
+
       clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }

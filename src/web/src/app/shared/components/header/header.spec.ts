@@ -12,7 +12,7 @@ const routes: Routes = [
 import { AuthStore } from '../../../core/auth/auth.store';
 import { CartStore } from '../../../features/cart/cart.store';
 import { signal } from '@angular/core';
-import { LucideAngularModule, User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Globe, Shield } from 'lucide-angular';
+import { LucideAngularModule, User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Shield } from 'lucide-angular';
 
 describe('HeaderComponent', () => {
   let component: Header;
@@ -37,7 +37,7 @@ describe('HeaderComponent', () => {
         provideRouter(routes),
         { provide: AuthStore, useValue: mockAuthStore },
         { provide: CartStore, useValue: mockCartStore },
-        importProvidersFrom(LucideAngularModule.pick({ User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Globe, Shield })),
+        importProvidersFrom(LucideAngularModule.pick({ User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart, Shield })),
       ],
     }).compileComponents();
 

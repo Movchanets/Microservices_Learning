@@ -28,6 +28,7 @@ export class CheckoutEnhancedPage extends BasePage {
   readonly correlationIdText: Locator;
 
   // Status
+  readonly statusProcessing: Locator;
   readonly statusCompleted: Locator;
   readonly statusCancelled: Locator;
   readonly statusFaulted: Locator;
@@ -60,6 +61,7 @@ export class CheckoutEnhancedPage extends BasePage {
     this.correlationIdText = page.getByTestId('checkout-correlation-id');
 
     // Status
+    this.statusProcessing = page.getByTestId('checkout-status-processing');
     this.statusCompleted = page.getByTestId('checkout-status-completed');
     this.statusCancelled = page.getByTestId('checkout-status-cancelled');
     this.statusFaulted = page.getByTestId('checkout-status-faulted');
@@ -115,6 +117,10 @@ export class CheckoutEnhancedPage extends BasePage {
 
   async isSubmitted(): Promise<boolean> {
     return this.orderSubmittedHeading.isVisible();
+  }
+
+  async isProcessing(): Promise<boolean> {
+    return this.statusProcessing.isVisible();
   }
 
   async isCompleted(): Promise<boolean> {

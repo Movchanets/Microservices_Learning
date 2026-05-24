@@ -232,10 +232,12 @@ export async function createCategory(
 export async function createInventoryItem(
   api: APIRequestContext,
   sku: string,
-  initialQuantity: number
+  initialQuantity: number,
+  storeId?: string,
+  productId?: string
 ): Promise<void> {
   const response = await api.post('/api/inventory/items', {
-    data: { sku, initialQuantity },
+    data: { sku, initialQuantity, storeId, productId },
   });
   if (!response.ok()) {
     // Ignore 409 Conflict — item may already exist
@@ -378,30 +380,13 @@ export async function addToCart(
   price: number,
   shopId?: string
 ): Promise<void> {
-  // Get current cart to preserve existing items
-  const cartResponse = await api.get('/api/cart');
-  let existingItems: Array<{ sku: string; quantity: number; price: number; shopId?: string }> = [];
-
-  if (cartResponse.ok()) {
-    const cart = await cartResponse.json();
-    existingItems = (cart.items || []).map((i: any) => ({
-      sku: i.sku,
-      quantity: i.quantity,
-      price: i.price ?? 0,
-      shopId: i.shopId ?? undefined,
-    }));
+  const product = await getProductBySku(api, sku);
+  if (!product) {
+    throw new Error(`Product not found for SKU: ${sku}`);
   }
 
-  // Add or update the new item
-  const existingIndex = existingItems.findIndex((i) => i.sku === sku && i.shopId === shopId);
-  if (existingIndex >= 0) {
-    existingItems[existingIndex].quantity += quantity;
-  } else {
-    existingItems.push({ sku, quantity, price, shopId });
-  }
-
-  const response = await api.post('/api/cart/', {
-    data: { items: existingItems },
+  const response = await api.post('/api/cart/items', {
+    data: { productId: product.id, quantity },
   });
 
   if (!response.ok()) {
@@ -424,12 +409,17 @@ export async function getOrder(
   api: APIRequestContext,
   orderId: string
 ): Promise<OrderResult | null> {
-  const response = await api.get(`/api/orders/${orderId}`);
+  const response = await api.get(`/bff/orders/${orderId}`);
   if (response.status() === 404) return null;
   if (!response.ok()) {
     throw new Error(`Get order failed: ${response.status()} ${await response.text()}`);
   }
-  return response.json();
+  const data = await response.json();
+  return {
+    ...data,
+    statusName: data.statusName ?? data.status,
+    status: typeof data.status === 'number' ? data.status : 0,
+  };
 }
 
 export async function getOrders(
@@ -626,11 +616,7 @@ export async function ensureProductExists(
 
   // Set inventory stock
   if (initialStock > 0) {
-    try {
-      await createInventoryItem(sellerApi, product.sku, initialStock);
-    } catch {
-      // 409 if already exists — that's fine
-    }
+    await setInventoryStock(sellerApi, product.sku, initialStock, created.storeId, created.id);
   }
 
   return created;
@@ -678,6 +664,7 @@ export async function runCheckoutFlow(
     finalOrder = await poll(
       async () => {
         const order = await getOrder(buyerApi, correlationId);
+        console.log(`[runCheckoutFlow Poll] Correlation ID: ${correlationId}, Status: ${order?.statusName ?? 'null'}`);
         if (order && terminalStatuses.includes(order.statusName)) {
           return order;
         }
@@ -823,6 +810,8 @@ export interface TestDataSetup {
   buyerApi: APIRequestContext;
   /** Authenticated API context for the seller */
   sellerApi: APIRequestContext;
+  /** Authenticated API context for the seller (alias/fresh context) */
+  sellerApiFresh: APIRequestContext;
   /** Authenticated API context for the admin */
   adminApi: APIRequestContext;
   /** The seller's verified store */
@@ -937,6 +926,7 @@ export async function createTestData(
 
   return {
     buyerApi,
+    sellerApi: sellerApiFresh,
     sellerApiFresh,
     adminApi,
     store,

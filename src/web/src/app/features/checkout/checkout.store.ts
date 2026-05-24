@@ -45,34 +45,25 @@ export const CheckoutStore = signalStore(
       const items = cartStore.items();
       const address = store.address();
 
-      console.log('[CheckoutStore] submitCheckout called', {
-        itemCount: items.length,
-        hasAddress: !!address,
-      });
+
 
       if (items.length === 0) {
-        console.warn('[CheckoutStore] submitCheckout → aborted: cart empty');
         patchState(store, { error: 'Cart is empty' });
         return;
       }
 
       if (!address) {
-        console.warn('[CheckoutStore] submitCheckout → aborted: no address');
         patchState(store, { error: 'Shipping address is required' });
         return;
       }
 
       // Capture total before checkout clears the cart items
       const totalAmount = cartStore.totalPrice();
-      console.log('[CheckoutStore] submitCheckout → captured totalAmount', { totalAmount });
 
       patchState(store, { submitting: true, error: null, submitted: true });
 
       try {
-        console.log('[CheckoutStore] submitCheckout → calling cartStore.checkout()', {
-          addressLine1: address.addressLine1,
-          city: address.city,
-        });
+
 
         // Real backend call — POST /api/cart/checkout → publishes OrderSubmittedEvent → saga
         await cartStore.checkout({
@@ -84,9 +75,7 @@ export const CheckoutStore = signalStore(
         });
 
         const correlationId = cartStore.checkoutCorrelationId();
-        console.log('[CheckoutStore] submitCheckout → backend responded', {
-          correlationId,
-        });
+
 
         // Set optimistic order with "Submitted" status.
         // The real orderId + progressive status updates arrive via SignalR/polling.
@@ -103,13 +92,10 @@ export const CheckoutStore = signalStore(
           submitting: false,
         });
 
-        console.log('[CheckoutStore] submitCheckout → optimistic order set', {
-          orderId: store.order()?.id,
-          status: 'Submitted',
-        });
+
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Checkout failed. Please try again.';
-        console.error('[CheckoutStore] submitCheckout → FAILED', { message, err });
+
         patchState(store, {
           error: message,
           submitting: false,

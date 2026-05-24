@@ -13,26 +13,26 @@ import { OrderStatus } from '../checkout.models';
         @case ('Submitted') {
           <div class="animate-pulse">
             <lucide-icon name="Clock" class="w-16 h-16 mx-auto mb-4 text-primary"></lucide-icon>
-            <h2 class="text-2xl font-bold font-lexend mb-2">Order Submitted</h2>
+            <h2 data-testid="checkout-status-processing" class="text-2xl font-bold font-lexend mb-2">Order Submitted</h2>
             <p class="text-muted mb-6">Your order is being processed...</p>
           </div>
         }
         @case ('InventoryReserved') {
           <lucide-icon name="PackageCheck" class="w-16 h-16 mx-auto mb-4 text-primary"></lucide-icon>
-          <h2 class="text-2xl font-bold font-lexend mb-2">Inventory Reserved</h2>
+          <h2 data-testid="checkout-status-processing" class="text-2xl font-bold font-lexend mb-2">Inventory Reserved</h2>
           <p class="text-muted mb-6">Items are reserved. Processing payment...</p>
         }
         @case ('PaymentProcessing') {
           <div class="animate-pulse">
             <lucide-icon name="CreditCard" class="w-16 h-16 mx-auto mb-4 text-primary"></lucide-icon>
-            <h2 class="text-2xl font-bold font-lexend mb-2">Processing Payment</h2>
+            <h2 data-testid="checkout-status-processing" class="text-2xl font-bold font-lexend mb-2">Processing Payment</h2>
             <p class="text-muted mb-6">Waiting for payment confirmation...</p>
           </div>
         }
         @case ('Processing') {
           <div class="animate-pulse">
             <lucide-icon name="Loader" class="w-16 h-16 mx-auto mb-4 text-primary"></lucide-icon>
-            <h2 class="text-2xl font-bold font-lexend mb-2">Processing Order</h2>
+            <h2 data-testid="checkout-status-processing" class="text-2xl font-bold font-lexend mb-2">Processing Order</h2>
             <p class="text-muted mb-6">Your order is being processed...</p>
           </div>
         }
