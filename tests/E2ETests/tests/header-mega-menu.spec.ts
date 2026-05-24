@@ -1,30 +1,25 @@
 import { test, expect } from '../fixtures/test-base';
+import { ensureAuthenticatedPageViaApi } from '../utils/api-helpers';
+import { MegaMenuComponent } from '../components/mega-menu.component';
+import { HeaderComponent } from '../components/header.component';
+import { CartDrawerComponent } from '../components/cart-drawer.component';
 
-test.describe('Plan 01: Header & Mega-Menu', () => {
+test.describe('Header & Mega-Menu', () => {
 
-  test.beforeEach(async ({ loginPage, registerPage, page }) => {
-    // Register a fresh user for each test
-    const randomId = Math.random().toString(36).substring(7);
-    const email = `user_${randomId}@test.com`;
-    const password = 'P@ssw0rd123!';
+  test('should display mega menu when clicking Catalog button', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new HeaderComponent(page);
 
-    await registerPage.goto('/auth/register');
-    await registerPage.register('Test', 'User', email, password);
-    await page.waitForLoadState('domcontentloaded');
-
-    // If redirected to login, login
-    if (page.url().includes('/auth/login')) {
-      await loginPage.login(email, password);
-      await expect(page).toHaveURL(/\/catalog/);
-    }
-  });
-
-  test('should display mega menu when clicking Catalog button', async ({ page, header }) => {
     await header.toggleMegaMenu();
     await expect(header.megaMenu).toBeVisible();
+    await context.close();
   });
 
-  test('should close mega menu when clicking a category', async ({ page, header, megaMenu }) => {
+  test('should close mega menu when clicking a category', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new HeaderComponent(page);
+    const megaMenu = new MegaMenuComponent(page);
+
     await header.toggleMegaMenu();
     await expect(header.megaMenu).toBeVisible();
 
@@ -34,9 +29,14 @@ test.describe('Plan 01: Header & Mega-Menu', () => {
       await page.waitForLoadState('domcontentloaded');
       await expect(page).toHaveURL(/\/catalog/);
     }
+    await context.close();
   });
 
-  test('should show subcategories on root category hover', async ({ page, header, megaMenu }) => {
+  test('should show subcategories on root category hover', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new HeaderComponent(page);
+    const megaMenu = new MegaMenuComponent(page);
+
     await header.toggleMegaMenu();
 
     const rootCategories = await megaMenu.getRootCategoryNames();
@@ -45,24 +45,38 @@ test.describe('Plan 01: Header & Mega-Menu', () => {
       const subcats = await megaMenu.getVisibleSubcategories();
       expect(subcats.length).toBeGreaterThan(0);
     }
+    await context.close();
   });
 
-  test('should search products from header search bar', async ({ page, header }) => {
+  test('should search products from header search bar', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new HeaderComponent(page);
+
     await header.search('laptop');
     await expect(page).toHaveURL(/\/catalog.*q=laptop/);
+    await context.close();
   });
 
-  test('should show cart badge when items in cart', async ({ page, header }) => {
+  test('should show cart badge when items in cart', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new HeaderComponent(page);
+
     const addBtn = page.getByRole('button', { name: /add to cart/i }).first();
     await expect(addBtn).toBeVisible({ timeout: 10000 });
     await addBtn.click();
     await page.waitForLoadState('domcontentloaded');
     const hasBadge = await header.hasCartBadge();
     expect(hasBadge).toBe(true);
+    await context.close();
   });
 
-  test('should open cart drawer when clicking cart icon', async ({ page, header, cartDrawer }) => {
+  test('should open cart drawer when clicking cart icon', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new HeaderComponent(page);
+    const cartDrawer = new CartDrawerComponent(page);
+
     await header.openCart();
     await cartDrawer.waitForOpen();
+    await context.close();
   });
 });

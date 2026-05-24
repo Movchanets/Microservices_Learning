@@ -1,10 +1,8 @@
 using BuildingBlocks.SharedContracts.Abstractions;
 using BuildingBlocks.SharedContracts.Events.Cart;
-using BuildingBlocks.SharedContracts.Events.Ordering;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Ordering.Domain.Aggregates;
-using Ordering.Domain.Enumerations;
 using Ordering.Domain.ValueObjects;
 
 namespace Ordering.Infrastructure.Messaging.Consumers;
@@ -50,13 +48,8 @@ public sealed class OrderSubmittedConsumer(
         await uow.SaveChangesAsync(context.CancellationToken);
 
         // Publish Submitted status so SignalR notifies the frontend immediately.
-        // Without this, the frontend has no real-time update until InventoryReserved.
-        await publishEndpoint.Publish(new OrderStatusChangedEvent(
-            order.Id,
-            order.BuyerId,
-            OrderStatus.Submitted.ToString(),
-            null,
-            DateTime.UtcNow), context.CancellationToken);
+        await OrderConsumerHelpers.PublishStatusChangedAsync(
+            publishEndpoint, order, null, context.CancellationToken);
 
         logger.LogInformation("Order entity created: OrderId={OrderId}", order.Id);
     }

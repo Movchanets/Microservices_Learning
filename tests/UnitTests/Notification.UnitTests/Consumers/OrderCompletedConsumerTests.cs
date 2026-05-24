@@ -64,4 +64,77 @@ public class OrderCompletedConsumerTests
             await harness.Stop();
         }
     }
+
+    [Fact]
+    public async Task Consume_SetsReasonToNull()
+    {
+        var buyerId = "buyer-124";
+        var orderId = Guid.NewGuid();
+        var evt = new OrderCompletedEvent(Guid.NewGuid(), orderId, buyerId);
+
+        OrderUpdateMessage? capturedMessage = null;
+        _clientProxyMock
+            .Setup(x => x.SendCoreAsync("OrderUpdate", It.IsAny<object?[]>(), It.IsAny<CancellationToken>()))
+            .Callback<string, object?[], CancellationToken>((_, args, _) =>
+            {
+                if (args.Length > 0 && args[0] is OrderUpdateMessage msg)
+                    capturedMessage = msg;
+            })
+            .Returns(Task.CompletedTask);
+
+        _clientsMock.Setup(c => c.User(buyerId)).Returns(_clientProxyMock.Object);
+
+        var consumer = new OrderCompletedConsumer(_hubContextMock.Object, _loggerMock.Object);
+        var harness = new InMemoryTestHarness();
+        var consumerHarness = harness.Consumer(() => consumer);
+
+        await harness.Start();
+        try
+        {
+            await harness.InputQueueSendEndpoint.Send(evt);
+
+            await consumerHarness.Consumed.Any<OrderCompletedEvent>();
+
+            capturedMessage.Should().NotBeNull();
+            capturedMessage!.Status.Should().Be("Completed");
+            capturedMessage.Reason.Should().BeNull();
+            capturedMessage.OrderId.Should().Be(orderId);
+            capturedMessage.BuyerId.Should().Be(buyerId);
+        }
+        finally
+        {
+            await harness.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task Consume_DoesNotSendToOtherBuyers()
+    {
+        var buyerId = "buyer-125";
+        var otherBuyerId = "buyer-other";
+        var orderId = Guid.NewGuid();
+        var evt = new OrderCompletedEvent(Guid.NewGuid(), orderId, buyerId);
+
+        _clientsMock.Setup(c => c.User(buyerId)).Returns(_clientProxyMock.Object);
+        _clientsMock.Setup(c => c.User(otherBuyerId)).Returns(new Mock<IClientProxy>().Object);
+
+        var consumer = new OrderCompletedConsumer(_hubContextMock.Object, _loggerMock.Object);
+        var harness = new InMemoryTestHarness();
+        var consumerHarness = harness.Consumer(() => consumer);
+
+        await harness.Start();
+        try
+        {
+            await harness.InputQueueSendEndpoint.Send(evt);
+
+            await consumerHarness.Consumed.Any<OrderCompletedEvent>();
+
+            _clientsMock.Verify(c => c.User(buyerId), Times.Once);
+            _clientsMock.Verify(c => c.User(otherBuyerId), Times.Never);
+        }
+        finally
+        {
+            await harness.Stop();
+        }
+    }
 }

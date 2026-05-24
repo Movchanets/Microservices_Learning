@@ -1,4 +1,4 @@
-import { Locator, expect } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export class ForgotPasswordPage extends BasePage {
@@ -9,6 +9,12 @@ export class ForgotPasswordPage extends BasePage {
     super(page);
     this.emailInput = page.getByTestId('email-input');
     this.forgotSubmitBtn = page.getByTestId('forgot-submit-btn');
+  }
+
+  async goto() {
+    await this.page.goto('/auth/forgot-password');
+    // Wait for Angular hydration to complete — the form is inside @else block
+    await this.forgotSubmitBtn.waitFor({ state: 'visible', timeout: 15000 });
   }
 
   async resetPassword(email: string) {

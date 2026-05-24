@@ -1,7 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout, throwError } from 'rxjs';
 import { ShoppingCart, CheckoutResponse } from './cart.models';
 
 const CART_ID_KEY = 'anon_cart_id';
@@ -76,7 +76,11 @@ export class CartService {
   }
 
   async checkout(address?: { addressLine1: string; city: string; state: string; postalCode: string; country: string }): Promise<CheckoutResponse> {
-    return firstValueFrom(this.http.post<CheckoutResponse>(`${this.baseUrl}/checkout`, address || {}, { headers: this.cartHeaders() }));
+    return firstValueFrom(
+      this.http.post<CheckoutResponse>(`${this.baseUrl}/checkout`, address || {}, { headers: this.cartHeaders() }).pipe(
+        timeout({ first: 15_000, with: () => throwError(() => new Error('Checkout timed out. Please try again.')) })
+      )
+    );
   }
 
   async addItem(productId: string, quantity: number): Promise<ShoppingCart> {

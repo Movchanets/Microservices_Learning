@@ -1,23 +1,10 @@
 import { test, expect } from '../fixtures/test-base';
+import { ensureAuthenticatedPageViaApi } from '../utils/api-helpers';
 
-test.describe('Plan 09: Seller Orders Management', () => {
+test.describe('Seller Orders Management', () => {
 
-  test.beforeEach(async ({ loginPage, registerPage, page }) => {
-    const randomId = Math.random().toString(36).substring(7);
-    const email = `seller_${randomId}@test.com`;
-    const password = 'P@ssw0rd123!';
-
-    await registerPage.goto('/auth/register');
-    await registerPage.register('Seller', 'User', email, password);
-    await page.waitForLoadState('domcontentloaded');
-
-    if (page.url().includes('/auth/login')) {
-      await loginPage.login(email, password);
-      await page.waitForLoadState('domcontentloaded');
-    }
-  });
-
-  test('should display seller orders tab', async ({ page }) => {
+  test('should display seller orders tab', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request, { firstName: 'Seller', lastName: 'User' });
     await page.goto('/seller');
     await page.waitForLoadState('domcontentloaded');
 
@@ -28,9 +15,11 @@ test.describe('Plan 09: Seller Orders Management', () => {
     const hasTable = await page.locator('table').isVisible();
     const isEmpty = await page.getByText('No orders yet').isVisible();
     expect(hasTable || isEmpty).toBe(true);
+    await context.close();
   });
 
-  test('should show orders table with status', async ({ page }) => {
+  test('should show orders table with status', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request, { firstName: 'Seller', lastName: 'User' });
     await page.goto('/seller');
     await page.waitForLoadState('domcontentloaded');
 
@@ -46,9 +35,11 @@ test.describe('Plan 09: Seller Orders Management', () => {
       await expect(page.getByRole('columnheader', { name: /order id/i })).toBeVisible();
       await expect(page.getByRole('columnheader', { name: /status/i })).toBeVisible();
     }
+    await context.close();
   });
 
-  test('should show status update buttons for seller', async ({ page }) => {
+  test('should show status update buttons for seller', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request, { firstName: 'Seller', lastName: 'User' });
     await page.goto('/seller');
     await page.waitForLoadState('domcontentloaded');
 
@@ -58,7 +49,8 @@ test.describe('Plan 09: Seller Orders Management', () => {
     await page.waitForLoadState('domcontentloaded');
     const updateBtns = page.getByRole('button', { name: /mark|update/i });
     const count = await updateBtns.count();
-    expect(count).toBeGreaterThan(0); // Should have at least 1 order item
+    expect(count).toBeGreaterThan(0);
+    await context.close();
   });
 
   test('should redirect unauthenticated from seller orders', async ({ page }) => {

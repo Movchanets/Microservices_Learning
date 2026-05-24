@@ -1,32 +1,23 @@
 import { test, expect } from '../fixtures/test-base';
+import { ensureAuthenticatedPageViaApi } from '../utils/api-helpers';
+import { ProfileHubPage } from '../pages/profile-hub.page';
 
-test.describe('Plan 02: User Profile Hub', () => {
+test.describe('User Profile Hub', () => {
 
-  let testEmail: string;
-  let testPassword: string;
+  test('should display profile hub with sidebar navigation', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const profileHubPage = new ProfileHubPage(page);
 
-  test.beforeEach(async ({ loginPage, registerPage, page }) => {
-    const randomId = Math.random().toString(36).substring(7);
-    testEmail = `user_${randomId}@test.com`;
-    testPassword = 'P@ssw0rd123!';
-
-    await registerPage.goto('/auth/register');
-    await registerPage.register('Test', 'User', testEmail, testPassword);
-    await page.waitForLoadState('domcontentloaded');
-
-    if (page.url().includes('/auth/login')) {
-      await loginPage.login(testEmail, testPassword);
-      await expect(page).toHaveURL(/\/catalog/);
-    }
-  });
-
-  test('should display profile hub with sidebar navigation', async ({ page, profileHubPage }) => {
     await profileHubPage.goto();
     await profileHubPage.waitForPageLoad();
     await expect(profileHubPage.pageHeading).toBeVisible();
+    await context.close();
   });
 
-  test('should navigate between profile tabs', async ({ page, profileHubPage }) => {
+  test('should navigate between profile tabs', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const profileHubPage = new ProfileHubPage(page);
+
     await profileHubPage.goto();
     await profileHubPage.waitForPageLoad();
 
@@ -37,23 +28,35 @@ test.describe('Plan 02: User Profile Hub', () => {
     await profileHubPage.navigateToSettings();
     await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/profile\/settings/);
+    await context.close();
   });
 
-  test('should display user profile information', async ({ page, profileHubPage }) => {
+  test('should display user profile information', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const profileHubPage = new ProfileHubPage(page);
+
     await profileHubPage.goto();
     await profileHubPage.navigateToSettings();
     await profileHubPage.waitForPageLoad();
     await expect(page.getByRole('heading', { name: 'Profile Information' })).toBeVisible();
+    await context.close();
   });
 
-  test('should show change password section', async ({ page, profileHubPage }) => {
+  test('should show change password section', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const profileHubPage = new ProfileHubPage(page);
+
     await profileHubPage.goto();
     await profileHubPage.navigateToSettings();
     await profileHubPage.waitForPageLoad();
     await expect(page.getByRole('heading', { name: 'Change Password' })).toBeVisible();
+    await context.close();
   });
 
-  test('should show order history on orders tab', async ({ page, profileHubPage }) => {
+  test('should show order history on orders tab', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const profileHubPage = new ProfileHubPage(page);
+
     await profileHubPage.goto();
     await profileHubPage.navigateToOrders();
     await profileHubPage.waitForPageLoad();
@@ -61,5 +64,6 @@ test.describe('Plan 02: User Profile Hub', () => {
     const hasOrders = await profileHubPage.getOrderCount();
     const isEmpty = await profileHubPage.emptyOrdersMessage.isVisible();
     expect(hasOrders > 0 || isEmpty).toBe(true);
+    await context.close();
   });
 });

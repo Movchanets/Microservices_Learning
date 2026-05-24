@@ -1,105 +1,48 @@
 import { test, expect, APIRequestContext } from '@playwright/test';
 import {
-  loginApi,
-  registerApi,
-  createStore,
-  verifyStore,
-  createProduct,
-  getCategories,
-  addToCart,
-  getCurrentUser,
+  createTestData,
+  runCheckoutFlow,
+  poll,
+  getPaymentByOrderId,
+  refundPayment,
+  type TestDataSetup,
 } from '../utils/api-helpers';
 
-let buyerApi: APIRequestContext;
-let sellerApi: APIRequestContext;
-let adminApi: APIRequestContext;
-let orderId: string;
+let data: TestDataSetup;
 let transactionId: string;
-
-/**
- * Polls an async condition with exponential backoff.
- * Returns the first truthy result, or throws after maxAttempts.
- */
-async function poll<T>(
-  fn: () => Promise<T>,
-  { maxAttempts = 20, delayMs = 1000, label = 'condition' } = {}
-): Promise<T> {
-  for (let i = 0; i < maxAttempts; i++) {
-    const result = await fn();
-    if (result) return result;
-    console.log(`Polling ${label}... attempt ${i + 1}/${maxAttempts}`);
-    await new Promise((r) => setTimeout(r, delayMs));
-  }
-  throw new Error(`Polling ${label} timed out after ${maxAttempts} attempts`);
-}
+let orderId: string;
 
 test.describe('Payment Refund Flow', () => {
   test.beforeAll(async ({ request }) => {
-    // Register and login buyer
-    buyerApi = await registerApi(
-      request,
-      'Refund',
-      'Buyer',
-      `refund-buyer-${Date.now()}@test.com`,
-      'Test123!'
-    );
-
-    // Register and login seller
-    sellerApi = await registerApi(
-      request,
-      'Refund',
-      'Seller',
-      `refund-seller-${Date.now()}@test.com`,
-      'Test123!'
-    );
-
-    // Login as admin (pre-seeded)
-    adminApi = await loginApi(request, 'admin@marketplace.com', 'P@ssw0rd123!');
-
-    // Create store and verify it
-    const sellerUser = await getCurrentUser(sellerApi);
-    const store = await createStore(sellerApi, sellerUser.id, 'Refund Test Store', 'Test store for refunds');
-    await verifyStore(adminApi, store.id, true);
-
-    // Create product
-    const categories = await getCategories(sellerApi);
-    const category = categories[0];
-    const product = await createProduct(sellerApi, {
-      name: 'Refund Test Product',
-      description: 'A product for testing refunds',
-      sku: `REFUND-TEST-${Date.now()}`,
-      price: 49.99,
-      currency: 'USD',
-      categoryId: category.id,
-      storeId: store.id,
+    // Create full test data environment (mirrors seeder pipeline)
+    data = await createTestData(request, {
+      productCount: 1,
+      stockPerProduct: 50,
+      productPrice: 49.99,
     });
 
-    // Add to cart and checkout
-    await addToCart(buyerApi, product.sku, 1, product.price, store.sellerId);
-
-    const checkoutResponse = await buyerApi.post('/api/cart/checkout', {
-      data: {
+    // Run checkout flow to create an order with payment
+    const { correlationId, finalOrder } = await runCheckoutFlow(
+      data.buyerApi,
+      [{ sku: data.products[0].sku, quantity: 1, price: data.products[0].price, shopId: data.store.sellerId }],
+      {
         addressLine1: '123 Refund St',
         city: 'Testville',
         state: 'TS',
         postalCode: '12345',
         country: 'US',
-      },
-    });
+      }
+    );
 
-    expect(checkoutResponse.ok()).toBeTruthy();
-    const checkoutResult = await checkoutResponse.json();
-    orderId = checkoutResult.correlationId;
+    orderId = correlationId;
     expect(orderId).toBeTruthy();
 
-    // Poll for payment completion instead of fixed sleep
+    // Poll for payment completion
     const payment = await poll(
       async () => {
-        const resp = await buyerApi.get(`/api/payments/order/${orderId}`);
-        if (!resp.ok()) return null;
-        const body = await resp.json();
-        // Wait until payment is Completed or Refunded
-        if (body.status === 'Completed' || body.status === 'Refunded') return body;
+        const resp = await getPaymentByOrderId(data.buyerApi, orderId);
+        if (!resp) return null;
+        if (resp.status === 'Completed' || resp.status === 'Refunded') return resp;
         return null;
       },
       { maxAttempts: 20, delayMs: 1000, label: 'payment completion' }
@@ -110,34 +53,27 @@ test.describe('Payment Refund Flow', () => {
   });
 
   test.afterAll(async () => {
-    await buyerApi?.dispose();
-    await sellerApi?.dispose();
-    await adminApi?.dispose();
+    await data?.buyerApi?.dispose();
+    await data?.sellerApi?.dispose();
+    await data?.adminApi?.dispose();
   });
 
   test('admin can refund a completed payment', async () => {
     expect(transactionId).toBeTruthy();
 
-    const response = await adminApi.post(`/api/payments/${transactionId}/refund`, {
-      data: { reason: 'Customer requested refund' },
-    });
-
-    expect(response.status()).toBe(201);
-    const body = await response.json();
-    expect(body.refundId).toBeTruthy();
+    const result = await refundPayment(data.adminApi, transactionId, 'Customer requested refund');
+    expect(result.refundId).toBeTruthy();
   });
 
   test('refund record appears in payment query', async () => {
     expect(orderId).toBeTruthy();
 
-    const response = await buyerApi.get(`/api/payments/order/${orderId}`);
-    expect(response.ok()).toBeTruthy();
+    const payment = await getPaymentByOrderId(data.buyerApi, orderId);
+    expect(payment).toBeTruthy();
+    expect(payment.refunds).toBeTruthy();
+    expect(payment.refunds.length).toBeGreaterThan(0);
 
-    const body = await response.json();
-    expect(body.refunds).toBeTruthy();
-    expect(body.refunds.length).toBeGreaterThan(0);
-
-    const refund = body.refunds[0];
+    const refund = payment.refunds[0];
     expect(refund.status).toBe('Processed');
     expect(refund.amount).toBe(49.99);
     expect(refund.reason).toBe('Customer requested refund');
@@ -146,7 +82,7 @@ test.describe('Payment Refund Flow', () => {
   test('cannot refund already refunded transaction', async () => {
     expect(transactionId).toBeTruthy();
 
-    const response = await adminApi.post(`/api/payments/${transactionId}/refund`, {
+    const response = await data.adminApi.post(`/api/payments/${transactionId}/refund`, {
       data: { reason: 'Second attempt' },
     });
 
@@ -158,18 +94,15 @@ test.describe('Payment Refund Flow', () => {
   test('buyer sees refunded status in payment query', async () => {
     expect(orderId).toBeTruthy();
 
-    const response = await buyerApi.get(`/api/payments/order/${orderId}`);
-    expect(response.ok()).toBeTruthy();
-
-    const body = await response.json();
-    expect(body.status).toBe('Refunded');
+    const payment = await getPaymentByOrderId(data.buyerApi, orderId);
+    expect(payment).toBeTruthy();
+    expect(payment.status).toBe('Refunded');
   });
 
   test('non-admin cannot issue refund', async () => {
     expect(transactionId).toBeTruthy();
 
-    // Buyer should not be able to refund
-    const response = await buyerApi.post(`/api/payments/${transactionId}/refund`, {
+    const response = await data.buyerApi.post(`/api/payments/${transactionId}/refund`, {
       data: { reason: 'Unauthorized attempt' },
     });
 

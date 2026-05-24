@@ -3,16 +3,14 @@ import { test, expect } from '../../fixtures/test-base';
 test.describe('Auth: Forgot Password', () => {
 
   test('should display forgot password form', async ({ page, forgotPasswordPage }) => {
-    await page.goto('/auth/forgot-password');
-    await page.waitForLoadState('domcontentloaded');
+    await forgotPasswordPage.goto();
 
     await expect(forgotPasswordPage.emailInput).toBeVisible();
     await expect(forgotPasswordPage.forgotSubmitBtn).toBeVisible();
   });
 
   test('should show success message after submitting valid email', async ({ page, forgotPasswordPage }) => {
-    await page.goto('/auth/forgot-password');
-    await page.waitForLoadState('domcontentloaded');
+    await forgotPasswordPage.goto();
 
     await forgotPasswordPage.resetPassword('admin@marketplace.com');
 
@@ -21,8 +19,7 @@ test.describe('Auth: Forgot Password', () => {
   });
 
   test('should show error for non-existent email', async ({ page, forgotPasswordPage }) => {
-    await page.goto('/auth/forgot-password');
-    await page.waitForLoadState('domcontentloaded');
+    await forgotPasswordPage.goto();
 
     await forgotPasswordPage.resetPassword('nonexistent@example.com');
 

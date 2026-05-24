@@ -25,7 +25,7 @@
   },
   "invalidUser": {
     "email": "wrong@test.com",
-    "password": "WrongPass123!"
+    "password": "WrongPassword123!"
   },
   "blockedUser": {
     "email": "blocked@test.com",

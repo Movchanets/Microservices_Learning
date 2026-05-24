@@ -95,7 +95,7 @@ describe('CheckoutStore', () => {
 
       await store.submitCheckout();
 
-      expect(store.error()).toBe('Checkout failed. Please try again.');
+      expect(store.error()).toBe('Network error');
       expect(store.submitting()).toBe(false);
       expect(store.submitted()).toBe(false);
     });
@@ -114,12 +114,32 @@ describe('CheckoutStore', () => {
   });
 
   describe('retryCheckout', () => {
-    it('should reset submitted, pollingExpired, and error', () => {
+    it('should reset submitted, pollingExpired, error, order, and submitting', () => {
+      store.setOrder({ id: 'order-1', status: 'Cancelled' } as any);
       store.retryCheckout();
 
       expect(store.submitted()).toBe(false);
       expect(store.pollingExpired()).toBe(false);
       expect(store.error()).toBeNull();
+      expect(store.order()).toBeNull();
+      expect(store.hasOrder()).toBe(false);
+      expect(store.submitting()).toBe(false);
+    });
+  });
+
+  describe('markTerminalFailure', () => {
+    it('should set error from reason and reset submitting', () => {
+      store.markTerminalFailure('Payment failed: insufficient funds');
+
+      expect(store.error()).toBe('Payment failed: insufficient funds');
+      expect(store.submitting()).toBe(false);
+    });
+
+    it('should use default message when reason is null', () => {
+      store.markTerminalFailure(null);
+
+      expect(store.error()).toBe('Order could not be completed. Please try again.');
+      expect(store.submitting()).toBe(false);
     });
   });
 

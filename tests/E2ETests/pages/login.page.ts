@@ -24,11 +24,9 @@ export class LoginPage extends BasePage {
         await this.loginSubmitBtn.click();
         return;
       }
-
-      await this.page.waitForTimeout(150);
     }
 
-    await expect(this.loginSubmitBtn).toBeEnabled();
+    await expect(this.loginSubmitBtn).toBeEnabled({ timeout: 3000 });
     await this.loginSubmitBtn.click();
   }
 

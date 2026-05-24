@@ -60,6 +60,7 @@ public sealed class Order : AggregateRoot
             throw new DomainException("Can only transition to InventoryReserved from Submitted");
 
         Status = OrderStatus.InventoryReserved;
+        AddDomainEvent(new OrderStatusChangedDomainEvent(Id, BuyerId, Status, null));
     }
 
     public void MarkPaymentProcessing()
@@ -68,6 +69,7 @@ public sealed class Order : AggregateRoot
             throw new DomainException("Can only transition to PaymentProcessing from InventoryReserved");
 
         Status = OrderStatus.PaymentProcessing;
+        AddDomainEvent(new OrderStatusChangedDomainEvent(Id, BuyerId, Status, null));
     }
 
     public void MarkCompleted()
@@ -96,6 +98,42 @@ public sealed class Order : AggregateRoot
     {
         Status = OrderStatus.Faulted;
         CancellationReason = reason;
+    }
+
+    /// <summary>
+    /// Fast-forwards through sequential saga states to reach the target status.
+    /// Handles race conditions where projection consumers arrive out of order
+    /// (e.g., PaymentProcessing arrives before InventoryReserved).
+    /// Returns true if the target was reached, false if already at/past it.
+    /// </summary>
+    public bool FastForwardTo(OrderStatus targetStatus, string? notes = null)
+    {
+        if (Status == targetStatus) return false;
+        if (Status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Faulted) return false;
+
+        // Terminal failure states — transition directly from any active state
+        if (targetStatus == OrderStatus.Cancelled)
+        {
+            MarkCancelled(notes ?? "Cancelled");
+            return true;
+        }
+        if (targetStatus == OrderStatus.Faulted)
+        {
+            MarkFaulted(notes ?? "Faulted");
+            return true;
+        }
+
+        // Saga path: Submitted → InventoryReserved → PaymentProcessing → Completed
+        if (Status == OrderStatus.Submitted && targetStatus >= OrderStatus.InventoryReserved)
+            MarkInventoryReserved();
+
+        if (Status == OrderStatus.InventoryReserved && targetStatus >= OrderStatus.PaymentProcessing)
+            MarkPaymentProcessing();
+
+        if (Status == OrderStatus.PaymentProcessing && targetStatus == OrderStatus.Completed)
+            MarkCompleted();
+
+        return Status == targetStatus;
     }
 
     public void UpdateStatus(OrderStatus newStatus, string? notes = null)

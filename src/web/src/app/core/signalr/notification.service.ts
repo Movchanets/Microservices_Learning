@@ -41,13 +41,21 @@ export class NotificationService {
           return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 30_000);
         },
       })
+      .withKeepAliveInterval(10000) // Send pings every 10s (server timeout is 30s)
       .configureLogging(LogLevel.Information)
       .build();
 
     // Handle OrderUpdate messages from the hub
     this.hubConnection.on('OrderUpdate', (message: OrderUpdate) => {
+      console.log('[SignalR] OrderUpdate received', {
+        orderId: message.orderId,
+        status: message.status,
+        reason: message.reason,
+        timestamp: message.timestamp,
+      });
       this.ngZone.run(() => {
         this.orderUpdates.set(message);
+        console.log('[SignalR] orderUpdates signal set');
       });
     });
 
@@ -66,9 +74,10 @@ export class NotificationService {
 
     try {
       await this.hubConnection.start();
+      console.log('[SignalR] Connected successfully');
       this.connected.set(true);
     } catch (err) {
-      console.error('[NotificationService] Failed to connect:', err);
+      console.error('[SignalR] Failed to connect:', err);
       this.connected.set(false);
     }
   }
@@ -79,5 +88,10 @@ export class NotificationService {
       this.hubConnection = null;
       this.connected.set(false);
     }
+  }
+
+  /** Clears the last order update signal (e.g., before starting a new checkout). */
+  clearOrderUpdates(): void {
+    this.orderUpdates.set(null);
   }
 }

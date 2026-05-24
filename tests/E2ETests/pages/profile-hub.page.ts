@@ -29,6 +29,11 @@ export class ProfileHubPage extends BasePage {
   readonly confirmPasswordInput: Locator;
   readonly updatePasswordBtn: Locator;
 
+  // Feedback
+  readonly successMessage: Locator;
+  readonly errorMessage: Locator;
+  readonly validationErrors: Locator;
+
   constructor(page: Page) {
     super(page);
     this.pageHeading = page.getByRole('heading', { name: /my account|profile/i });
@@ -54,10 +59,16 @@ export class ProfileHubPage extends BasePage {
     this.newPasswordInput = page.getByLabel(/new password/i);
     this.confirmPasswordInput = page.getByLabel(/confirm password/i);
     this.updatePasswordBtn = page.getByRole('button', { name: /update password/i });
+
+    // Feedback messages
+    this.successMessage = page.getByText(/success|updated|saved/i).or(page.locator('.text-green'));
+    this.errorMessage = page.getByText(/error|failed|incorrect/i).or(page.locator('[role="alert"], .text-red'));
+    this.validationErrors = page.locator('.text-red-500, [aria-live="polite"]');
   }
 
   async goto() {
     await this.page.goto('/profile');
+    await this.waitForPageLoad();
   }
 
   async navigateToOrders() {
@@ -88,5 +99,25 @@ export class ProfileHubPage extends BasePage {
     await this.newPasswordInput.fill(newPass);
     await this.confirmPasswordInput.fill(confirm);
     await this.updatePasswordBtn.click();
+  }
+
+  async expectProfileUpdateSuccess(timeout = 10000) {
+    await expect(this.successMessage).toBeVisible({ timeout });
+  }
+
+  async expectPasswordChangeSuccess(timeout = 10000) {
+    await expect(this.successMessage).toBeVisible({ timeout });
+  }
+
+  async expectValidationError(message: string, timeout = 5000) {
+    await expect(this.validationErrors.filter({ hasText: message })).toBeVisible({ timeout });
+  }
+
+  async expectError(message?: string, timeout = 10000) {
+    if (message) {
+      await expect(this.errorMessage.filter({ hasText: message })).toBeVisible({ timeout });
+    } else {
+      await expect(this.errorMessage).toBeVisible({ timeout });
+    }
   }
 }

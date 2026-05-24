@@ -1,4 +1,4 @@
-import { Locator, Page } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export class SellerProductsPage extends BasePage {
@@ -7,6 +7,10 @@ export class SellerProductsPage extends BasePage {
   readonly productRows: Locator;
   readonly emptyState: Locator;
   readonly loadingSpinner: Locator;
+  readonly searchInput: Locator;
+  readonly editBtns: Locator;
+  readonly deleteBtns: Locator;
+  readonly confirmDeleteBtn: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -15,6 +19,10 @@ export class SellerProductsPage extends BasePage {
     this.productRows = this.productsTable.locator('tbody tr');
     this.emptyState = page.getByText(/no products|empty/i);
     this.loadingSpinner = page.locator('[class*="animate-spin"]');
+    this.searchInput = page.getByPlaceholder(/search/i);
+    this.editBtns = page.getByRole('button', { name: /edit/i });
+    this.deleteBtns = page.getByRole('button', { name: /delete|remove/i });
+    this.confirmDeleteBtn = page.getByRole('button', { name: /confirm|yes.*delete/i });
   }
 
   async goto() {
@@ -23,10 +31,52 @@ export class SellerProductsPage extends BasePage {
   }
 
   async getProductCount(): Promise<number> {
-    return await this.productRows.count();
+    return this.productRows.count();
   }
 
   async getProductRow(index: number) {
     return this.productRows.nth(index);
+  }
+
+  async clickAddProduct() {
+    await this.addProductBtn.click();
+  }
+
+  async editProduct(index: number) {
+    const row = this.productRows.nth(index);
+    await row.getByRole('button', { name: /edit/i }).click();
+  }
+
+  async deleteProduct(index: number) {
+    const row = this.productRows.nth(index);
+    await row.getByRole('button', { name: /delete|remove/i }).click();
+  }
+
+  async confirmDelete() {
+    await this.confirmDeleteBtn.click();
+  }
+
+  async searchProducts(query: string) {
+    await this.searchInput.fill(query);
+  }
+
+  async getProductName(index: number): Promise<string> {
+    const row = this.productRows.nth(index);
+    const nameCell = row.locator('td').first();
+    return nameCell.innerText();
+  }
+
+  async getProductStatus(index: number): Promise<string> {
+    const row = this.productRows.nth(index);
+    const statusCell = row.locator('td').nth(2);
+    return statusCell.innerText();
+  }
+
+  async isLoading(): Promise<boolean> {
+    return this.loadingSpinner.isVisible();
+  }
+
+  async isEmpty(): Promise<boolean> {
+    return this.emptyState.isVisible();
   }
 }

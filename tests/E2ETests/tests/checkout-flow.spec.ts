@@ -1,5 +1,5 @@
 import { checkoutTest as test, expect } from '../fixtures/checkout.fixture';
-import { registerApi } from '../utils/api-helpers';
+import { createTestData, runCheckoutFlow, addToCart } from '../utils/api-helpers';
 
 test.describe('Full Checkout Flow', () => {
   test('register, add product to cart via API, checkout and pay', async ({
@@ -7,32 +7,21 @@ test.describe('Full Checkout Flow', () => {
     playwright,
     cartPage,
     checkoutEnhancedPage,
-    testProduct,
-    addItemToCart,
   }) => {
-    // --- Step 1: Register a fresh user via API ---
-    const randomId = Math.random().toString(36).substring(7);
-    const email = `checkout_${randomId}@test.com`;
-    const password = 'P@ssw0rd123!';
+    // --- Step 1: Create test data environment ---
+    const data = await createTestData(playwright.request, {
+      productCount: 1,
+      stockPerProduct: 50,
+    });
 
-    const buyerApi = await registerApi(
-      playwright.request,
-      'Checkout',
-      'Tester',
-      email,
-      password
-    );
-
-    // Copy auth cookies to the browser context so the page is logged in
-    const storageState = await buyerApi.storageState();
+    // Copy auth cookies to the browser context
+    const storageState = await data.buyerApi.storageState();
     await page.context().addCookies(storageState.cookies);
-
-    // Navigate to catalog to establish the session
     await page.goto('/catalog');
     await page.waitForLoadState('domcontentloaded');
 
     // --- Step 2: Add product to cart via API ---
-    await addItemToCart(buyerApi, 1);
+    await addToCart(data.buyerApi, data.products[0].sku, 1, data.products[0].price, data.store.sellerId);
 
     // --- Step 3: Navigate to cart and verify item ---
     await cartPage.goto();
@@ -41,7 +30,7 @@ test.describe('Full Checkout Flow', () => {
     const isEmpty = await cartPage.isEmpty();
     expect(isEmpty).toBe(false);
 
-    const cartItem = await cartPage.getCartItem(testProduct.sku);
+    const cartItem = await cartPage.getCartItem(data.products[0].sku);
     await expect(cartItem).toBeVisible({ timeout: 5000 });
 
     // --- Step 4: Proceed to checkout ---
@@ -60,10 +49,8 @@ test.describe('Full Checkout Flow', () => {
     await checkoutEnhancedPage.saveAddress();
     await page.waitForLoadState('domcontentloaded');
 
-    // --- Step 6: Select express shipping (to trigger change event) ---
+    // --- Step 6: Select express shipping ---
     await checkoutEnhancedPage.selectExpressShipping();
-
-    // Wait for accordion to advance to summary section
     await expect(checkoutEnhancedPage.continueToPaymentBtn).toBeVisible({ timeout: 10000 });
 
     // --- Step 7: Continue to payment ---
@@ -72,25 +59,47 @@ test.describe('Full Checkout Flow', () => {
 
     // --- Step 8: Place order ---
     await checkoutEnhancedPage.placeOrder();
-
-    // --- Step 9: Verify order was submitted ---
     await page.waitForLoadState('domcontentloaded');
 
+    // --- Step 9: Verify order was submitted ---
     const submittedVisible = await checkoutEnhancedPage.orderSubmittedHeading.isVisible().catch(() => false);
     const completedVisible = await checkoutEnhancedPage.isCompleted().catch(() => false);
     const faultedVisible = await checkoutEnhancedPage.isFaulted().catch(() => false);
 
-    // The order should NOT be faulted (the TotalAmount bug is fixed)
     expect(faultedVisible).toBe(false);
-
-    // The order should be either submitted (processing) or completed
     expect(submittedVisible || completedVisible).toBe(true);
 
-    // Wait for the order to complete (polling takes up to 30s)
     if (submittedVisible && !completedVisible) {
       await expect(checkoutEnhancedPage.statusCompleted).toBeVisible({ timeout: 35000 });
     }
 
-    await buyerApi.dispose();
+    // Cleanup
+    await data.buyerApi.dispose();
+    await data.sellerApi.dispose();
+    await data.adminApi.dispose();
+  });
+
+  test('full checkout via API helpers (runCheckoutFlow)', async ({ playwright, testProduct, testStore }) => {
+    const data = await createTestData(playwright.request, { productCount: 1 });
+
+    const { correlationId, finalOrder } = await runCheckoutFlow(
+      data.buyerApi,
+      [{ sku: data.products[0].sku, quantity: 1, price: data.products[0].price, shopId: data.store.sellerId }],
+      {
+        addressLine1: '456 Helper Street',
+        city: 'Helper City',
+        state: 'NY',
+        postalCode: '10001',
+        country: 'US',
+      }
+    );
+
+    expect(correlationId).toBeTruthy();
+    expect(finalOrder).not.toBeNull();
+    expect(finalOrder!.statusName).toBe('Completed');
+
+    await data.buyerApi.dispose();
+    await data.sellerApi.dispose();
+    await data.adminApi.dispose();
   });
 });

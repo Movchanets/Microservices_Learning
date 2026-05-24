@@ -1,23 +1,13 @@
 import { test, expect } from '../fixtures/test-base';
+import { ensureAuthenticatedPageViaApi } from '../utils/api-helpers';
+import { OrderDetailEnhancedPage } from '../pages/order-detail-enhanced.page';
 
-test.describe('Plan 09: Order Cancellation & Status', () => {
+test.describe('Order Cancellation & Status', () => {
 
-  test.beforeEach(async ({ loginPage, registerPage, page }) => {
-    const randomId = Math.random().toString(36).substring(7);
-    const email = `user_${randomId}@test.com`;
-    const password = 'P@ssw0rd123!';
+  test('should display order detail with cancel button for cancellable orders', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const orderDetailPage = new OrderDetailEnhancedPage(page);
 
-    await registerPage.goto('/auth/register');
-    await registerPage.register('Test', 'User', email, password);
-    await page.waitForLoadState('domcontentloaded');
-
-    if (page.url().includes('/auth/login')) {
-      await loginPage.login(email, password);
-      await expect(page).toHaveURL(/\/catalog/);
-    }
-  });
-
-  test('should display order detail with cancel button for cancellable orders', async ({ page, orderDetailEnhancedPage }) => {
     await page.goto('/orders');
     await page.waitForLoadState('domcontentloaded');
 
@@ -25,77 +15,99 @@ test.describe('Plan 09: Order Cancellation & Status', () => {
     const isOrderVisible = await orderLink.isVisible().catch(() => false);
     if (!isOrderVisible) {
       test.skip(true, 'No orders available for this user — skipping');
+      await context.close();
       return;
     }
     await orderLink.click();
     await page.waitForLoadState('domcontentloaded');
-    await orderDetailEnhancedPage.waitForLoaded();
-    await expect(orderDetailEnhancedPage.pageHeading).toBeVisible();
+    await orderDetailPage.waitForLoaded();
+    await expect(orderDetailPage.pageHeading).toBeVisible();
+    await context.close();
   });
 
-  test('should show order status badge', async ({ page, orderDetailEnhancedPage }) => {
+  test('should show order status badge', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const orderDetailPage = new OrderDetailEnhancedPage(page);
+
     await page.goto('/orders');
     await page.waitForLoadState('domcontentloaded');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
     const isOrderVisible = await orderLink.isVisible().catch(() => false);
     if (!isOrderVisible) {
-      test.skip(true, 'No orders available for this user — skipping');
+      test.skip(true, 'No orders available — skipping');
+      await context.close();
       return;
     }
     await orderLink.click();
     await page.waitForLoadState('domcontentloaded');
-    await orderDetailEnhancedPage.waitForLoaded();
-    await expect(orderDetailEnhancedPage.statusBadge).toBeVisible();
+    await orderDetailPage.waitForLoaded();
+    await expect(orderDetailPage.statusBadge).toBeVisible();
+    await context.close();
   });
 
-  test('should show order timeline', async ({ page, orderDetailEnhancedPage }) => {
+  test('should show order timeline', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const orderDetailPage = new OrderDetailEnhancedPage(page);
+
     await page.goto('/orders');
     await page.waitForLoadState('domcontentloaded');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
     const isOrderVisible = await orderLink.isVisible().catch(() => false);
     if (!isOrderVisible) {
-      test.skip(true, 'No orders available for this user — skipping');
+      test.skip(true, 'No orders available — skipping');
+      await context.close();
       return;
     }
     await orderLink.click();
     await page.waitForLoadState('domcontentloaded');
-    await orderDetailEnhancedPage.waitForLoaded();
-    await expect(orderDetailEnhancedPage.timeline).toBeVisible();
+    await orderDetailPage.waitForLoaded();
+    await expect(orderDetailPage.timeline).toBeVisible();
+    await context.close();
   });
 
-  test('should show order items list', async ({ page, orderDetailEnhancedPage }) => {
+  test('should show order items list', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const orderDetailPage = new OrderDetailEnhancedPage(page);
+
     await page.goto('/orders');
     await page.waitForLoadState('domcontentloaded');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
     const isOrderVisible = await orderLink.isVisible().catch(() => false);
     if (!isOrderVisible) {
-      test.skip(true, 'No orders available for this user — skipping');
+      test.skip(true, 'No orders available — skipping');
+      await context.close();
       return;
     }
     await orderLink.click();
     await page.waitForLoadState('domcontentloaded');
-    await orderDetailEnhancedPage.waitForLoaded();
-    const itemCount = await orderDetailEnhancedPage.getOrderItemCount();
-    expect(itemCount).toBeGreaterThan(0); // Should have at least 1 order item
+    await orderDetailPage.waitForLoaded();
+    const itemCount = await orderDetailPage.getOrderItemCount();
+    expect(itemCount).toBeGreaterThan(0);
+    await context.close();
   });
 
-  test('should navigate back to orders from detail', async ({ page, orderDetailEnhancedPage }) => {
+  test('should navigate back to orders from detail', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const orderDetailPage = new OrderDetailEnhancedPage(page);
+
     await page.goto('/orders');
     await page.waitForLoadState('domcontentloaded');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details/i }).first();
     const isOrderVisible = await orderLink.isVisible().catch(() => false);
     if (!isOrderVisible) {
-      test.skip(true, 'No orders available for this user — skipping');
+      test.skip(true, 'No orders available — skipping');
+      await context.close();
       return;
     }
     await orderLink.click();
     await page.waitForLoadState('domcontentloaded');
-    await orderDetailEnhancedPage.waitForLoaded();
-    await orderDetailEnhancedPage.backToOrdersLink.click();
+    await orderDetailPage.waitForLoaded();
+    await orderDetailPage.backToOrdersLink.click();
     await expect(page).toHaveURL(/\/orders/);
+    await context.close();
   });
 });

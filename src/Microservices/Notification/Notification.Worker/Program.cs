@@ -22,7 +22,14 @@ builder.Services.AddSignalR()
         {
             options.Configuration.ChannelPrefix =
                 RedisChannel.Literal("marketplace");
-        });
+        })
+    .AddHubOptions<NotificationHub>(options =>
+    {
+        // Increase client timeout to 60s to tolerate proxy/WebSocket latency.
+        // Default is 30s — clients behind gateways may need more time.
+        options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+        options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    });
 
 // ── Custom UserIdProvider (maps authenticated claims) ───
 builder.Services.AddSingleton<IUserIdProvider, BuyerIdUserIdProvider>();

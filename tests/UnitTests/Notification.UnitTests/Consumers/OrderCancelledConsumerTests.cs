@@ -63,4 +63,77 @@ public class OrderCancelledConsumerTests
             await harness.Stop();
         }
     }
+
+    [Fact]
+    public async Task Consume_SetsStatusToCancelledRegardlessOfReason()
+    {
+        var buyerId = "buyer-457";
+        var orderId = Guid.NewGuid();
+        var evt = new OrderCancelledEvent(Guid.NewGuid(), orderId, buyerId, "Inventory reservation failed: Out of stock", DateTime.UtcNow);
+
+        OrderUpdateMessage? capturedMessage = null;
+        _clientProxyMock
+            .Setup(x => x.SendCoreAsync("OrderUpdate", It.IsAny<object?[]>(), It.IsAny<CancellationToken>()))
+            .Callback<string, object?[], CancellationToken>((_, args, _) =>
+            {
+                if (args.Length > 0 && args[0] is OrderUpdateMessage msg)
+                    capturedMessage = msg;
+            })
+            .Returns(Task.CompletedTask);
+
+        _clientsMock.Setup(c => c.User(buyerId)).Returns(_clientProxyMock.Object);
+
+        var consumer = new OrderCancelledConsumer(_hubContextMock.Object, _loggerMock.Object);
+        var harness = new InMemoryTestHarness();
+        var consumerHarness = harness.Consumer(() => consumer);
+
+        await harness.Start();
+        try
+        {
+            await harness.InputQueueSendEndpoint.Send(evt);
+
+            await consumerHarness.Consumed.Any<OrderCancelledEvent>();
+
+            capturedMessage.Should().NotBeNull();
+            capturedMessage!.Status.Should().Be("Cancelled");
+            capturedMessage.Reason.Should().Be("Inventory reservation failed: Out of stock");
+            capturedMessage.OrderId.Should().Be(orderId);
+            capturedMessage.BuyerId.Should().Be(buyerId);
+        }
+        finally
+        {
+            await harness.Stop();
+        }
+    }
+
+    [Fact]
+    public async Task Consume_DoesNotSendToOtherBuyers()
+    {
+        var buyerId = "buyer-458";
+        var otherBuyerId = "buyer-other";
+        var orderId = Guid.NewGuid();
+        var evt = new OrderCancelledEvent(Guid.NewGuid(), orderId, buyerId, "cancelled", DateTime.UtcNow);
+
+        _clientsMock.Setup(c => c.User(buyerId)).Returns(_clientProxyMock.Object);
+        _clientsMock.Setup(c => c.User(otherBuyerId)).Returns(new Mock<IClientProxy>().Object);
+
+        var consumer = new OrderCancelledConsumer(_hubContextMock.Object, _loggerMock.Object);
+        var harness = new InMemoryTestHarness();
+        var consumerHarness = harness.Consumer(() => consumer);
+
+        await harness.Start();
+        try
+        {
+            await harness.InputQueueSendEndpoint.Send(evt);
+
+            await consumerHarness.Consumed.Any<OrderCancelledEvent>();
+
+            _clientsMock.Verify(c => c.User(buyerId), Times.Once);
+            _clientsMock.Verify(c => c.User(otherBuyerId), Times.Never);
+        }
+        finally
+        {
+            await harness.Stop();
+        }
+    }
 }

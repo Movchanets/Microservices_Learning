@@ -1,67 +1,43 @@
 import { checkoutTest as test, expect } from '../fixtures/checkout.fixture';
-import { loginApi, registerApi } from '../utils/api-helpers';
-import * as users from '../data/users.json';
+import { createTestData, addToCart, getCurrentUser } from '../utils/api-helpers';
 
-test.describe('Plan 10: Seller Order Correlation', () => {
+test.describe('Seller Order Correlation', () => {
 
   test('buyer checkout creates order visible to seller', async ({
     page,
     playwright,
-    testStore,
-    testProduct,
-    addItemToCart,
   }) => {
-    // 1. Register a fresh buyer
-    const randomId = Math.random().toString(36).substring(7);
-    const buyerEmail = `buyer_${randomId}@test.com`;
-    const buyerPassword = 'P@ssw0rd123!';
+    // Create full environment: buyer, seller, store, product
+    const data = await createTestData(playwright.request, { productCount: 1 });
 
-    const buyerApi = await registerApi(
-      playwright.request,
-      'Test',
-      'Buyer',
-      buyerEmail,
-      buyerPassword
-    );
+    // Add product to buyer's cart
+    await addToCart(data.buyerApi, data.products[0].sku, 1, data.products[0].price, data.store.sellerId);
 
-    try {
-      // 2. Add product to buyer's cart via API (includes sellerId)
-      await addItemToCart(buyerApi);
+    // Checkout via API
+    const checkoutResponse = await data.buyerApi.post('/api/cart/checkout', {
+      data: {
+        addressLine1: '123 Test St',
+        city: 'Testville',
+        state: 'TS',
+        postalCode: '12345',
+        country: 'US',
+      },
+    });
+    expect(checkoutResponse.ok()).toBeTruthy();
+    const checkoutResult = await checkoutResponse.json();
+    expect(checkoutResult.correlationId).toBeTruthy();
 
-      // 3. Checkout via API
-      const checkoutResponse = await buyerApi.post('/api/cart/checkout', {
-        data: {
-          addressLine1: '123 Test St',
-          city: 'Testville',
-          state: 'TS',
-          postalCode: '12345',
-          country: 'US',
-        },
-      });
-      expect(checkoutResponse.ok()).toBeTruthy();
-      const checkoutResult = await checkoutResponse.json();
-      expect(checkoutResult.correlationId).toBeTruthy();
-
-      // 4. Wait for order to be processed (saga completes)
-      await page.waitForLoadState('domcontentloaded');
-
-      // 5. Login as seller in browser
-      await page.goto('/auth/login');
-      await page.getByPlaceholder('name@company.com').fill(users.sellerUser.email);
-      await page.getByPlaceholder('••••••••').fill(users.sellerUser.password);
-      await page.getByRole('button', { name: /sign in/i }).click();
-      await page.waitForLoadState('domcontentloaded');
-
-      // 6. Navigate to seller dashboard -> Orders tab
-      await page.goto('/seller');
-      await page.waitForLoadState('domcontentloaded');
+    // Copy seller cookies to browser and check orders
+    const storageState = await data.sellerApi.storageState();
+    await page.context().addCookies(storageState.cookies);
+    await page.goto('/seller');
+    await page.waitForLoadState('domcontentloaded');
 
     const ordersTab = page.getByRole('link', { name: /orders/i });
     await expect(ordersTab).toBeVisible({ timeout: 10000 });
     await ordersTab.click();
     await page.waitForLoadState('domcontentloaded');
 
-    // 7. Verify order appears in seller order list
     const hasTable = await page.locator('table').isVisible();
     const isEmpty = await page.getByText('No orders yet').isVisible();
 
@@ -71,47 +47,27 @@ test.describe('Plan 10: Seller Order Correlation', () => {
     } else {
       expect(isEmpty).toBe(true);
     }
-    } finally {
-      await buyerApi.dispose();
-    }
+
+    await data.buyerApi.dispose();
+    await data.sellerApi.dispose();
+    await data.adminApi.dispose();
   });
 
-  test('cart item includes sellerId when adding product', async ({
-    playwright,
-    testStore,
-    testProduct,
-  }) => {
-    const randomId = Math.random().toString(36).substring(7);
-    const buyerEmail = `buyer_cart_${randomId}@test.com`;
+  test('cart item includes sellerId when adding product', async ({ playwright, testStore }) => {
+    const data = await createTestData(playwright.request, { productCount: 1 });
 
-    const buyerApi = await registerApi(
-      playwright.request,
-      'Cart',
-      'Test',
-      buyerEmail,
-      'P@ssw0rd123!'
-    );
+    // Add product to cart
+    await addToCart(data.buyerApi, data.products[0].sku, 1, data.products[0].price, data.store.sellerId);
 
-    try {
-      // Add product to cart with shopId
-      const cartResponse = await buyerApi.post('/api/cart/items', {
-        data: {
-          sku: testProduct.sku,
-          quantity: 1,
-          shopId: testStore.sellerId,
-        },
-      });
+    // Verify cart item has shopId
+    const getCartResponse = await data.buyerApi.get('/api/cart');
+    expect(getCartResponse.ok()).toBeTruthy();
+    const cart = await getCartResponse.json();
+    expect(cart.items).toHaveLength(1);
+    expect(cart.items[0].shopId).toBe(data.store.sellerId);
 
-      expect(cartResponse.ok()).toBeTruthy();
-
-      // Verify cart item has shopId
-      const getCartResponse = await buyerApi.get('/api/cart');
-      expect(getCartResponse.ok()).toBeTruthy();
-      const cart = await getCartResponse.json();
-      expect(cart.items).toHaveLength(1);
-      expect(cart.items[0].shopId).toBe(testStore.sellerId);
-    } finally {
-      await buyerApi.dispose();
-    }
+    await data.buyerApi.dispose();
+    await data.sellerApi.dispose();
+    await data.adminApi.dispose();
   });
 });

@@ -40,13 +40,30 @@ export const AuthStore = signalStore(
       await notificationService.start(user.id);
     }
 
-    async function cleanupAuth(): Promise<void> {
+    async function cleanupAuth(forceRedirect = false): Promise<void> {
       if (isPlatformBrowser(platformId)) {
         localStorage.removeItem('buyerId');
       }
       await notificationService.stop();
       patchState(store, { user: null, loading: false });
-      router.navigate(['/auth/login']);
+
+      // Only redirect to login if forced (logout) or on a protected page.
+      // During checkAuth init, public pages (/auth/*, /home, /catalog) should not redirect.
+      if (forceRedirect) {
+        router.navigate(['/auth/login']);
+        return;
+      }
+
+      const url = router.url;
+      const isPublicRoute = url.startsWith('/auth/')
+        || url.startsWith('/home')
+        || url.startsWith('/catalog')
+        || url.startsWith('/stores')
+        || url === '/';
+
+      if (!isPublicRoute) {
+        router.navigate(['/auth/login']);
+      }
     }
 
     async function handlePostAuth(): Promise<void> {
@@ -97,7 +114,7 @@ export const AuthStore = signalStore(
         } catch {
           // Logout should always clean up locally, even if the API call fails
         } finally {
-          await cleanupAuth();
+          await cleanupAuth(true);
         }
       },
 

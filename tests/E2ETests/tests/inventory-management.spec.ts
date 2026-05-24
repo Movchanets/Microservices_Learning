@@ -1,23 +1,10 @@
 import { test, expect } from '../fixtures/test-base';
+import { ensureAuthenticatedPageViaApi } from '../utils/api-helpers';
 
-test.describe('Plan 08: Inventory Management UI', () => {
+test.describe('Inventory Management UI', () => {
 
-  test.beforeEach(async ({ loginPage, registerPage, page }) => {
-    const randomId = Math.random().toString(36).substring(7);
-    const email = `seller_${randomId}@test.com`;
-    const password = 'P@ssw0rd123!';
-
-    await registerPage.goto('/auth/register');
-    await registerPage.register('Seller', 'User', email, password);
-    await page.waitForLoadState('domcontentloaded');
-
-    if (page.url().includes('/auth/login')) {
-      await loginPage.login(email, password);
-      await page.waitForLoadState('domcontentloaded');
-    }
-  });
-
-  test('should display inventory tab for seller', async ({ page }) => {
+  test('should display inventory tab for seller', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request, { firstName: 'Seller', lastName: 'User' });
     await page.goto('/seller');
     await page.waitForLoadState('domcontentloaded');
 
@@ -34,9 +21,11 @@ test.describe('Plan 08: Inventory Management UI', () => {
       const isEmpty = await page.getByText(/no inventory/i).isVisible();
       expect(hasTable || isEmpty).toBe(true);
     }
+    await context.close();
   });
 
-  test('should show inventory table with products', async ({ page }) => {
+  test('should show inventory table with products', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request, { firstName: 'Seller', lastName: 'User' });
     await page.goto('/seller');
     await page.waitForLoadState('domcontentloaded');
 
@@ -47,9 +36,11 @@ test.describe('Plan 08: Inventory Management UI', () => {
     const hasTable = await page.locator('table').isVisible();
     const isEmpty = await page.getByText(/no inventory/i).isVisible();
     expect(hasTable || isEmpty).toBe(true);
+    await context.close();
   });
 
-  test('should filter inventory by status', async ({ page }) => {
+  test('should filter inventory by status', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request, { firstName: 'Seller', lastName: 'User' });
     await page.goto('/seller');
     await page.waitForLoadState('domcontentloaded');
 
@@ -67,6 +58,7 @@ test.describe('Plan 08: Inventory Management UI', () => {
     await expect(allItemsBtn).toBeVisible({ timeout: 10000 });
     await allItemsBtn.click();
     await page.waitForLoadState('domcontentloaded');
+    await context.close();
   });
 
   test('should redirect unauthenticated from inventory', async ({ page }) => {

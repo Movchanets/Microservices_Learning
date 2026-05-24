@@ -24,17 +24,22 @@ export abstract class BasePage {
   /**
    * Fills an input and verifies the value took effect.
    * Retries up to 3 times to handle reactive form interference.
+   * Uses expect() polling instead of waitForTimeout for reliability.
    */
   protected async fillStable(input: Locator, value: string): Promise<void> {
     for (let attempt = 0; attempt < 3; attempt++) {
       await input.fill(value);
-      await expect(input).toHaveValue(value);
 
-      if ((await input.inputValue()) === value) {
+      try {
+        await expect(input).toHaveValue(value, { timeout: 2000 });
         return;
+      } catch {
+        // Retry on next attempt
       }
-
-      await this.page.waitForTimeout(100);
     }
+
+    // Final attempt — let the assertion throw if it still fails
+    await input.fill(value);
+    await expect(input).toHaveValue(value, { timeout: 3000 });
   }
 }

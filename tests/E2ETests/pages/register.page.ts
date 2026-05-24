@@ -28,11 +28,9 @@ export class RegisterPage extends BasePage {
         await this.registerSubmitBtn.click();
         return;
       }
-
-      await this.page.waitForTimeout(150);
     }
 
-    await expect(this.registerSubmitBtn).toBeEnabled();
+    await expect(this.registerSubmitBtn).toBeEnabled({ timeout: 3000 });
     await this.registerSubmitBtn.click();
   }
 }

@@ -1,44 +1,49 @@
 import { test, expect } from '../fixtures/test-base';
+import { ensureAuthenticatedPageViaApi } from '../utils/api-helpers';
 
-test.describe('Plan 03: Cart Drawer & Checkout', () => {
+test.describe('Cart Drawer & Checkout', () => {
 
-  test.beforeEach(async ({ loginPage, registerPage, page }) => {
-    const randomId = Math.random().toString(36).substring(7);
-    const email = `user_${randomId}@test.com`;
-    const password = 'P@ssw0rd123!';
+  test('should open cart drawer from header', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new (await import('../components/header.component')).HeaderComponent(page);
+    const cartDrawer = new (await import('../components/cart-drawer.component')).CartDrawerComponent(page);
 
-    await registerPage.goto('/auth/register');
-    await registerPage.register('Test', 'User', email, password);
-    await page.waitForLoadState('domcontentloaded');
-
-    if (page.url().includes('/auth/login')) {
-      await loginPage.login(email, password);
-      await expect(page).toHaveURL(/\/catalog/);
-    }
-  });
-
-  test('should open cart drawer from header', async ({ page, header, cartDrawer }) => {
     await header.openCart();
     await cartDrawer.waitForOpen();
     await expect(cartDrawer.heading).toBeVisible();
+    await context.close();
   });
 
-  test('should close cart drawer', async ({ page, header, cartDrawer }) => {
+  test('should close cart drawer', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new (await import('../components/header.component')).HeaderComponent(page);
+    const cartDrawer = new (await import('../components/cart-drawer.component')).CartDrawerComponent(page);
+
     await header.openCart();
     await cartDrawer.waitForOpen();
     await cartDrawer.close();
     await cartDrawer.waitForClose();
+    await context.close();
   });
 
-  test('should show empty cart message when no items', async ({ page, header, cartDrawer }) => {
+  test('should show empty cart message when no items', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new (await import('../components/header.component')).HeaderComponent(page);
+    const cartDrawer = new (await import('../components/cart-drawer.component')).CartDrawerComponent(page);
+
     await header.openCart();
     await cartDrawer.waitForOpen();
     const isEmpty = await cartDrawer.isEmpty();
     const itemCount = await cartDrawer.getItemCount();
     expect(isEmpty || itemCount > 0).toBe(true);
+    await context.close();
   });
 
-  test('should add item and see it in cart drawer', async ({ page, header, cartDrawer }) => {
+  test('should add item and see it in cart drawer', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const header = new (await import('../components/header.component')).HeaderComponent(page);
+    const cartDrawer = new (await import('../components/cart-drawer.component')).CartDrawerComponent(page);
+
     const addBtn = page.getByRole('button', { name: /add to cart/i }).first();
     await expect(addBtn).toBeVisible({ timeout: 10000 });
     await addBtn.click();
@@ -47,14 +52,18 @@ test.describe('Plan 03: Cart Drawer & Checkout', () => {
     await cartDrawer.waitForOpen();
     const itemCount = await cartDrawer.getItemCount();
     expect(itemCount).toBeGreaterThan(0);
+    await context.close();
   });
 
-  test('should display checkout page with address form', async ({ page, checkoutEnhancedPage }) => {
-    await checkoutEnhancedPage.goto();
-    await checkoutEnhancedPage.waitForPageLoad();
-    // May show empty cart or checkout form
-    const isEmpty = await checkoutEnhancedPage.emptyCartMessage.isVisible();
-    const hasHeading = await checkoutEnhancedPage.pageHeading.isVisible();
+  test('should display checkout page with address form', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const checkoutPage = new (await import('../pages/checkout-enhanced.page')).CheckoutEnhancedPage(page);
+
+    await checkoutPage.goto();
+    await checkoutPage.waitForPageLoad();
+    const isEmpty = await checkoutPage.emptyCartMessage.isVisible();
+    const hasHeading = await checkoutPage.pageHeading.isVisible();
     expect(isEmpty || hasHeading).toBe(true);
+    await context.close();
   });
 });

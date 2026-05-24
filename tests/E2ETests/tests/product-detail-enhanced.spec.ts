@@ -1,23 +1,13 @@
 import { test, expect } from '../fixtures/test-base';
+import { ensureAuthenticatedPageViaApi } from '../utils/api-helpers';
+import { ProductDetailEnhancedPage } from '../pages/product-detail-enhanced.page';
 
-test.describe('Plan 04: Product Detail Enhancements', () => {
+test.describe('Product Detail Enhancements', () => {
 
-  test.beforeEach(async ({ loginPage, registerPage, page }) => {
-    const randomId = Math.random().toString(36).substring(7);
-    const email = `user_${randomId}@test.com`;
-    const password = 'P@ssw0rd123!';
+  test('should display product detail with buy box', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const pdp = new ProductDetailEnhancedPage(page);
 
-    await registerPage.goto('/auth/register');
-    await registerPage.register('Test', 'User', email, password);
-    await page.waitForLoadState('domcontentloaded');
-
-    if (page.url().includes('/auth/login')) {
-      await loginPage.login(email, password);
-      await expect(page).toHaveURL(/\/catalog/);
-    }
-  });
-
-  test('should display product detail with buy box', async ({ page, productDetailEnhancedPage }) => {
     await page.goto('/catalog');
     await page.waitForLoadState('domcontentloaded');
 
@@ -25,10 +15,14 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await expect(firstProduct).toBeVisible({ timeout: 10000 });
     await firstProduct.click();
     await page.waitForLoadState('domcontentloaded');
-    await expect(productDetailEnhancedPage.addToCartBtn).toBeVisible();
+    await expect(pdp.addToCartBtn).toBeVisible();
+    await context.close();
   });
 
-  test('should show stock indicator on product detail', async ({ page, productDetailEnhancedPage }) => {
+  test('should show stock indicator on product detail', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const pdp = new ProductDetailEnhancedPage(page);
+
     await page.goto('/catalog');
     await page.waitForLoadState('domcontentloaded');
 
@@ -36,11 +30,15 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await expect(firstProduct).toBeVisible({ timeout: 10000 });
     await firstProduct.click();
     await page.waitForLoadState('domcontentloaded');
-    const stockVisible = await productDetailEnhancedPage.stockIndicator.isVisible();
+    const stockVisible = await pdp.stockIndicator.isVisible();
     expect(stockVisible).toBe(true);
+    await context.close();
   });
 
-  test('should change quantity with plus/minus buttons', async ({ page, productDetailEnhancedPage }) => {
+  test('should change quantity with plus/minus buttons', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const pdp = new ProductDetailEnhancedPage(page);
+
     await page.goto('/catalog');
     await page.waitForLoadState('domcontentloaded');
 
@@ -48,11 +46,15 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await expect(firstProduct).toBeVisible({ timeout: 10000 });
     await firstProduct.click();
     await page.waitForLoadState('domcontentloaded');
-    await productDetailEnhancedPage.increaseQuantity();
-    await productDetailEnhancedPage.decreaseQuantity();
+    await pdp.increaseQuantity();
+    await pdp.decreaseQuantity();
+    await context.close();
   });
 
-  test('should add product to cart from detail page', async ({ page, productDetailEnhancedPage }) => {
+  test('should add product to cart from detail page', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const pdp = new ProductDetailEnhancedPage(page);
+
     await page.goto('/catalog');
     await page.waitForLoadState('domcontentloaded');
 
@@ -60,11 +62,15 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await expect(firstProduct).toBeVisible({ timeout: 10000 });
     await firstProduct.click();
     await page.waitForLoadState('domcontentloaded');
-    await productDetailEnhancedPage.addToCart();
+    await pdp.addToCart();
     await page.waitForLoadState('domcontentloaded');
+    await context.close();
   });
 
-  test('should display review section when reviews exist', async ({ page, productDetailEnhancedPage }) => {
+  test('should display review section when reviews exist', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const pdp = new ProductDetailEnhancedPage(page);
+
     await page.goto('/catalog');
     await page.waitForLoadState('domcontentloaded');
 
@@ -72,12 +78,16 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await expect(firstProduct).toBeVisible({ timeout: 10000 });
     await firstProduct.click();
     await page.waitForLoadState('domcontentloaded');
-    const hasReviews = await productDetailEnhancedPage.reviewSummary.isVisible();
+    const hasReviews = await pdp.reviewSummary.isVisible();
     const hasNoReviews = await page.getByText(/no reviews|be the first/i).isVisible();
     expect(hasReviews || hasNoReviews).toBe(true);
+    await context.close();
   });
 
-  test('should show frequently bought together section', async ({ page, productDetailEnhancedPage }) => {
+  test('should show frequently bought together section', async ({ browser, playwright }) => {
+    const { page, context } = await ensureAuthenticatedPageViaApi(browser, playwright.request);
+    const pdp = new ProductDetailEnhancedPage(page);
+
     await page.goto('/catalog');
     await page.waitForLoadState('domcontentloaded');
 
@@ -85,7 +95,8 @@ test.describe('Plan 04: Product Detail Enhancements', () => {
     await expect(firstProduct).toBeVisible({ timeout: 10000 });
     await firstProduct.click();
     await page.waitForLoadState('domcontentloaded');
-    const hasFBT = await productDetailEnhancedPage.frequentlyBoughtTogether.isVisible();
-    expect(hasFBT).toBe(true); // Frequently bought together should be visible
+    const hasFBT = await pdp.frequentlyBoughtTogether.isVisible();
+    expect(hasFBT).toBe(true);
+    await context.close();
   });
 });

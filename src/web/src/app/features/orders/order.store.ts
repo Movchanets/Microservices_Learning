@@ -57,12 +57,27 @@ export const OrderStore = signalStore(
     },
 
     updateOrderStatus(orderId: string, status: OrderStatus): void {
+      const orders = store.orders();
+      const selected = store.selectedOrder();
+      const target = orders.find((o) => o.id === orderId);
+      const selectedMatches = selected?.id === orderId;
+
+      // Guard: skip if order not found anywhere, or nothing would change.
+      // Avoids creating new array references that needlessly fire signals.
+      const listNeedsUpdate = target && target.status !== status;
+      const selectedNeedsUpdate = selectedMatches && selected!.status !== status;
+
+      if (!listNeedsUpdate && !selectedNeedsUpdate) {
+        return;
+      }
+
       patchState(store, {
-        orders: store.orders().map((o) => (o.id === orderId ? { ...o, status } : o)),
-        selectedOrder:
-          store.selectedOrder()?.id === orderId
-            ? { ...store.selectedOrder()!, status }
-            : store.selectedOrder(),
+        orders: listNeedsUpdate
+          ? orders.map((o) => (o.id === orderId ? { ...o, status } : o))
+          : orders,
+        selectedOrder: selectedNeedsUpdate
+          ? { ...selected!, status }
+          : selected,
       });
     },
 

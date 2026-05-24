@@ -1,11 +1,8 @@
 import { APIRequestContext } from '@playwright/test';
 import {
-  createStore,
-  verifyStore,
-  createProduct,
-  createInventoryItem,
-  getCategories,
-  getStoreBySellerId,
+  ensureStoreExists,
+  ensureProductExists,
+  ensureCategoryExists,
   getCurrentUser,
   addToCart,
   type StoreResult,
@@ -15,7 +12,7 @@ import { authTest as baseTest, type AuthFixtures } from './auth.fixture';
 
 /**
  * Combined fixture for checkout E2E tests.
- * Merges page object fixtures with auth + store/product API fixtures.
+ * Uses idempotent "ensure" helpers mirroring the Seeder.App pipeline.
  *
  * Provides pre-authenticated buyer/seller/admin contexts, a verified store,
  * and a product with inventory — so tests focus on the feature under test.
@@ -32,59 +29,42 @@ export type CheckoutFixtures = AuthFixtures & {
 export const checkoutTest = baseTest.extend<Omit<CheckoutFixtures, keyof AuthFixtures>>({
   testStore: async ({ sellerApi, adminApi }, use) => {
     const seller = await getCurrentUser(sellerApi);
+    const randomId = Math.random().toString(36).substring(7).toUpperCase();
 
-    let store = await getStoreBySellerId(sellerApi, seller.id).catch(() => null);
-
-    if (!store) {
-      try {
-        const randomId = Math.random().toString(36).substring(7).toUpperCase();
-        store = await createStore(
-          sellerApi,
-          seller.id,
-          `Test Store ${randomId}`,
-          `E2E test store created at ${new Date().toISOString()}`
-        );
-      } catch {
-        store = await getStoreBySellerId(sellerApi, seller.id);
-        if (!store) {
-          throw new Error(`Failed to create or find store for seller ${seller.id}`);
-        }
-      }
-    }
-
-    if (store.verificationStatus !== 'Verified') {
-      try {
-        await verifyStore(adminApi, store.id, true);
-      } catch {
-        // 409 if already verified
-      }
-      store.verificationStatus = 'Verified';
-    }
+    const store = await ensureStoreExists(
+      sellerApi,
+      adminApi,
+      seller.id,
+      `Test Store ${randomId}`,
+      `E2E test store created at ${new Date().toISOString()}`
+    );
 
     await use(store);
   },
 
   testProduct: async ({ sellerApi, testStore }, use) => {
-    const categories = await getCategories(sellerApi);
-    const categoryId =
-      categories.length > 0
-        ? categories[0].id
-        : '00000000-0000-0000-0000-000000000000';
+    const categories = await ensureCategoryExists(
+      sellerApi,
+      'Electronics',
+      'Devices and gadgets'
+    );
 
     const randomId = Math.random().toString(36).substring(7).toUpperCase();
 
-    const product = await createProduct(sellerApi, {
-      name: `Test Product ${randomId}`,
-      description: `E2E test product created at ${new Date().toISOString()}`,
-      sku: `TEST-${randomId}`,
-      price: 29.99,
-      currency: 'USD',
-      categoryId,
-      storeId: testStore.id,
-      tags: ['e2e', 'test'],
-    });
-
-    await createInventoryItem(sellerApi, product.sku, 100);
+    const product = await ensureProductExists(
+      sellerApi,
+      {
+        name: `Test Product ${randomId}`,
+        description: `E2E test product created at ${new Date().toISOString()}`,
+        sku: `TEST-${randomId}`,
+        price: 29.99,
+        currency: 'USD',
+        categoryId: categories.id,
+        storeId: testStore.id,
+        tags: ['e2e', 'test'],
+      },
+      100
+    );
 
     await use(product);
   },

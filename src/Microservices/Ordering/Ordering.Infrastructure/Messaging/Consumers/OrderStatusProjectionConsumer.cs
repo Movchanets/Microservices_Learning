@@ -16,6 +16,7 @@ namespace Ordering.Infrastructure.Messaging.Consumers;
 public sealed class OrderStatusProjectionConsumer(
     IOrderRepository repository,
     IUnitOfWork uow,
+    IPublishEndpoint publishEndpoint,
     ILogger<OrderStatusProjectionConsumer> logger) : IConsumer<OrderStatusChangedEvent>
 {
     public async Task Consume(ConsumeContext<OrderStatusChangedEvent> context)
@@ -24,69 +25,25 @@ public sealed class OrderStatusProjectionConsumer(
         var order = await OrderConsumerHelpers.LoadOrderOrThrowAsync(
             repository, evt.OrderId, context.CancellationToken);
 
-        var targetStatus = evt.NewStatus;
-
-        // Skip if the order is already at or past the target status
-        if (order.Status.ToString() == targetStatus)
+        if (!Enum.TryParse<OrderStatus>(evt.NewStatus, ignoreCase: true, out var targetStatus))
         {
-            logger.LogDebug(
-                "Order {OrderId} already at {Status}, skipping projection",
-                order.Id, targetStatus);
+            logger.LogWarning("Unknown target status {Status} for Order {OrderId}", evt.NewStatus, order.Id);
             return;
         }
 
-        // Apply the status transition
-        switch (targetStatus)
+        // Skip if already at target
+        if (order.Status == targetStatus)
         {
-            case nameof(OrderStatus.PaymentProcessing):
-                if (order.Status == OrderStatus.Submitted)
-                {
-                    // Safety net: fast-forward through InventoryReserved
-                    logger.LogWarning(
-                        "Order {OrderId} is still Submitted — fast-forwarding to InventoryReserved first",
-                        order.Id);
-                    order.MarkInventoryReserved();
-                }
-                if (order.Status == OrderStatus.InventoryReserved)
-                {
-                    order.MarkPaymentProcessing();
-                }
-                break;
-
-            case nameof(OrderStatus.InventoryReserved):
-                if (order.Status == OrderStatus.Submitted)
-                {
-                    order.MarkInventoryReserved();
-                }
-                break;
-
-            case nameof(OrderStatus.Completed):
-                if (order.Status is not (OrderStatus.Cancelled or OrderStatus.Faulted))
-                {
-                    order.MarkCompleted();
-                }
-                break;
-
-            case nameof(OrderStatus.Cancelled):
-                order.MarkCancelled(evt.Notes ?? "Cancelled");
-                break;
-
-            case nameof(OrderStatus.Faulted):
-                order.MarkFaulted(evt.Notes ?? "Faulted");
-                break;
-
-            default:
-                logger.LogWarning(
-                    "Unknown target status {Status} for Order {OrderId}",
-                    targetStatus, order.Id);
-                return;
+            logger.LogDebug("Order {OrderId} already at {Status}, skipping projection", order.Id, targetStatus);
+            return;
         }
 
-        repository.Update(order);
-        await uow.SaveChangesAsync(context.CancellationToken);
+        var updated = await OrderConsumerHelpers.FastForwardAndPublishAsync(
+            repository, uow, publishEndpoint, order, targetStatus, evt.Notes, context.CancellationToken);
 
-        logger.LogInformation(
-            "Order {OrderId} projected to {Status}",
-            order.Id, order.Status);
+        if (updated)
+            logger.LogInformation("Order {OrderId} projected to {Status}", order.Id, order.Status);
+        else
+            logger.LogWarning("Order {OrderId} could not reach {Status} from {CurrentStatus}", order.Id, targetStatus, order.Status);
     }
 }

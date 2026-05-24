@@ -45,24 +45,73 @@ export const CheckoutStore = signalStore(
       const items = cartStore.items();
       const address = store.address();
 
+      console.log('[CheckoutStore] submitCheckout called', {
+        itemCount: items.length,
+        hasAddress: !!address,
+      });
+
       if (items.length === 0) {
+        console.warn('[CheckoutStore] submitCheckout → aborted: cart empty');
         patchState(store, { error: 'Cart is empty' });
         return;
       }
 
       if (!address) {
+        console.warn('[CheckoutStore] submitCheckout → aborted: no address');
         patchState(store, { error: 'Shipping address is required' });
         return;
       }
 
+      // Capture total before checkout clears the cart items
+      const totalAmount = cartStore.totalPrice();
+      console.log('[CheckoutStore] submitCheckout → captured totalAmount', { totalAmount });
+
       patchState(store, { submitting: true, error: null, submitted: true });
 
       try {
-        await cartStore.checkout(address);
-        patchState(store, { submitting: false });
-      } catch {
+        console.log('[CheckoutStore] submitCheckout → calling cartStore.checkout()', {
+          addressLine1: address.addressLine1,
+          city: address.city,
+        });
+
+        // Real backend call — POST /api/cart/checkout → publishes OrderSubmittedEvent → saga
+        await cartStore.checkout({
+          addressLine1: address.addressLine1,
+          city: address.city,
+          state: address.state,
+          postalCode: address.postalCode,
+          country: address.country,
+        });
+
+        const correlationId = cartStore.checkoutCorrelationId();
+        console.log('[CheckoutStore] submitCheckout → backend responded', {
+          correlationId,
+        });
+
+        // Set optimistic order with "Submitted" status.
+        // The real orderId + progressive status updates arrive via SignalR/polling.
         patchState(store, {
-          error: 'Checkout failed. Please try again.',
+          order: {
+            id: correlationId ?? crypto.randomUUID(),
+            buyerId: '',
+            status: 'Submitted',
+            totalAmount,
+            createdAt: new Date().toISOString(),
+            completedAt: null,
+            items: [],
+          },
+          submitting: false,
+        });
+
+        console.log('[CheckoutStore] submitCheckout → optimistic order set', {
+          orderId: store.order()?.id,
+          status: 'Submitted',
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Checkout failed. Please try again.';
+        console.error('[CheckoutStore] submitCheckout → FAILED', { message, err });
+        patchState(store, {
+          error: message,
           submitting: false,
           submitted: false,
         });
@@ -77,8 +126,26 @@ export const CheckoutStore = signalStore(
       patchState(store, { pollingExpired: expired });
     },
 
+    /**
+     * Called when a terminal failure status (Cancelled/Faulted) is received
+     * via SignalR or polling. Sets the error message so the template can
+     * surface the failure reason and show a retry mechanism.
+     */
+    markTerminalFailure(reason: string | null): void {
+      patchState(store, {
+        submitting: false,
+        error: reason || 'Order could not be completed. Please try again.',
+      });
+    },
+
     retryCheckout(): void {
-      patchState(store, { submitted: false, pollingExpired: false, error: null });
+      patchState(store, {
+        submitted: false,
+        pollingExpired: false,
+        error: null,
+        order: null,
+        submitting: false,
+      });
     },
 
     reset(): void {

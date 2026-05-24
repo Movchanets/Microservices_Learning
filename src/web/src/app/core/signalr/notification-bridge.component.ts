@@ -2,7 +2,7 @@
 // Connects SignalR notifications to NgRx stores via effects.
 // Renderless component — injects into app root to bridge real-time updates.
 
-import { Component, ChangeDetectionStrategy, effect, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, effect, inject, untracked } from '@angular/core';
 import { NotificationService } from './notification.service';
 import { OrderStore } from '../../features/orders/order.store';
 import { AuthStore } from '../auth/auth.store';
@@ -18,11 +18,17 @@ export class NotificationBridgeComponent {
   private readonly authStore = inject(AuthStore);
 
   constructor() {
-    // When a SignalR OrderUpdate arrives, update the order store
+    // When a SignalR OrderUpdate arrives, update the order store.
+    // CRITICAL: updateOrderStatus() internally reads store.orders() and
+    // creates a new array via .map(). Without untracked(), Angular tracks
+    // that read as an effect dependency — patchState creates a new array
+    // reference → signal fires → effect re-triggers → infinite loop → UI freeze.
     effect(() => {
       const update = this.notifications.orderUpdates();
       if (update) {
-        this.orderStore.updateOrderStatus(update.orderId, update.status);
+        untracked(() => {
+          this.orderStore.updateOrderStatus(update.orderId, update.status);
+        });
       }
     });
 
@@ -30,7 +36,9 @@ export class NotificationBridgeComponent {
     effect(() => {
       const user = this.authStore.user();
       if (!user) {
-        this.notifications.stop();
+        untracked(() => {
+          this.notifications.stop();
+        });
       }
     });
   }
