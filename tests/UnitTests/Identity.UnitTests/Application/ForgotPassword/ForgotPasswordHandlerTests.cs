@@ -1,3 +1,4 @@
+using BuildingBlocks.SharedContracts.Abstractions;
 using FluentAssertions;
 using Identity.Application.Commands.ForgotPassword;
 using Identity.Domain.Aggregates;
@@ -9,14 +10,16 @@ namespace Identity.UnitTests.Application.ForgotPassword;
 public sealed class ForgotPasswordHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<ForgotPasswordHandler>> _loggerMock;
     private readonly ForgotPasswordHandler _handler;
 
     public ForgotPasswordHandlerTests()
     {
         _userRepositoryMock = new Mock<IUserRepository>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<ForgotPasswordHandler>>();
-        _handler = new ForgotPasswordHandler(_userRepositoryMock.Object, _loggerMock.Object);
+        _handler = new ForgotPasswordHandler(_userRepositoryMock.Object, _unitOfWorkMock.Object, _loggerMock.Object);
     }
 
     [Fact]

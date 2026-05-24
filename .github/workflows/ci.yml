@@ -24,13 +24,6 @@ jobs:
         with:
           run_install: false
 
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      # Connect your workspace by running "nx connect" and uncomment this line to enable task distribution
-      # - run: pnpm dlx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
-
-      # Cache node_modules
       - uses: actions/setup-node@v6
         with:
           node-version: 20
@@ -56,27 +49,26 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter e2e-tests exec playwright install chromium --with-deps
 
-      # 4. Якщо кеш є — системні залежності (Linux пакети) все одно треба встановити,
-      # бо вони не зберігаються в ~/.cache, але це займає буквально пару секунд.
+      # 4. Якщо кеш є — системні залежності все одно треба встановити
       - name: Install Playwright OS dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm --filter e2e-tests exec playwright install-deps chromium
 
       - uses: nrwl/nx-set-shas@v5
 
-      # Run affected targets (lint, test, build) with Nx Cloud caching
-      - name: Run affected targets (with Nx Cloud)
-        id: nx-affected
-        run: pnpm exec nx affected -t lint test build
-        continue-on-error: true
+      # Cache Nx local cache
+      - name: Cache Nx local cache
+        uses: actions/cache@v5
+        with:
+          path: .nx/cache
+          key: nx-cache-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            nx-cache-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            nx-cache-${{ runner.os }}-
 
-      # Fallback: if Nx Cloud fails (e.g. rate limit reached), retry without cloud
-      - name: Run affected targets (without Nx Cloud - fallback)
-        if: steps.nx-affected.outcome == 'failure'
+      # Run affected targets with local cache only and without daemon
+      - name: Run affected targets
         env:
           NX_NO_CLOUD: true
-        run: pnpm exec nx affected -t lint test build --skip-nx-cache
-
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
-      - run: pnpm exec nx fix-ci
-        if: always() && steps.install.outcome == 'success'
+          NX_DAEMON: false # Вимикає фоновий процес Nx, який викликає зависання
+        run: pnpm exec nx affected -t test build

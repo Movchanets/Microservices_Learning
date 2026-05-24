@@ -12,10 +12,17 @@ public sealed class ProductSearchDocument
     public string CategoryName { get; init; } = string.Empty;
     public List<string> Tags { get; init; } = [];
     public string? ImageUrl { get; init; }
-    public Guid SellerId { get; init; }
+    public Guid StoreId { get; init; }
     public bool IsActive { get; init; } = true;
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
+
+    // New fields for richer faceting
+    public string? Brand { get; init; }
+    public Dictionary<string, string> Attributes { get; init; } = [];
+    public double? Rating { get; init; }
+    public int ReviewCount { get; init; }
+    public bool InStock { get; init; }
 }
 
 public sealed record SearchResult<T>(

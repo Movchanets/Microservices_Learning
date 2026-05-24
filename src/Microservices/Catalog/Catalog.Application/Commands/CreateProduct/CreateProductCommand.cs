@@ -11,6 +11,6 @@ public sealed record CreateProductCommand(
     string Currency,
     string Sku,
     Guid CategoryId,
-    Guid SellerId,
+    Guid StoreId,
     List<string>? Tags = null,
     string? ImageUrl = null) : IRequest<Result<ProductDto>>;

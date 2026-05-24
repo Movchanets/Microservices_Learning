@@ -2,11 +2,11 @@
   class="min-h-screen bg-background flex items-center justify-center p-6 transition-colors duration-300"
 >
   <div
-    class="w-full max-w-md bg-card/80 backdrop-blur-xl border border-border rounded-[2.5rem] p-10 z-10 shadow-2xl"
+    class="w-full max-w-md bg-card shadow-lg border border-border rounded-[2.5rem] p-10 z-10"
   >
     <div class="flex flex-col items-center mb-10">
       <div
-        class="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20 mb-6 transition-transform hover:scale-110"
+        class="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-6 transition-transform hover:scale-110"
       >
         <span class="text-white font-bold text-3xl">M</span>
       </div>
@@ -48,6 +48,12 @@
             class="w-full bg-input border-border rounded-xl py-3 pl-12 pr-4 transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary placeholder:text-muted-foreground/40 text-foreground"
           />
         </div>
+        @if (loginForm.controls.email.touched && loginForm.controls.email.hasError('required')) {
+          <p class="text-xs text-red-500 mt-2 ml-1" aria-live="polite" i18n>Email is required</p>
+        }
+        @if (loginForm.controls.email.touched && loginForm.controls.email.hasError('email')) {
+          <p class="text-xs text-red-500 mt-2 ml-1" aria-live="polite" i18n>Please enter a valid email</p>
+        }
       </div>
       <div class="space-y-2">
         <div class="flex items-center justify-between ml-1">
@@ -85,12 +91,15 @@
             <lucide-icon [name]="showPassword() ? 'eye-off' : 'eye'" class="w-5 h-5"></lucide-icon>
           </button>
         </div>
+        @if (loginForm.controls.password.touched && loginForm.controls.password.hasError('required')) {
+          <p class="text-xs text-red-500 mt-2 ml-1" aria-live="polite" i18n>Password is required</p>
+        }
       </div>
       <button
         data-testid="login-submit-btn"
         type="submit"
         [disabled]="loginForm.invalid || isSubmitting()"
-        class="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg transition-all hover:bg-secondary hover:scale-[1.02] active:scale-95 disabled:opacity-50 shadow-xl shadow-primary/20 hover:shadow-primary/40 mt-4 flex items-center justify-center gap-3"
+        class="w-full bg-primary text-white font-bold py-4 rounded-xl text-lg transition-all hover:bg-secondary hover:scale-[1.02] active:scale-95 disabled:opacity-50 mt-4 flex items-center justify-center gap-3"
       >
         @if (isSubmitting()) {
           <svg

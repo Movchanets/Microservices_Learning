@@ -15,5 +15,8 @@ public sealed record ProductUpdatedEvent(
     string CategoryName,
     List<string> Tags,
     string? ImageUrl,
+    Guid StoreId,
     bool IsActive,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    string? Brand = null,
+    Dictionary<string, string>? Attributes = null);

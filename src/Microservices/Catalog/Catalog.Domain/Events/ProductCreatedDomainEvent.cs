@@ -5,4 +5,12 @@ namespace Catalog.Domain.Events;
 public sealed record ProductCreatedDomainEvent(
     Guid ProductId,
     string Name,
-    string Sku) : IDomainEvent;
+    string Description,
+    decimal Price,
+    string Currency,
+    string Sku,
+    Guid CategoryId,
+    List<string> Tags,
+    string? ImageUrl,
+    Guid StoreId,
+    DateTime CreatedAt) : IDomainEvent;

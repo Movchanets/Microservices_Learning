@@ -28,6 +28,11 @@ public sealed class GlobalExceptionMiddleware(
         {
             await next(context);
         }
+        catch (OperationCanceledException ex) when (context.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogWarning("Request cancelled: {Path}", context.Request.Path);
+            await HandleExceptionAsync(context, ex);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
@@ -46,18 +51,30 @@ public sealed class GlobalExceptionMiddleware(
     {
         var (statusCode, title) = exception switch
         {
+            OperationCanceledException => (HttpStatusCode.ServiceUnavailable, "Request Cancelled"),
             ArgumentException => (HttpStatusCode.BadRequest, "Bad Request"),
             KeyNotFoundException => (HttpStatusCode.NotFound, "Not Found"),
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Unauthorized"),
             InvalidOperationException => (HttpStatusCode.Conflict, "Conflict"),
+            // EF Core exceptions — detected by type name to avoid adding EF Core dependency to BuildingBlocks
+            _ when exception.GetType().Name is "DbUpdateConcurrencyException" or "DbUpdateException"
+                => (HttpStatusCode.Conflict, "Data Conflict"),
             _ => (HttpStatusCode.InternalServerError, "Internal Server Error")
+        };
+
+        // For data conflicts, provide a user-friendly message in production too
+        var detail = exception.GetType().Name switch
+        {
+            "DbUpdateConcurrencyException" => "The data was modified by another request. Please retry.",
+            "DbUpdateException" => env.IsDevelopment() ? exception.Message : "A data conflict occurred. Please retry.",
+            _ => env.IsDevelopment() ? exception.Message : "An unexpected error occurred."
         };
 
         var problemDetails = new ProblemDetails
         {
             Status = (int)statusCode,
             Title = title,
-            Detail = env.IsDevelopment() ? exception.Message : "An unexpected error occurred.",
+            Detail = detail,
             Instance = context.Request.Path
         };
 

@@ -25,8 +25,17 @@ public sealed class User : AggregateRoot
     /// <summary>Gets the role assigned to the user.</summary>
     public UserRole Role { get; private set; }
 
+    /// <summary>Gets the store ID associated with this user (for sellers).</summary>
+    public Guid? StoreId { get; private set; }
+
     /// <summary>Gets the current refresh token assigned to the user.</summary>
     public RefreshToken? CurrentRefreshToken { get; private set; }
+
+    /// <summary>Gets the current password reset token, if any.</summary>
+    public string? PasswordResetToken { get; private set; }
+
+    /// <summary>Gets when the password reset token expires.</summary>
+    public DateTime? PasswordResetTokenExpiresAt { get; private set; }
 
     /// <summary>Gets a value indicating whether the user is active.</summary>
     public bool IsActive { get; private set; } = true;
@@ -76,23 +85,48 @@ public sealed class User : AggregateRoot
         user.AddDomainEvent(new UserRegisteredEvent(
             user.Id,
             user.Email.Value,
+            user.FirstName,
+            user.LastName,
             user.Role.ToString()));
 
         return user;
     }
 
     /// <summary>
-    /// Changes the role of the user.
+    /// Adds a role to the user (bitwise OR). Users can hold multiple roles.
     /// </summary>
-    /// <param name="newRole">The new role to assign to the user.</param>
-    public void ChangeRole(UserRole newRole)
+    /// <param name="roleToAdd">The role to add.</param>
+    public void AddRole(UserRole roleToAdd)
     {
-        if (Role == newRole) return;
+        if (Role.HasFlag(roleToAdd)) return;
 
-        var oldRole = Role.ToString();
-        Role = newRole;
+        var oldRoles = Role.ToString();
+        Role |= roleToAdd;
 
-        AddDomainEvent(new UserRoleChangedEvent(Id, oldRole, newRole.ToString()));
+        AddDomainEvent(new UserRoleChangedEvent(Id, oldRoles, Role.ToString()));
+    }
+
+    /// <summary>
+    /// Removes a role from the user (bitwise AND NOT).
+    /// </summary>
+    /// <param name="roleToRemove">The role to remove.</param>
+    public void RemoveRole(UserRole roleToRemove)
+    {
+        if (!Role.HasFlag(roleToRemove)) return;
+
+        var oldRoles = Role.ToString();
+        Role &= ~roleToRemove;
+
+        AddDomainEvent(new UserRoleChangedEvent(Id, oldRoles, Role.ToString()));
+    }
+
+    /// <summary>
+    /// Associates a store with this user (for sellers).
+    /// </summary>
+    /// <param name="storeId">The store ID to associate.</param>
+    public void SetStoreId(Guid storeId)
+    {
+        StoreId = storeId;
     }
 
     /// <summary>
@@ -118,6 +152,49 @@ public sealed class User : AggregateRoot
     /// Activates the user.
     /// </summary>
     public void Activate() => IsActive = true;
+
+    /// <summary>
+    /// Updates the user's profile.
+    /// Rationale: Domain method to safely encapsulate modifications to user identity elements.
+    /// </summary>
+    /// <param name="firstName">The new first name.</param>
+    /// <param name="lastName">The new last name.</param>
+    /// <param name="email">The new email address.</param>
+    /// <exception cref="ArgumentException">Thrown when firstName, lastName, or email are null/whitespace.</exception>
+    public void UpdateProfile(string firstName, string lastName, string email)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(firstName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(lastName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+
+        FirstName = firstName.Trim();
+        LastName = lastName.Trim();
+        Email = Email.Create(email.Trim());
+    }
+
+    /// <summary>
+    /// Changes the user's password.
+    /// </summary>
+    /// <param name="newPasswordHash">The new hashed password.</param>
+    public void ChangePassword(string newPasswordHash)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPasswordHash);
+        PasswordHash = PasswordHash.Create(newPasswordHash);
+    }
+
+    /// <summary>
+    /// Generates a new password reset token valid for the specified duration.
+    /// </summary>
+    /// <param name="validity">The token validity duration. Defaults to 24 hours.</param>
+    /// <returns>The generated reset token.</returns>
+    public string GeneratePasswordResetToken(TimeSpan? validity = null)
+    {
+        var token = Guid.NewGuid().ToString("N");
+        PasswordResetToken = token;
+        PasswordResetTokenExpiresAt = DateTime.UtcNow.Add(validity ?? TimeSpan.FromHours(24));
+        AddDomainEvent(new PasswordResetRequestedEvent(Id, Email.Value, token));
+        return token;
+    }
 
     /// <summary>
     /// Gets the full name of the user.

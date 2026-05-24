@@ -7,13 +7,25 @@ export interface User {
 }
 
 export interface LoginCredentials {
-  email?: string;
-  password?: string;
+  email: string;
+  password: string;
 }
 
 export interface RegisterCredentials {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  password?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}
+
+export interface UpdateProfileRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }

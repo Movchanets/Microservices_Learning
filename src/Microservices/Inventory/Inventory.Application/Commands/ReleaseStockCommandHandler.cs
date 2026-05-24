@@ -11,12 +11,17 @@ public sealed class ReleaseStockCommandHandler(
 {
     public async Task<Result<bool>> Handle(ReleaseStockCommand request, CancellationToken cancellationToken)
     {
-        var skus = request.Items.Select(i => i.Sku).ToList();
-        var items = await repository.GetBySkusAsync(skus, cancellationToken);
+        var productIds = request.Items.Select(i => i.ProductId).ToList();
+        var items = new List<InventoryItem>();
+        foreach (var pid in productIds)
+        {
+            var item = await repository.GetByProductIdAsync(pid, cancellationToken);
+            if (item is not null) items.Add(item);
+        }
 
         foreach (var requestedItem in request.Items)
         {
-            var inventoryItem = items.FirstOrDefault(i => i.Sku == requestedItem.Sku);
+            var inventoryItem = items.FirstOrDefault(i => i.ProductId == requestedItem.ProductId);
             if (inventoryItem != null)
             {
                 inventoryItem.Release(requestedItem.Quantity);

@@ -6,18 +6,18 @@ import { ProductListItem } from '../../catalog.models';
 
 @Component({
   selector: 'app-product-card',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CurrencyPipe, RouterLink, LucideAngularModule],
   template: `
     <div
-      class="group flex flex-col bg-card/40 backdrop-blur-sm border border-border
-                rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-primary/40
+      [attr.data-testid]="'product-card-' + product().id"
+      class="group flex flex-col bg-card border border-border
+                rounded-2xl p-6 shadow-sm hover:shadow-md
                 transition-all duration-300 h-full"
     >
       <!-- Image with defer -->
       <a
-        [routerLink]="[product().id]"
+        [routerLink]="['/catalog', product().id]"
         class="block relative w-full aspect-square rounded-xl overflow-hidden mb-5 bg-muted/10"
       >
         @if (product().imageUrl) {
@@ -41,11 +41,22 @@ import { ProductListItem } from '../../catalog.models';
 
         <!-- Category Badge -->
         <span
-          class="absolute top-3 left-3 px-3 py-1 bg-background/80 backdrop-blur-md
-                     rounded-full text-xs font-medium text-foreground shadow-sm"
+          class="absolute top-3 left-3 px-3 py-1 bg-card border border-border shadow-sm
+                     rounded-full text-xs font-medium text-foreground"
         >
           {{ product().categoryName }}
         </span>
+
+        <!-- In Stock Badge -->
+        @if (product().status === 'Active') {
+          <span
+            class="absolute top-3 right-3 px-2 py-0.5 bg-emerald-50 text-emerald-700
+                       border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300
+                       dark:border-emerald-800 rounded-full text-xs font-medium border"
+          >
+            In Stock
+          </span>
+        }
       </a>
 
       <!-- Content -->
@@ -54,13 +65,25 @@ import { ProductListItem } from '../../catalog.models';
           class="text-xl font-bold text-foreground font-lexend mb-1 line-clamp-2
                    group-hover:text-primary transition-colors"
         >
-          <a [routerLink]="[product().id]">{{ product().name }}</a>
+          <a [routerLink]="['/catalog', product().id]">{{ product().name }}</a>
         </h3>
 
-        <!-- SKU -->
-        <p class="text-xs text-muted mb-4 font-mono">
-          <lucide-icon name="Tag" class="w-3 h-3 inline mr-1"></lucide-icon>
-          {{ product().sku }}
+        <!-- SKU + Store -->
+        <p class="text-xs text-muted mb-4 font-mono flex items-center gap-2">
+          <span>
+            <lucide-icon name="Tag" class="w-3 h-3 inline mr-1"></lucide-icon>
+            {{ product().sku }}
+          </span>
+          @if (product().storeId) {
+            <a
+              [routerLink]="['/stores', product().storeId]"
+              class="inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+              (click)="$event.stopPropagation()"
+            >
+              <lucide-icon name="Store" class="w-3 h-3"></lucide-icon>
+              Store
+            </a>
+          }
         </p>
 
         <!-- Spacer pushes price to bottom -->
@@ -78,7 +101,7 @@ import { ProductListItem } from '../../catalog.models';
             (click)="addToCart.emit(product().id)"
             class="flex items-center justify-center w-12 h-12 rounded-xl
                          bg-primary text-white hover:bg-secondary
-                         active:scale-95 transition-all shadow-md shadow-primary/20"
+                         active:scale-95 transition-all"
             aria-label="Add to cart"
             data-testid="add-to-cart-btn"
           >

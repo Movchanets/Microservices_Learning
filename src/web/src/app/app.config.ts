@@ -40,12 +40,36 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
+  Clock,
+  XCircle,
+  AlertTriangle,
+  PackageCheck,
+  CreditCard,
+  ShoppingBag,
+  Pencil,
+  Settings,
+  ArrowRight,
+  Zap,
+  Loader,
+  CheckCircle,
+  Star,
+  Store,
+  ThumbsUp,
+  ThumbsDown,
+  MessageSquare,
+  Users,
+  UserX,
+  Home,
+  Check,
+  Bookmark,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { AuthStore } from './core/auth/auth.store';
 import { apiInterceptor } from './core/http/api.interceptor';
+import { errorInterceptor } from './core/http/error.interceptor';
+import { CategoryTreeService } from './core/services/category-tree.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -54,14 +78,21 @@ export const appConfig: ApplicationConfig = {
     provideClientHydration(withEventReplay()),
     provideHttpClient(
       withFetch(),
-      withInterceptors([apiInterceptor]),
+      withInterceptors([apiInterceptor, errorInterceptor]),
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
     ),
     provideAppInitializer(() => {
       if (isPlatformBrowser(inject(PLATFORM_ID))) {
-        // Run auth bootstrap in the background so UI hydration/form bindings are not blocked.
-        void inject(AuthStore).checkAuth();
+        const authStore = inject(AuthStore);
+        const categoryTreeService = inject(CategoryTreeService);
+        
+        // Fire off category tree load (don't block app boot)
+        void categoryTreeService.initialize();
+
+        // Auth must complete before router starts (guards need user state)
+        return authStore.checkAuth();
       }
+      return Promise.resolve();
     }),
     importProvidersFrom(
       LucideAngularModule.pick({
@@ -89,6 +120,28 @@ export const appConfig: ApplicationConfig = {
         Plus,
         Trash2,
         CheckCircle2,
+        Clock,
+        XCircle,
+        AlertTriangle,
+        PackageCheck,
+        CreditCard,
+        ShoppingBag,
+        Pencil,
+        Settings,
+        ArrowRight,
+        Zap,
+        Loader,
+        CheckCircle,
+        Star,
+        Store,
+        ThumbsUp,
+        ThumbsDown,
+        MessageSquare,
+        Users,
+        UserX,
+        Home,
+        Check,
+        Bookmark,
       }),
     ),
   ],

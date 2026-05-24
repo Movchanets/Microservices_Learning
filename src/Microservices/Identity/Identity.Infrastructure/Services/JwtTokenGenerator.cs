@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Identity.Application.Interfaces;
 using Identity.Domain.Aggregates;
+using Identity.Domain.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -28,15 +29,30 @@ public sealed class JwtTokenGenerator(IConfiguration configuration) : IJwtTokenG
 
         // Rationale: Include essential claims (Sub, Email, Role) to allow downstream services
         // to authorize actions without querying the Identity service.
-        var claims = new[]
+        // Emit one role claim per flag so RequireRole("Admin") works with multi-role users.
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email.Value),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim("firstName", user.FirstName),
-            new Claim("lastName", user.LastName)
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email.Value),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("firstName", user.FirstName),
+            new("lastName", user.LastName)
         };
+
+        // Add individual role claims for each flag that is set
+        foreach (var roleValue in Enum.GetValues<UserRole>())
+        {
+            if (roleValue != UserRole.None && user.Role.HasFlag(roleValue))
+            {
+                claims.Add(new Claim(ClaimTypes.Role, roleValue.ToString()));
+            }
+        }
+
+        // Include StoreId for sellers so downstream services can verify store ownership.
+        if (user.StoreId.HasValue)
+        {
+            claims.Add(new Claim("StoreId", user.StoreId.Value.ToString()));
+        }
 
         var token = new JwtSecurityToken(
             issuer: configuration["Jwt:Issuer"] ?? "marketplace-identity",

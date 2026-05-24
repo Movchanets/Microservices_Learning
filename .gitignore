@@ -503,3 +503,5 @@ tests/E2ETests/server.pid
 output.json
 tests/E2ETests/playwright-report/index.html
 tests/E2ETests/playwright-report/index.html
+.openclaude/
+.gemini/

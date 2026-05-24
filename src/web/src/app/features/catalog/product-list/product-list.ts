@@ -1,24 +1,24 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { computed } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CatalogStore } from '../catalog.store';
 import { CartStore } from '../../cart/cart.store';
 import { ProductCardComponent } from '../components/product-card/product-card';
-import { CategorySidebarComponent } from '../components/category-sidebar/category-sidebar';
 import { PaginationComponent } from '../components/pagination/pagination';
 import { SearchFacetsComponent } from '../components/search-facets/search-facets';
 
 @Component({
   selector: 'app-product-list',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [CatalogStore], // Feature-scoped store
   imports: [
     FormsModule,
     LucideAngularModule,
     ProductCardComponent,
-    CategorySidebarComponent,
     PaginationComponent,
     SearchFacetsComponent,
   ],
@@ -38,7 +38,7 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
           </p>
         </header>
 
-        <!-- Search bar -->
+        <!-- Search bar (local overrides header if used) -->
         <div class="relative max-w-xl mb-8">
           <lucide-icon
             name="Search"
@@ -52,29 +52,30 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
             placeholder="Search products..."
             class="w-full pl-12 pr-4 py-3 rounded-xl border border-border
                         focus:ring-2 focus:ring-primary focus:border-transparent outline-none
-                        bg-card/60 backdrop-blur-sm text-foreground placeholder:text-muted"
+                        bg-card text-foreground placeholder:text-muted"
             data-testid="search-input"
           />
         </div>
 
         <!-- Content: sidebar + grid -->
         <div class="flex flex-col lg:flex-row gap-8">
-          <!-- Sidebar: Categories (browse mode) or Search Facets (search mode) -->
+          <!-- Sidebar: Search Facets (search mode only, category sidebar removed) -->
           <div class="lg:w-64 shrink-0 space-y-4">
             @if (store.isSearchMode()) {
               <app-search-facets
                 [categoryFacets]="searchCategoryFacets()"
+                [brandFacets]="searchBrandFacets()"
                 [priceMin]="store.priceMin()"
                 [priceMax]="store.priceMax()"
+                [selectedBrands]="store.selectedBrands()"
+                [selectedRating]="store.minRating()"
+                [inStockOnly]="store.inStockOnly()"
                 (priceRangeChange)="onPriceRangeChange($event)"
                 (categoryClicked)="onFacetCategoryClick($event)"
+                (brandToggled)="store.toggleBrand($event)"
+                (ratingSelected)="store.setMinRating($event)"
+                (inStockToggle)="store.setInStockOnly($event)"
                 (clearFilters)="onClearFilters()"
-              />
-            } @else {
-              <app-category-sidebar
-                [categories]="store.categories()"
-                [selectedId]="store.selectedCategoryId()"
-                (categorySelected)="onCategorySelect($event)"
               />
             }
           </div>
@@ -86,7 +87,7 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
               <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 @for (i of skeletons; track i) {
                   <div
-                    class="bg-card/40 backdrop-blur-sm border border-border rounded-2xl p-6 shadow-sm animate-pulse"
+                    class="bg-card border border-border rounded-2xl p-6 shadow-sm animate-pulse"
                   >
                     <div class="w-full aspect-square bg-muted/20 rounded-xl mb-4"></div>
                     <div class="h-3 bg-muted/20 rounded-md w-1/3 mb-3"></div>
@@ -146,37 +147,45 @@ import { SearchFacetsComponent } from '../components/search-facets/search-facets
 export class ProductListComponent implements OnInit {
   store = inject(CatalogStore);
   cartStore = inject(CartStore);
+  route = inject(ActivatedRoute);
+  private platformId = inject(PLATFORM_ID);
+  
   readonly skeletons = Array.from({ length: 6 }, (_, i) => i);
-
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+  constructor() {
+    this.route.queryParams.pipe(takeUntilDestroyed()).subscribe(params => {
+      const q = params['q'] || '';
+      const categoryId = params['categoryId'] || null;
+      
+      this.store.updateSearchQuery(q);
+      this.store.selectCategory(categoryId);
+      this.store.refresh();
+    });
+  }
+
   ngOnInit(): void {
-    this.store.loadCategories();
-    this.store.loadProducts();
+    // Note: We no longer load side-bar categories here since it's global mega-menu now.
   }
 
   onSearch(query: string): void {
     this.store.updateSearchQuery(query);
-    // Debounce search to avoid excessive API calls
     if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     this.searchDebounceTimer = setTimeout(() => this.store.refresh(), 350);
-  }
-
-  onCategorySelect(categoryId: string | null): void {
-    this.store.selectCategory(categoryId);
-    this.store.refresh();
   }
 
   onPageChange(page: number): void {
     this.store.goToPage(page);
     this.store.refresh();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (isPlatformBrowser(this.platformId)) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   onAddToCart(productId: string): void {
     const product = this.store.products().find((p) => p.id === productId);
     if (product) {
-      this.cartStore.addToCart(product.sku, 1);
+      this.cartStore.addToCart(product.id, 1);
     }
   }
 
@@ -185,14 +194,17 @@ export class ProductListComponent implements OnInit {
     return facets['categories'] ?? [];
   });
 
+  searchBrandFacets = computed(() => {
+    const facets = this.store.facets();
+    return facets['brands'] ?? [];
+  });
+
   onPriceRangeChange(event: { min: number | null; max: number | null }): void {
     this.store.setPriceRange(event.min, event.max);
     this.store.refresh();
   }
 
   onFacetCategoryClick(categoryName: string): void {
-    // Search facets return category names, not IDs
-    // Update the search query to include the category name
     const currentQuery = this.store.searchQuery();
     const newQuery = currentQuery.includes(categoryName)
       ? currentQuery
@@ -202,9 +214,7 @@ export class ProductListComponent implements OnInit {
   }
 
   onClearFilters(): void {
-    this.store.updateSearchQuery('');
-    this.store.selectCategory(null);
-    this.store.setPriceRange(null, null);
+    this.store.clearFilters();
     this.store.refresh();
   }
 }

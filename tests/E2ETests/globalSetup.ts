@@ -4,65 +4,67 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 async function globalSetup(config: FullConfig) {
-  console.log('Starting .NET Aspire AppHost...');
-  
-  const projectPath = path.resolve(__dirname, '../../src/Aspire/Marketplace.AppHost/Marketplace.AppHost.csproj');
-  
-  const child = spawn('dotnet', ['run', '--project', projectPath], {
-    env: {
-      ...process.env,
-      ASPNETCORE_ENVIRONMENT: 'Testing'
-    },
-    detached: true,
-    stdio: 'pipe'
-  });
-
-  // Unref so Node.js can exit cleanly without waiting for the child
-  child.unref();
-
-  // Save PID to a file for teardown
-  fs.writeFileSync(path.join(__dirname, 'server.pid'), child.pid?.toString() || '');
-
-  child.stdout?.on('data', (data) => {
-    // console.log(`[AppHost]: ${data}`);
-  });
-
-  child.stderr?.on('data', (data) => {
-    console.error(`[AppHost Error]: ${data}`);
-  });
-
-  // Wait for the server to be ready
-  const baseURL = config.projects[0].use.baseURL || 'http://localhost:4200';
-  console.log(`Waiting for server at ${baseURL}...`);
-  
-  let ready = false;
-  const timeout = 300 * 1000;
-  const start = Date.now();
+  const frontendURL = config.projects[0].use.baseURL || 'http://localhost:4200';
   const probeTimeoutMs = 5000;
+  let appHostPid: number | undefined;
 
-  while (!ready && Date.now() - start < timeout) {
-    try {
-      const [frontendResponse, healthResponse] = await Promise.all([
-        fetch(baseURL, { signal: AbortSignal.timeout(probeTimeoutMs) }),
-        fetch(`${baseURL}/bff/health`, { signal: AbortSignal.timeout(probeTimeoutMs) })
-      ]);
+  // Check if frontend is already running (AppHost started externally)
+  let alreadyRunning = false;
+  try {
+    const resp = await fetch(frontendURL, { signal: AbortSignal.timeout(probeTimeoutMs) });
+    if (resp.ok || resp.status === 302) {
+      alreadyRunning = true;
+      console.log(`Frontend already running at ${frontendURL}, skipping AppHost startup.`);
+    }
+  } catch { /* not running */ }
 
-      if (frontendResponse.ok && healthResponse.ok) {
-        ready = true;
-      }
-    } catch (e) {
-      // Ignore errors while waiting
+  if (!alreadyRunning) {
+    console.log('Starting .NET Aspire AppHost...');
+    const projectPath = path.resolve(__dirname, '../../src/Aspire/Marketplace.AppHost/Marketplace.AppHost.csproj');
+
+    const child = spawn('dotnet', ['run', '--project', projectPath], {
+      env: { ...process.env, ASPNETCORE_ENVIRONMENT: 'Testing' },
+      detached: true,
+      stdio: 'pipe'
+    });
+
+    child.unref();
+    appHostPid = child.pid;
+    fs.writeFileSync(path.join(__dirname, 'server.pid'), child.pid?.toString() || '');
+
+    child.stdout?.on('data', () => {});
+    child.stderr?.on('data', (data) => {
+      console.error(`[AppHost Error]: ${data}`);
+    });
+
+    // Wait for frontend to be ready
+    console.log(`Waiting for frontend at ${frontendURL}...`);
+    const timeout = 300 * 1000;
+    const start = Date.now();
+    let ready = false;
+
+    while (!ready && Date.now() - start < timeout) {
+      try {
+        const resp = await fetch(frontendURL, { signal: AbortSignal.timeout(probeTimeoutMs) });
+        if (resp.ok || resp.status === 302) {
+          ready = true;
+        }
+      } catch { /* ignore */ }
+      if (!ready) await new Promise(r => setTimeout(r, 2000));
     }
-    if (!ready) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
+
+    if (!ready) throw new Error(`Frontend failed to start at ${frontendURL} within ${timeout}ms`);
+    console.log('Frontend is ready!');
+
+    // Wait additional time for backend services to stabilize
+    // The frontend (Angular SSR) responds before backend APIs are fully ready
+    console.log('Waiting for backend services to stabilize...');
+    await new Promise(r => setTimeout(r, 30_000));
+    console.log('Server is ready!');
   }
 
-  if (!ready) {
-    throw new Error(`Server failed to start at ${baseURL} within ${timeout}ms`);
-  }
-
-  console.log('Server is ready!');
+  // Save whether we started the AppHost (for teardown)
+  fs.writeFileSync(path.join(__dirname, 'external-host'), alreadyRunning ? 'true' : 'false');
 }
 
 export default globalSetup;

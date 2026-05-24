@@ -1,22 +1,25 @@
 import { defineConfig, devices } from "@playwright/test";
-import * as path from "path";
 
 export default defineConfig({
   testDir: "./tests",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  retries: 1,
+  workers: process.env.CI ? 3 : undefined,
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
+
+  reporter: process.env.CI
+    ? [["html"], ["junit", { outputFile: "results/junit.xml" }]]
+    : [["list"], ["html"]],
 
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:4200",
-
-    /* Enforce data-testid requirement */
+    baseURL: process.env.BASE_URL || "http://localhost:4200",
     testIdAttribute: "data-testid",
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
+    screenshot: "on-first-retry",
+    video: "on-first-retry",
     trace: "on-first-retry",
   },
 

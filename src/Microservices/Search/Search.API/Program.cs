@@ -19,10 +19,12 @@ builder.Services.AddSingleton(_ =>
 {
     var settings = new ElasticsearchClientSettings(new Uri(elasticUri))
         .DefaultIndex("marketplace-products")
-        .EnableDebugMode();
+        .EnableDebugMode()
+        .RequestTimeout(TimeSpan.FromSeconds(30));
     return new ElasticsearchClient(settings);
 });
 
+builder.Services.AddHostedService<ElasticsearchInitializer>();
 builder.Services.AddSingleton<ISearchService, ElasticsearchService>();
 
 // ── MassTransit (consumers) ─────────────────────────────
@@ -37,7 +39,7 @@ builder.Services.AddMassTransit(x =>
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration.GetConnectionString("messaging"));
-        cfg.ConfigureEndpoints(context);
+        cfg.ConfigureEndpoints(context, new KebabCaseEndpointNameFormatter("search", false));
     });
 });
 

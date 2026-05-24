@@ -1,3 +1,4 @@
+using BuildingBlocks.Infrastructure.Database.Interceptors;
 using BuildingBlocks.SharedContracts.Abstractions;
 using Inventory.Application.Commands;
 using Inventory.Domain.Aggregates;
@@ -7,13 +8,24 @@ using Inventory.Infrastructure.Repositories;
 using Inventory.API.Endpoints;
 using MassTransit;
 using Marketplace.ServiceDefaults;
+using BuildingBlocks.Infrastructure.Authentication;
+using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
 // Infrastructure
-builder.AddNpgsqlDbContext<InventoryDbContext>("inventory-db");
+// NOTE: Do NOT use AddNpgsqlDbContext here — it uses AddDbContextPool internally,
+// which conflicts with IDbContextOptionsConfiguration<T> being scoped in EF Core 10.
+builder.Services.AddSingleton<DomainEventDispatcherInterceptor>();
+builder.Services.AddDbContext<InventoryDbContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("inventory-db"),
+        npgsql => npgsql.MigrationsAssembly(typeof(InventoryDbContext).Assembly.FullName));
+    options.AddInterceptors(sp.GetRequiredService<DomainEventDispatcherInterceptor>());
+});
 
 builder.Services.AddScoped<IInventoryItemRepository, InventoryItemRepository>();
 builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<InventoryDbContext>());
@@ -27,15 +39,17 @@ builder.Services.AddMediatR(cfg =>
 // MassTransit
 builder.Services.AddMassTransit(x =>
 {
+    x.SetKebabCaseEndpointNameFormatter();
+
     x.AddEntityFrameworkOutbox<InventoryDbContext>(o =>
     {
         o.UsePostgres();
-        o.UseBusOutbox();
     });
 
     x.AddConsumer<ReserveInventoryConsumer>();
     x.AddConsumer<CancelReservationConsumer>();
     x.AddConsumer<ProductCreatedConsumer>();
+    x.AddConsumer<ProductUpdatedConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -47,9 +61,12 @@ builder.Services.AddMassTransit(x =>
             cfg.Host(connectionString);
         }
 
-        cfg.ConfigureEndpoints(context);
+        cfg.ConfigureEndpoints(context, new KebabCaseEndpointNameFormatter("inventory", false));
     });
 });
+
+// ── Authentication ─────────────────────────────────────
+builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -64,6 +81,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapInventoryEndpoints();
+
+app.ApplyMigrations();
 
 app.Run();

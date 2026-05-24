@@ -1,6 +1,14 @@
+using System.Text;
 using ApiGateway.Endpoints;
 using ApiGateway.Extensions;
+using ApiGateway.Middleware;
+using ApiGateway.Services;
 using Marketplace.ServiceDefaults;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,10 +20,15 @@ builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
     .AddServiceDiscoveryDestinationResolver();
 
-// ── Authentication (Cookie session) ─────────────────────
-builder.Services.AddAuthentication(options =>
+// ── Authentication (Cookie session + dev JWT for seeder) ──
+var authBuilder = builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = "Cookies";
+    options.DefaultScheme = builder.Environment.IsDevelopment()
+        ? "DevPolicyScheme"
+        : "Cookies";
+    options.DefaultChallengeScheme = builder.Environment.IsDevelopment()
+        ? "DevPolicyScheme"
+        : "Cookies";
 })
 .AddCookie("Cookies", options =>
 {
@@ -29,7 +42,43 @@ builder.Services.AddAuthentication(options =>
     options.SlidingExpiration = true;
 });
 
-builder.Services.AddAuthorization();
+// In dev, also accept JWT Bearer tokens (e.g. from Seeder.App).
+// Production traffic is cookie-only via the SPA.
+if (builder.Environment.IsDevelopment())
+{
+    authBuilder
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                ValidAudience = builder.Configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
+            };
+        })
+        .AddPolicyScheme("DevPolicyScheme", "Cookie or Bearer", options =>
+        {
+            options.ForwardDefaultSelector = context =>
+            {
+                var auth = context.Request.Headers.Authorization.ToString();
+                return auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                    ? JwtBearerDefaults.AuthenticationScheme
+                    : "Cookies";
+            };
+        });
+}
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Authenticated", policy => policy.RequireAuthenticatedUser());
+    options.AddPolicy("Seller", policy => policy.RequireRole("Seller", "Admin"));
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+});
 // ── Named HTTP clients for BFF + health probing ─────────
 builder.Services.AddHttpClient("identity-api", client =>
 {
@@ -45,6 +94,10 @@ builder.Services.AddHttpClient("media-api", c => c.BaseAddress = new Uri("http:/
 builder.Services.AddHttpClient("payment-api", c => c.BaseAddress = new Uri("http://payment-api"));
 builder.Services.AddHttpClient("notification-worker", c => c.BaseAddress = new Uri("http://notification-worker"));
 
+// ── BFF Services ────────────────────────────────────────
+builder.Services.AddScoped<CartBffService>();
+builder.Services.AddScoped<OrderBffService>();
+
 // ── CORS (for Angular SPA) ──────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -56,6 +109,20 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
+});
+
+// ── Rate Limiting ───────────────────────────────────────
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("fixed", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 10;
+    });
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
 // ── OpenAPI (for Scalar — exposes Gateway/Health endpoints) ───
@@ -74,10 +141,17 @@ var app = builder.Build();
 
 // ── Middleware pipeline ─────────────────────────────────
 app.MapDefaultEndpoints(); // health checks
+app.UseRateLimiter();
 app.UseCors();
+app.UseMiddleware<RequestLoggingMiddleware>();
+app.Use(async (context, next) =>
+{
+    context.Request.EnableBuffering();
+    await next();
+});
 app.UseAuthentication();
-app.UseCsrfValidation();   // Custom CSRF check
 app.UseCookieToBearer();   // Cookie → Bearer transform
+app.UseCsrfValidation();   // Custom CSRF check (skips when Bearer present — safe because CookieToBearer already validated the session)
 app.UseAuthorization();
 
 app.MapBffEndpoints();

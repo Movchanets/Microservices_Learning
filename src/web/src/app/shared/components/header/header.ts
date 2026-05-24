@@ -1,33 +1,58 @@
-import { Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { RouterLink, Router } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth.store';
-import { LucideAngularModule, User, LogOut, Settings, ChevronDown } from 'lucide-angular';
+import { CartStore } from '../../../features/cart/cart.store';
+import { LucideAngularModule, User, LogOut, Settings, ChevronDown, Search, Menu, ShoppingCart, Heart } from 'lucide-angular';
+import { MegaMenu } from '../mega-menu/mega-menu';
+import { SearchBarComponent } from '../search-bar/search-bar';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, CommonModule, LucideAngularModule],
-  standalone: true,
+  imports: [RouterLink, LucideAngularModule, MegaMenu, SearchBarComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
 export class Header {
   private authStore = inject(AuthStore);
+  private router = inject(Router);
+  cartStore = inject(CartStore);
 
   user = this.authStore.user;
   isMenuOpen = signal(false);
+  isMegaMenuOpen = signal(false);
 
   readonly UserIcon = User;
   readonly LogOutIcon = LogOut;
   readonly SettingsIcon = Settings;
   readonly ChevronIcon = ChevronDown;
+  readonly SearchIcon = Search;
+  readonly MenuIcon = Menu;
+  readonly CartIcon = ShoppingCart;
+  readonly HeartIcon = Heart;
 
   toggleMenu() {
     this.isMenuOpen.update((v) => !v);
   }
 
+  toggleMegaMenu() {
+    this.isMegaMenuOpen.update((v) => !v);
+  }
+
+  closeMegaMenu() {
+    this.isMegaMenuOpen.set(false);
+  }
+
   logout() {
     this.authStore.logout();
     this.isMenuOpen.set(false);
+  }
+
+  search(query: string) {
+    const q = query.trim();
+    if (q) {
+      this.router.navigate(['/catalog'], { queryParams: { q } });
+      this.closeMegaMenu();
+    }
   }
 }

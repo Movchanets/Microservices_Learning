@@ -38,7 +38,7 @@ public sealed class CreateProductHandler(
             request.Currency,
             request.Sku,
             request.CategoryId,
-            request.SellerId,
+            request.StoreId,
             request.Tags,
             request.ImageUrl);
 
@@ -58,7 +58,7 @@ public sealed class CreateProductHandler(
             category.Name,
             product.Status.ToString(),
             product.ImageUrl,
-            product.SellerId,
+            product.StoreId,
             product.Tags,
             product.CreatedAt,
             product.UpdatedAt));

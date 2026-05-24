@@ -1,0 +1,98 @@
+[
+  {
+    "storeName": "Tech Store",
+    "categoryName": "Electronics",
+    "name": "iPhone 15 Pro",
+    "description": "Apple smartphone with advanced camera system.",
+    "price": 1199.00,
+    "currency": "USD",
+    "sku": "PHONE-IPHONE-15-PRO",
+    "tags": ["smartphone", "apple", "ios"],
+    "imageUrl": "https://picsum.photos/seed/iphone15/1200/800",
+    "initialStock": 50
+  },
+  {
+    "storeName": "Tech Store",
+    "categoryName": "Electronics",
+    "name": "Sony WH-1000XM5",
+    "description": "Wireless noise-canceling over-ear headphones.",
+    "price": 399.00,
+    "currency": "USD",
+    "sku": "AUDIO-SONY-WH1000XM5",
+    "tags": ["audio", "headphones", "wireless"],
+    "imageUrl": "https://picsum.photos/seed/sonyxm5/1200/800",
+    "initialStock": 100
+  },
+  {
+    "storeName": "Tech Store",
+    "categoryName": "Electronics",
+    "name": "Samsung 65\" OLED 4K TV",
+    "description": "Stunning OLED display with smart TV features.",
+    "price": 1799.00,
+    "currency": "USD",
+    "sku": "TV-SAMSUNG-OLED-65",
+    "tags": ["tv", "oled", "samsung", "4k"],
+    "imageUrl": "https://picsum.photos/seed/samsungtv/1200/800",
+    "initialStock": 25
+  },
+  {
+    "storeName": "Tech Store",
+    "categoryName": "Electronics",
+    "name": "Logitech MX Master 3S",
+    "description": "Ergonomic wireless mouse with MagSpeed scroll.",
+    "price": 99.00,
+    "currency": "USD",
+    "sku": "PERIPH-LOGI-MXM3S",
+    "tags": ["mouse", "wireless", "ergonomic"],
+    "imageUrl": "https://picsum.photos/seed/logimx/1200/800",
+    "initialStock": 200
+  },
+  {
+    "storeName": "Home Store",
+    "categoryName": "Home & Kitchen",
+    "name": "Ninja Air Fryer",
+    "description": "Digital air fryer for fast and healthy cooking.",
+    "price": 149.00,
+    "currency": "USD",
+    "sku": "HOME-NINJA-AIR-FRYER",
+    "tags": ["kitchen", "air-fryer", "appliance"],
+    "imageUrl": "https://picsum.photos/seed/ninjaairfryer/1200/800",
+    "initialStock": 75
+  },
+  {
+    "storeName": "Home Store",
+    "categoryName": "Home & Kitchen",
+    "name": "Dyson V15 Detect",
+    "description": "Cordless vacuum with laser dust detection.",
+    "price": 749.00,
+    "currency": "USD",
+    "sku": "HOME-DYSON-V15",
+    "tags": ["vacuum", "cordless", "dyson"],
+    "imageUrl": "https://picsum.photos/seed/dysonv15/1200/800",
+    "initialStock": 30
+  },
+  {
+    "storeName": "Tech Store",
+    "categoryName": "Clothing",
+    "name": "Nike Air Max 270",
+    "description": "Lightweight sneakers with Max Air unit.",
+    "price": 150.00,
+    "currency": "USD",
+    "sku": "SHOE-NIKE-AM270",
+    "tags": ["shoes", "nike", "sneakers"],
+    "imageUrl": "https://picsum.photos/seed/nike270/1200/800",
+    "initialStock": 60
+  },
+  {
+    "storeName": "Home Store",
+    "categoryName": "Books",
+    "name": "Clean Code",
+    "description": "A handbook of agile software craftsmanship by Robert C. Martin.",
+    "price": 39.99,
+    "currency": "USD",
+    "sku": "BOOK-CLEANCODE",
+    "tags": ["book", "programming", "software"],
+    "imageUrl": "https://picsum.photos/seed/cleancode/1200/800",
+    "initialStock": 150
+  }
+]

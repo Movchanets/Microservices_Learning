@@ -12,7 +12,7 @@ export interface Product {
   categoryName: string;
   status: ProductStatus;
   imageUrl: string | null;
-  sellerId: string;
+  storeId: string;
   tags: string[];
   createdAt: string;
   updatedAt: string | null;
@@ -31,6 +31,7 @@ export interface ProductListItem {
   categoryName: string;
   status: string;
   imageUrl: string | null;
+  storeId: string;
   createdAt: string;
 }
 
@@ -86,7 +87,7 @@ export interface ProductListParams {
   page?: number;
   pageSize?: number;
   categoryId?: string;
-  sellerId?: string;
+  storeId?: string;
   search?: string;
 }
 
@@ -99,6 +100,48 @@ export interface ProductSearchParams {
   priceMin?: number;
   priceMax?: number;
   tags?: string;
+  brand?: string;
+  minRating?: number;
+  inStock?: boolean;
   page?: number;
   pageSize?: number;
+}
+
+/**
+ * Mirrors backend Catalog.Application.DTOs.ReviewDto
+ */
+export interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  title: string;
+  text: string;
+  isVerifiedPurchase: boolean;
+  photoUrls: string[];
+  helpfulCount: number;
+  notHelpfulCount: number;
+  sellerResponse: string | null;
+  sellerResponseDate: string | null;
+  createdAt: string;
+}
+
+/**
+ * Mirrors backend Catalog.Application.DTOs.ReviewSummaryDto
+ */
+export interface ReviewSummary {
+  averageRating: number;
+  totalReviews: number;
+  ratingDistribution: Record<number, number>;
+}
+
+/**
+ * Request payload for creating a review.
+ * userId and userName are derived server-side from auth claims.
+ */
+export interface CreateReviewRequest {
+  rating: number;
+  title: string;
+  text: string;
+  photoUrls?: string[];
 }

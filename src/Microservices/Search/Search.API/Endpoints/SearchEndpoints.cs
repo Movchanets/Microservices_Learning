@@ -12,30 +12,29 @@ public static class SearchEndpoints
             .WithOpenApi();
 
         group.MapGet("/products", async (
+            ISearchService searchService,
             string? q,
             Guid? categoryId,
             decimal? priceMin,
             decimal? priceMax,
             string? tags,
-            int page,
-            int pageSize,
-            ISearchService searchService,
-            CancellationToken ct) =>
+            string? brand,
+            double? minRating,
+            bool? inStock,
+            int page = 1,
+            int pageSize = 20,
+            CancellationToken ct = default) =>
         {
             var tagList = !string.IsNullOrWhiteSpace(tags)
                 ? tags.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
                 : null;
 
-            var result = await searchService.SearchAsync(
-                q,
-                categoryId,
-                priceMin,
-                priceMax,
-                tagList,
-                page > 0 ? page : 1,
-                pageSize > 0 ? Math.Min(pageSize, 100) : 20,
-                ct);
+            var request = new SearchRequest(
+                q, categoryId, priceMin, priceMax, tagList, brand,
+                minRating, inStock, page > 0 ? page : 1,
+                pageSize > 0 ? Math.Min(pageSize, 100) : 20);
 
+            var result = await searchService.SearchAsync(request, ct);
             return Results.Ok(result);
         })
         .WithName("SearchProducts")

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
+using Testcontainers.Redis;
 
 namespace Marketplace.IntegrationTests.Shared;
 
@@ -26,6 +27,16 @@ public static class PostgresContainerFactory
 /// <summary>
 /// Shared helper for applying EF Core migrations in integration tests.
 /// </summary>
+public static class RedisContainerFactory
+{
+    public static RedisContainer Create()
+    {
+        return new RedisBuilder()
+            .WithImage("redis:7-alpine")
+            .Build();
+    }
+}
+
 public static class ServiceProviderMigrationExtensions
 {
     /// <summary>

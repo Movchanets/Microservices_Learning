@@ -16,7 +16,7 @@ public sealed class ListProductsHandler(
             request.Page,
             request.PageSize,
             request.CategoryId,
-            request.SellerId,
+            request.StoreId,
             request.Search,
             cancellationToken);
 }

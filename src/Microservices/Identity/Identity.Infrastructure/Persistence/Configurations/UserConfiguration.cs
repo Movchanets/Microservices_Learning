@@ -1,4 +1,5 @@
 using Identity.Domain.Aggregates;
+using Identity.Domain.Enums;
 using Identity.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -47,6 +48,9 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasConversion<string>()
             .HasMaxLength(20);
 
+        builder.Property(u => u.StoreId)
+            .IsRequired(false);
+
         builder.Property(u => u.IsActive)
             .HasDefaultValue(true);
 
@@ -63,5 +67,19 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         // Ignore domain events — dispatched in-memory, not persisted
         builder.Ignore(u => u.DomainEvents);
+
+        // Seed root admin user
+        // Using anonymous object with primitive types mapped by the converter
+        builder.HasData(new
+        {
+            Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            Email = Email.Create("admin@marketplace.com"),
+            PasswordHash = PasswordHash.FromHashedValue("AQAAAAIAAYagAAAAEB4zoEmVNsVqNQ4IB/O/kd7FdPcJFluki3ytGV1Ef2gu7whx+k4iRXDLQHenIWjyjg=="),
+            FirstName = "Admin",
+            LastName = "User",
+            Role = UserRole.Admin,
+            IsActive = true,
+            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
     }
 }

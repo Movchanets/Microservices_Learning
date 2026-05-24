@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedContracts.Abstractions;
+using BuildingBlocks.Infrastructure.Database;
 using Inventory.Domain.Aggregates;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Inventory.Infrastructure.Data;
 
 public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> options)
-    : DbContext(options), IUnitOfWork
+    : DomainEventsDbContext(options)
 {
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
 

@@ -1,4 +1,4 @@
-import { Locator, expect } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export class ProfilePage extends BasePage {
@@ -6,7 +6,7 @@ export class ProfilePage extends BasePage {
   readonly userNameTitle: Locator;
   readonly userEmailText: Locator;
 
-  constructor(page: any) {
+  constructor(page: Page) {
     super(page);
     this.logoutBtn = page.getByTestId('profile-logout-btn');
     this.userNameTitle = page.locator('h1');

@@ -1,64 +1,73 @@
 <header
-  class="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl transition-all duration-300"
+  class="sticky top-0 z-50 w-full border-b border-border bg-card shadow-sm transition-all duration-300 relative"
 >
-  <div class="container mx-auto flex h-20 items-center justify-between px-6">
-    <a
-      routerLink="/"
-      class="flex items-center gap-3 group"
-      aria-label="Go to homepage"
-      data-testid="header-logo"
-    >
-      <div
-        class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform"
-      >
-        <span class="text-white font-bold text-2xl">M</span>
-      </div>
-      <span class="text-2xl font-bold tracking-tight text-foreground font-lexend">Marketplace</span>
-    </a>
-
-    <nav class="hidden md:flex gap-8">
+  <div class="container mx-auto flex h-20 items-center justify-between gap-6 px-6">
+    <!-- Left: Logo & Catalog Button -->
+    <div class="flex items-center gap-6">
       <a
-        routerLink="/catalog"
-        class="text-sm font-medium text-muted hover:text-primary transition-colors relative group"
-        data-testid="nav-catalog"
+        routerLink="/"
+        class="flex items-center gap-3 group"
+        aria-label="Go to homepage"
+        data-testid="header-logo"
       >
-        Catalog
-        <span
-          class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"
-        ></span>
+        <div
+          class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center group-hover:scale-110 transition-transform"
+        >
+          <span class="text-white font-bold text-2xl">M</span>
+        </div>
+        <span class="text-2xl font-bold tracking-tight text-foreground font-lexend hidden lg:block">Marketplace</span>
       </a>
-      <a
-        routerLink="/seller-dashboard"
-        class="text-sm font-medium text-muted hover:text-primary transition-colors relative group"
-        data-testid="nav-sell"
-      >
-        Sell
-        <span
-          class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"
-        ></span>
-      </a>
-    </nav>
 
-    <div class="flex items-center gap-4">
+      <button 
+        (click)="toggleMegaMenu()"
+        class="flex items-center gap-2 h-11 px-5 rounded-xl bg-primary hover:bg-primary/90 text-white font-medium transition-all active:scale-95"
+      >
+        <lucide-icon [name]="MenuIcon" class="w-5 h-5"></lucide-icon>
+        <span class="hidden sm:inline">Catalog</span>
+      </button>
+    </div>
+
+    <!-- Center: Search Bar -->
+    <div class="flex-1 max-w-3xl hidden md:block">
+      <app-search-bar (search)="search($event)" />
+    </div>
+
+    <!-- Right: Utility Icons -->
+    <div class="flex items-center gap-3 sm:gap-5">
+      <button class="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors h-11 w-11 rounded-xl hover:bg-primary/5 hidden lg:flex">
+        <lucide-icon [name]="HeartIcon" class="w-5 h-5"></lucide-icon>
+      </button>
+
+      <!-- Cart Icon -->
+      <button 
+        data-testid="cart-button"
+        (click)="cartStore.toggleDrawer()"
+        class="relative flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors h-11 w-11 rounded-xl hover:bg-primary/5"
+      >
+        <lucide-icon [name]="CartIcon" class="w-5 h-5"></lucide-icon>
+        @if (cartStore.totalItems() > 0) {
+        <div
+          data-testid="cart-badge"
+          class="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-primary text-white text-[10px] font-bold border-2 border-background"
+        >
+          {{ cartStore.totalItems() }}
+        </div>
+        }
+      </button>
+
+      <!-- Profile Section -->
       @if (!user()) {
         <a
           routerLink="/auth/login"
-          class="text-sm font-medium text-muted hover:text-foreground transition-colors"
+          class="text-sm font-medium text-muted hover:text-foreground transition-colors hidden sm:block"
           data-testid="nav-login"
           >Sign in</a
         >
-        <a
-          routerLink="/auth/register"
-          class="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 py-2 text-sm font-medium text-white shadow-xl shadow-primary/20 transition-all hover:scale-[1.05] hover:shadow-primary/40 active:scale-95 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-          data-testid="nav-register"
-        >
-          Get Started
-        </a>
       } @else {
         <div class="relative">
           <button
             (click)="toggleMenu()"
-            class="flex items-center gap-2 p-1.5 rounded-xl border border-border bg-card/50 hover:bg-card transition-all focus:ring-2 focus:ring-primary/20 outline-none group"
+            class="flex items-center gap-2 p-1.5 rounded-xl border border-border bg-card hover:bg-card/80 transition-all focus:ring-2 focus:ring-primary/20 outline-none group"
             data-testid="user-menu-trigger"
           >
             <div
@@ -66,9 +75,6 @@
             >
               <lucide-icon [name]="UserIcon" class="w-4 h-4"></lucide-icon>
             </div>
-            <span class="text-sm font-semibold text-foreground px-1 hidden sm:block">{{
-              user()?.firstName
-            }}</span>
             <lucide-icon
               [name]="ChevronIcon"
               class="w-4 h-4 text-muted transition-transform"
@@ -77,10 +83,10 @@
           </button>
 
           <!-- Dropdown Menu -->
+          @if (isMenuOpen()) {
           <div
-            *ngIf="isMenuOpen()"
             (click)="isMenuOpen.set(false)"
-            class="absolute right-0 mt-2 w-56 bg-card/90 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 z-[100]"
+            class="absolute right-0 mt-2 w-56 bg-card border border-border rounded-2xl shadow-lg overflow-hidden animate-in fade-in zoom-in duration-200 z-[100]"
             data-testid="user-dropdown"
           >
             <div class="p-4 border-b border-border/50">
@@ -100,12 +106,33 @@
                 My Profile
               </a>
               <a
-                routerLink="/seller-dashboard"
+                routerLink="/orders"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"
+                data-testid="nav-orders"
               >
-                <lucide-icon [name]="SettingsIcon" class="w-4 h-4"></lucide-icon>
-                Dashboard
+                <lucide-icon [name]="UserIcon" class="w-4 h-4"></lucide-icon>
+                My Orders
               </a>
+              @if (user()?.role === 'Seller' || user()?.role === 'Admin') {
+                <a
+                  routerLink="/seller"
+                  class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"
+                  data-testid="nav-seller"
+                >
+                  <lucide-icon [name]="SettingsIcon" class="w-4 h-4"></lucide-icon>
+                  Seller Dashboard
+                </a>
+              }
+              @if (user()?.role === 'Admin') {
+                <a
+                  routerLink="/admin"
+                  class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"
+                  data-testid="nav-admin"
+                >
+                  <lucide-icon name="Shield" class="w-4 h-4"></lucide-icon>
+                  Admin Panel
+                </a>
+              }
             </div>
 
             <div class="p-2 border-t border-border/50">
@@ -119,8 +146,13 @@
               </button>
             </div>
           </div>
+          }
         </div>
       }
     </div>
   </div>
 </header>
+
+@if (isMegaMenuOpen()) {
+  <app-mega-menu (closeMenu)="closeMegaMenu()"></app-mega-menu>
+}

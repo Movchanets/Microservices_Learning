@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Tech Store",
+    "sellerEmail": "store.tech@marketplace.com",
+    "description": "Electronics and gadgets from leading brands."
+  },
+  {
+    "name": "Home Store",
+    "sellerEmail": "store.home@marketplace.com",
+    "description": "Home essentials, kitchen tools, and lifestyle products."
+  }
+]

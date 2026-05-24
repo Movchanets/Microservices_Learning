@@ -19,11 +19,12 @@ public static class InventoryEndpoints
             [FromServices] IUnitOfWork uow,
             CancellationToken ct) =>
         {
-            var item = InventoryItem.Create(request.Sku, request.InitialQuantity);
+            var item = InventoryItem.Create(request.Sku, request.InitialQuantity, request.StoreId, request.ProductId);
             repository.Add(item);
             await uow.SaveChangesAsync(ct);
             return Results.Created($"/api/inventory/items/{item.Id}", item.Id);
-        });
+        })
+        .RequireAuthorization();
 
         group.MapPost("/items/{sku}/add-stock", async (
             string sku,
@@ -39,7 +40,8 @@ public static class InventoryEndpoints
             repository.Update(item);
             await uow.SaveChangesAsync(ct);
             return Results.Ok();
-        });
+        })
+        .RequireAuthorization();
 
         group.MapGet("/items/{sku}", async (
             string sku,
@@ -49,8 +51,55 @@ public static class InventoryEndpoints
             var item = await repository.GetBySkuAsync(sku, ct);
             return item == null ? Results.NotFound() : Results.Ok(new { item.Sku, item.AvailableQuantity });
         });
+
+        group.MapGet("/items", async (
+            [FromServices] IInventoryItemRepository repository,
+            CancellationToken ct) =>
+        {
+            var items = await repository.GetAllAsync(ct);
+            return Results.Ok(items.Select(i => new { i.Id, i.Sku, i.AvailableQuantity }));
+        })
+        .RequireAuthorization();
+
+        // Batch lookup by SKUs — for seller inventory dashboard
+        group.MapPost("/items/batch", async (
+            [FromBody] BatchInventoryRequest request,
+            [FromServices] IInventoryItemRepository repository,
+            CancellationToken ct) =>
+        {
+            var items = await repository.GetBySkusAsync(request.Skus, ct);
+            return Results.Ok(items.Select(i => new { i.Id, i.Sku, i.AvailableQuantity }));
+        })
+        .RequireAuthorization();
+
+        // Idempotent: upsert stock quantity by SKU (creates item if not exists)
+        group.MapPut("/items/{sku}/stock", async (
+            string sku,
+            [FromBody] SetStockRequest request,
+            [FromServices] IInventoryItemRepository repository,
+            [FromServices] IUnitOfWork uow,
+            CancellationToken ct) =>
+        {
+            var item = await repository.GetBySkuAsync(sku, ct);
+            if (item is null)
+            {
+                item = InventoryItem.Create(sku, request.Quantity, request.StoreId, request.ProductId);
+                repository.Add(item);
+            }
+            else
+            {
+                var diff = request.Quantity - item.AvailableQuantity;
+                if (diff > 0) item.AddStock(diff);
+            }
+
+            await uow.SaveChangesAsync(ct);
+            return Results.Ok();
+        })
+        .RequireAuthorization();
     }
 }
 
-public record CreateInventoryItemRequest(string Sku, int InitialQuantity);
+public record CreateInventoryItemRequest(string Sku, int InitialQuantity, Guid StoreId, Guid ProductId);
 public record AddStockRequest(int Quantity);
+public record SetStockRequest(int Quantity, Guid StoreId, Guid ProductId);
+public record BatchInventoryRequest(List<string> Skus);

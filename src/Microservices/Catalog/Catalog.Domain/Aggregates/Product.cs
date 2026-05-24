@@ -16,7 +16,7 @@ public sealed class Product : AggregateRoot
     public Category? Category { get; private set; }
     public ProductStatus Status { get; private set; } = ProductStatus.Draft;
     public string? ImageUrl { get; private set; }
-    public Guid SellerId { get; private set; }
+    public Guid StoreId { get; private set; }
     public List<string> Tags { get; private set; } = [];
     public DateTime CreatedAt { get; private init; }
     public DateTime? UpdatedAt { get; private set; }
@@ -31,7 +31,7 @@ public sealed class Product : AggregateRoot
         string currency,
         string sku,
         Guid categoryId,
-        Guid sellerId,
+        Guid storeId,
         List<string>? tags = null,
         string? imageUrl = null)
     {
@@ -41,8 +41,8 @@ public sealed class Product : AggregateRoot
         if (categoryId == Guid.Empty)
             throw new ArgumentException("CategoryId is required", nameof(categoryId));
 
-        if (sellerId == Guid.Empty)
-            throw new ArgumentException("SellerId is required", nameof(sellerId));
+        if (storeId == Guid.Empty)
+            throw new ArgumentException("StoreId is required", nameof(storeId));
 
         var product = new Product
         {
@@ -51,7 +51,7 @@ public sealed class Product : AggregateRoot
             Price = Money.Create(price, currency),
             Sku = Sku.Create(sku),
             CategoryId = categoryId,
-            SellerId = sellerId,
+            StoreId = storeId,
             Tags = tags ?? [],
             ImageUrl = imageUrl,
             Status = ProductStatus.Draft,
@@ -59,7 +59,11 @@ public sealed class Product : AggregateRoot
         };
 
         product.AddDomainEvent(new ProductCreatedDomainEvent(
-            product.Id, product.Name, product.Sku.Value));
+            product.Id, product.Name, product.Description,
+            product.Price.Amount, product.Price.Currency,
+            product.Sku.Value, product.CategoryId,
+            product.Tags, product.ImageUrl, product.StoreId,
+            product.CreatedAt));
 
         return product;
     }
@@ -81,7 +85,12 @@ public sealed class Product : AggregateRoot
         ImageUrl = imageUrl ?? ImageUrl;
         UpdatedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new ProductUpdatedDomainEvent(Id, Name));
+        AddDomainEvent(new ProductUpdatedDomainEvent(
+            Id, Name, Description,
+            Price.Amount, Price.Currency,
+            Sku.Value, CategoryId,
+            Tags, ImageUrl, StoreId,
+            IsActive, UpdatedAt.Value));
     }
 
     public void ChangePrice(decimal newPrice, string currency)
@@ -101,14 +110,24 @@ public sealed class Product : AggregateRoot
 
         Status = ProductStatus.Active;
         UpdatedAt = DateTime.UtcNow;
-        AddDomainEvent(new ProductUpdatedDomainEvent(Id, Name));
+        AddDomainEvent(new ProductUpdatedDomainEvent(
+            Id, Name, Description,
+            Price.Amount, Price.Currency,
+            Sku.Value, CategoryId,
+            Tags, ImageUrl, StoreId,
+            IsActive, UpdatedAt.Value));
     }
 
     public void Deactivate()
     {
         Status = ProductStatus.Inactive;
         UpdatedAt = DateTime.UtcNow;
-        AddDomainEvent(new ProductUpdatedDomainEvent(Id, Name));
+        AddDomainEvent(new ProductUpdatedDomainEvent(
+            Id, Name, Description,
+            Price.Amount, Price.Currency,
+            Sku.Value, CategoryId,
+            Tags, ImageUrl, StoreId,
+            IsActive, UpdatedAt.Value));
     }
 
     public void SoftDelete()

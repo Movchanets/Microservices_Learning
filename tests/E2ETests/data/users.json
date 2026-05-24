@@ -1,15 +1,34 @@
 {
   "validUser": {
-    "email": "buyer@test.com",
-    "password": "P@ssw0rd",
-    "name": "Test Buyer"
+    "email": "buyer@marketplace.com",
+    "password": "P@ssw0rd123!",
+    "name": "Test Buyer",
+    "role": "Buyer"
+  },
+  "buyerUser": {
+    "email": "buyer@marketplace.com",
+    "password": "P@ssw0rd123!",
+    "name": "Test Buyer",
+    "role": "Buyer"
+  },
+  "sellerUser": {
+    "email": "store.tech@marketplace.com",
+    "password": "P@ssw0rd123!",
+    "name": "Tech Store",
+    "role": "Seller"
+  },
+  "adminUser": {
+    "email": "admin@marketplace.com",
+    "password": "P@ssw0rd123!",
+    "name": "Admin User",
+    "role": "Admin"
   },
   "invalidUser": {
     "email": "wrong@test.com",
-    "password": "wrongpassword"
+    "password": "WrongPassword123!"
   },
   "blockedUser": {
     "email": "blocked@test.com",
-    "password": "P@ssw0rd"
+    "password": "P@ssw0rd123!"
   }
 }

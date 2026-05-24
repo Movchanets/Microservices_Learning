@@ -17,7 +17,17 @@ internal static class BffAuthHelpers
         AddClaimIfPresent(claims, "sub", GetPayloadValue(payload, "sub"));
         AddClaimIfPresent(claims, ClaimTypes.Email, GetPayloadValue(payload, "email"));
         AddClaimIfPresent(claims, "email", GetPayloadValue(payload, "email"));
-        AddClaimIfPresent(claims, ClaimTypes.Role, GetPayloadValue(payload, ClaimTypes.Role));
+
+        // Add one claim per role value — JWT may have "role" or full URI claim name, string or array
+        var roleClaimNames = new[] { "role", "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" };
+        foreach (var claimName in roleClaimNames)
+        {
+            foreach (var role in GetPayloadValues(payload, claimName))
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+        }
+
         AddClaimIfPresent(claims, "firstName", GetPayloadValue(payload, "firstName"));
         AddClaimIfPresent(claims, "lastName", GetPayloadValue(payload, "lastName"));
 
@@ -97,5 +107,34 @@ internal static class BffAuthHelpers
         }
 
         return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
+    }
+
+    /// <summary>
+    /// Returns all values for a claim that may be a string or an array.
+    /// JWT with multiple role claims serializes as "role": ["Buyer", "Admin"].
+    /// </summary>
+    private static IEnumerable<string> GetPayloadValues(JsonElement payload, string claimName)
+    {
+        if (!payload.TryGetProperty(claimName, out var value))
+        {
+            yield break;
+        }
+
+        if (value.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in value.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String)
+                {
+                    var s = item.GetString();
+                    if (!string.IsNullOrWhiteSpace(s)) yield return s;
+                }
+            }
+        }
+        else if (value.ValueKind == JsonValueKind.String)
+        {
+            var s = value.GetString();
+            if (!string.IsNullOrWhiteSpace(s)) yield return s;
+        }
     }
 }

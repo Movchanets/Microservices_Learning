@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
   Product,
@@ -10,6 +10,7 @@ import {
   ProductSearchParams,
   SearchResult,
 } from './catalog.models';
+import { buildParams } from '../../core/utils/http.utils';
 
 /**
  * All calls route through the YARP API Gateway (BFF).
@@ -20,17 +21,18 @@ import {
  */
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   // ── Catalog CRUD (via /api/catalog) ─────────────
 
   getProducts(params: ProductListParams = {}): Promise<PagedResult<ProductListItem>> {
-    let httpParams = new HttpParams();
-    if (params.page) httpParams = httpParams.set('page', params.page);
-    if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize);
-    if (params.categoryId) httpParams = httpParams.set('categoryId', params.categoryId);
-    if (params.sellerId) httpParams = httpParams.set('sellerId', params.sellerId);
-    if (params.search) httpParams = httpParams.set('search', params.search);
+    const httpParams = buildParams({
+      page: params.page,
+      pageSize: params.pageSize,
+      categoryId: params.categoryId,
+      storeId: params.storeId,
+      search: params.search,
+    });
 
     return firstValueFrom(
       this.http.get<PagedResult<ProductListItem>>('/api/catalog/products', { params: httpParams }),
@@ -41,23 +43,40 @@ export class CatalogService {
     return firstValueFrom(this.http.get<Product>(`/api/catalog/products/${id}`));
   }
 
+  getRecommendations(productId: string): Promise<ProductListItem[]> {
+    return firstValueFrom(
+      this.http.get<ProductListItem[]>(`/api/catalog/products/${productId}/recommendations`),
+    );
+  }
+
   // ── Categories (via /api/catalog) ───────────────
 
   getCategories(): Promise<Category[]> {
     return firstValueFrom(this.http.get<Category[]>('/api/catalog/categories'));
   }
 
+  getFeatured(tag?: string): Promise<ProductListItem[]> {
+    const params: Record<string, string> = tag ? { tag } : {};
+    return firstValueFrom(
+      this.http.get<ProductListItem[]>('/api/catalog/products/featured', { params }),
+    );
+  }
+
   // ── Full-text Search (via /api/search) ──────────
 
   searchProducts(params: ProductSearchParams = {}): Promise<SearchResult<ProductListItem>> {
-    let httpParams = new HttpParams();
-    if (params.q) httpParams = httpParams.set('q', params.q);
-    if (params.categoryId) httpParams = httpParams.set('categoryId', params.categoryId);
-    if (params.priceMin != null) httpParams = httpParams.set('priceMin', params.priceMin);
-    if (params.priceMax != null) httpParams = httpParams.set('priceMax', params.priceMax);
-    if (params.tags) httpParams = httpParams.set('tags', params.tags);
-    if (params.page) httpParams = httpParams.set('page', params.page);
-    if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize);
+    const httpParams = buildParams({
+      q: params.q,
+      categoryId: params.categoryId,
+      priceMin: params.priceMin,
+      priceMax: params.priceMax,
+      tags: params.tags,
+      brand: params.brand,
+      minRating: params.minRating,
+      inStock: params.inStock,
+      page: params.page,
+      pageSize: params.pageSize,
+    });
 
     return firstValueFrom(
       this.http.get<SearchResult<ProductListItem>>('/api/search/products', { params: httpParams }),

@@ -4,40 +4,59 @@ namespace Cart.Domain.Aggregates;
 
 public sealed class ShoppingCart : AggregateRoot
 {
-    public string BuyerId { get; private set; } = string.Empty;
+    public Guid? BuyerId { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public DateTime UpdatedAt { get; private set; }
+
+    /// <summary>
+    /// Row version used for optimistic concurrency. Mapped to PostgreSQL xmin system column.
+    /// </summary>
+    public uint Version { get; private set; }
+
+    private const int MaxItems = 50;
 
     private readonly List<CartItem> _items = [];
     public IReadOnlyCollection<CartItem> Items => _items.AsReadOnly();
 
     private ShoppingCart() { } // EF Core
 
-    public ShoppingCart(string buyerId)
+    public ShoppingCart(Guid? buyerId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(buyerId);
         BuyerId = buyerId;
+        CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
 
-    public void AddItem(string sku, int quantity)
+    public void AddItem(Guid productId, int quantity, Guid storeId, decimal price = 0m)
     {
-        if (string.IsNullOrWhiteSpace(sku))
-            throw new ArgumentException("SKU cannot be empty", nameof(sku));
+        if (productId == Guid.Empty)
+            throw new ArgumentException("ProductId is required", nameof(productId));
         if (quantity <= 0)
             throw new ArgumentException("Quantity must be greater than zero", nameof(quantity));
+        if (price < 0)
+            throw new ArgumentException("Price cannot be negative", nameof(price));
+        if (storeId == Guid.Empty)
+            throw new ArgumentException("StoreId is required", nameof(storeId));
 
-        var existingItem = _items.FirstOrDefault(i => i.Sku == sku);
+        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId));
         if (existingItem != null)
         {
             existingItem.AddQuantity(quantity);
         }
         else
         {
-            _items.Add(new CartItem(sku, quantity));
+            if (_items.Count >= MaxItems)
+                throw new InvalidOperationException($"Cart cannot exceed {MaxItems} items");
+
+            _items.Add(new CartItem(Id, productId, quantity, price, storeId));
         }
+
+        Touch();
     }
 
-    public void UpdateQuantity(string sku, int quantity)
+    public void UpdateQuantity(Guid productId, int quantity)
     {
-        var existingItem = _items.FirstOrDefault(i => i.Sku == sku);
+        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId));
         if (existingItem != null)
         {
             if (quantity <= 0)
@@ -48,20 +67,42 @@ public sealed class ShoppingCart : AggregateRoot
             {
                 existingItem.SetQuantity(quantity);
             }
+
+            Touch();
         }
     }
 
-    public void RemoveItem(string sku)
+    public void RemoveItem(Guid productId)
     {
-        var existingItem = _items.FirstOrDefault(i => i.Sku == sku);
+        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId));
         if (existingItem != null)
         {
             _items.Remove(existingItem);
+            Touch();
         }
     }
 
     public void Clear()
     {
         _items.Clear();
+        Touch();
+    }
+
+    /// <summary>
+    /// Claims this anonymous cart for an authenticated user.
+    /// Sets the BuyerId on a cart that was created without one.
+    /// </summary>
+    public void Claim(Guid buyerId)
+    {
+        if (BuyerId.HasValue)
+            throw new InvalidOperationException("Cart is already claimed by a buyer.");
+
+        BuyerId = buyerId;
+        Touch();
+    }
+
+    private void Touch()
+    {
+        UpdatedAt = DateTime.UtcNow;
     }
 }

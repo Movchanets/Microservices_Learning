@@ -5,7 +5,7 @@
     <div class="flex flex-col gap-4">
       <a routerLink="/" class="flex items-center gap-3 group">
         <div
-          class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform"
+          class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center group-hover:scale-110 transition-transform"
         >
           <span class="text-white font-bold text-2xl">M</span>
         </div>
@@ -24,7 +24,7 @@
         <button
           (click)="toggleTheme()"
           data-testid="theme-toggle-btn"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[120px] justify-between"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-card/80 transition-all group min-w-[120px] justify-between"
         >
           <div class="flex items-center gap-2">
             <lucide-icon
@@ -40,9 +40,9 @@
           ></lucide-icon>
         </button>
 
+        @if (isThemeOpen()) {
         <div
-          *ngIf="isThemeOpen()"
-          class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl"
+          class="absolute bottom-full mb-2 left-0 w-full bg-card border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-lg"
         >
           <button
             (click)="setTheme('light')"
@@ -63,6 +63,7 @@
             <lucide-icon name="monitor" class="w-4 h-4 text-muted-foreground"></lucide-icon> System
           </button>
         </div>
+        }
       </div>
 
       <!-- Language Selector -->
@@ -70,12 +71,13 @@
         <button
           (click)="toggleLang()"
           data-testid="lang-toggle-btn"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card/40 hover:bg-card/80 transition-all group min-w-[140px] justify-between"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-card/80 transition-all group min-w-[140px] justify-between"
         >
           <div class="flex items-center gap-2">
             <!-- Current Flag -->
             <div class="w-5 h-3.5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
-              <div *ngIf="langService.currentLocale() === 'en'" class="flex flex-col h-full">
+              @if (langService.currentLocale() === 'en') {
+              <div class="flex flex-col h-full">
                 <div class="bg-[#00247D] h-full relative overflow-hidden">
                   <div
                     class="absolute inset-0 flex items-center justify-center text-[4px] text-white font-bold"
@@ -84,10 +86,13 @@
                   </div>
                 </div>
               </div>
-              <div *ngIf="langService.currentLocale() === 'uk'" class="flex flex-col h-full">
+              }
+              @if (langService.currentLocale() === 'uk') {
+              <div class="flex flex-col h-full">
                 <div class="bg-[#0057B7] h-1/2 w-full"></div>
                 <div class="bg-[#FFD700] h-1/2 w-full"></div>
               </div>
+              }
             </div>
             <span class="text-sm font-semibold text-foreground">{{ currentLangName }}</span>
           </div>
@@ -98,9 +103,9 @@
           ></lucide-icon>
         </button>
 
+        @if (isLangOpen()) {
         <div
-          *ngIf="isLangOpen()"
-          class="absolute bottom-full mb-2 left-0 w-full bg-card/90 backdrop-blur-xl border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl"
+          class="absolute bottom-full mb-2 left-0 w-full bg-card border border-border rounded-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-lg"
         >
           <button
             (click)="setLang('en')"
@@ -126,6 +131,7 @@
             Українська
           </button>
         </div>
+        }
       </div>
     </div>
   </div>

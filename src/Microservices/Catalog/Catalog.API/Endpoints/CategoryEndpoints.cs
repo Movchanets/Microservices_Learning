@@ -1,4 +1,6 @@
 using Catalog.Application.Commands.CreateCategory;
+using Catalog.Application.Commands.DeleteCategory;
+using Catalog.Application.Commands.UpdateCategory;
 using Catalog.Application.DTOs;
 using Catalog.Application.Queries;
 using MediatR;
@@ -13,6 +15,15 @@ public static class CategoryEndpoints
             .WithTags("Categories")
             .WithOpenApi();
 
+        // Public: category tree
+        group.MapGet("/tree", async (ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetCategoryTreeQuery(), ct);
+            return Results.Ok(result);
+        })
+        .WithName("GetCategoryTree")
+        .Produces<List<CategoryTreeDto>>();
+
         // Public: list categories
         group.MapGet("/", async (
             ISender sender,
@@ -24,7 +35,7 @@ public static class CategoryEndpoints
         .WithName("ListCategories")
         .Produces<List<CategoryDto>>();
 
-        // Authorized: create category (admin only)
+        // Authorized: create category
         group.MapPost("/", async (
             CreateCategoryCommand command,
             ISender sender,
@@ -38,6 +49,40 @@ public static class CategoryEndpoints
         .WithName("CreateCategory")
         .RequireAuthorization()
         .Produces<CategoryDto>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // Authorized: update category
+        group.MapPut("/{id:guid}", async (
+            Guid id,
+            UpdateCategoryCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var cmd = command with { Id = id };
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.Ok(result.Value)
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("UpdateCategory")
+        .RequireAuthorization()
+        .Produces<CategoryDto>()
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // Authorized: delete category (soft delete)
+        group.MapDelete("/{id:guid}", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new DeleteCategoryCommand(id), ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("DeleteCategory")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest);
     }
 }

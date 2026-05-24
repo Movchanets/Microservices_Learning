@@ -39,10 +39,36 @@
     <Project Path="src/Microservices/Inventory/Inventory.Domain/Inventory.Domain.csproj" />
     <Project Path="src/Microservices/Inventory/Inventory.Infrastructure/Inventory.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Microservices/Media/">
+    <Project Path="src/Microservices/Media/Media.API/Media.API.csproj" />
+  </Folder>
+  <Folder Name="/src/Microservices/Notification/">
+    <Project Path="src/Microservices/Notification/Notification.Worker/Notification.Worker.csproj" />
+  </Folder>
+  <Folder Name="/src/Microservices/Ordering/">
+    <Project Path="src/Microservices/Ordering/Ordering.API/Ordering.API.csproj" />
+    <Project Path="src/Microservices/Ordering/Ordering.Application/Ordering.Application.csproj" />
+    <Project Path="src/Microservices/Ordering/Ordering.Domain/Ordering.Domain.csproj" />
+    <Project Path="src/Microservices/Ordering/Ordering.Infrastructure/Ordering.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Microservices/Payment/">
+    <Project Path="src/Microservices/Payment/Payment.API/Payment.API.csproj" />
+    <Project Path="src/Microservices/Payment/Payment.Application/Payment.Application.csproj" />
+    <Project Path="src/Microservices/Payment/Payment.Domain/Payment.Domain.csproj" />
+    <Project Path="src/Microservices/Payment/Payment.Infrastructure/Payment.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/src/Microservices/Search/">
     <Project Path="src/Microservices/Search/Search.API/Search.API.csproj" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/src/Microservices/StoreManagement/">
+    <Project Path="src/Microservices/StoreManagement/StoreManagement.API/StoreManagement.API.csproj" />
+    <Project Path="src/Microservices/StoreManagement/StoreManagement.Application/StoreManagement.Application.csproj" />
+    <Project Path="src/Microservices/StoreManagement/StoreManagement.Domain/StoreManagement.Domain.csproj" />
+    <Project Path="src/Microservices/StoreManagement/StoreManagement.Infrastructure/StoreManagement.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests\ContractTests\ContractTests.csproj" Type="Classic C#" />
+  </Folder>
   <Folder Name="/tests/BuildingBlocks/">
     <Project Path="tests/BuildingBlocks/BuildingBlocks.SharedContracts.UnitTests/BuildingBlocks.SharedContracts.UnitTests.csproj" />
   </Folder>
@@ -62,6 +88,13 @@
     <Project Path="tests/UnitTests/Catalog.UnitTests/Catalog.UnitTests.csproj" />
     <Project Path="tests/UnitTests/Identity.UnitTests/Identity.UnitTests.csproj" />
     <Project Path="tests/UnitTests/Inventory.UnitTests/Inventory.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/Notification.UnitTests/Notification.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/Ordering.UnitTests/Ordering.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/Payment.UnitTests/Payment.UnitTests.csproj" />
     <Project Path="tests/UnitTests/Search.UnitTests/Search.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/StoreManagement.UnitTests/StoreManagement.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/src/Tools/">
+    <Project Path="src/Tools/Seeder.App/Seeder.App.csproj" />
   </Folder>
 </Solution>

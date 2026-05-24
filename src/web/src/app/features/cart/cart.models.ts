@@ -1,11 +1,19 @@
-export interface CartItem {
-  sku: string;
+export interface CartItemDetails {
+  productId: string;
+  title: string;
+  imageUrl: string | null;
   quantity: number;
+  price: number;
+  lineTotal: number;
+  storeId: string;
 }
 
 export interface ShoppingCart {
-  buyerId: string;
-  items: CartItem[];
+  buyerId: string | null;
+  cartId: string;
+  items: CartItemDetails[];
+  totalPrice: number;
+  totalItems: number;
 }
 
 export interface CheckoutResponse {

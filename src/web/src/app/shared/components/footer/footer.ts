@@ -1,13 +1,12 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { ThemeService, Theme } from '../../../core/theme.service';
 import { LanguageService, Locale } from '../../../core/language.service';
 import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-footer',
-  imports: [CommonModule, LucideAngularModule],
-  standalone: true,
+  imports: [LucideAngularModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './footer.html',
   styleUrl: './footer.css',
 })

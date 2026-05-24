@@ -7,7 +7,6 @@ import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-login',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, LucideAngularModule],
   templateUrl: './login.html',

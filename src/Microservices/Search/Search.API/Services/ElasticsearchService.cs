@@ -1,44 +1,25 @@
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Search.API.Models;
+using SearchRequest = Search.API.Models.SearchRequest;
 
 namespace Search.API.Services;
 
-public sealed class ElasticsearchService : ISearchService
+public sealed class ElasticsearchService(
+    ElasticsearchClient client,
+    ILogger<ElasticsearchService> logger)
+    : ISearchService
 {
-    private readonly ElasticsearchClient _client;
-    private readonly ILogger<ElasticsearchService> _logger;
     private const string IndexName = "marketplace-products";
-
-    public ElasticsearchService(
-        ElasticsearchClient client,
-        ILogger<ElasticsearchService> logger)
-    {
-        _client = client;
-        _logger = logger;
-
-        EnsureIndexAsync().GetAwaiter().GetResult();
-    }
-
-    private async Task EnsureIndexAsync(CancellationToken ct = default)
-    {
-        var existsResponse = await _client.Indices.ExistsAsync(IndexName, ct);
-        if (existsResponse.Exists)
-            return;
-
-        var createResponse = await _client.Indices.CreateAsync(IndexName, ct);
-        if (!createResponse.IsValidResponse)
-            _logger.LogError("Failed to create Elasticsearch index {Index}: {Error}", IndexName, createResponse.DebugInformation);
-    }
 
     public async Task IndexProductAsync(ProductSearchDocument product, CancellationToken ct = default)
     {
-        var response = await _client.IndexAsync(product, i => i
+        var response = await client.IndexAsync(product, i => i
             .Index(IndexName)
             .Id(product.Id.ToString()), ct);
 
         if (!response.IsValidResponse)
-            _logger.LogError("Failed to index product {ProductId}: {Error}", product.Id, response.DebugInformation);
+            logger.LogError("Failed to index product {ProductId}: {Error}", product.Id, response.DebugInformation);
     }
 
     public async Task UpdateProductAsync(ProductSearchDocument product, CancellationToken ct = default) =>
@@ -46,26 +27,50 @@ public sealed class ElasticsearchService : ISearchService
 
     public async Task DeleteProductAsync(Guid productId, CancellationToken ct = default)
     {
-        var response = await _client.DeleteAsync<ProductSearchDocument>(
+        var response = await client.DeleteAsync<ProductSearchDocument>(
             productId.ToString(),
             d => d.Index(IndexName),
             ct);
 
         if (!response.IsValidResponse)
-            _logger.LogWarning("Failed to delete product {ProductId}: {Error}", productId, response.DebugInformation);
+            logger.LogWarning("Failed to delete product {ProductId}: {Error}", productId, response.DebugInformation);
     }
 
-    public async Task<SearchResult<ProductSearchDocument>> SearchAsync(
-        string? query,
-        Guid? categoryId,
-        decimal? priceMin,
-        decimal? priceMax,
-        List<string>? tags,
-        int page,
-        int pageSize,
-        CancellationToken ct = default)
+    public async Task<SearchResult<ProductSearchDocument>> SearchAsync(SearchRequest request, CancellationToken ct = default)
     {
-        var response = await _client.SearchAsync<ProductSearchDocument>(s => s
+        var (_, _, _, _, _, _, _, _, page, pageSize) = request;
+
+        try
+        {
+            var response = await client.SearchAsync<ProductSearchDocument>(BuildSearchQuery(request), ct);
+
+            if (!response.IsValidResponse)
+            {
+                logger.LogError("Search failed: {Error}", response.DebugInformation);
+                return new SearchResult<ProductSearchDocument>([], 0, page, pageSize);
+            }
+
+            var facets = ExtractFacets(response);
+
+            return new SearchResult<ProductSearchDocument>(
+                response.Documents.ToList(),
+                response.Total,
+                page,
+                pageSize,
+                facets);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogWarning("Elasticsearch search request was cancelled");
+            return new SearchResult<ProductSearchDocument>([], 0, page, pageSize);
+        }
+    }
+
+    private Action<SearchRequestDescriptor<ProductSearchDocument>> BuildSearchQuery(SearchRequest request)
+    {
+        var (query, categoryId, priceMin, priceMax, tags, brand, minRating, inStock, page, pageSize) = request;
+
+        return s => s
             .Indices(IndexName)
             .From((page - 1) * pageSize)
             .Size(pageSize)
@@ -88,7 +93,7 @@ public sealed class ElasticsearchService : ISearchService
                 // Category filter
                 if (categoryId.HasValue)
                 {
-                    mustQueries.Add(mq => mq.Term(t => t.Field(f => f.CategoryId).Value(categoryId.Value.ToString())));
+                    mustQueries.Add(mq => mq.Term(t => t.Field("categoryId.keyword").Value(categoryId.Value.ToString())));
                 }
 
                 // Price range filter
@@ -109,12 +114,35 @@ public sealed class ElasticsearchService : ISearchService
                         .Terms(new TermsQueryField(tags.Select(FieldValue.String).ToArray()))));
                 }
 
+                // Brand filter
+                if (!string.IsNullOrWhiteSpace(brand))
+                {
+                    mustQueries.Add(mq => mq.Term(t => t.Field("brand.keyword").Value(brand)));
+                }
+
+                // Rating filter
+                if (minRating.HasValue)
+                {
+                    mustQueries.Add(mq => mq.Range(r => r
+                        .NumberRange(nr => nr
+                            .Field(f => f.Rating)
+                            .Gte(minRating.Value))));
+                }
+
+                // In-stock filter
+                if (inStock == true)
+                {
+                    mustQueries.Add(mq => mq.Term(t => t.Field(f => f.InStock).Value(true)));
+                }
+
                 b.Must(mustQueries.ToArray());
             }))
-            // Aggregations for facets
             .Aggregations(aggs => aggs
                 .Add("categories", a => a.Terms(t => t
                     .Field("categoryName.keyword")
+                    .Size(50)))
+                .Add("brands", a => a.Terms(t => t
+                    .Field("brand.keyword")
                     .Size(50)))
                 .Add("price_ranges", a => a.Range(r => r
                     .Field(f => f.Price)
@@ -130,33 +158,40 @@ public sealed class ElasticsearchService : ISearchService
                 .Score(sc => sc.Order(SortOrder.Desc))
                 .Field(f => f.CreatedAt, fs => fs
                     .Order(SortOrder.Desc)
-                    .UnmappedType(Elastic.Clients.Elasticsearch.Mapping.FieldType.Date))),
-            ct);
+                    .UnmappedType(Elastic.Clients.Elasticsearch.Mapping.FieldType.Date)));
+    }
 
-        if (!response.IsValidResponse)
-        {
-            _logger.LogError("Search failed: {Error}", response.DebugInformation);
-            return new SearchResult<ProductSearchDocument>([], 0, page, pageSize);
-        }
-
-        // Extract facets
+    private static Dictionary<string, List<FacetValue>> ExtractFacets(SearchResponse<ProductSearchDocument> response)
+    {
         var facets = new Dictionary<string, List<FacetValue>>();
-        if (response.Aggregations != null)
+        if (response.Aggregations == null)
+            return facets;
+
+        var categoryAgg = response.Aggregations.GetStringTerms("categories");
+        if (categoryAgg != null)
         {
-            var categoryAgg = response.Aggregations.GetStringTerms("categories");
-            if (categoryAgg != null)
-            {
-                facets["categories"] = categoryAgg.Buckets
-                    .Select(b => new FacetValue(b.Key.ToString(), b.DocCount))
-                    .ToList();
-            }
+            facets["categories"] = categoryAgg.Buckets
+                .Select(b => new FacetValue(b.Key.ToString(), b.DocCount))
+                .ToList();
         }
 
-        return new SearchResult<ProductSearchDocument>(
-            response.Documents.ToList(),
-            response.Total,
-            page,
-            pageSize,
-            facets);
+        var brandAgg = response.Aggregations.GetStringTerms("brands");
+        if (brandAgg != null)
+        {
+            facets["brands"] = brandAgg.Buckets
+                .Where(b => !string.IsNullOrEmpty(b.Key.ToString()))
+                .Select(b => new FacetValue(b.Key.ToString(), b.DocCount))
+                .ToList();
+        }
+
+        var priceRangeAgg = response.Aggregations.GetRange("price_ranges");
+        if (priceRangeAgg != null)
+        {
+            facets["price_ranges"] = priceRangeAgg.Buckets
+                .Select(b => new FacetValue(b.Key, b.DocCount))
+                .ToList();
+        }
+
+        return facets;
     }
 }

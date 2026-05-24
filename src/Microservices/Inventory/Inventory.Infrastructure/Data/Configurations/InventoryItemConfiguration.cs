@@ -10,7 +10,13 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
     {
         builder.HasKey(x => x.Id);
 
-        builder.HasIndex(x => x.Sku).IsUnique();
+        builder.Property(x => x.ProductId)
+            .IsRequired();
+
+        builder.Property(x => x.StoreId)
+            .IsRequired();
+
+        builder.HasIndex(x => x.ProductId).IsUnique();
 
         builder.Property(x => x.Sku)
             .IsRequired()
@@ -20,6 +26,7 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
             .IsRequired();
 
         builder.Property(x => x.Version)
-            .IsRowVersion();
+            .IsRowVersion()
+            .HasDefaultValueSql("gen_random_uuid()::text::bytea");
     }
 }

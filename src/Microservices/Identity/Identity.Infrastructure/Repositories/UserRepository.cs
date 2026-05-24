@@ -27,6 +27,10 @@ public sealed class UserRepository(IdentityDbContext context) : IUserRepository
             u => u.Email == Identity.Domain.ValueObjects.Email.Create(email), ct);
 
     /// <inheritdoc/>
+    public async Task<List<User>> GetAllAsync(CancellationToken ct = default) =>
+        await context.Users.OrderBy(u => u.CreatedAt).ToListAsync(ct);
+
+    /// <inheritdoc/>
     public void Add(User entity) => context.Users.Add(entity);
 
     /// <inheritdoc/>

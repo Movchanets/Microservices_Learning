@@ -16,6 +16,13 @@ import {
   Monitor,
   Eye,
   EyeOff,
+  Search,
+  Menu,
+  ShoppingCart,
+  Heart,
+  Settings,
+  Clock,
+  Package,
 } from 'lucide-angular';
 
 // Mock window.matchMedia which is used by ThemeService
@@ -53,6 +60,13 @@ describe('App', () => {
             Monitor,
             Eye,
             EyeOff,
+            Search,
+            Menu,
+            ShoppingCart,
+            Heart,
+            Settings,
+            Clock,
+            Package,
           }),
         ),
       ],

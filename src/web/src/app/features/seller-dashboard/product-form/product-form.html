@@ -1,0 +1,123 @@
+<div class="bg-card rounded-3xl border border-border p-6 max-w-2xl mx-auto">
+  <h2 class="text-xl font-bold font-lexend mb-6">
+    {{ isEditing() ? 'Edit Product' : 'Add Product' }}
+  </h2>
+
+  @if (store.error()) {
+    <div class="mb-4 p-3 bg-red-500/10 text-red-500 rounded-xl text-sm">{{ store.error() }}</div>
+  }
+
+  <form (submit)="onSubmit($event)" class="space-y-5" novalidate>
+    @if (formErrors().length > 0) {
+      <div class="p-3 bg-red-500/10 text-red-500 rounded-xl text-sm space-y-1">
+        @for (err of formErrors(); track err) {
+          <p>{{ err }}</p>
+        }
+      </div>
+    }
+    <div>
+      <label class="block text-sm font-medium mb-1.5" i18n>Product Name</label>
+      <input #nameInput [value]="name()" (input)="name.set(nameInput.value)"
+             class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+             required />
+      @if (formTouched() && !name().trim()) {
+        <p class="text-xs text-red-500 mt-1" aria-live="polite">Product name is required.</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1.5" i18n>SKU</label>
+      <div class="flex gap-2">
+        <input #skuInput [value]="sku()" (input)="onSkuInput(skuInput.value)"
+               placeholder="e.g. WIDGET-001"
+               class="flex-1 px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+               [disabled]="isEditing()"
+               required />
+        @if (!isEditing()) {
+          <button type="button" (click)="generateSku()"
+                  class="px-4 py-2.5 bg-muted/20 text-foreground rounded-xl text-sm font-medium hover:bg-muted/30 transition-colors cursor-pointer whitespace-nowrap">
+            Generate
+          </button>
+        }
+      </div>
+      <p class="text-xs text-muted mt-1">Alphanumeric and hyphens only (e.g. MY-PRODUCT-01)</p>
+      @if (formTouched() && !sku().trim()) {
+        <p class="text-xs text-red-500 mt-1" aria-live="polite">SKU is required.</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1.5" i18n>Description</label>
+      <textarea #descInput [value]="description()" (input)="description.set(descInput.value)"
+                rows="3"
+                class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"></textarea>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1.5" i18n>Price</label>
+        <input #priceInput type="number" [value]="price()" (input)="price.set(+priceInput.value)"
+               min="0" step="0.01"
+               class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+               required />
+        @if (formTouched() && price() <= 0) {
+          <p class="text-xs text-red-500 mt-1" aria-live="polite">Price must be greater than zero.</p>
+        }
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1.5" i18n>Currency</label>
+        <select #currencySelect [value]="currency()" (change)="currency.set(currencySelect.value)"
+                class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+          <option value="GBP">GBP</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1.5" i18n>Category</label>
+      <select #categorySelect [value]="categoryId()" (change)="categoryId.set(categorySelect.value)"
+              class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              required>
+        <option value="" disabled>Select a category</option>
+        @for (cat of categories(); track cat.id) {
+          <option [value]="cat.id">{{ cat.name }}</option>
+        }
+      </select>
+      @if (formTouched() && !categoryId()) {
+        <p class="text-xs text-red-500 mt-1" aria-live="polite">Category is required.</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1.5" i18n>Image URL</label>
+      <input #imageUrlInput [value]="imageUrl()" (input)="imageUrl.set(imageUrlInput.value)"
+             placeholder="https://example.com/image.jpg"
+             class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+      @if (formTouched() && imageUrl() && !/^https?:\/\/.+/.test(imageUrl())) {
+        <p class="text-xs text-red-500 mt-1" aria-live="polite">Must start with http:// or https://</p>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1.5" i18n>Tags</label>
+      <input #tagsInputElement [value]="tagsInput()" (input)="tagsInput.set(tagsInputElement.value)"
+             placeholder="electronics, gadgets, wireless (comma-separated)"
+             class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+      <p class="text-xs text-muted mt-1" i18n>Separate tags with commas</p>
+    </div>
+
+    <div class="flex items-center gap-3 pt-2">
+      <button type="submit"
+              [disabled]="store.loading()"
+              class="px-6 py-2.5 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors disabled:opacity-50 cursor-pointer">
+        {{ store.loading() ? 'Saving...' : (isEditing() ? 'Update' : 'Create') }}
+      </button>
+      <a routerLink="/seller/products"
+         class="px-6 py-2.5 text-muted hover:text-foreground transition-colors">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>

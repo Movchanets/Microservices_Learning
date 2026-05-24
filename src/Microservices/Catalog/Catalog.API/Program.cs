@@ -7,6 +7,7 @@ using FluentValidation;
 using MassTransit;
 using Marketplace.ServiceDefaults;
 using MediatR;
+using BuildingBlocks.Infrastructure.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,7 +39,6 @@ builder.Services.AddMassTransit(x =>
     x.AddEntityFrameworkOutbox<CatalogDbContext>(o =>
     {
         o.UsePostgres();
-        o.UseBusOutbox();
     });
 
     x.UsingRabbitMq((context, cfg) =>
@@ -48,26 +48,8 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-// ── Authentication (JWT Bearer) ─────────────────────────
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "marketplace-identity",
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "marketplace-api",
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                System.Text.Encoding.UTF8.GetBytes(
-                    builder.Configuration["Jwt:Secret"] ?? "super-secret-key-for-dev-only-min-32-chars!!")),
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-
-builder.Services.AddAuthorization();
+// ── Authentication ─────────────────────────────────────
+builder.Services.AddMarketplaceAuthentication(builder.Configuration);
 
 // ── OpenAPI ─────────────────────────────────────────────
 builder.Services.AddOpenApi();
@@ -75,11 +57,6 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 app.ApplyMigrations();
-
-if (app.Environment.IsDevelopment())
-{
-    app.SeedData();
-}
 
 // ── Middleware pipeline ─────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();

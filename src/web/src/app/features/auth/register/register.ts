@@ -7,7 +7,6 @@ import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-register',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, LucideAngularModule],
   templateUrl: './register.html',
@@ -24,10 +23,14 @@ export class Register {
   }
 
   registerForm = this.fb.nonNullable.group({
-    firstName: ['', Validators.required],
-    lastName: ['', Validators.required],
-    email: ['', Validators.required],
-    password: ['', Validators.required],
+    firstName: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
+    lastName: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [
+      Validators.required,
+      Validators.minLength(8),
+      Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/),
+    ]],
   });
 
   async onSubmit() {

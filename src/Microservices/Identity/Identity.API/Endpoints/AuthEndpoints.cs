@@ -2,7 +2,9 @@ using Identity.Application.Commands.Login;
 using Identity.Application.Commands.Register;
 using Identity.Application.Commands.RefreshToken;
 using Identity.Application.Commands.ForgotPassword;
+using Identity.Application.Commands.ChangePassword;
 using MediatR;
+using System.Security.Claims;
 
 namespace Identity.API.Endpoints;
 
@@ -76,6 +78,23 @@ public static class AuthEndpoints
             return Results.Ok();
         })
         .WithName("ForgotPassword")
+        .Produces(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        group.MapPost("/change-password", async (
+            ChangePasswordCommand command,
+            ClaimsPrincipal user,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await sender.Send(command with { UserId = Guid.Parse(userId!) }, ct);
+            return result.IsSuccess
+                ? Results.Ok()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("ChangePassword")
+        .RequireAuthorization()
         .Produces(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest);
     }

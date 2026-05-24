@@ -20,6 +20,7 @@ public static class DependencyInjection
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ISavedSearchRepository, SavedSearchRepository>();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<IdentityDbContext>());
 
         // Services

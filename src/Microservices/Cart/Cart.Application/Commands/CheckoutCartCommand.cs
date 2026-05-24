@@ -8,7 +8,10 @@ using MediatR;
 namespace Cart.Application.Commands;
 
 public record CheckoutResponseDto(Guid CorrelationId);
-public record CheckoutCartCommand(string BuyerId) : IRequest<Result<CheckoutResponseDto>>;
+public record CheckoutCartCommand(
+    Guid BuyerId,
+    Guid? CartId = null,
+    AddressRequest? Address = null) : IRequest<Result<CheckoutResponseDto>>;
 
 public sealed class CheckoutCartCommandHandler(
     ICartRepository repository,
@@ -16,7 +19,7 @@ public sealed class CheckoutCartCommandHandler(
 {
     public async Task<Result<CheckoutResponseDto>> Handle(CheckoutCartCommand request, CancellationToken cancellationToken)
     {
-        var cart = await repository.GetCartAsync(request.BuyerId, cancellationToken);
+        var cart = await repository.GetCartAsync(request.BuyerId, request.CartId, cancellationToken);
 
         if (cart.Items.Count == 0)
         {
@@ -24,18 +27,24 @@ public sealed class CheckoutCartCommandHandler(
         }
 
         var correlationId = Guid.NewGuid();
-        var itemsContract = cart.Items.Select(i => new OrderItemContract(i.Sku, i.Quantity)).ToList();
+        var itemsContract = cart.Items.Select(i => new OrderItemContract(i.ProductId, i.Quantity, i.Price, i.StoreId)).ToList();
 
         var orderSubmittedEvent = new OrderSubmittedEvent(
             correlationId,
-            request.BuyerId,
+            request.BuyerId.ToString(),
             itemsContract,
-            DateTime.UtcNow
+            DateTime.UtcNow,
+            request.Address?.AddressLine1,
+            request.Address?.AddressLine2,
+            request.Address?.City,
+            request.Address?.State,
+            request.Address?.PostalCode,
+            request.Address?.Country
         );
 
         await publishEndpoint.Publish(orderSubmittedEvent, cancellationToken);
 
-        await repository.DeleteCartAsync(request.BuyerId, cancellationToken);
+        await repository.DeleteCartAsync(request.BuyerId, request.CartId, cancellationToken);
 
         return Result<CheckoutResponseDto>.Success(new CheckoutResponseDto(correlationId));
     }

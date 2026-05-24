@@ -13,16 +13,14 @@ public static class HealthEndpoints
     private static readonly string[] ServiceNames =
     [
         "identity-api",
-        //uncomment when implemented
-        //"catalog-api",
-        //"ordering-api",
-        //"inventory-api",
-        //"cart-api",
-        //"search-api",
-        //"store-api",
-        //"media-api",
-        //"payment-api",
-        //"notification-worker"
+        "catalog-api",
+        "ordering-api",
+        "inventory-api",
+        "cart-api",
+        "search-api",
+        "store-api",
+        "media-api",
+        "payment-api"
     ];
 
     public static void MapHealthEndpoints(this IEndpointRouteBuilder app)

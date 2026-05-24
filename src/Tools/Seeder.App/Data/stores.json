@@ -1,0 +1,14 @@
+[
+  {
+    "SellerEmail": "store.tech@marketplace.com",
+    "SellerPassword": "P@ssw0rd123!",
+    "Name": "Tech Store",
+    "Description": "Electronics and gadgets from leading brands."
+  },
+  {
+    "SellerEmail": "store.home@marketplace.com",
+    "SellerPassword": "P@ssw0rd123!",
+    "Name": "Home Store",
+    "Description": "Home essentials, kitchen tools, and lifestyle products."
+  }
+]

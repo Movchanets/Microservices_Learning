@@ -26,8 +26,11 @@ public sealed class ProductUpdatedConsumer(
             CategoryName = msg.CategoryName,
             Tags = msg.Tags,
             ImageUrl = msg.ImageUrl,
+            StoreId = msg.StoreId,
             IsActive = msg.IsActive,
-            UpdatedAt = msg.UpdatedAt
+            UpdatedAt = msg.UpdatedAt,
+            Brand = msg.Brand,
+            Attributes = msg.Attributes ?? []
         };
 
         await searchService.UpdateProductAsync(document, context.CancellationToken);

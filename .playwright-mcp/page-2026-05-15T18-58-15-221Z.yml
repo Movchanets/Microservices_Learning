@@ -1,0 +1,73 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "Go to homepage" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e8]: M
+        - generic [ref=e9]: Marketplace
+      - navigation [ref=e10]:
+        - link "Catalog" [ref=e11] [cursor=pointer]:
+          - /url: /catalog
+          - text: Catalog
+        - link "Sell" [ref=e12] [cursor=pointer]:
+          - /url: /seller-dashboard
+          - text: Sell
+      - generic [ref=e13]:
+        - link "Sign in" [ref=e475] [cursor=pointer]:
+          - /url: /auth/login
+        - link "Get Started" [ref=e476] [cursor=pointer]:
+          - /url: /auth/register
+  - main [ref=e16]:
+    - generic [ref=e479]:
+      - generic [ref=e480]:
+        - generic [ref=e482]: M
+        - heading "Welcome back" [level=1] [ref=e483]
+        - paragraph [ref=e484]: Enter your credentials to continue
+      - generic [ref=e485]:
+        - generic [ref=e486]:
+          - generic [ref=e487]: Email address
+          - generic [ref=e488]:
+            - generic:
+              - generic:
+                - img
+            - textbox "Email address" [ref=e489]:
+              - /placeholder: name@company.com
+        - generic [ref=e490]:
+          - generic [ref=e491]:
+            - generic [ref=e492]: Password
+            - link "Forgot password?" [ref=e493] [cursor=pointer]:
+              - /url: /auth/forgot-password
+          - generic [ref=e494]:
+            - generic:
+              - generic:
+                - img
+            - textbox "Password" [ref=e495]:
+              - /placeholder: ••••••••
+            - button [ref=e496]:
+              - img [ref=e498]
+        - button "Sign In" [disabled] [ref=e501]:
+          - generic [ref=e502]: Sign In
+          - img [ref=e504]
+      - paragraph [ref=e508]:
+        - text: Don't have an account?
+        - link "Register here" [ref=e509] [cursor=pointer]:
+          - /url: /auth/register
+  - contentinfo [ref=e402]:
+    - generic [ref=e403]:
+      - generic [ref=e404]:
+        - generic [ref=e405]:
+          - generic [ref=e407]: M
+          - generic [ref=e408]: Marketplace
+        - paragraph [ref=e409]: The ultimate enterprise platform for digital trade. Secure, fast, and transparent.
+        - generic [ref=e410]: © 2026 Marketplace. All rights reserved.
+      - generic [ref=e411]:
+        - button "System" [ref=e413]:
+          - generic [ref=e414]:
+            - img [ref=e416]
+            - generic [ref=e422]: System
+          - img [ref=e424]
+        - button "🇬🇧 English" [ref=e427]:
+          - generic [ref=e428]:
+            - generic [ref=e432]: 🇬🇧
+            - generic [ref=e433]: English
+          - img [ref=e435]

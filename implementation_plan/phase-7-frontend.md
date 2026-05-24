@@ -20,7 +20,7 @@
 - [ ] **Implement checkout flow** — Order summary → confirm → real-time status via SignalR
 - [ ] **Implement order history** — List past orders with status badges
 - [ ] **Implement seller dashboard** — Product management, store settings, sales overview
-- [ ] **Implement admin panel** — User management, seller verification
+- [ ] **Implement admin panel** — User management, seller verification → see `phase-7/7.6/` (3 sub-plans: models/services, store, UI)
 - [ ] **Configure lazy loading** — Route-level code splitting per feature
 - [ ] **Verify** — Full user journey: register → browse → cart → checkout → notification
 
