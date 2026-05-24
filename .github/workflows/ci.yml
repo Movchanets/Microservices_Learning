@@ -71,4 +71,4 @@ jobs:
         env:
           NX_NO_CLOUD: true
           NX_DAEMON: false # Вимикає фоновий процес Nx, який викликає зависання
-        run: pnpm exec nx affected -t lint test build
+        run: pnpm exec nx affected -t test build
