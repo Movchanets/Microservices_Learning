@@ -27,8 +27,8 @@ export class HeaderComponent {
   constructor(page: Page) {
     this.page = page;
     this.logo = page.getByTestId('header-logo');
-    this.catalogLink = page.getByTestId('nav-catalog');
-    this.sellLink = page.getByTestId('nav-sell');
+    this.catalogLink = page.getByRole('button', { name: /catalog/i }).first();
+    this.sellLink = page.getByRole('link', { name: /sell/i });
     this.loginLink = page.getByTestId('nav-login');
     this.registerLink = page.getByTestId('nav-register');
     this.userMenuTrigger = page.getByTestId('user-menu-trigger');

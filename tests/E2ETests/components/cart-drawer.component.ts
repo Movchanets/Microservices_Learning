@@ -21,8 +21,8 @@ export class CartDrawerComponent {
     this.itemsList = this.drawer.locator('.cart-items');
     this.items = this.drawer.locator('.cart-item');
     this.totalText = page.getByTestId('cart-total');
-    this.viewCartLink = page.getByRole('link', { name: 'View Cart' });
-    this.checkoutLink = page.getByRole('link', { name: 'Checkout' });
+    this.viewCartLink = page.getByTestId('cart-drawer-view-cart');
+    this.checkoutLink = page.getByTestId('cart-drawer-checkout');
   }
 
   async waitForOpen() {
