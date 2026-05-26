@@ -1,19 +1,8 @@
 // Auth fixture with storageState-based pre-authenticated browser contexts
 // and role-based API request contexts. Eliminates duplicated login boilerplate.
 //
-// Usage:
-//   import { authTest as test, expect } from '../../fixtures/auth.fixture';
-//
-//   test('seller can access dashboard', async ({ page, sellerAuth }) => {
-//     // page is already authenticated as seller
-//     await page.goto('/seller');
-//   });
-//
-//   test('admin can verify store', async ({ page, adminAuth, adminApi }) => {
-//     // page is authenticated as admin
-//     // adminApi is an APIRequestContext for programmatic setup
-//     await page.goto('/admin');
-//   });
+// Each worker gets its own storage state files (worker-indexed) to prevent
+// race conditions when running tests in parallel.
 
 import { test as base, APIRequestContext, BrowserContext } from '@playwright/test';
 import * as fs from 'fs';
@@ -33,24 +22,25 @@ async function ensureStorageDir(): Promise<void> {
 }
 
 /**
- * Logs in via BFF API, saves storageState to a temp file.
- * Returns the file path for use with browser context storageState.
+ * Logs in via BFF API, saves storageState to a worker-indexed temp file.
+ * Each parallel worker gets its own file to avoid race conditions.
  */
 async function loginAndSaveState(
   requestFactory: APIRequestContext,
   email: string,
   password: string,
-  label: string
+  label: string,
+  workerIndex: number
 ): Promise<{ statePath: string; api: APIRequestContext }> {
   await ensureStorageDir();
-  const statePath = path.join(STORAGE_DIR, `${label}.json`);
+  // Worker-indexed filename prevents cross-worker race conditions
+  const statePath = path.join(STORAGE_DIR, `${label}-w${workerIndex}.json`);
 
   // Reuse cached state if fresh (< 30 min old) and valid
   try {
     const stat = await fs.promises.stat(statePath);
     const ageMinutes = (Date.now() - stat.mtimeMs) / 60_000;
     if (ageMinutes < 30 && stat.size > 10) {
-      // Validate the file is valid JSON with cookies
       const content = await fs.promises.readFile(statePath, 'utf-8');
       const parsed = JSON.parse(content);
       if (parsed.cookies && parsed.cookies.length > 0) {
@@ -97,34 +87,37 @@ export type AuthFixtures = {
 export const authTest = pageTest.extend<AuthFixtures>({
   // ── API Contexts ────────────────────────────────────────
 
-  buyerApi: async ({ playwright }, use) => {
+  buyerApi: async ({ playwright }, use, testInfo) => {
     const { api } = await loginAndSaveState(
       playwright.request,
       users.buyerUser.email,
       users.buyerUser.password,
-      'buyer'
+      'buyer',
+      testInfo.workerIndex
     );
     await use(api);
     await api.dispose();
   },
 
-  sellerApi: async ({ playwright }, use) => {
+  sellerApi: async ({ playwright }, use, testInfo) => {
     const { api } = await loginAndSaveState(
       playwright.request,
       users.sellerUser.email,
       users.sellerUser.password,
-      'seller'
+      'seller',
+      testInfo.workerIndex
     );
     await use(api);
     await api.dispose();
   },
 
-  adminApi: async ({ playwright }, use) => {
+  adminApi: async ({ playwright }, use, testInfo) => {
     const { api } = await loginAndSaveState(
       playwright.request,
       users.adminUser.email,
       users.adminUser.password,
-      'admin'
+      'admin',
+      testInfo.workerIndex
     );
     await use(api);
     await api.dispose();
@@ -149,36 +142,39 @@ export const authTest = pageTest.extend<AuthFixtures>({
 
   // ── Pre-authenticated Browser Contexts ──────────────────
 
-  buyerContext: async ({ browser, playwright }, use) => {
+  buyerContext: async ({ browser, playwright }, use, testInfo) => {
     const { statePath } = await loginAndSaveState(
       playwright.request,
       users.buyerUser.email,
       users.buyerUser.password,
-      'buyer'
+      'buyer',
+      testInfo.workerIndex
     );
     const context = await browser.newContext({ storageState: statePath });
     await use(context);
     await context.close();
   },
 
-  sellerContext: async ({ browser, playwright }, use) => {
+  sellerContext: async ({ browser, playwright }, use, testInfo) => {
     const { statePath } = await loginAndSaveState(
       playwright.request,
       users.sellerUser.email,
       users.sellerUser.password,
-      'seller'
+      'seller',
+      testInfo.workerIndex
     );
     const context = await browser.newContext({ storageState: statePath });
     await use(context);
     await context.close();
   },
 
-  adminContext: async ({ browser, playwright }, use) => {
+  adminContext: async ({ browser, playwright }, use, testInfo) => {
     const { statePath } = await loginAndSaveState(
       playwright.request,
       users.adminUser.email,
       users.adminUser.password,
-      'admin'
+      'admin',
+      testInfo.workerIndex
     );
     const context = await browser.newContext({ storageState: statePath });
     await use(context);

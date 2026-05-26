@@ -11,11 +11,11 @@ test.describe('Checkout: Order Flow', () => {
     await page.close();
   });
 
-  test('should show empty cart message when no items', async ({ buyerContext }) => {
-    const page = await buyerContext.newPage();
-    await page.goto('/cart');
-    await page.waitForLoadState('domcontentloaded');
+  test('should show empty cart message when no items', async ({ buyerContext, buyerApi }) => {
+    // Clear cart first to ensure isolation from parallel workers
+    await buyerApi.delete('/api/cart').catch(() => {});
 
+    const page = await buyerContext.newPage();
     await page.goto('/checkout');
     await page.waitForLoadState('domcontentloaded');
 
