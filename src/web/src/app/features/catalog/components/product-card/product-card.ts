@@ -68,12 +68,14 @@ import { ProductListItem } from '../../catalog.models';
           <a [routerLink]="['/catalog', product().id]">{{ product().name }}</a>
         </h3>
 
-        <!-- SKU + Store -->
+        <!-- SKU Count + Store -->
         <p class="text-xs text-muted mb-4 font-mono flex items-center gap-2">
-          <span>
-            <lucide-icon name="Tag" class="w-3 h-3 inline mr-1"></lucide-icon>
-            {{ product().sku }}
-          </span>
+          @if (product().skuCount > 0) {
+            <span>
+              <lucide-icon name="Tag" class="w-3 h-3 inline mr-1"></lucide-icon>
+              {{ product().skuCount }} {{ product().skuCount === 1 ? 'variant' : 'variants' }}
+            </span>
+          }
           @if (product().storeId) {
             <a
               [routerLink]="['/stores', product().storeId]"
@@ -92,13 +94,17 @@ import { ProductListItem } from '../../catalog.models';
         <!-- Footer: Price & Add to Cart -->
         <div class="flex items-center justify-between mt-4">
           <div class="flex flex-col">
-            <span class="text-2xl font-bold text-foreground font-lexend">
-              {{ product().price | currency: product().currency : 'symbol' : '1.2-2' }}
-            </span>
+            @if (product().minPrice !== null) {
+              <span class="text-2xl font-bold text-foreground font-lexend">
+                {{ product().minPrice! | currency: (product().currency ?? 'USD') : 'symbol' : '1.2-2' }}
+              </span>
+            } @else {
+              <span class="text-sm text-muted">Price unavailable</span>
+            }
           </div>
 
           <button
-            (click)="addToCart.emit(product().id)"
+            (click)="addToCart.emit(product())"
             class="flex items-center justify-center w-12 h-12 rounded-xl
                          bg-primary text-white hover:bg-secondary
                          active:scale-95 transition-all"
@@ -114,5 +120,5 @@ import { ProductListItem } from '../../catalog.models';
 })
 export class ProductCardComponent {
   product = input.required<ProductListItem>();
-  addToCart = output<string>();
+  addToCart = output<ProductListItem>();
 }

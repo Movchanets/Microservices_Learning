@@ -4,7 +4,9 @@ namespace Cart.Domain.Entities;
 
 public sealed class ProductPrice : Entity
 {
-    public string Sku { get; private set; } = default!;
+    public Guid ProductId { get; private set; }
+    public Guid SkuId { get; private set; }
+    public string SkuCode { get; private set; } = default!;
     public string Name { get; private set; } = default!;
     public decimal Price { get; private set; }
     public string Currency { get; private set; } = "USD";
@@ -13,12 +15,14 @@ public sealed class ProductPrice : Entity
 
     private ProductPrice() { }
 
-    public static ProductPrice Create(Guid productId, string sku, string name, decimal price, string currency, Guid storeId)
+    public static ProductPrice Create(Guid productId, Guid skuId, string skuCode, string name, decimal price, string currency, Guid storeId)
     {
         return new ProductPrice
         {
-            Id = productId,
-            Sku = sku,
+            Id = Guid.NewGuid(),
+            ProductId = productId,
+            SkuId = skuId,
+            SkuCode = skuCode,
             Name = name,
             Price = price,
             Currency = currency,

@@ -1,4 +1,5 @@
 using BuildingBlocks.SharedContracts.Abstractions;
+using BuildingBlocks.SharedContracts.Dtos;
 using BuildingBlocks.Infrastructure.Models;
 using Inventory.Domain.Aggregates;
 using Inventory.Domain.Exceptions;
@@ -12,31 +13,20 @@ public sealed class ReserveStockCommandHandler(
 {
     public async Task<Result<bool>> Handle(ReserveStockCommand request, CancellationToken cancellationToken)
     {
-        var productIds = request.Items.Select(i => i.ProductId).ToList();
-        var items = new List<InventoryItem>();
-        foreach (var pid in productIds)
-        {
-            var item = await repository.GetByProductIdAsync(pid, cancellationToken);
-            if (item is not null) items.Add(item);
-        }
+        var resolved = await InventoryItemResolver.ResolveAsync(request.Items, repository, cancellationToken);
 
-        foreach (var requestedItem in request.Items)
+        foreach (var (requestedItem, inventoryItem) in resolved)
         {
-            var inventoryItem = items.FirstOrDefault(i => i.ProductId == requestedItem.ProductId);
-            if (inventoryItem == null)
-            {
-                return Result<bool>.Failure($"Inventory item not found for product {requestedItem.ProductId}");
-            }
+            if (inventoryItem is null)
+                return Result<bool>.Failure($"Inventory item not found for SKU {requestedItem.SkuCode}");
 
             try
             {
                 inventoryItem.Reserve(requestedItem.Quantity);
                 repository.Update(inventoryItem);
             }
-            catch (OutOfStockException ex)
-            {
-                return Result<bool>.Failure(ex.Message);
-            }
+            catch (OutOfStockException ex) { return Result<bool>.Failure(ex.Message); }
+            catch (InvalidOperationException ex) { return Result<bool>.Failure(ex.Message); }
         }
 
         await uow.SaveChangesAsync(cancellationToken);

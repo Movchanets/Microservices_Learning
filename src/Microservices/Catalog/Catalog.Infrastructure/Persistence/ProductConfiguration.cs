@@ -1,5 +1,4 @@
 using Catalog.Domain.Aggregates;
-using Catalog.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,28 +16,9 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.CategoryId).IsRequired();
         builder.Property(p => p.StoreId).IsRequired();
         builder.Property(p => p.ImageUrl).HasMaxLength(500);
+        builder.Property(p => p.Brand).HasMaxLength(100);
 
-        // Money Value Object (Owned Type)
-        builder.OwnsOne(p => p.Price, priceBuilder =>
-        {
-            priceBuilder.Property(m => m.Amount)
-                .HasColumnName("PriceAmount")
-                .HasPrecision(18, 2);
-
-            priceBuilder.Property(m => m.Currency)
-                .HasColumnName("PriceCurrency")
-                .HasMaxLength(3);
-        });
-
-        // Sku Value Object (Conversion)
-        builder.Property(p => p.Sku)
-            .HasConversion(
-                sku => sku.Value,
-                value => Sku.Create(value))
-            .HasMaxLength(50)
-            .IsRequired();
-
-        // PostgreSQL string array mapping for Tags
+        // Tags as jsonb
         builder.Property(p => p.Tags).HasColumnType("jsonb");
 
         // Relationships
@@ -47,8 +27,9 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasForeignKey(p => p.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Skus are configured via SkuConfiguration (HasOne<Product>.WithMany(p => p.Skus))
+
         // Indexes
-        builder.HasIndex(p => p.Sku).IsUnique();
         builder.HasIndex(p => p.CategoryId);
         builder.HasIndex(p => p.StoreId);
     }

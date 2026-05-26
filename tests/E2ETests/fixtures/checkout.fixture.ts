@@ -56,12 +56,14 @@ export const checkoutTest = baseTest.extend<Omit<CheckoutFixtures, keyof AuthFix
       {
         name: `Test Product ${randomId}`,
         description: `E2E test product created at ${new Date().toISOString()}`,
-        sku: `TEST-${randomId}`,
-        price: 29.99,
-        currency: 'USD',
         categoryId: categories.id,
         storeId: testStore.id,
         tags: ['e2e', 'test'],
+      },
+      {
+        skuCode: `TEST-${randomId}`,
+        price: 29.99,
+        currency: 'USD',
       },
       100
     );
@@ -71,7 +73,8 @@ export const checkoutTest = baseTest.extend<Omit<CheckoutFixtures, keyof AuthFix
 
   addItemToCart: async ({ testProduct, testStore }, use) => {
     const fn = async (buyerApi: APIRequestContext, quantity = 1) => {
-      await addToCart(buyerApi, testProduct.sku, quantity, testProduct.price, testStore.sellerId);
+      const firstSku = testProduct.skus[0];
+      await addToCart(buyerApi, firstSku.skuCode, quantity, firstSku.price, testStore.sellerId);
     };
     await use(fn);
   },

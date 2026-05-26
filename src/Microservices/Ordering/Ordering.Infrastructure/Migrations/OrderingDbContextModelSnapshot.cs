@@ -210,6 +210,13 @@ namespace Ordering.Infrastructure.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
+                    b.Property<string>("SkuCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SkuId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("StoreId")
                         .HasColumnType("uuid");
 

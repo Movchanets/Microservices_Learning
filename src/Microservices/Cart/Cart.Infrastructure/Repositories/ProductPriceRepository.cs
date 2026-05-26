@@ -2,7 +2,6 @@ using Cart.Domain.Entities;
 using Cart.Domain.Repositories;
 using Cart.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Cart.Infrastructure.Repositories;
 
@@ -12,14 +11,30 @@ public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepo
     {
         return await dbContext.ProductPrices
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+            .FirstOrDefaultAsync(p => p.ProductId == productId, ct);
+    }
+
+    public async Task<ProductPrice?> GetBySkuIdAsync(Guid skuId, CancellationToken ct = default)
+    {
+        return await dbContext.ProductPrices
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.SkuId == skuId, ct);
+    }
+
+    public async Task<List<ProductPrice>> GetBySkuIdsAsync(IEnumerable<Guid> skuIds, CancellationToken ct = default)
+    {
+        var idList = skuIds.ToList();
+        return await dbContext.ProductPrices
+            .AsNoTracking()
+            .Where(p => idList.Contains(p.SkuId))
+            .ToListAsync(ct);
     }
 
     public async Task UpsertAsync(
-        Guid productId, string sku, string name, decimal price, string currency, Guid storeId, CancellationToken ct = default)
+        Guid productId, Guid skuId, string skuCode, string name, decimal price, string currency, Guid storeId, CancellationToken ct = default)
     {
         var existing = await dbContext.ProductPrices
-            .FirstOrDefaultAsync(p => p.Id == productId, ct);
+            .FirstOrDefaultAsync(p => p.SkuId == skuId, ct);
         if (existing is not null)
         {
             existing.UpdateDetails(name, price, currency);
@@ -27,7 +42,7 @@ public class ProductPriceRepository(CartDbContext dbContext) : IProductPriceRepo
         else
         {
             dbContext.ProductPrices.Add(
-                ProductPrice.Create(productId, sku, name, price, currency, storeId));
+                ProductPrice.Create(productId, skuId, skuCode, name, price, currency, storeId));
         }
 
         await dbContext.SaveChangesAsync(ct);

@@ -51,7 +51,7 @@ export async function cancelOrder(
  */
 export async function runCheckoutFlow(
   buyerApi: APIRequestContext,
-  items: Array<{ sku: string; quantity: number; price: number; shopId?: string }>,
+  items: Array<{ skuCode: string; quantity: number; price: number; shopId?: string }>,
   address: {
     addressLine1: string;
     city: string;
@@ -63,7 +63,7 @@ export async function runCheckoutFlow(
 ): Promise<{ correlationId: string; finalOrder: OrderResult | null }> {
   // 1. Add items to cart
   for (const item of items) {
-    await addToCart(buyerApi, item.sku, item.quantity, item.price, item.shopId);
+    await addToCart(buyerApi, item.skuCode, item.quantity, item.price, item.shopId);
   }
 
   // 2. Checkout

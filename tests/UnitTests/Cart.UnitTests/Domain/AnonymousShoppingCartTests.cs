@@ -23,7 +23,7 @@ public class AnonymousShoppingCartTests
     public void AddItem_AnonymousCart_ShouldWork()
     {
         var cart = new ShoppingCart(null);
-        cart.AddItem(ProductId1, 2, StoreId, 10m);
+        cart.AddItem(ProductId1, Guid.NewGuid(), "TEST-SKU", 2, StoreId, 10m);
 
         cart.BuyerId.Should().BeNull();
         cart.Items.Should().ContainSingle();
@@ -35,8 +35,8 @@ public class AnonymousShoppingCartTests
     public void AddItem_MultipleProducts_AnonymousCart_ShouldKeepAll()
     {
         var cart = new ShoppingCart(null);
-        cart.AddItem(ProductId1, 1, StoreId, 10m);
-        cart.AddItem(ProductId2, 3, StoreId, 20m);
+        cart.AddItem(ProductId1, Guid.NewGuid(), "TEST-SKU", 1, StoreId, 10m);
+        cart.AddItem(ProductId2, Guid.NewGuid(), "TEST-SKU", 3, StoreId, 20m);
 
         cart.Items.Should().HaveCount(2);
         cart.Items.Should().Contain(i => i.ProductId == ProductId1 && i.Quantity == 1);
@@ -47,8 +47,9 @@ public class AnonymousShoppingCartTests
     public void UpdateQuantity_AnonymousCart_ShouldWork()
     {
         var cart = new ShoppingCart(null);
-        cart.AddItem(ProductId1, 1, StoreId, 10m);
-        cart.UpdateQuantity(ProductId1, 5);
+        var skuId = Guid.NewGuid();
+        cart.AddItem(ProductId1, skuId, "TEST-SKU", 1, StoreId, 10m);
+        cart.UpdateQuantity(ProductId1, skuId, 5);
 
         cart.Items.Should().ContainSingle();
         cart.Items.First().Quantity.Should().Be(5);
@@ -58,9 +59,11 @@ public class AnonymousShoppingCartTests
     public void RemoveItem_AnonymousCart_ShouldWork()
     {
         var cart = new ShoppingCart(null);
-        cart.AddItem(ProductId1, 1, StoreId, 10m);
-        cart.AddItem(ProductId2, 2, StoreId, 20m);
-        cart.RemoveItem(ProductId1);
+        var skuId1 = Guid.NewGuid();
+        var skuId2 = Guid.NewGuid();
+        cart.AddItem(ProductId1, skuId1, "TEST-SKU", 1, StoreId, 10m);
+        cart.AddItem(ProductId2, skuId2, "TEST-SKU", 2, StoreId, 20m);
+        cart.RemoveItem(ProductId1, skuId1);
 
         cart.Items.Should().ContainSingle();
         cart.Items.First().ProductId.Should().Be(ProductId2);
@@ -70,8 +73,8 @@ public class AnonymousShoppingCartTests
     public void Clear_AnonymousCart_ShouldRemoveAllItems()
     {
         var cart = new ShoppingCart(null);
-        cart.AddItem(ProductId1, 1, StoreId, 10m);
-        cart.AddItem(ProductId2, 2, StoreId, 20m);
+        cart.AddItem(ProductId1, Guid.NewGuid(), "TEST-SKU", 1, StoreId, 10m);
+        cart.AddItem(ProductId2, Guid.NewGuid(), "TEST-SKU", 2, StoreId, 20m);
         cart.Clear();
 
         cart.Items.Should().BeEmpty();
@@ -94,9 +97,10 @@ public class AnonymousShoppingCartTests
         var cart = new ShoppingCart(null);
         var initialId = cart.Id;
 
-        cart.AddItem(ProductId1, 1, StoreId, 10m);
-        cart.UpdateQuantity(ProductId1, 5);
-        cart.RemoveItem(ProductId1);
+        var skuId = Guid.NewGuid();
+        cart.AddItem(ProductId1, skuId, "TEST-SKU", 1, StoreId, 10m);
+        cart.UpdateQuantity(ProductId1, skuId, 5);
+        cart.RemoveItem(ProductId1, skuId);
 
         cart.Id.Should().Be(initialId);
     }
@@ -105,7 +109,7 @@ public class AnonymousShoppingCartTests
     public void Claim_ShouldSetBuyerIdOnAnonymousCart()
     {
         var cart = new ShoppingCart(null);
-        cart.AddItem(ProductId1, 2, StoreId, 10m);
+        cart.AddItem(ProductId1, Guid.NewGuid(), "TEST-SKU", 2, StoreId, 10m);
 
         var buyerId = Guid.NewGuid();
         cart.Claim(buyerId);

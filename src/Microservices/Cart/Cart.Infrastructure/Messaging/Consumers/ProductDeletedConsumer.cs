@@ -15,16 +15,20 @@ public sealed class ProductDeletedConsumer(
         var evt = context.Message;
         logger.LogInformation("Product deleted: {ProductId}", evt.ProductId);
 
+        // Remove ALL ProductPrice entries for this product (one per SKU)
         var existing = await dbContext.ProductPrices
-            .FirstOrDefaultAsync(p => p.Id == evt.ProductId, context.CancellationToken);
+            .Where(p => p.ProductId == evt.ProductId)
+            .ToListAsync(context.CancellationToken);
 
-        if (existing is null)
+        if (existing.Count == 0)
         {
-            logger.LogWarning("ProductPrice {ProductId} not found for deletion", evt.ProductId);
+            logger.LogWarning("No ProductPrice entries found for deleted Product {ProductId}", evt.ProductId);
             return;
         }
 
-        dbContext.ProductPrices.Remove(existing);
+        dbContext.ProductPrices.RemoveRange(existing);
         await dbContext.SaveChangesAsync(context.CancellationToken);
+        logger.LogInformation("Removed {Count} ProductPrice entries for deleted Product {ProductId}",
+            existing.Count, evt.ProductId);
     }
 }

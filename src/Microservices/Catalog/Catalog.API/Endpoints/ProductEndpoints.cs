@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using BuildingBlocks.Infrastructure.Models;
 using Catalog.Application.Commands.ActivateProduct;
+using Catalog.Application.Commands.AddSku;
 using Catalog.Application.Commands.ChangePrice;
 using Catalog.Application.Commands.CreateProduct;
 using Catalog.Application.Commands.CreateReview;
 using Catalog.Application.Commands.DeactivateProduct;
 using Catalog.Application.Commands.DeleteProduct;
+using Catalog.Application.Commands.RemoveSku;
 using Catalog.Application.Commands.SellerResponse;
 using Catalog.Application.Commands.UpdateProduct;
 using Catalog.Application.Commands.VoteReview;
@@ -27,6 +29,7 @@ public static class ProductEndpoints
 
         group.MapProductCrudEndpoints();
         group.MapProductReviewEndpoints();
+        group.MapProductSkuEndpoints();
     }
 
     private static void MapProductCrudEndpoints(this RouteGroupBuilder group)
@@ -327,6 +330,63 @@ public static class ProductEndpoints
         .WithName("SellerResponse")
         .RequireAuthorization()
         .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+    }
+
+    private static void MapProductSkuEndpoints(this RouteGroupBuilder group)
+    {
+        // Authorized: add SKU to product
+        group.MapPost("/{id:guid}/skus", async (
+            Guid id,
+            AddSkuCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var cmd = command with { ProductId = id };
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.Created($"/api/catalog/products/{id}/skus/{result.Value!.Id}", result.Value)
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("AddSku")
+        .RequireAuthorization()
+        .Produces<SkuDto>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // Authorized: remove SKU from product
+        group.MapDelete("/{id:guid}/skus/{skuId:guid}", async (
+            Guid id,
+            Guid skuId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new RemoveSkuCommand(id, skuId), ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("RemoveSku")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // Authorized: change SKU price
+        group.MapPatch("/{id:guid}/skus/{skuId:guid}/price", async (
+            Guid id,
+            Guid skuId,
+            ChangePriceCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var cmd = command with { ProductId = id, SkuId = skuId };
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.Ok()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("ChangeSkuPrice")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest);
     }
 }

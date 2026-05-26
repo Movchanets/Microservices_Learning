@@ -11,9 +11,14 @@ public sealed class InventoryItemRepository(InventoryDbContext dbContext) : IInv
         return await dbContext.InventoryItems.FindAsync([id], cancellationToken: ct);
     }
 
-    public async Task<InventoryItem?> GetBySkuAsync(string sku, CancellationToken ct = default)
+    public async Task<InventoryItem?> GetBySkuIdAsync(Guid skuId, CancellationToken ct = default)
     {
-        return await dbContext.InventoryItems.FirstOrDefaultAsync(i => i.Sku == sku, ct);
+        return await dbContext.InventoryItems.FirstOrDefaultAsync(i => i.SkuId == skuId, ct);
+    }
+
+    public async Task<InventoryItem?> GetBySkuCodeAsync(string skuCode, CancellationToken ct = default)
+    {
+        return await dbContext.InventoryItems.FirstOrDefaultAsync(i => i.SkuCode == skuCode, ct);
     }
 
     public async Task<InventoryItem?> GetByProductIdAsync(Guid productId, CancellationToken ct = default)
@@ -21,17 +26,17 @@ public sealed class InventoryItemRepository(InventoryDbContext dbContext) : IInv
         return await dbContext.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId, ct);
     }
 
-    public async Task<InventoryItem?> GetByStoreAndSkuAsync(Guid storeId, string sku, CancellationToken ct = default)
+    public async Task<InventoryItem?> GetByStoreAndSkuCodeAsync(Guid storeId, string skuCode, CancellationToken ct = default)
     {
         return await dbContext.InventoryItems.FirstOrDefaultAsync(
-            i => i.StoreId == storeId && i.Sku == sku, ct);
+            i => i.StoreId == storeId && i.SkuCode == skuCode, ct);
     }
 
-    public async Task<List<InventoryItem>> GetBySkusAsync(IEnumerable<string> skus, CancellationToken ct = default)
+    public async Task<List<InventoryItem>> GetBySkuIdsAsync(IEnumerable<Guid> skuIds, CancellationToken ct = default)
     {
-        var skuList = skus.ToList();
+        var idList = skuIds.ToList();
         return await dbContext.InventoryItems
-            .Where(i => skuList.Contains(i.Sku))
+            .Where(i => idList.Contains(i.SkuId))
             .ToListAsync(ct);
     }
 

@@ -23,7 +23,7 @@ public class GetOrderByIdHandlerTests
     public async Task Handle_WithExistingOrder_ReturnsOrderDto()
     {
         var order = Order.Create("buyer-1");
-        order.AddItem(Guid.NewGuid(), "Product", 10m, 2, Guid.Parse("33333333-3333-3333-3333-333333333333"));
+        order.AddItem(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Product", 10m, 2, Guid.Parse("33333333-3333-3333-3333-333333333333"));
         _repositoryMock.Setup(r => r.GetByIdAsync(order.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(order);
 

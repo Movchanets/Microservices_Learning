@@ -19,5 +19,12 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();
         modelBuilder.AddOutboxStateEntity();
+        // Disable RowVersion concurrency token on OutboxState to prevent
+        // DbUpdateConcurrencyException when domain event handlers call
+        // IPublishEndpoint.Publish() inside SaveChanges (OutboxState.RowVersion
+        // gets mutated multiple times in the same transaction).
+        modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxState")
+            .Property<byte[]>("RowVersion")
+            .IsConcurrencyToken(false);
     }
 }

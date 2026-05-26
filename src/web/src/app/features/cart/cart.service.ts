@@ -83,21 +83,21 @@ export class CartService {
     );
   }
 
-  async addItem(productId: string, quantity: number): Promise<ShoppingCart> {
+  async addItem(productId: string, skuId: string, skuCode: string, quantity: number): Promise<ShoppingCart> {
     return firstValueFrom(
-      this.http.post<ShoppingCart>(`${this.baseUrl}/items`, { productId, quantity }, { headers: this.cartHeaders() })
+      this.http.post<ShoppingCart>(`${this.baseUrl}/items`, { productId, skuId, skuCode, quantity }, { headers: this.cartHeaders() })
     );
   }
 
-  async updateItem(productId: string, quantity: number): Promise<ShoppingCart> {
+  async updateItem(skuId: string, quantity: number): Promise<ShoppingCart> {
     return firstValueFrom(
-      this.http.put<ShoppingCart>(`${this.baseUrl}/items/${productId}`, { quantity }, { headers: this.cartHeaders() })
+      this.http.put<ShoppingCart>(`${this.baseUrl}/items/${skuId}`, { quantity }, { headers: this.cartHeaders() })
     );
   }
 
-  async removeItem(productId: string): Promise<ShoppingCart> {
+  async removeItem(skuId: string): Promise<ShoppingCart> {
     return firstValueFrom(
-      this.http.delete<ShoppingCart>(`${this.baseUrl}/items/${productId}`, { headers: this.cartHeaders() })
+      this.http.delete<ShoppingCart>(`${this.baseUrl}/items/${skuId}`, { headers: this.cartHeaders() })
     );
   }
 }

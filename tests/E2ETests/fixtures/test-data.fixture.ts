@@ -61,11 +61,13 @@ export const testDataSetupTest = baseTest.extend<Omit<TestDataFixtures, keyof Au
 
   addItemToCart: async ({ testData }, use) => {
     const fn = async (buyerApi: APIRequestContext, quantity = 1) => {
+      const product = testData.products[0];
+      const firstSku = product.skus[0];
       await addToCart(
         buyerApi,
-        testData.products[0].sku,
+        firstSku.skuCode,
         quantity,
-        testData.products[0].price,
+        firstSku.price,
         testData.store.sellerId
       );
     };

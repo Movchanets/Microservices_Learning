@@ -59,7 +59,9 @@ import { ProductListItem } from '../../../features/catalog/catalog.models';
                     <p class="text-sm text-foreground truncate">{{ product.name }}</p>
                     <p class="text-xs text-muted-foreground">{{ product.categoryName }}</p>
                   </div>
-                  <span class="text-sm font-medium text-foreground">{{ product.price | number:'1.2-2' }}</span>
+                  @if (product.minPrice !== null) {
+                    <span class="text-sm font-medium text-foreground">{{ product.minPrice! | number:'1.2-2' }}</span>
+                  }
                 </button>
               }
             </div>

@@ -88,6 +88,7 @@ import { CartStore } from '../../../cart/cart.store';
 export class BuyBoxComponent {
   protected cartStore = inject(CartStore);
 
+  skuId = input.required<string>();
   sku = input.required<string>();
   price = input.required<number>();
   currency = input.required<string>();
@@ -117,11 +118,11 @@ export class BuyBoxComponent {
   }
 
   async onAddToCart(): Promise<void> {
-    await this.cartStore.addToCart(this.productId(), this.quantity());
+    await this.cartStore.addToCart(this.productId(), this.skuId(), this.sku(), this.quantity());
   }
 
   onBuyNow(): void {
-    this.cartStore.addToCart(this.productId(), this.quantity());
+    this.cartStore.addToCart(this.productId(), this.skuId(), this.sku(), this.quantity());
     this.buyNow.emit();
   }
 }

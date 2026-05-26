@@ -28,15 +28,15 @@ public class UpdateCartCommandHandlerTests
     {
         Guid? buyerId = Guid.NewGuid();
         var existingCart = new ShoppingCart(buyerId);
-        existingCart.AddItem(OldProductId, 1, StoreId1, 5m);
+        existingCart.AddItem(OldProductId, Guid.NewGuid(), "TEST-SKU", 1, StoreId1, 5m);
 
         _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(buyerId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingCart);
 
         var newItems = new List<CartItemDto>
         {
-            new(ProductId1, 2, 10m, StoreId1),
-            new(ProductId2, 3, 20m, StoreId2)
+            new(ProductId1, Guid.NewGuid(), "TEST-SKU", 2, 10m, StoreId1),
+            new(ProductId2, Guid.NewGuid(), "TEST-SKU", 3, 20m, StoreId2)
         };
         var command = new UpdateCartCommand(buyerId, null, newItems);
 

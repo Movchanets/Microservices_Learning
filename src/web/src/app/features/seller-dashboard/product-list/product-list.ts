@@ -59,7 +59,12 @@ function statusClass(status: string): string {
                 }
                 <div>
                   <p class="font-medium">{{ product.name }}</p>
-                  <p class="text-sm text-muted">{{ product.sku }} &middot; {{ product.price | currency }}</p>
+                  <p class="text-sm text-muted">
+                    {{ product.skus?.length ?? 0 }} {{ (product.skus?.length ?? 0) === 1 ? 'SKU' : 'SKUs' }}
+                    @if (product.skus?.length) {
+                      &middot; {{ product.skus[0].price | currency: product.skus[0].currency }}
+                    }
+                  </p>
                 </div>
               </div>
               <div class="flex items-center gap-2">

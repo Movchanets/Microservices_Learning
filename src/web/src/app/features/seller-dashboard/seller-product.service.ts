@@ -5,8 +5,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, map } from 'rxjs';
-import { SellerProduct, CreateProductRequest, UpdateProductRequest } from './seller.models';
-import { PagedResult } from '../catalog/catalog.models';
+import { SellerProduct, CreateProductRequest, UpdateProductRequest, AddSkuRequest } from './seller.models';
+import { PagedResult, Sku } from '../catalog/catalog.models';
 
 @Injectable({ providedIn: 'root' })
 export class SellerProductService {
@@ -39,9 +39,21 @@ export class SellerProductService {
     );
   }
 
-  async changePrice(id: string, price: number, currency: string): Promise<void> {
+  async addSku(productId: string, request: AddSkuRequest): Promise<Sku> {
     return firstValueFrom(
-      this.http.patch<void>(`${this.baseUrl}/${id}/price`, { price, currency })
+      this.http.post<Sku>(`${this.baseUrl}/${productId}/skus`, request)
+    );
+  }
+
+  async removeSku(productId: string, skuId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.delete<void>(`${this.baseUrl}/${productId}/skus/${skuId}`)
+    );
+  }
+
+  async changeSkuPrice(productId: string, skuId: string, price: number, currency: string): Promise<void> {
+    return firstValueFrom(
+      this.http.patch<void>(`${this.baseUrl}/${productId}/skus/${skuId}/price`, { price, currency })
     );
   }
 

@@ -5,9 +5,10 @@ public sealed class ProductSearchDocument
     public Guid Id { get; init; }
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
-    public decimal Price { get; init; }
+    public decimal MinPrice { get; init; }
+    public decimal MaxPrice { get; init; }
     public string Currency { get; init; } = "USD";
-    public string Sku { get; init; } = string.Empty;
+    public int SkuCount { get; init; }
     public Guid CategoryId { get; init; }
     public string CategoryName { get; init; } = string.Empty;
     public List<string> Tags { get; init; } = [];
@@ -17,7 +18,7 @@ public sealed class ProductSearchDocument
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
 
-    // New fields for richer faceting
+    // Richer faceting
     public string? Brand { get; init; }
     public Dictionary<string, string> Attributes { get; init; } = [];
     public double? Rating { get; init; }
@@ -36,3 +37,21 @@ public sealed record SearchResult<T>(
 }
 
 public sealed record FacetValue(string Key, long Count);
+
+/// <summary>
+/// Groups all metadata fields for a product search document update.
+/// Replaces the 11-parameter UpdateProductMetadataAsync signature.
+/// </summary>
+public sealed record UpdateProductMetadataRequest(
+    Guid ProductId,
+    string Name,
+    string Description,
+    Guid CategoryId,
+    string CategoryName,
+    List<string> Tags,
+    string? ImageUrl,
+    Guid StoreId,
+    bool IsActive,
+    DateTime UpdatedAt,
+    string? Brand,
+    Dictionary<string, string>? Attributes);

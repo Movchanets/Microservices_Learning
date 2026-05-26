@@ -5,7 +5,8 @@
 import { computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { SellerProductService } from './seller-product.service';
-import { SellerProduct, CreateProductRequest, UpdateProductRequest } from './seller.models';
+import { SellerProduct, CreateProductRequest, UpdateProductRequest, AddSkuRequest } from './seller.models';
+import { Sku } from '../catalog/catalog.models';
 import { StoreSettingsStore } from './store-settings.store';
 
 interface SellerProductState {
@@ -59,7 +60,7 @@ export const SellerProductStore = signalStore(
       }
     },
 
-    async createProduct(request: CreateProductRequest): Promise<boolean> {
+    async createProduct(request: CreateProductRequest): Promise<SellerProduct | null> {
       patchState(store, { loading: true, error: null });
       try {
         const product = await productService.createProduct(request);
@@ -67,26 +68,58 @@ export const SellerProductStore = signalStore(
           products: [...store.products(), product],
           loading: false,
         });
-        return true;
+        return product;
       } catch {
         patchState(store, { error: 'Failed to create product', loading: false });
+        return null;
+      }
+    },
+
+    async addSku(productId: string, request: AddSkuRequest): Promise<Sku | null> {
+      try {
+        const sku = await productService.addSku(productId, request);
+        // Update the product in the store with the new SKU
+        patchState(store, {
+          products: store.products().map(p =>
+            p.id === productId ? { ...p, skus: [...p.skus, sku] } : p
+          ),
+          selectedProduct: store.selectedProduct()?.id === productId
+            ? { ...store.selectedProduct()!, skus: [...store.selectedProduct()!.skus, sku] }
+            : store.selectedProduct(),
+        });
+        return sku;
+      } catch {
+        patchState(store, { error: 'Failed to add SKU' });
+        return null;
+      }
+    },
+
+    async removeSku(productId: string, skuId: string): Promise<boolean> {
+      try {
+        await productService.removeSku(productId, skuId);
+        // Update the product in the store by removing the SKU
+        patchState(store, {
+          products: store.products().map(p =>
+            p.id === productId ? { ...p, skus: p.skus.filter(s => s.id !== skuId) } : p
+          ),
+          selectedProduct: store.selectedProduct()?.id === productId
+            ? { ...store.selectedProduct()!, skus: store.selectedProduct()!.skus.filter(s => s.id !== skuId) }
+            : store.selectedProduct(),
+        });
+        return true;
+      } catch {
+        patchState(store, { error: 'Failed to remove SKU' });
         return false;
       }
     },
 
-    async updateProduct(id: string, request: UpdateProductRequest, newPrice?: number, currency?: string): Promise<boolean> {
+    async updateProduct(id: string, request: UpdateProductRequest): Promise<boolean> {
       patchState(store, { loading: true, error: null });
       try {
         const updated = await productService.updateProduct(id, request);
-        // If price changed, call the separate price change endpoint
-        if (newPrice !== undefined && currency) {
-          await productService.changePrice(id, newPrice, currency);
-        }
-        // Reload to get fresh data including price change
-        const fresh = newPrice !== undefined ? await productService.getProductById(id) : updated;
         patchState(store, {
-          products: store.products().map(p => p.id === id ? fresh : p),
-          selectedProduct: store.selectedProduct()?.id === id ? fresh : store.selectedProduct(),
+          products: store.products().map(p => p.id === id ? updated : p),
+          selectedProduct: store.selectedProduct()?.id === id ? updated : store.selectedProduct(),
           loading: false,
         });
         return true;

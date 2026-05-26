@@ -22,7 +22,7 @@ public sealed class GetOrderByIdHandler(
             order.CreatedAt,
             order.CompletedAt,
             order.Items.Select(i => new OrderItemDto(
-                i.Id, i.ProductId, i.ProductName, i.UnitPrice, i.Quantity, i.TotalPrice)).ToList());
+                i.Id, i.ProductId, i.SkuId, i.SkuCode, i.ProductName, i.UnitPrice, i.Quantity, i.TotalPrice)).ToList());
 
         return Result<OrderDto>.Success(dto);
     }

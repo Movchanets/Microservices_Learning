@@ -14,7 +14,7 @@ export default defineConfig({
     : [["list"], ["html"]],
 
   use: {
-    baseURL: process.env.BASE_URL || "http://localhost:4200",
+    baseURL: process.env.BASE_URL || "http://localhost:4201",
     testIdAttribute: "data-testid",
     actionTimeout: 15_000,
     navigationTimeout: 30_000,

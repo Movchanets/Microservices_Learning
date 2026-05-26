@@ -1,19 +1,20 @@
 // Seller Dashboard data models.
 // Defines types for product management, store settings, and sales metrics.
 
+import { Sku } from '../catalog/catalog.models';
+
 export interface SellerProduct {
   id: string;
   name: string;
   description: string;
-  sku: string;
-  price: number;
-  currency: string;
+  brand: string | null;
   categoryId: string;
   categoryName: string;
   status: 'Draft' | 'Active' | 'Inactive' | 'Deleted';
   imageUrl: string | null;
   storeId: string;
   tags: string[];
+  skus: Sku[];
   createdAt: string;
   updatedAt: string | null;
 }
@@ -21,19 +22,24 @@ export interface SellerProduct {
 export interface CreateProductRequest {
   name: string;
   description: string;
-  sku: string;
-  price: number;
-  currency: string;
+  brand?: string;
   categoryId: string;
   storeId: string;
   tags?: string[];
   imageUrl?: string;
 }
 
+export interface AddSkuRequest {
+  skuCode: string;
+  price: number;
+  currency: string;
+  typedAttributes?: Record<string, string>;
+  flexibleAttributes?: Record<string, string>;
+}
+
 export interface UpdateProductRequest {
   name?: string;
   description?: string;
-  price?: number;
   categoryId?: string;
   stockQuantity?: number;
   imageUrl?: string;

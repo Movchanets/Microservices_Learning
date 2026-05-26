@@ -1,20 +1,34 @@
 // Product form component.
 // Handles both create and edit modes for seller products.
 // Uses signals for form state, submits to SellerProductStore.
-// Supports category selection, tags, and image URL.
+// Supports category selection, tags, image URL, and multiple SKUs.
 
 import { Component, ChangeDetectionStrategy, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { DecimalPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { SellerProductStore } from '../seller-product.store';
 import { StoreSettingsStore } from '../store-settings.store';
 import { CategoryService, CategoryOption } from '../../../core/services/category.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { AddSkuRequest } from '../seller.models';
+
+interface SkuFormEntry {
+  id: string;
+  skuCode: string;
+  price: number;
+  currency: string;
+}
+
+let skuIdCounter = 0;
+function nextSkuId(): string {
+  return `sku-${++skuIdCounter}-${Date.now()}`;
+}
 
 @Component({
   selector: 'app-product-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule],
+  imports: [RouterLink, LucideAngularModule, DecimalPipe],
   templateUrl: './product-form.html',
 })
 export class ProductFormComponent implements OnInit {
@@ -29,10 +43,8 @@ export class ProductFormComponent implements OnInit {
   productId = signal<string | null>(null);
   formPopulated = signal(false);
   name = signal('');
-  sku = signal('');
   description = signal('');
-  price = signal(0);
-  currency = signal('USD');
+  brand = signal('');
   categoryId = signal('');
   imageUrl = signal('');
   tagsInput = signal('');
@@ -40,19 +52,30 @@ export class ProductFormComponent implements OnInit {
   formErrors = signal<string[]>([]);
   formTouched = signal(false);
 
+  // SKU form entries for create mode
+  skus = signal<SkuFormEntry[]>([{ id: nextSkuId(), skuCode: '', price: 0, currency: 'USD' }]);
+
+  // Existing SKUs for edit mode
+  existingSkus = signal<{ skuCode: string; price: number; currency: string }[]>([]);
+
   constructor() {
     // Populate form fields when editing — fires once when selectedProduct loads
     effect(() => {
       const product = this.store.selectedProduct();
       if (product && this.isEditing() && !this.formPopulated()) {
         this.name.set(product.name);
-        this.sku.set(product.sku);
         this.description.set(product.description);
-        this.price.set(product.price);
-        this.currency.set(product.currency);
+        this.brand.set(product.brand ?? '');
         this.categoryId.set(product.categoryId);
         this.imageUrl.set(product.imageUrl ?? '');
         this.tagsInput.set(product.tags?.join(', ') ?? '');
+        this.existingSkus.set(
+          product.skus?.map(s => ({
+            skuCode: s.skuCode,
+            price: s.price,
+            currency: s.currency,
+          })) ?? []
+        );
         this.formPopulated.set(true);
       }
     });
@@ -78,15 +101,31 @@ export class ProductFormComponent implements OnInit {
     }
   }
 
-  onSkuInput(rawValue: string): void {
-    this.sku.set(ProductFormComponent.sanitizeSku(rawValue));
+  addSkuRow(): void {
+    this.skus.update(rows => [...rows, { id: nextSkuId(), skuCode: '', price: 0, currency: 'USD' }]);
   }
 
-  generateSku(): void {
+  removeSkuRow(index: number): void {
+    if (this.skus().length <= 1) return; // Always keep at least one SKU row
+    this.skus.update(rows => rows.filter((_, i) => i !== index));
+  }
+
+  updateSkuCode(index: number, value: string): void {
+    this.skus.update(rows => rows.map((r, i) => i === index ? { ...r, skuCode: ProductFormComponent.sanitizeSku(value) } : r));
+  }
+
+  updateSkuPrice(index: number, value: number): void {
+    this.skus.update(rows => rows.map((r, i) => i === index ? { ...r, price: value } : r));
+  }
+
+  updateSkuCurrency(index: number, value: string): void {
+    this.skus.update(rows => rows.map((r, i) => i === index ? { ...r, currency: value } : r));
+  }
+
+  generateSkuFor(index: number): void {
     const productName = this.name().trim();
     if (!productName) return;
 
-    // Take first 3 words, uppercase, join with hyphens, append random 4-digit
     const words = productName
       .replace(/[^a-zA-Z0-9\s]/g, '')
       .split(/\s+/)
@@ -97,7 +136,8 @@ export class ProductFormComponent implements OnInit {
     if (words.length === 0) return;
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    this.sku.set(`${words.join('-')}-${randomSuffix}`);
+    const skuCode = `${words.join('-')}-${randomSuffix}`;
+    this.skus.update(rows => rows.map((r, i) => i === index ? { ...r, skuCode } : r));
   }
 
   /**
@@ -120,32 +160,44 @@ export class ProductFormComponent implements OnInit {
     // Validate required fields
     const errors: string[] = [];
     if (!this.name().trim()) errors.push('Product name is required.');
-    if (!this.sku().trim()) errors.push('SKU is required.');
-    if (!this.isEditing() && !/^[A-Z0-9][A-Z0-9-]*[A-Z0-9]$/i.test(this.sku()) && this.sku().length > 0) {
-      errors.push('SKU must be alphanumeric with hyphens only.');
-    }
-    if (this.price() <= 0) errors.push('Price must be greater than zero.');
     if (!this.categoryId()) errors.push('Category is required.');
     if (this.imageUrl() && !/^https?:\/\/.+/.test(this.imageUrl())) {
       errors.push('Image URL must be a valid URL starting with http:// or https://.');
     }
+
+    // Validate SKUs in create mode
+    if (!this.isEditing()) {
+      const skuEntries = this.skus();
+      if (skuEntries.length === 0) {
+        errors.push('At least one SKU is required.');
+      }
+      skuEntries.forEach((sku, i) => {
+        if (!sku.skuCode.trim()) errors.push(`SKU #${i + 1}: SKU code is required.`);
+        if (!/^[A-Z0-9][A-Z0-9-]*[A-Z0-9]$/i.test(sku.skuCode) && sku.skuCode.length > 0) {
+          errors.push(`SKU #${i + 1}: SKU must be alphanumeric with hyphens only.`);
+        }
+        if (sku.price <= 0) errors.push(`SKU #${i + 1}: Price must be greater than zero.`);
+      });
+
+      // Check for duplicate SKU codes
+      const skuCodes = skuEntries.map(s => s.skuCode.trim().toUpperCase()).filter(Boolean);
+      const duplicates = skuCodes.filter((code, i) => skuCodes.indexOf(code) !== i);
+      if (duplicates.length > 0) {
+        errors.push(`Duplicate SKU codes: ${[...new Set(duplicates)].join(', ')}`);
+      }
+    }
+
     if (errors.length > 0) {
       this.formErrors.set(errors);
       return;
     }
     this.formErrors.set([]);
 
-    // Safety net: ensure SKU is valid even if pasted
-    this.sku.set(ProductFormComponent.sanitizeSku(this.sku()));
-
     const tags = this.tagsInput()
       ? this.tagsInput().split(',').map(t => t.trim()).filter(t => t.length > 0)
       : [];
 
     if (this.isEditing()) {
-      const product = this.store.selectedProduct();
-      const priceChanged = product && this.price() !== product.price;
-
       const success = await this.store.updateProduct(
         this.productId()!,
         {
@@ -154,9 +206,6 @@ export class ProductFormComponent implements OnInit {
           categoryId: this.categoryId(),
           imageUrl: this.imageUrl() || undefined,
         },
-        // Pass new price if changed — store will call changePrice endpoint
-        priceChanged ? this.price() : undefined,
-        priceChanged ? this.currency() : undefined,
       );
       if (success) {
         this.toast.success('Product updated');
@@ -166,20 +215,39 @@ export class ProductFormComponent implements OnInit {
       }
     } else {
       const storeId = this.storeSettingsStore.settings()?.storeId || '';
-      const success = await this.store.createProduct({
+      const product = await this.store.createProduct({
         name: this.name(),
-        sku: this.sku(),
         description: this.description(),
-        price: this.price(),
-        currency: this.currency(),
+        brand: this.brand() || undefined,
         categoryId: this.categoryId(),
         storeId,
         tags,
         imageUrl: this.imageUrl() || undefined,
       });
-      if (success) {
-        this.toast.success('Product created');
-        this.router.navigate(['/seller/products']);
+
+      if (product) {
+        // Add each SKU to the newly created product
+        const failedSkus: string[] = [];
+        for (const skuEntry of this.skus()) {
+          const skuRequest: AddSkuRequest = {
+            skuCode: skuEntry.skuCode,
+            price: skuEntry.price,
+            currency: skuEntry.currency,
+          };
+          const sku = await this.store.addSku(product.id, skuRequest);
+          if (!sku) {
+            failedSkus.push(skuEntry.skuCode);
+          }
+        }
+
+        if (failedSkus.length === 0) {
+          this.toast.success('Product created');
+          this.router.navigate(['/seller/products']);
+        } else {
+          // Stay on form — show which SKUs failed, user can retry
+          this.toast.error(`Failed to add SKUs: ${failedSkus.join(', ')}. Product was created — you can add missing SKUs from the edit page.`);
+          this.router.navigate(['/seller/products', product.id, 'edit']);
+        }
       } else {
         this.toast.error('Failed to create product');
       }

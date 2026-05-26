@@ -15,15 +15,15 @@ describe('InventoryStore', () => {
   let mockProductService: any;
 
   const mockProducts = [
-    { id: 'p1', name: 'Widget Pro', sku: 'WP-1', imageUrl: null, updatedAt: '2026-01-01', createdAt: '2026-01-01' },
-    { id: 'p2', name: 'Gadget Mini', sku: 'GM-1', imageUrl: null, updatedAt: '2026-01-01', createdAt: '2026-01-01' },
-    { id: 'p3', name: 'Thing Max', sku: 'TM-1', imageUrl: null, updatedAt: '2026-01-01', createdAt: '2026-01-01' },
+    { id: 'p1', name: 'Widget Pro', skus: [{ id: 's1', skuCode: 'WP-1', price: 10, currency: 'USD', status: 'Active' }], imageUrl: null, updatedAt: '2026-01-01', createdAt: '2026-01-01' },
+    { id: 'p2', name: 'Gadget Mini', skus: [{ id: 's2', skuCode: 'GM-1', price: 20, currency: 'USD', status: 'Active' }], imageUrl: null, updatedAt: '2026-01-01', createdAt: '2026-01-01' },
+    { id: 'p3', name: 'Thing Max', skus: [{ id: 's3', skuCode: 'TM-1', price: 30, currency: 'USD', status: 'Active' }], imageUrl: null, updatedAt: '2026-01-01', createdAt: '2026-01-01' },
   ];
 
   const mockInventory = [
-    { id: 'i1', sku: 'WP-1', availableQuantity: 15 },
-    { id: 'i2', sku: 'GM-1', availableQuantity: 3 },
-    { id: 'i3', sku: 'TM-1', availableQuantity: 0 },
+    { id: 'i1', skuCode: 'WP-1', availableQuantity: 15 },
+    { id: 'i2', skuCode: 'GM-1', availableQuantity: 3 },
+    { id: 'i3', skuCode: 'TM-1', availableQuantity: 0 },
   ];
 
   beforeEach(() => {

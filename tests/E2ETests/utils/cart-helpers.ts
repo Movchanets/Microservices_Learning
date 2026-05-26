@@ -12,14 +12,14 @@ import { getProductBySku } from './catalog-helpers';
  */
 export async function addToCart(
   api: APIRequestContext,
-  sku: string,
+  skuCode: string,
   quantity: number,
   price: number,
   shopId?: string
 ): Promise<void> {
-  const product = await getProductBySku(api, sku);
+  const product = await getProductBySku(api, skuCode);
   if (!product) {
-    throw new Error(`Product not found for SKU: ${sku}`);
+    throw new Error(`Product not found for SKU: ${skuCode}`);
   }
 
   const response = await api.post('/api/cart/items', {

@@ -9,6 +9,11 @@ public sealed class CategoryRepository(CatalogDbContext context) : ICategoryRepo
     public async Task<Category?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         await context.Categories.FirstOrDefaultAsync(c => c.Id == id, ct);
 
+    public async Task<Category?> GetWithAttributeDefinitionsAsync(Guid id, CancellationToken ct = default) =>
+        await context.Categories
+            .Include(c => c.AttributeDefinitions)
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
+
     public async Task<List<Category>> GetAllAsync(CancellationToken ct = default) =>
         await context.Categories
             .OrderBy(c => c.SortOrder)

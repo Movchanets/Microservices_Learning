@@ -20,6 +20,8 @@ export type {
   BffUser,
   StoreResult,
   ProductResult,
+  ProductListResult,
+  SkuResult,
   CategoryResult,
   OrderResult,
   OrderItemResult,
@@ -56,6 +58,8 @@ export {
 // Catalog & Inventory
 export {
   createProduct,
+  addSku,
+  getProductById,
   getProductBySku,
   activateProduct,
   getCategories,

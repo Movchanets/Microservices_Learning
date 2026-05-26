@@ -70,7 +70,7 @@ export class ProductCarouselComponent {
   title = input.required<string>();
   products = input.required<ProductListItem[]>();
   viewAllLink = input<string | null>(null);
-  addToCart = output<string>();
+  addToCart = output<ProductListItem>();
 
   scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 

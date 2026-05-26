@@ -8,6 +8,8 @@ public class AddCartItemValidator : AbstractValidator<AddCartItemCommand>
     {
         // BuyerId is optional — anonymous users have no BuyerId
         RuleFor(x => x.ProductId).NotEmpty();
+        RuleFor(x => x.SkuId).NotEmpty();
+        RuleFor(x => x.SkuCode).NotEmpty();
         RuleFor(x => x.Quantity).GreaterThan(0);
     }
 }

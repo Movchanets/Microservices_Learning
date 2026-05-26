@@ -15,6 +15,8 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(c => c.Description).HasMaxLength(500);
         builder.Property(c => c.Slug).IsRequired().HasMaxLength(128);
 
+        // AttributeDefinitions are configured via AttributeDefinitionConfiguration
+
         builder.HasIndex(c => c.Slug).IsUnique();
         builder.HasIndex(c => c.ParentCategoryId);
     }

@@ -1,8 +1,11 @@
+using BuildingBlocks.SharedContracts.Abstractions;
 using Catalog.Application.Commands.CreateCategory;
 using Catalog.Application.Commands.DeleteCategory;
 using Catalog.Application.Commands.UpdateCategory;
 using Catalog.Application.DTOs;
 using Catalog.Application.Queries;
+using Catalog.Domain.Entities;
+using Catalog.Domain.Enums;
 using MediatR;
 
 namespace Catalog.API.Endpoints;
@@ -84,5 +87,128 @@ public static class CategoryEndpoints
         .RequireAuthorization()
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        group.MapCategoryAttributeEndpoints();
+    }
+
+    private static void MapCategoryAttributeEndpoints(this RouteGroupBuilder group)
+    {
+        // Authorized: add attribute definition to category
+        group.MapPost("/{id:guid}/attributes", async (
+            Guid id,
+            AddAttributeDefinitionRequest request,
+            ICategoryRepository categoryRepo,
+            IUnitOfWork unitOfWork,
+            CancellationToken ct) =>
+        {
+            var category = await categoryRepo.GetWithAttributeDefinitionsAsync(id, ct);
+            if (category is null) return Results.NotFound(new { error = "Category not found" });
+
+            try
+            {
+                var attr = category.AddAttributeDefinition(
+                    request.Key,
+                    request.DisplayName,
+                    (AttributeTarget)request.Target,
+                    (AttributeType)request.ValueType,
+                    request.IsFilterable,
+                    request.IsRequired,
+                    request.SortOrder,
+                    request.AllowedValues);
+
+                categoryRepo.Update(category);
+                await unitOfWork.SaveChangesAsync(ct);
+
+                var dto = new AttributeDefinitionDto(
+                    attr.Id,
+                    attr.Key,
+                    attr.DisplayName,
+                    attr.Target.ToString(),
+                    attr.ValueType.ToString(),
+                    attr.IsFilterable,
+                    attr.IsRequired,
+                    attr.SortOrder,
+                    attr.AllowedValues);
+
+                return Results.Created($"/api/catalog/categories/{id}/attributes/{attr.Id}", dto);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("AddAttributeDefinition")
+        .RequireAuthorization()
+        .Produces<AttributeDefinitionDto>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Public: get attribute definitions for a category
+        group.MapGet("/{id:guid}/attributes", async (
+            Guid id,
+            ICategoryRepository categoryRepo,
+            CancellationToken ct) =>
+        {
+            var category = await categoryRepo.GetWithAttributeDefinitionsAsync(id, ct);
+            if (category is null) return Results.NotFound(new { error = "Category not found" });
+
+            var dtos = category.AttributeDefinitions
+                .OrderBy(a => a.SortOrder)
+                .Select(attr => new AttributeDefinitionDto(
+                    attr.Id,
+                    attr.Key,
+                    attr.DisplayName,
+                    attr.Target.ToString(),
+                    attr.ValueType.ToString(),
+                    attr.IsFilterable,
+                    attr.IsRequired,
+                    attr.SortOrder,
+                    attr.AllowedValues))
+                .ToList();
+
+            return Results.Ok(dtos);
+        })
+        .WithName("GetAttributeDefinitions")
+        .Produces<List<AttributeDefinitionDto>>()
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Authorized: remove attribute definition from category
+        group.MapDelete("/{id:guid}/attributes/{attrId:guid}", async (
+            Guid id,
+            Guid attrId,
+            ICategoryRepository categoryRepo,
+            IUnitOfWork unitOfWork,
+            CancellationToken ct) =>
+        {
+            var category = await categoryRepo.GetWithAttributeDefinitionsAsync(id, ct);
+            if (category is null) return Results.NotFound(new { error = "Category not found" });
+
+            try
+            {
+                category.RemoveAttributeDefinition(attrId);
+                categoryRepo.Update(category);
+                await unitOfWork.SaveChangesAsync(ct);
+                return Results.NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("RemoveAttributeDefinition")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound);
     }
 }
+
+public sealed record AddAttributeDefinitionRequest(
+    string Key,
+    string DisplayName,
+    int Target,        // 0=Product, 1=Sku
+    int ValueType,     // 0=Text, 1=Number, 2=Select
+    bool IsFilterable,
+    bool IsRequired,
+    int SortOrder = 0,
+    List<string>? AllowedValues = null);

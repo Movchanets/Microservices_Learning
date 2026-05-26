@@ -12,7 +12,13 @@ public class ProductPriceConfiguration : IEntityTypeConfiguration<ProductPrice>
 
         builder.HasKey(p => p.Id);
 
-        builder.Property(p => p.Sku)
+        builder.Property(p => p.ProductId)
+            .IsRequired();
+
+        builder.Property(p => p.SkuId)
+            .IsRequired();
+
+        builder.Property(p => p.SkuCode)
             .IsRequired()
             .HasMaxLength(64);
 
@@ -27,7 +33,11 @@ public class ProductPriceConfiguration : IEntityTypeConfiguration<ProductPrice>
             .IsRequired()
             .HasMaxLength(3);
 
-        builder.HasIndex(p => p.Sku)
+        // One ProductPrice per SKU
+        builder.HasIndex(p => p.SkuId)
             .IsUnique();
+
+        // Fast lookup by ProductId (non-unique — multiple SKUs per product)
+        builder.HasIndex(p => p.ProductId);
     }
 }

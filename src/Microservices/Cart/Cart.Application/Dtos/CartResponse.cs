@@ -12,6 +12,8 @@ public sealed record CartResponse(
 
 public sealed record CartItemResponse(
     Guid ProductId,
+    Guid SkuId,
+    string SkuCode,
     Guid StoreId,
     int Quantity,
     decimal Price,
@@ -23,7 +25,7 @@ public static class CartMapper
         cart.BuyerId,
         cart.Id,
         cart.Items.Select(i => new CartItemResponse(
-            i.ProductId, i.StoreId, i.Quantity, i.Price, i.Price * i.Quantity)).ToList(),
+            i.ProductId, i.SkuId, i.SkuCode, i.StoreId, i.Quantity, i.Price, i.Price * i.Quantity)).ToList(),
         cart.Items.Sum(i => i.Price * i.Quantity),
         cart.Items.Sum(i => i.Quantity),
         cart.UpdatedAt);

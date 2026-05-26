@@ -34,7 +34,7 @@ public class AnonymousCartCommandTests
         var cartId = Guid.NewGuid();
         var cart = new ShoppingCart(null);
         typeof(ShoppingCart).GetProperty("Id")!.SetValue(cart, cartId);
-        cart.AddItem(TestProductId, 2, TestStoreId, 10m);
+        cart.AddItem(TestProductId, Guid.NewGuid(), "TEST-SKU", 2, TestStoreId, 10m);
 
         _repositoryMock.Setup(r => r.GetCartAsync(null, cartId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cart);
@@ -69,15 +69,15 @@ public class AnonymousCartCommandTests
     public async Task AddCartItem_NullBuyerId_ShouldCreateAnonymousCartAndAddItem()
     {
         var price = 29.99m;
-        _priceRepositoryMock.Setup(r => r.GetByIdAsync(TestProductId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ProductPrice.Create(TestProductId, "PROD-001", "Test Product", price, "USD", TestStoreId));
+        _priceRepositoryMock.Setup(r => r.GetBySkuIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ProductPrice.Create(TestProductId, Guid.NewGuid(), "TEST-SKU", "Test Product", price, "USD", TestStoreId));
 
         var anonCart = new ShoppingCart(null);
         _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(anonCart);
 
         var handler = new AddCartItemCommandHandler(_repositoryMock.Object, _priceRepositoryMock.Object);
-        var result = await handler.Handle(new AddCartItemCommand(null, null, TestProductId, 1), CancellationToken.None);
+        var result = await handler.Handle(new AddCartItemCommand(null, null, TestProductId, Guid.NewGuid(), "TEST-SKU", 1), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.BuyerId.Should().BeNull();
@@ -93,8 +93,8 @@ public class AnonymousCartCommandTests
     {
         var cartId = Guid.NewGuid();
         var price = 15m;
-        _priceRepositoryMock.Setup(r => r.GetByIdAsync(TestProductId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ProductPrice.Create(TestProductId, "PROD-001", "Test", price, "USD", TestStoreId));
+        _priceRepositoryMock.Setup(r => r.GetBySkuIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ProductPrice.Create(TestProductId, Guid.NewGuid(), "TEST-SKU", "Test", price, "USD", TestStoreId));
 
         var anonCart = new ShoppingCart(null);
         typeof(ShoppingCart).GetProperty("Id")!.SetValue(anonCart, cartId);
@@ -102,7 +102,7 @@ public class AnonymousCartCommandTests
             .ReturnsAsync(anonCart);
 
         var handler = new AddCartItemCommandHandler(_repositoryMock.Object, _priceRepositoryMock.Object);
-        var result = await handler.Handle(new AddCartItemCommand(null, cartId, TestProductId, 2), CancellationToken.None);
+        var result = await handler.Handle(new AddCartItemCommand(null, cartId, TestProductId, Guid.NewGuid(), "TEST-SKU", 2), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.CartId.Should().Be(cartId);
@@ -117,13 +117,14 @@ public class AnonymousCartCommandTests
         var cartId = Guid.NewGuid();
         var anonCart = new ShoppingCart(null);
         typeof(ShoppingCart).GetProperty("Id")!.SetValue(anonCart, cartId);
-        anonCart.AddItem(TestProductId, 1, TestStoreId, 10m);
+        var skuId = Guid.NewGuid();
+        anonCart.AddItem(TestProductId, skuId, "TEST-SKU", 1, TestStoreId, 10m);
 
         _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(null, cartId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(anonCart);
 
         var handler = new UpdateCartItemCommandHandler(_repositoryMock.Object);
-        var result = await handler.Handle(new UpdateCartItemCommand(null, cartId, TestProductId, 5), CancellationToken.None);
+        var result = await handler.Handle(new UpdateCartItemCommand(null, cartId, TestProductId, skuId, 5), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Items.First().Quantity.Should().Be(5);
@@ -137,13 +138,14 @@ public class AnonymousCartCommandTests
         var cartId = Guid.NewGuid();
         var anonCart = new ShoppingCart(null);
         typeof(ShoppingCart).GetProperty("Id")!.SetValue(anonCart, cartId);
-        anonCart.AddItem(TestProductId, 2, TestStoreId, 10m);
+        var skuId = Guid.NewGuid();
+        anonCart.AddItem(TestProductId, skuId, "TEST-SKU", 2, TestStoreId, 10m);
 
         _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(null, cartId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(anonCart);
 
         var handler = new RemoveCartItemCommandHandler(_repositoryMock.Object);
-        var result = await handler.Handle(new RemoveCartItemCommand(null, cartId, TestProductId), CancellationToken.None);
+        var result = await handler.Handle(new RemoveCartItemCommand(null, cartId, TestProductId, skuId), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Items.Should().BeEmpty();
@@ -174,14 +176,14 @@ public class AnonymousCartCommandTests
         var cartId = Guid.NewGuid();
         var anonCart = new ShoppingCart(null);
         typeof(ShoppingCart).GetProperty("Id")!.SetValue(anonCart, cartId);
-        anonCart.AddItem(Guid.NewGuid(), 1, TestStoreId, 5m); // old item
+        anonCart.AddItem(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", 1, TestStoreId, 5m); // old item
 
         _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(null, cartId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(anonCart);
 
         var newItems = new List<CartItemDto>
         {
-            new(TestProductId, 3, 15m, TestStoreId)
+            new(TestProductId, Guid.NewGuid(), "TEST-SKU", 3, 15m, TestStoreId)
         };
 
         var handler = new UpdateCartCommandHandler(_repositoryMock.Object);

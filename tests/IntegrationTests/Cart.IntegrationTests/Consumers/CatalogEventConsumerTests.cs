@@ -22,72 +22,71 @@ public class CatalogEventConsumerTests
         _fixture = fixture;
     }
 
-    // ─── ProductCreatedConsumer ───────────────────────────────────────────
+    // ─── SkuCreatedConsumer ─────────────────────────────────────────────
 
     [Fact]
-    public async Task ProductCreatedConsumer_ShouldCreateProductPriceInDb()
+    public async Task SkuCreatedConsumer_ShouldCreateProductPriceInDb()
     {
         // Arrange
         var productId = Guid.NewGuid();
-        var @event = new ProductCreatedEvent(
+        var skuId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
+        var @event = new SkuCreatedIntegrationEvent(
             ProductId: productId,
-            Name: "Integration Test Product",
-            Description: "A product for integration testing",
+            SkuId: skuId,
+            SkuCode: "INT-SKU-001",
+            ProductName: "Test Product",
+            StoreId: storeId,
             Price: 42.50m,
             Currency: "USD",
-            Sku: "INT-SKU-001",
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Test Category",
-            Tags: ["test", "integration"],
-            ImageUrl: "https://example.com/img.jpg",
-            StoreId: Guid.NewGuid(),
-            CreatedAt: DateTime.UtcNow,
-            Brand: "TestBrand",
-            Attributes: new Dictionary<string, string> { ["color"] = "red" });
+            TypedAttributes: new Dictionary<string, string> { ["color"] = "red" },
+            FlexibleAttributes: new Dictionary<string, string>(),
+            Timestamp: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductCreatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuCreatedIntegrationEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
         using var scope = _fixture.CreateScope();
         var priceRepository = scope.ServiceProvider.GetRequiredService<IProductPriceRepository>();
-        var consumer = new ProductCreatedConsumer(priceRepository, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var consumer = new SkuCreatedConsumer(priceRepository, Mock.Of<ILogger<SkuCreatedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
         var productPrice = await dbContext.ProductPrices
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == productId);
+            .FirstOrDefaultAsync(p => p.SkuId == skuId);
 
         productPrice.Should().NotBeNull();
-        productPrice!.Sku.Should().Be("INT-SKU-001");
-        productPrice.Name.Should().Be("Integration Test Product");
+        productPrice!.SkuCode.Should().Be("INT-SKU-001");
         productPrice.Price.Should().Be(42.50m);
         productPrice.Currency.Should().Be("USD");
+        productPrice.ProductId.Should().Be(productId);
+        productPrice.StoreId.Should().Be(storeId);
     }
 
     [Fact]
-    public async Task ProductCreatedConsumer_ShouldBeIdempotent_WhenDuplicateProductId()
+    public async Task SkuCreatedConsumer_ShouldBeIdempotent_WhenDuplicateSkuId()
     {
         // Arrange
         var productId = Guid.NewGuid();
-        var @event = new ProductCreatedEvent(
+        var skuId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
+        var @event = new SkuCreatedIntegrationEvent(
             ProductId: productId,
-            Name: "Idempotent Product",
-            Description: "Desc",
+            SkuId: skuId,
+            SkuCode: "INT-IDEM-001",
+            ProductName: "Test Product",
+            StoreId: storeId,
             Price: 15.00m,
             Currency: "USD",
-            Sku: "INT-IDEM-001",
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Test",
-            Tags: [],
-            ImageUrl: null,
-            StoreId: Guid.NewGuid(),
-            CreatedAt: DateTime.UtcNow);
+            TypedAttributes: new Dictionary<string, string>(),
+            FlexibleAttributes: new Dictionary<string, string>(),
+            Timestamp: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductCreatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuCreatedIntegrationEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -95,191 +94,157 @@ public class CatalogEventConsumerTests
         using var scope = _fixture.CreateScope();
         var priceRepository = scope.ServiceProvider.GetRequiredService<IProductPriceRepository>();
 
-        var consumer1 = new ProductCreatedConsumer(priceRepository, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var consumer1 = new SkuCreatedConsumer(priceRepository, Mock.Of<ILogger<SkuCreatedConsumer>>());
         await consumer1.Consume(consumeContext.Object);
 
-        var consumer2 = new ProductCreatedConsumer(priceRepository, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var consumer2 = new SkuCreatedConsumer(priceRepository, Mock.Of<ILogger<SkuCreatedConsumer>>());
         await consumer2.Consume(consumeContext.Object);
 
-        // Assert — only one record for this product
+        // Assert — only one record for this SKU
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
-        var count = await dbContext.ProductPrices.CountAsync(p => p.Id == productId);
+        var count = await dbContext.ProductPrices.CountAsync(p => p.SkuId == skuId);
         count.Should().Be(1);
 
-        var productPrice = await dbContext.ProductPrices.FindAsync(productId);
+        var productPrice = await dbContext.ProductPrices.FirstOrDefaultAsync(p => p.SkuId == skuId);
         productPrice!.Price.Should().Be(15.00m);
     }
 
-    // ─── ProductUpdatedConsumer ───────────────────────────────────────────
-
     [Fact]
-    public async Task ProductUpdatedConsumer_ShouldUpdateExistingProductPrice()
+    public async Task SkuCreatedConsumer_ShouldUpsertExistingProductPrice_WhenSkuAlreadyExists()
     {
-        // Arrange — pre-create the product in the cart DB
+        // Arrange — pre-create the product price in the cart DB
         var productId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
         using var scope = _fixture.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
 
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "INT-UPD-001", "Old Name", 10.00m, "USD", Guid.NewGuid()));
+            ProductPrice.Create(productId, skuId, "INT-UPD-001", "Old Name", 10.00m, "USD", storeId));
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 
-        var @event = new ProductUpdatedEvent(
+        var @event = new SkuCreatedIntegrationEvent(
             ProductId: productId,
-            Name: "Updated Name",
-            Description: "Updated desc",
+            SkuId: skuId,
+            SkuCode: "INT-UPD-001",
+            ProductName: "Test Product",
+            StoreId: storeId,
             Price: 25.99m,
             Currency: "USD",
-            Sku: "INT-UPD-001",
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Updated Category",
-            Tags: ["updated"],
-            ImageUrl: null,
-            StoreId: Guid.NewGuid(),
-            IsActive: true,
-            UpdatedAt: DateTime.UtcNow);
+            TypedAttributes: new Dictionary<string, string>(),
+            FlexibleAttributes: new Dictionary<string, string>(),
+            Timestamp: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductUpdatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuCreatedIntegrationEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
         var priceRepository = scope.ServiceProvider.GetRequiredService<IProductPriceRepository>();
-        var consumer = new ProductUpdatedConsumer(priceRepository, Mock.Of<ILogger<ProductUpdatedConsumer>>());
+        var consumer = new SkuCreatedConsumer(priceRepository, Mock.Of<ILogger<SkuCreatedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert
-        var productPrice = await dbContext.ProductPrices.FindAsync(productId);
-        productPrice.Should().NotBeNull();
-        productPrice!.Price.Should().Be(25.99m);
-        productPrice.Name.Should().Be("Updated Name");
-    }
-
-    [Fact]
-    public async Task ProductUpdatedConsumer_ShouldCreateProductPrice_WhenNotExists()
-    {
-        // Arrange — product does not exist in cart DB
-        var productId = Guid.NewGuid();
-        using var scope = _fixture.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
-
-        var @event = new ProductUpdatedEvent(
-            ProductId: productId,
-            Name: "New From Update",
-            Description: "Desc",
-            Price: 8.50m,
-            Currency: "USD",
-            Sku: "INT-NEWUPD-001",
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Cat",
-            Tags: [],
-            ImageUrl: null,
-            StoreId: Guid.NewGuid(),
-            IsActive: true,
-            UpdatedAt: DateTime.UtcNow);
-
-        var consumeContext = new Mock<ConsumeContext<ProductUpdatedEvent>>();
-        consumeContext.Setup(x => x.Message).Returns(@event);
-        consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
-
-        // Act
-        var priceRepository = scope.ServiceProvider.GetRequiredService<IProductPriceRepository>();
-        var consumer = new ProductUpdatedConsumer(priceRepository, Mock.Of<ILogger<ProductUpdatedConsumer>>());
-        await consumer.Consume(consumeContext.Object);
-
-        // Assert — should have been created as a fallback
         var productPrice = await dbContext.ProductPrices
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == productId);
+            .FirstOrDefaultAsync(p => p.SkuId == skuId);
 
         productPrice.Should().NotBeNull();
-        productPrice!.Name.Should().Be("New From Update");
-        productPrice.Price.Should().Be(8.50m);
-        productPrice.Sku.Should().Be("INT-NEWUPD-001");
+        productPrice!.Price.Should().Be(25.99m);
+        productPrice.SkuCode.Should().Be("INT-UPD-001");
     }
 
-    // ─── ProductDeletedConsumer ───────────────────────────────────────────
+    // ─── SkuDeletedConsumer ─────────────────────────────────────────────
 
     [Fact]
-    public async Task ProductDeletedConsumer_ShouldRemoveProductPrice()
+    public async Task SkuDeletedConsumer_ShouldRemoveProductPrice()
     {
-        // Arrange — pre-create the product
+        // Arrange — pre-create the product price
         var productId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
         using var scope = _fixture.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
 
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "INT-DEL-001", "To Delete", 30.00m, "USD", Guid.NewGuid()));
+            ProductPrice.Create(productId, skuId, "INT-DEL-001", "To Delete", 30.00m, "USD", storeId));
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 
-        var @event = new ProductDeletedEvent(productId, DateTime.UtcNow);
+        var @event = new SkuDeletedEvent(productId, skuId, "INT-DEL-001", DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductDeletedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuDeletedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
-        var consumer = new ProductDeletedConsumer(dbContext, Mock.Of<ILogger<ProductDeletedConsumer>>());
+        var consumer = new SkuDeletedConsumer(dbContext, Mock.Of<ILogger<SkuDeletedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert
-        var productPrice = await dbContext.ProductPrices.FindAsync(productId);
+        var productPrice = await dbContext.ProductPrices.FirstOrDefaultAsync(p => p.SkuId == skuId);
         productPrice.Should().BeNull();
     }
 
     [Fact]
-    public async Task ProductDeletedConsumer_ShouldNotThrow_WhenProductNotFound()
+    public async Task SkuDeletedConsumer_ShouldNotThrow_WhenSkuNotFound()
     {
-        // Arrange — product does not exist
+        // Arrange — SKU does not exist
         using var scope = _fixture.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
 
-        var @event = new ProductDeletedEvent(Guid.NewGuid(), DateTime.UtcNow);
+        var @event = new SkuDeletedEvent(Guid.NewGuid(), Guid.NewGuid(), "NONEXISTENT", DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductDeletedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuDeletedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act & Assert — should not throw
-        var consumer = new ProductDeletedConsumer(dbContext, Mock.Of<ILogger<ProductDeletedConsumer>>());
+        var consumer = new SkuDeletedConsumer(dbContext, Mock.Of<ILogger<SkuDeletedConsumer>>());
         var act = () => consumer.Consume(consumeContext.Object);
         await act.Should().NotThrowAsync();
     }
 
-    // ─── ProductPriceChangedConsumer ──────────────────────────────────────
+    // ─── SkuPriceChangedConsumer ────────────────────────────────────────
 
     [Fact]
-    public async Task ProductPriceChangedConsumer_ShouldUpdatePriceOnly()
+    public async Task SkuPriceChangedConsumer_ShouldUpdatePriceOnly()
     {
-        // Arrange — pre-create the product
+        // Arrange — pre-create the product price
         var productId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
         using var scope = _fixture.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
 
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "INT-PRC-001", "Price Change Product", 50.00m, "USD", Guid.NewGuid()));
+            ProductPrice.Create(productId, skuId, "INT-PRC-001", "Price Change Product", 50.00m, "USD", storeId));
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 
-        var @event = new ProductPriceChangedEvent(
+        var @event = new SkuPriceChangedEvent(
             ProductId: productId,
+            SkuId: skuId,
+            SkuCode: "INT-PRC-001",
             OldPrice: 50.00m,
             NewPrice: 75.00m,
             Currency: "USD",
             ChangedAt: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductPriceChangedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuPriceChangedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
-        var consumer = new ProductPriceChangedConsumer(dbContext, Mock.Of<ILogger<ProductPriceChangedConsumer>>());
+        var consumer = new SkuPriceChangedConsumer(dbContext, Mock.Of<ILogger<SkuPriceChangedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert — price updated, name unchanged
-        var productPrice = await dbContext.ProductPrices.FindAsync(productId);
+        var productPrice = await dbContext.ProductPrices
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.SkuId == skuId);
+
         productPrice.Should().NotBeNull();
         productPrice!.Price.Should().Be(75.00m);
         productPrice.Currency.Should().Be("USD");
@@ -287,25 +252,27 @@ public class CatalogEventConsumerTests
     }
 
     [Fact]
-    public async Task ProductPriceChangedConsumer_ShouldNotThrow_WhenProductUnknown()
+    public async Task SkuPriceChangedConsumer_ShouldNotThrow_WhenSkuUnknown()
     {
-        // Arrange — product does not exist
+        // Arrange — SKU does not exist
         using var scope = _fixture.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
 
-        var @event = new ProductPriceChangedEvent(
+        var @event = new SkuPriceChangedEvent(
             ProductId: Guid.NewGuid(),
+            SkuId: Guid.NewGuid(),
+            SkuCode: "UNKNOWN-SKU",
             OldPrice: 10.00m,
             NewPrice: 15.99m,
             Currency: "USD",
             ChangedAt: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductPriceChangedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuPriceChangedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act & Assert — should not throw
-        var consumer = new ProductPriceChangedConsumer(dbContext, Mock.Of<ILogger<ProductPriceChangedConsumer>>());
+        var consumer = new SkuPriceChangedConsumer(dbContext, Mock.Of<ILogger<SkuPriceChangedConsumer>>());
         var act = () => consumer.Consume(consumeContext.Object);
         await act.Should().NotThrowAsync();
     }

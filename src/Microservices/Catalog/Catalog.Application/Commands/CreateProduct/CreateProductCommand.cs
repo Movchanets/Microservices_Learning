@@ -7,10 +7,8 @@ namespace Catalog.Application.Commands.CreateProduct;
 public sealed record CreateProductCommand(
     string Name,
     string Description,
-    decimal Price,
-    string Currency,
-    string Sku,
     Guid CategoryId,
     Guid StoreId,
+    string? Brand = null,
     List<string>? Tags = null,
     string? ImageUrl = null) : IRequest<Result<ProductDto>>;

@@ -36,15 +36,15 @@ export class CartDrawer {
     this.cartStore.hideDrawer();
   }
 
-  updateQuantity(productId: string, newQuantity: number) {
-    this.cartStore.updateQuantity(productId, newQuantity);
+  updateQuantity(skuId: string, newQuantity: number) {
+    this.cartStore.updateQuantity(skuId, newQuantity);
   }
 
-  removeItem(productId: string) {
-    this.cartStore.removeFromCart(productId);
+  removeItem(skuId: string) {
+    this.cartStore.removeFromCart(skuId);
   }
 
-  trackByCartItem(_index: number, item: { productId: string }): string {
-    return item.productId;
+  trackByCartItem(_index: number, item: { skuId: string }): string {
+    return item.skuId;
   }
 }

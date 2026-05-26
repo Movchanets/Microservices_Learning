@@ -86,15 +86,17 @@ public static class CartEndpoints
             CancellationToken ct) =>
         {
             var (buyerId, cartId) = GetCartIdentity(user, request);
-            var result = await sender.Send(new AddCartItemCommand(buyerId, cartId, req.ProductId, req.Quantity), ct);
+            var result = await sender.Send(new AddCartItemCommand(
+                buyerId, cartId, req.ProductId, req.SkuId, req.SkuCode, req.Quantity), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
-        // PUT /api/cart/items/{productId} — anonymous OK
-        group.MapPut("/items/{productId:guid}", async (
+        // PUT /api/cart/items/{productId}/{skuId} — anonymous OK
+        group.MapPut("/items/{productId:guid}/{skuId:guid}", async (
             ClaimsPrincipal user,
             HttpRequest request,
             Guid productId,
+            Guid skuId,
             [FromBody] UpdateCartItemRequest req,
             [FromServices] ISender sender,
             CancellationToken ct) =>
@@ -103,15 +105,16 @@ public static class CartEndpoints
             if (buyerId is null && cartId is null)
                 return Results.BadRequest("No cart identity provided.");
 
-            var result = await sender.Send(new UpdateCartItemCommand(buyerId, cartId, productId, req.Quantity), ct);
+            var result = await sender.Send(new UpdateCartItemCommand(buyerId, cartId, productId, skuId, req.Quantity), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
-        // DELETE /api/cart/items/{productId} — anonymous OK
-        group.MapDelete("/items/{productId:guid}", async (
+        // DELETE /api/cart/items/{productId}/{skuId} — anonymous OK
+        group.MapDelete("/items/{productId:guid}/{skuId:guid}", async (
             ClaimsPrincipal user,
             HttpRequest request,
             Guid productId,
+            Guid skuId,
             [FromServices] ISender sender,
             CancellationToken ct) =>
         {
@@ -119,7 +122,7 @@ public static class CartEndpoints
             if (buyerId is null && cartId is null)
                 return Results.BadRequest("No cart identity provided.");
 
-            var result = await sender.Send(new RemoveCartItemCommand(buyerId, cartId, productId), ct);
+            var result = await sender.Send(new RemoveCartItemCommand(buyerId, cartId, productId, skuId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
     }
@@ -143,7 +146,7 @@ public static class CartEndpoints
     }
 }
 
-public record AddCartItemRequest(Guid ProductId, int Quantity);
+public record AddCartItemRequest(Guid ProductId, Guid SkuId, string SkuCode, int Quantity);
 public record UpdateCartItemRequest(int Quantity);
 public record CheckoutRequest(
     string? AddressLine1,

@@ -47,7 +47,23 @@ public class ProductSeeder
         {
             var dto = await response.Content.ReadFromJsonAsync<ProductDto>(cancellationToken: ct);
 
-            // Activate the product
+            // Add SKU to the product (required before activation post-SKU refactor)
+            var skuRequest = new
+            {
+                SkuCode = product.Sku,
+                Price = product.Price,
+                Currency = product.Currency,
+                TypedAttributes = new Dictionary<string, string>(),
+                FlexibleAttributes = (Dictionary<string, string>?)null
+            };
+            var skuResponse = await _client.PostAsJsonAsync($"/api/catalog/products/{dto!.Id}/skus", skuRequest, ct);
+            if (!skuResponse.IsSuccessStatusCode)
+            {
+                var skuError = await skuResponse.Content.ReadAsStringAsync(ct);
+                _logger.LogWarning("Failed to add SKU for {Name}: {StatusCode} - {Error}", product.Name, skuResponse.StatusCode, skuError);
+            }
+
+            // Activate the product (requires at least one active SKU)
             try
             {
                 await _client.PutAsync($"/api/catalog/products/{dto!.Id}/activate", null, ct);

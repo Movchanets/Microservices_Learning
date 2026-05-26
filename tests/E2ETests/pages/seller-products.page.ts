@@ -72,6 +72,26 @@ export class SellerProductsPage extends BasePage {
     return statusCell.innerText();
   }
 
+  /**
+   * Returns the price range text for a product row.
+   * With the new SKU model, products show minPrice–maxPrice.
+   */
+  async getProductPriceRange(index: number): Promise<string> {
+    const row = this.productRows.nth(index);
+    // Price is typically the 3rd or 4th column
+    const priceCell = row.locator('td').nth(3);
+    return priceCell.innerText();
+  }
+
+  /**
+   * Returns the SKU count text for a product row.
+   */
+  async getProductSkuCount(index: number): Promise<string> {
+    const row = this.productRows.nth(index);
+    const skuCountCell = row.locator('td').nth(4);
+    return skuCountCell.innerText();
+  }
+
   async isLoading(): Promise<boolean> {
     return this.loadingSpinner.isVisible();
   }

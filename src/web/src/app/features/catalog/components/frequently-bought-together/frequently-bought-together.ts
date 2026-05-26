@@ -51,9 +51,11 @@ import { CartStore } from '../../../cart/cart.store';
                 <span class="text-xs text-foreground text-center line-clamp-2 group-hover:text-primary transition-colors">
                   {{ product.name }}
                 </span>
-                <span class="text-xs text-muted-foreground mt-1">
-                  {{ product.price | currency: product.currency : 'symbol' : '1.2-2' }}
-                </span>
+                @if (product.minPrice !== null) {
+                  <span class="text-xs text-muted-foreground mt-1">
+                    {{ product.minPrice! | currency: (product.currency ?? 'USD') : 'symbol' : '1.2-2' }}
+                  </span>
+                }
               </a>
             </div>
           }
@@ -95,16 +97,19 @@ export class FrequentlyBoughtTogetherComponent {
   loading = input(false);
 
   protected totalPrice = computed(() =>
-    this.products().reduce((sum, p) => sum + p.price, 0),
+    this.products().reduce((sum, p) => sum + (p.minPrice ?? 0), 0),
   );
 
-  protected bundleCurrency = computed(() =>
-    this.products().length > 0 ? this.products()[0].currency : 'USD',
-  );
+  protected bundleCurrency = computed(() => {
+    const first = this.products()[0];
+    return first?.currency ?? 'USD';
+  });
 
   async addAllToCart(): Promise<void> {
     for (const product of this.products()) {
-      await this.cartStore.addToCart(product.id, 1);
+      if (product.defaultSkuId && product.defaultSkuCode) {
+        await this.cartStore.addToCart(product.id, product.defaultSkuId, product.defaultSkuCode, 1);
+      }
     }
   }
 }

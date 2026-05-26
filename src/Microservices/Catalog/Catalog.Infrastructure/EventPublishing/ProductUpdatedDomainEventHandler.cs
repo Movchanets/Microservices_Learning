@@ -20,19 +20,17 @@ public sealed class ProductUpdatedDomainEventHandler(
         var category = await categoryRepository.GetByIdAsync(notification.CategoryId, cancellationToken);
 
         await publishEndpoint.Publish(new ProductUpdatedEvent(
-            notification.ProductId,
-            notification.Name,
-            notification.Description,
-            notification.Price,
-            notification.Currency,
-            notification.Sku,
-            notification.CategoryId,
-            category?.Name ?? "",
-            notification.Tags,
-            notification.ImageUrl,
-            notification.StoreId,
-            notification.IsActive,
-            notification.UpdatedAt), cancellationToken);
+            ProductId: notification.ProductId,
+            Name: notification.Name,
+            Description: notification.Description,
+            CategoryId: notification.CategoryId,
+            CategoryName: category?.Name ?? "",
+            Tags: notification.Tags,
+            ImageUrl: notification.ImageUrl,
+            StoreId: notification.StoreId,
+            IsActive: notification.IsActive,
+            UpdatedAt: notification.UpdatedAt,
+            Brand: notification.Brand), cancellationToken);
 
         logger.LogInformation("Published ProductUpdatedEvent for {ProductId}", notification.ProductId);
     }

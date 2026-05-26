@@ -1,6 +1,6 @@
 using Catalog.Domain.Aggregates;
+using Catalog.Domain.Entities;
 using Catalog.Domain.Enums;
-using Catalog.Domain.ValueObjects;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,29 +11,37 @@ public sealed class ProductRepository(CatalogDbContext context) : IProductReposi
     public async Task<Product?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         await context.Products
             .Include(p => p.Category)
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
             .FirstOrDefaultAsync(p => p.Id == id && p.Status != ProductStatus.Deleted, ct);
 
-    public async Task<Product?> GetBySkuAsync(string sku, CancellationToken ct = default)
-    {
-        var skuVo = Sku.Create(sku);
-        return await context.Products
+    public async Task<Product?> GetWithSkusAsync(Guid productId, CancellationToken ct = default) =>
+        await context.Products
             .Include(p => p.Category)
-            .FirstOrDefaultAsync(p => p.Sku == skuVo && p.Status != ProductStatus.Deleted, ct);
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
+            .FirstOrDefaultAsync(p => p.Id == productId && p.Status != ProductStatus.Deleted, ct);
+
+    public async Task<Sku?> GetSkuByCodeAsync(string skuCode, CancellationToken ct = default)
+    {
+        var normalized = skuCode.Trim().ToUpperInvariant();
+        return await context.Skus
+            .FirstOrDefaultAsync(s => s.SkuCode == normalized && s.Status != SkuStatus.Deleted, ct);
     }
 
-    public async Task<bool> ExistsBySkuAsync(string sku, CancellationToken ct = default)
+    public async Task<bool> ExistsBySkuCodeAsync(string skuCode, CancellationToken ct = default)
     {
-        var skuVo = Sku.Create(sku);
-        return await context.Products.AnyAsync(p => p.Sku == skuVo && p.Status != ProductStatus.Deleted, ct);
+        var normalized = skuCode.Trim().ToUpperInvariant();
+        return await context.Skus.AnyAsync(s => s.SkuCode == normalized && s.Status != SkuStatus.Deleted, ct);
     }
 
     public async Task<List<Product>> GetByCategoryAsync(Guid categoryId, CancellationToken ct = default) =>
         await context.Products
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
             .Where(p => p.CategoryId == categoryId && p.Status != ProductStatus.Deleted)
             .ToListAsync(ct);
 
     public async Task<List<Product>> GetByStoreAsync(Guid storeId, CancellationToken ct = default) =>
         await context.Products
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
             .Where(p => p.StoreId == storeId && p.Status != ProductStatus.Deleted)
             .ToListAsync(ct);
 

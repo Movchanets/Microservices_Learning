@@ -13,9 +13,9 @@ describe('FrequentlyBoughtTogetherComponent', () => {
   let mockCartService: any;
 
   const mockProducts: ProductListItem[] = [
-    { id: '1', name: 'Camera', price: 499, currency: 'USD', sku: 'CAM-1', categoryName: 'Electronics', status: 'Active', imageUrl: null, storeId: 'store-1', createdAt: '2026-01-01' },
-    { id: '2', name: 'Memory Card', price: 29, currency: 'USD', sku: 'MEM-1', categoryName: 'Electronics', status: 'Active', imageUrl: null, storeId: 'store-1', createdAt: '2026-01-01' },
-    { id: '3', name: 'Camera Case', price: 49, currency: 'USD', sku: 'CASE-1', categoryName: 'Electronics', status: 'Active', imageUrl: null, storeId: 'store-1', createdAt: '2026-01-01' },
+    { id: '1', name: 'Camera', minPrice: 499, maxPrice: 499, currency: 'USD', skuCount: 1, defaultSkuId: 'sku-1', defaultSkuCode: 'CAM-001', categoryName: 'Electronics', status: 'Active', imageUrl: null, storeId: 'store-1', createdAt: '2026-01-01' },
+    { id: '2', name: 'Memory Card', minPrice: 29, maxPrice: 29, currency: 'USD', skuCount: 1, defaultSkuId: 'sku-2', defaultSkuCode: 'MEM-001', categoryName: 'Electronics', status: 'Active', imageUrl: null, storeId: 'store-1', createdAt: '2026-01-01' },
+    { id: '3', name: 'Camera Case', minPrice: 49, maxPrice: 49, currency: 'USD', skuCount: 1, defaultSkuId: 'sku-3', defaultSkuCode: 'CASE-001', categoryName: 'Electronics', status: 'Active', imageUrl: null, storeId: 'store-1', createdAt: '2026-01-01' },
   ];
 
   beforeEach(async () => {
@@ -122,8 +122,8 @@ describe('FrequentlyBoughtTogetherComponent', () => {
     await component.addAllToCart();
 
     expect(mockCartService.addItem).toHaveBeenCalledTimes(3);
-    expect(mockCartService.addItem).toHaveBeenCalledWith('1', 1);
-    expect(mockCartService.addItem).toHaveBeenCalledWith('2', 1);
-    expect(mockCartService.addItem).toHaveBeenCalledWith('3', 1);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('1', 'sku-1', 'CAM-001', 1);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('2', 'sku-2', 'MEM-001', 1);
+    expect(mockCartService.addItem).toHaveBeenCalledWith('3', 'sku-3', 'CASE-001', 1);
   });
 });

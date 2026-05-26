@@ -31,13 +31,26 @@ namespace Inventory.Infrastructure.Migrations
                     b.Property<int>("AvailableQuantity")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsDeactivated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Sku")
+                    b.Property<int>("ReservedQuantity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("SkuId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("StoreId")
                         .HasColumnType("uuid");
@@ -51,7 +64,11 @@ namespace Inventory.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId")
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SkuCode");
+
+                    b.HasIndex("SkuId")
                         .IsUnique();
 
                     b.ToTable("InventoryItems");

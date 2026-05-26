@@ -8,6 +8,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CatalogStore } from '../catalog.store';
 import { CartStore } from '../../cart/cart.store';
 import { ProductCardComponent } from '../components/product-card/product-card';
+import { ProductListItem } from '../catalog.models';
 import { PaginationComponent } from '../components/pagination/pagination';
 import { SearchFacetsComponent } from '../components/search-facets/search-facets';
 
@@ -182,10 +183,9 @@ export class ProductListComponent implements OnInit {
     }
   }
 
-  onAddToCart(productId: string): void {
-    const product = this.store.products().find((p) => p.id === productId);
-    if (product) {
-      this.cartStore.addToCart(product.id, 1);
+  onAddToCart(product: ProductListItem): void {
+    if (product.defaultSkuId && product.defaultSkuCode) {
+      this.cartStore.addToCart(product.id, product.defaultSkuId, product.defaultSkuCode, 1);
     }
   }
 

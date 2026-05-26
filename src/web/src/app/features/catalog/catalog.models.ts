@@ -1,19 +1,32 @@
 /**
+ * Mirrors backend Catalog.Application.DTOs.SkuDto
+ */
+export interface Sku {
+  id: string;
+  skuCode: string;
+  price: number;
+  currency: string;
+  status: string;
+  typedAttributes: Record<string, string>;
+  flexibleAttributes: Record<string, string>;
+  createdAt: string;
+}
+
+/**
  * Mirrors backend Catalog.Application.DTOs.ProductDto
  */
 export interface Product {
   id: string;
   name: string;
   description: string;
-  price: number;
-  currency: string;
-  sku: string;
+  brand: string | null;
   categoryId: string;
   categoryName: string;
   status: ProductStatus;
   imageUrl: string | null;
   storeId: string;
   tags: string[];
+  skus: Sku[];
   createdAt: string;
   updatedAt: string | null;
 }
@@ -25,9 +38,12 @@ export interface Product {
 export interface ProductListItem {
   id: string;
   name: string;
-  price: number;
-  currency: string;
-  sku: string;
+  minPrice: number | null;
+  maxPrice: number | null;
+  currency: string | null;
+  skuCount: number;
+  defaultSkuId: string | null;
+  defaultSkuCode: string | null;
   categoryName: string;
   status: string;
   imageUrl: string | null;
@@ -132,7 +148,7 @@ export interface Review {
 export interface ReviewSummary {
   averageRating: number;
   totalReviews: number;
-  ratingDistribution: Record<number, number>;
+  ratingDistribution: Partial<Record<number, number>>;
 }
 
 /**

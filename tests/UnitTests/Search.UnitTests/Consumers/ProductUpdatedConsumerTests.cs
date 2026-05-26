@@ -4,100 +4,95 @@ using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Search.API.Consumers;
-using Search.API.Models;
 using Search.API.Services;
 
 namespace Search.UnitTests.Consumers;
 
-public class ProductUpdatedConsumerTests
+public class SkuPriceChangedConsumerTests
 {
     private readonly Mock<ISearchService> _searchServiceMock = new();
-    private readonly Mock<ILogger<ProductUpdatedConsumer>> _loggerMock = new();
-    private readonly ProductUpdatedConsumer _consumer;
+    private readonly Mock<ILogger<SkuPriceChangedConsumer>> _loggerMock = new();
+    private readonly SkuPriceChangedConsumer _consumer;
 
-    public ProductUpdatedConsumerTests()
+    public SkuPriceChangedConsumerTests()
     {
-        _consumer = new ProductUpdatedConsumer(_searchServiceMock.Object, _loggerMock.Object);
+        _consumer = new SkuPriceChangedConsumer(_searchServiceMock.Object, _loggerMock.Object);
     }
 
     [Fact]
-    public async Task Consume_MapsEventToDocumentAndUpdates()
+    public async Task Consume_ShouldUpdateProductPriceInSearchIndex()
     {
         // Arrange
         var productId = Guid.NewGuid();
-        var categoryId = Guid.NewGuid();
-        var updatedAt = DateTime.UtcNow;
+        var skuId = Guid.NewGuid();
 
-        var @event = new ProductUpdatedEvent(
-            productId, "Updated Product", "Updated description",
-            49.99m, "EUR", "SKU-002",
-            categoryId, "Books",
-            new List<string> { "fiction" },
-            "http://new-img.jpg",
-            Guid.NewGuid(), // StoreId
-            true, updatedAt);
+        var @event = new SkuPriceChangedEvent(
+            ProductId: productId,
+            SkuId: skuId,
+            SkuCode: "SKU-002",
+            OldPrice: 39.99m,
+            NewPrice: 49.99m,
+            Currency: "EUR",
+            ChangedAt: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductUpdatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuPriceChangedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        ProductSearchDocument? captured = null;
+        Guid? capturedProductId = null;
+        decimal? capturedPrice = null;
+        string? capturedCurrency = null;
         _searchServiceMock
-            .Setup(x => x.UpdateProductAsync(It.IsAny<ProductSearchDocument>(), It.IsAny<CancellationToken>()))
-            .Callback<ProductSearchDocument, CancellationToken>((doc, _) => captured = doc)
+            .Setup(x => x.UpdateProductPriceAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<Guid, decimal, string, CancellationToken>((id, price, currency, _) =>
+            {
+                capturedProductId = id;
+                capturedPrice = price;
+                capturedCurrency = currency;
+            })
             .Returns(Task.CompletedTask);
 
         // Act
         await _consumer.Consume(consumeContext.Object);
 
         // Assert
-        captured.Should().NotBeNull();
-        captured!.Id.Should().Be(productId);
-        captured.Name.Should().Be("Updated Product");
-        captured.Description.Should().Be("Updated description");
-        captured.Price.Should().Be(49.99m);
-        captured.Currency.Should().Be("EUR");
-        captured.Sku.Should().Be("SKU-002");
-        captured.CategoryId.Should().Be(categoryId);
-        captured.CategoryName.Should().Be("Books");
-        captured.Tags.Should().BeEquivalentTo("fiction");
-        captured.ImageUrl.Should().Be("http://new-img.jpg");
-        captured.IsActive.Should().BeTrue();
-        captured.UpdatedAt.Should().Be(updatedAt);
+        capturedProductId.Should().Be(productId);
+        capturedPrice.Should().Be(49.99m);
+        capturedCurrency.Should().Be("EUR");
 
         _searchServiceMock.Verify(
-            x => x.UpdateProductAsync(It.IsAny<ProductSearchDocument>(), It.IsAny<CancellationToken>()),
+            x => x.UpdateProductPriceAsync(productId, 49.99m, "EUR", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task Consume_WhenIsActiveFalse_PassesInactiveState()
+    public async Task Consume_WithDifferentPrice_ShouldPassNewPriceToService()
     {
         // Arrange
         var productId = Guid.NewGuid();
-        var @event = new ProductUpdatedEvent(
-            productId, "Product", "Desc",
-            10m, "USD", "SKU-X",
-            Guid.NewGuid(), "Cat",
-            new List<string>(),
-            null,
-            Guid.NewGuid(), // StoreId
-            false, DateTime.UtcNow);
+        var @event = new SkuPriceChangedEvent(
+            ProductId: productId,
+            SkuId: Guid.NewGuid(),
+            SkuCode: "SKU-X",
+            OldPrice: 20m,
+            NewPrice: 10m,
+            Currency: "USD",
+            ChangedAt: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductUpdatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuPriceChangedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        ProductSearchDocument? captured = null;
         _searchServiceMock
-            .Setup(x => x.UpdateProductAsync(It.IsAny<ProductSearchDocument>(), It.IsAny<CancellationToken>()))
-            .Callback<ProductSearchDocument, CancellationToken>((doc, _) => captured = doc)
+            .Setup(x => x.UpdateProductPriceAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
         await _consumer.Consume(consumeContext.Object);
 
         // Assert
-        captured!.IsActive.Should().BeFalse();
+        _searchServiceMock.Verify(
+            x => x.UpdateProductPriceAsync(productId, 10m, "USD", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

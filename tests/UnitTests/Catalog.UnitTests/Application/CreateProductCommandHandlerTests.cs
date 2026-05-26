@@ -34,18 +34,16 @@ public class CreateProductCommandHandlerTests
     public async Task Handle_ValidCommand_PersistsProductAndReturnsDto()
     {
         // Arrange
+        var categoryId = Guid.NewGuid();
+        var storeId = Guid.NewGuid();
         var command = new CreateProductCommand(
-            "Test Product",
-            "Test Description",
-            10m,
-            "USD",
-            "SKU-1",
-            Guid.NewGuid(),
-            Guid.NewGuid());
-
-        _productRepositoryMock
-            .Setup(repo => repo.ExistsBySkuAsync(command.Sku, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            Name: "Test Product",
+            Description: "Test Description",
+            CategoryId: categoryId,
+            StoreId: storeId,
+            Brand: "TestBrand",
+            Tags: new List<string> { "tag1" },
+            ImageUrl: "http://img.jpg");
 
         var category = Category.Create("Test Category");
         _categoryRepositoryMock
@@ -63,27 +61,28 @@ public class CreateProductCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().NotBeNull();
         result.Value!.Name.Should().Be(command.Name);
+        result.Value.CategoryId.Should().Be(categoryId);
+        result.Value.StoreId.Should().Be(storeId);
+        result.Value.Brand.Should().Be("TestBrand");
+        result.Value.CategoryName.Should().Be("Test Category");
 
         _productRepositoryMock.Verify(repo => repo.Add(It.IsAny<Product>()), Times.Once);
         _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_DuplicateSku_ReturnsFailure()
+    public async Task Handle_CategoryNotFound_ReturnsFailure()
     {
         // Arrange
         var command = new CreateProductCommand(
-            "Test Product",
-            "Test Description",
-            10m,
-            "USD",
-            "SKU-1",
-            Guid.NewGuid(),
-            Guid.NewGuid());
+            Name: "Test Product",
+            Description: "Test Description",
+            CategoryId: Guid.NewGuid(),
+            StoreId: Guid.NewGuid());
 
-        _productRepositoryMock
-            .Setup(repo => repo.ExistsBySkuAsync(command.Sku, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true); // Simulate duplicate SKU
+        _categoryRepositoryMock
+            .Setup(repo => repo.GetByIdAsync(command.CategoryId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Category?)null);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -91,7 +90,7 @@ public class CreateProductCommandHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be("SKU_DUPLICATE");
+        result.ErrorCode.Should().Be("NOT_FOUND");
 
         _productRepositoryMock.Verify(repo => repo.Add(It.IsAny<Product>()), Times.Never);
         _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

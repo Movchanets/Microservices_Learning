@@ -9,5 +9,6 @@ public sealed record UpdateProductCommand(
     string Name,
     string Description,
     Guid CategoryId,
+    string? Brand = null,
     List<string>? Tags = null,
     string? ImageUrl = null) : IRequest<Result<ProductDto>>;

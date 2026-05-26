@@ -19,21 +19,21 @@ public static class InventoryEndpoints
             [FromServices] IUnitOfWork uow,
             CancellationToken ct) =>
         {
-            var item = InventoryItem.Create(request.Sku, request.InitialQuantity, request.StoreId, request.ProductId);
+            var item = InventoryItem.Create(request.SkuId, request.ProductId, request.SkuCode, request.InitialQuantity, request.StoreId);
             repository.Add(item);
             await uow.SaveChangesAsync(ct);
             return Results.Created($"/api/inventory/items/{item.Id}", item.Id);
         })
         .RequireAuthorization();
 
-        group.MapPost("/items/{sku}/add-stock", async (
-            string sku,
+        group.MapPost("/items/{skuCode}/add-stock", async (
+            string skuCode,
             [FromBody] AddStockRequest request,
             [FromServices] IInventoryItemRepository repository,
             [FromServices] IUnitOfWork uow,
             CancellationToken ct) =>
         {
-            var item = await repository.GetBySkuAsync(sku, ct);
+            var item = await repository.GetBySkuCodeAsync(skuCode, ct);
             if (item == null) return Results.NotFound();
 
             item.AddStock(request.Quantity);
@@ -43,13 +43,13 @@ public static class InventoryEndpoints
         })
         .RequireAuthorization();
 
-        group.MapGet("/items/{sku}", async (
-            string sku,
+        group.MapGet("/items/{skuCode}", async (
+            string skuCode,
             [FromServices] IInventoryItemRepository repository,
             CancellationToken ct) =>
         {
-            var item = await repository.GetBySkuAsync(sku, ct);
-            return item == null ? Results.NotFound() : Results.Ok(new { item.Sku, item.AvailableQuantity });
+            var item = await repository.GetBySkuCodeAsync(skuCode, ct);
+            return item == null ? Results.NotFound() : Results.Ok(new { item.SkuCode, item.AvailableQuantity });
         });
 
         group.MapGet("/items", async (
@@ -57,33 +57,37 @@ public static class InventoryEndpoints
             CancellationToken ct) =>
         {
             var items = await repository.GetAllAsync(ct);
-            return Results.Ok(items.Select(i => new { i.Id, i.Sku, i.AvailableQuantity }));
+            return Results.Ok(items.Select(i => new { i.Id, i.SkuCode, i.AvailableQuantity }));
         })
         .RequireAuthorization();
 
-        // Batch lookup by SKUs — for seller inventory dashboard
+        // Batch lookup by SKU IDs — for seller inventory dashboard
         group.MapPost("/items/batch", async (
             [FromBody] BatchInventoryRequest request,
             [FromServices] IInventoryItemRepository repository,
             CancellationToken ct) =>
         {
-            var items = await repository.GetBySkusAsync(request.Skus, ct);
-            return Results.Ok(items.Select(i => new { i.Id, i.Sku, i.AvailableQuantity }));
+            var items = await repository.GetBySkuIdsAsync(request.SkuIds, ct);
+            return Results.Ok(items.Select(i => new { i.Id, i.SkuCode, i.AvailableQuantity }));
         })
         .RequireAuthorization();
 
-        // Idempotent: upsert stock quantity by SKU (creates item if not exists)
-        group.MapPut("/items/{sku}/stock", async (
-            string sku,
+        // Idempotent: upsert stock quantity by SKU code (creates item if not exists)
+        group.MapPut("/items/{skuCode}/stock", async (
+            string skuCode,
             [FromBody] SetStockRequest request,
             [FromServices] IInventoryItemRepository repository,
             [FromServices] IUnitOfWork uow,
             CancellationToken ct) =>
         {
-            var item = await repository.GetBySkuAsync(sku, ct);
+            var item = await repository.GetBySkuCodeAsync(skuCode, ct);
             if (item is null)
             {
-                item = InventoryItem.Create(sku, request.Quantity, request.StoreId, request.ProductId);
+                // Generate a deterministic SkuId from the code if not provided
+                var skuId = request.SkuId != Guid.Empty
+                    ? request.SkuId
+                    : Guid.CreateVersion7();
+                item = InventoryItem.Create(skuId, request.ProductId, skuCode, request.Quantity, request.StoreId);
                 repository.Add(item);
             }
             else
@@ -99,7 +103,7 @@ public static class InventoryEndpoints
     }
 }
 
-public record CreateInventoryItemRequest(string Sku, int InitialQuantity, Guid StoreId, Guid ProductId);
+public record CreateInventoryItemRequest(Guid SkuId, Guid ProductId, string SkuCode, int InitialQuantity, Guid StoreId);
 public record AddStockRequest(int Quantity);
-public record SetStockRequest(int Quantity, Guid StoreId, Guid ProductId);
-public record BatchInventoryRequest(List<string> Skus);
+public record SetStockRequest(Guid SkuId, int Quantity, Guid StoreId, Guid ProductId);
+public record BatchInventoryRequest(List<Guid> SkuIds);

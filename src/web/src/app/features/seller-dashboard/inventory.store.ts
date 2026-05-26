@@ -50,31 +50,36 @@ export const InventoryStore = signalStore(
             return;
           }
           const products = await productService.getMyProducts(storeId);
-          const skus = products.map(p => p.sku);
 
-          if (skus.length === 0) {
+          // Collect all SKU codes from all products
+          const allSkuCodes = products.flatMap(p => (p.skus ?? []).map(s => s.skuCode));
+
+          if (allSkuCodes.length === 0) {
             patchState(store, { items: [], loading: false });
             return;
           }
 
           // Get inventory for those SKUs
-          const inventory = await inventoryService.getInventoryBySkus(skus);
+          const inventory = await inventoryService.getInventoryBySkus(allSkuCodes);
 
-          // Join product data with inventory data
-          const displayItems: InventoryDisplayItem[] = products.map(product => {
-            const inv = inventory.find(i => i.sku === product.sku);
-            const quantity = inv?.availableQuantity ?? 0;
-            return {
-              sku: product.sku,
-              productName: product.name,
-              imageUrl: product.imageUrl,
-              quantity,
-              status: quantity === 0 ? 'out-of-stock' as const
-                : quantity <= LOW_STOCK_THRESHOLD ? 'low-stock' as const
-                : 'in-stock' as const,
-              lastUpdated: product.updatedAt ?? product.createdAt,
-            };
-          });
+          // Join product data with inventory data — one display item per SKU
+          const displayItems: InventoryDisplayItem[] = [];
+          for (const product of products) {
+            for (const sku of product.skus ?? []) {
+              const inv = inventory.find(i => i.skuCode === sku.skuCode);
+              const quantity = inv?.availableQuantity ?? 0;
+              displayItems.push({
+                sku: sku.skuCode,
+                productName: product.name,
+                imageUrl: product.imageUrl,
+                quantity,
+                status: quantity === 0 ? 'out-of-stock' as const
+                  : quantity <= LOW_STOCK_THRESHOLD ? 'low-stock' as const
+                  : 'in-stock' as const,
+                lastUpdated: product.updatedAt ?? product.createdAt,
+              });
+            }
+          }
 
           patchState(store, { items: displayItems, loading: false });
         } catch {

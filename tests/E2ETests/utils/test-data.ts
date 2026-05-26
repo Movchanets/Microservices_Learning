@@ -35,7 +35,7 @@ export interface TestDataSetupOptions {
   productCount?: number;
   /** Stock per product (default: 100) */
   stockPerProduct?: number;
-  /** Product price (default: 29.99) */
+  /** Product price applied to each SKU (default: 29.99) */
   productPrice?: number;
   /** Store name (default: random) */
   storeName?: string;
@@ -53,7 +53,7 @@ export interface TestDataSetupOptions {
  *   2. Login as admin (pre-seeded)
  *   3. Create + verify store for seller
  *   4. Ensure category exists
- *   5. Create N products with inventory
+ *   5. Create N products with SKUs and inventory
  *
  * Returns everything a test needs to write assertions against.
  */
@@ -108,21 +108,23 @@ export async function createTestData(
   const categoryName = options.categoryName ?? 'Electronics';
   const category = await ensureCategoryExists(adminApi, categoryName, 'Test category');
 
-  // 5. Create products with inventory
+  // 5. Create products with SKUs and inventory
   const products: ProductResult[] = [];
   for (let i = 0; i < productCount; i++) {
-    const sku = `E2E-${uniqueId.toUpperCase()}-${i + 1}`;
+    const skuCode = `E2E-${uniqueId.toUpperCase()}-${i + 1}`;
     const product = await ensureProductExists(
       sellerApiFresh,
       {
         name: `E2E Product ${i + 1} (${uniqueId})`,
         description: `E2E test product #${i + 1}`,
-        sku,
-        price: productPrice,
-        currency: 'USD',
         categoryId: category.id,
         storeId: store.id,
         tags: ['e2e', 'test'],
+      },
+      {
+        skuCode,
+        price: productPrice,
+        currency: 'USD',
       },
       stockPerProduct
     );

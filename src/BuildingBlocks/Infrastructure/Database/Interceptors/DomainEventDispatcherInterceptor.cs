@@ -10,6 +10,12 @@ namespace BuildingBlocks.Infrastructure.Database.Interceptors;
 /// EF Core SaveChanges interceptor that dispatches domain events via MediatR
 /// BEFORE the database save occurs. This allows MassTransit Outbox to write
 /// its messages into the same transaction atomically.
+///
+/// Note: The OutboxState.RowVersion concurrency token is disabled in each
+/// service's DbContext to prevent DbUpdateConcurrencyException when multiple
+/// domain events fire in a single SaveChanges call. See the DbContext
+/// OnModelCreating override where AddOutboxStateEntity() is called.
+///
 /// Handles cascading events (events that trigger new events) via a while loop.
 /// Register as a Singleton — uses DbContext.GetService to resolve IPublisher
 /// from the exact DI scope that leased the DbContext from the pool.

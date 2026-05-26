@@ -25,7 +25,7 @@ public class GetCartQueryHandlerTests
         var cart = new ShoppingCart(buyerId);
         var productId = Guid.NewGuid();
         var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-        cart.AddItem(productId, 1, storeId, 10m);
+        cart.AddItem(productId, Guid.NewGuid(), "TEST-SKU", 1, storeId, 10m);
         _repositoryMock.Setup(r => r.GetCartAsync(buyerId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cart);
 

@@ -44,8 +44,8 @@ describe('CartPageComponent', () => {
   it('should render items', () => {
     mockIsEmpty.set(false);
     mockItems.set([
-      { productId: 'PROD-1', storeId: 's1', quantity: 2, title: 'Widget', price: 10, lineTotal: 20, imageUrl: null },
-      { productId: 'PROD-2', storeId: 's1', quantity: 1, title: 'Gadget', price: 15, lineTotal: 15, imageUrl: null },
+      { productId: 'PROD-1', skuId: 'SKU-1', skuCode: 'SKU-CODE-1', storeId: 's1', quantity: 2, title: 'Widget', price: 10, lineTotal: 20, imageUrl: null },
+      { productId: 'PROD-2', skuId: 'SKU-2', skuCode: 'SKU-CODE-2', storeId: 's1', quantity: 1, title: 'Gadget', price: 15, lineTotal: 15, imageUrl: null },
     ]);
     mockTotalItems.set(3);
     mockTotalPrice.set(35);
@@ -55,23 +55,23 @@ describe('CartPageComponent', () => {
 
   it('should call updateQuantity on minus click', () => {
     mockIsEmpty.set(false);
-    mockItems.set([{ productId: 'PROD-1', storeId: 's1', quantity: 2, title: 'Widget', price: 10, lineTotal: 20, imageUrl: null }]);
+    mockItems.set([{ productId: 'PROD-1', skuId: 'SKU-1', skuCode: 'SKU-CODE-1', storeId: 's1', quantity: 2, title: 'Widget', price: 10, lineTotal: 20, imageUrl: null }]);
     mockTotalItems.set(2);
     mockTotalPrice.set(20);
     fixture.detectChanges();
     const btn = fixture.nativeElement.querySelector('[data-testid="cart-item-decrease"]');
     if (btn) btn.click();
-    expect(mockCartStore.updateQuantity).toHaveBeenCalledWith('PROD-1', 1);
+    expect(mockCartStore.updateQuantity).toHaveBeenCalledWith('SKU-1', 1);
   });
 
   it('should call removeFromCart on trash click', () => {
     mockIsEmpty.set(false);
-    mockItems.set([{ productId: 'PROD-1', storeId: 's1', quantity: 2, title: 'Widget', price: 10, lineTotal: 20, imageUrl: null }]);
+    mockItems.set([{ productId: 'PROD-1', skuId: 'SKU-1', skuCode: 'SKU-CODE-1', storeId: 's1', quantity: 2, title: 'Widget', price: 10, lineTotal: 20, imageUrl: null }]);
     mockTotalItems.set(2);
     mockTotalPrice.set(20);
     fixture.detectChanges();
     const btn = fixture.nativeElement.querySelector('[data-testid="cart-item-remove"]');
     if (btn) btn.click();
-    expect(mockCartStore.removeFromCart).toHaveBeenCalledWith('PROD-1');
+    expect(mockCartStore.removeFromCart).toHaveBeenCalledWith('SKU-1');
   });
 });

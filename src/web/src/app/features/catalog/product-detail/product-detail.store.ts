@@ -53,7 +53,10 @@ export const ProductDetailStore = signalStore(
         recentlyViewedService.trackView(product.id);
 
         // Fire-and-forget secondary data loads
-        this.loadStock(product.sku);
+        const firstSkuCode = product.skus?.[0]?.skuCode;
+        if (firstSkuCode) {
+          this.loadStock(firstSkuCode);
+        }
         this.loadRecommendations(product.id);
         this.loadStoreInfo(product.storeId);
       } catch (err: unknown) {

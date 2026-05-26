@@ -2,7 +2,6 @@ using BuildingBlocks.Infrastructure.Models;
 using Catalog.Application.DTOs;
 using Catalog.Application.Interfaces;
 using Catalog.Domain.Enums;
-using Catalog.Domain.ValueObjects;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,20 +14,31 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         return await context.Products
             .AsNoTracking()
             .Include(p => p.Category)
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
             .Where(p => p.Id == id && p.Status != ProductStatus.Deleted)
             .Select(p => new ProductDto(
                 p.Id,
                 p.Name,
                 p.Description,
-                p.Price.Amount,
-                p.Price.Currency,
-                p.Sku.Value,
                 p.CategoryId,
                 p.Category != null ? p.Category.Name : "",
                 p.Status.ToString(),
                 p.ImageUrl,
+                p.Brand,
                 p.StoreId,
                 p.Tags,
+                p.Skus
+                    .Where(s => s.Status != SkuStatus.Deleted)
+                    .Select(s => new SkuDto(
+                        s.Id,
+                        s.SkuCode,
+                        s.Price.Amount,
+                        s.Price.Currency,
+                        s.Status.ToString(),
+                        s.TypedAttributes,
+                        s.FlexibleAttributes,
+                        s.CreatedAt))
+                    .ToList(),
                 p.CreatedAt,
                 p.UpdatedAt))
             .FirstOrDefaultAsync(ct);
@@ -36,27 +46,14 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
 
     public async Task<ProductDto?> GetBySkuAsync(string sku, CancellationToken ct = default)
     {
-        var skuVo = Sku.Create(sku);
-        return await context.Products
+        var normalized = sku.Trim().ToUpperInvariant();
+        return await context.Skus
             .AsNoTracking()
-            .Include(p => p.Category)
-            .Where(p => p.Sku == skuVo && p.Status != ProductStatus.Deleted)
-            .Select(p => new ProductDto(
-                p.Id,
-                p.Name,
-                p.Description,
-                p.Price.Amount,
-                p.Price.Currency,
-                p.Sku.Value,
-                p.CategoryId,
-                p.Category != null ? p.Category.Name : "",
-                p.Status.ToString(),
-                p.ImageUrl,
-                p.StoreId,
-                p.Tags,
-                p.CreatedAt,
-                p.UpdatedAt))
-            .FirstOrDefaultAsync(ct);
+            .Where(s => s.SkuCode == normalized && s.Status != SkuStatus.Deleted)
+            .Select(s => s.ProductId)
+            .FirstOrDefaultAsync(ct) is Guid productId
+            ? await GetByIdAsync(productId, ct)
+            : null;
     }
 
     public async Task<List<ProductListDto>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
@@ -65,13 +62,17 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         return await context.Products
             .AsNoTracking()
             .Include(p => p.Category)
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
             .Where(p => idSet.Contains(p.Id) && p.Status != ProductStatus.Deleted)
             .Select(p => new ProductListDto(
                 p.Id,
                 p.Name,
-                p.Price.Amount,
-                p.Price.Currency,
-                p.Sku.Value,
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Min(s => (decimal?)s.Price.Amount),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Max(s => (decimal?)s.Price.Amount),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.Price.Currency).FirstOrDefault(),
+                p.Skus.Count(s => s.Status == SkuStatus.Active),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => (Guid?)s.Id).FirstOrDefault(),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.SkuCode).FirstOrDefault(),
                 p.Category != null ? p.Category.Name : "",
                 p.Status.ToString(),
                 p.ImageUrl,
@@ -90,6 +91,7 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         var query = context.Products
             .AsNoTracking()
             .Include(p => p.Category)
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
             .Where(p => p.Status == ProductStatus.Active);
 
         if (categoryId.HasValue)
@@ -112,9 +114,12 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
             .Select(p => new ProductListDto(
                 p.Id,
                 p.Name,
-                p.Price.Amount,
-                p.Price.Currency,
-                p.Sku.Value,
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Min(s => (decimal?)s.Price.Amount),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Max(s => (decimal?)s.Price.Amount),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.Price.Currency).FirstOrDefault(),
+                p.Skus.Count(s => s.Status == SkuStatus.Active),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => (Guid?)s.Id).FirstOrDefault(),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.SkuCode).FirstOrDefault(),
                 p.Category != null ? p.Category.Name : "",
                 p.Status.ToString(),
                 p.ImageUrl,

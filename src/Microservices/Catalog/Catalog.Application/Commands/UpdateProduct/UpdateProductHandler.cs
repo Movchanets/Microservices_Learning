@@ -31,6 +31,7 @@ public sealed class UpdateProductHandler(
             request.Name,
             request.Description,
             request.CategoryId,
+            request.Brand,
             request.Tags,
             request.ImageUrl);
 
@@ -43,15 +44,25 @@ public sealed class UpdateProductHandler(
             product.Id,
             product.Name,
             product.Description,
-            product.Price.Amount,
-            product.Price.Currency,
-            product.Sku.Value,
             product.CategoryId,
             category?.Name ?? "",
             product.Status.ToString(),
             product.ImageUrl,
+            product.Brand,
             product.StoreId,
             product.Tags,
+            product.Skus
+                .Where(s => s.IsActive)
+                .Select(s => new SkuDto(
+                    s.Id,
+                    s.SkuCode,
+                    s.Price.Amount,
+                    s.Price.Currency,
+                    s.Status.ToString(),
+                    s.TypedAttributes,
+                    s.FlexibleAttributes,
+                    s.CreatedAt))
+                .ToList(),
             product.CreatedAt,
             product.UpdatedAt));
     }

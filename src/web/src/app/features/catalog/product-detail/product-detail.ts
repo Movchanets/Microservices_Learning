@@ -1,7 +1,7 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import { CreateReviewRequest } from '../catalog.models';
+import { CreateReviewRequest, Sku } from '../catalog.models';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ReviewStore } from '../review.store';
 import { ProductDetailStore } from './product-detail.store';
@@ -11,9 +11,6 @@ import { StockIndicatorComponent } from '../../../shared/components/stock-indica
 import { ReviewSummaryComponent } from '../components/review-summary/review-summary';
 import { ReviewListComponent } from '../components/review-list/review-list';
 import { WriteReviewComponent } from '../components/write-review/write-review';
-
-// TODO: Add product variant selector (color, size) when Catalog supports variants.
-//       Ref: plans/future_design/product_details.md — "Advanced Product Variations Selector"
 
 @Component({
   selector: 'app-product-detail',
@@ -41,6 +38,20 @@ export class ProductDetailComponent implements OnInit {
 
   private currentProductId = '';
 
+  selectedSkuIndex = signal(0);
+
+  protected selectedSku = computed<Sku | null>(() => {
+    const product = this.store.product();
+    if (!product?.skus?.length) return null;
+    const idx = this.selectedSkuIndex();
+    return product.skus[idx] ?? product.skus[0] ?? null;
+  });
+
+  protected hasMultipleSkus = computed(() => {
+    const product = this.store.product();
+    return (product?.skus?.length ?? 0) > 1;
+  });
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -50,6 +61,15 @@ export class ProductDetailComponent implements OnInit {
     } else {
       // Store has no setError method, but loading will stop
       // and the template handles the null product case
+    }
+  }
+
+  onSelectSku(index: number): void {
+    this.selectedSkuIndex.set(index);
+    // Reload stock for the selected SKU
+    const sku = this.store.product()?.skus?.[index];
+    if (sku) {
+      this.store.loadStock(sku.skuCode);
     }
   }
 
