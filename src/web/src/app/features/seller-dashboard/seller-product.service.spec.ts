@@ -4,7 +4,8 @@
 // Uses HttpClientTestingModule to assert correct URLs and methods.
 
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { SellerProductService } from './seller-product.service';
 
 describe('SellerProductService', () => {
@@ -13,8 +14,7 @@ describe('SellerProductService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [SellerProductService],
+      providers: [SellerProductService, provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(SellerProductService);
     httpMock = TestBed.inject(HttpTestingController);

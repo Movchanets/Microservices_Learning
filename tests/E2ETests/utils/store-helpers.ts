@@ -35,7 +35,8 @@ export async function verifyStore(
   const response = await api.post(`/api/stores/${storeId}/verify`, {
     data: { isApproved, reason },
   });
-  if (!response.ok()) {
+  // 409 = already verified — idempotent, ignore
+  if (!response.ok() && response.status() !== 409) {
     throw new Error(`Verify store failed: ${response.status()} ${await response.text()}`);
   }
 }

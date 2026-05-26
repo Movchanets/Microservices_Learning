@@ -35,7 +35,7 @@ public class OrderSagaIntegrationTests
 
         await _fixture.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-1",
-            [new OrderItemContract(Guid.NewGuid(), 2, 25.00m, Guid.NewGuid())],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Test Product", 2, 25.00m, Guid.NewGuid())],
             DateTime.UtcNow));
 
         var state = await PollForState(correlationId, "ReservingInventory", TimeSpan.FromSeconds(15));
@@ -52,8 +52,8 @@ public class OrderSagaIntegrationTests
         // Step 1: OrderSubmitted → ReservingInventory
         await _fixture.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-2",
-            [new OrderItemContract(Guid.NewGuid(), 1, 50.00m, Guid.NewGuid()),
-             new OrderItemContract(Guid.NewGuid(), 3, 15.00m, Guid.NewGuid())],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Test Product", 1, 50.00m, Guid.NewGuid()),
+             new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Test Product", 3, 15.00m, Guid.NewGuid())],
             DateTime.UtcNow));
 
         var state1 = await PollForState(correlationId, "ReservingInventory", TimeSpan.FromSeconds(15));
@@ -84,7 +84,7 @@ public class OrderSagaIntegrationTests
         // Step 1: OrderSubmitted → ReservingInventory
         await _fixture.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-3",
-            [new OrderItemContract(Guid.NewGuid(), 5, 10.00m, Guid.NewGuid())],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Test Product", 5, 10.00m, Guid.NewGuid())],
             DateTime.UtcNow));
 
         var state1 = await PollForState(correlationId, "ReservingInventory", TimeSpan.FromSeconds(15));

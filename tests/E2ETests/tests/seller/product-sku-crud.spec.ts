@@ -144,7 +144,7 @@ test.describe('Seller: Product & SKU CRUD', () => {
     // Change price
     const priceResponse = await sellerApi.patch(
       `/api/catalog/products/${product.id}/skus/${sku.id}/price`,
-      { data: { price: 75.00, currency: 'USD' } }
+      { data: { NewPrice: 75.00, Currency: 'USD' } }
     );
     expect(priceResponse.ok()).toBe(true);
 
@@ -262,6 +262,10 @@ test.describe('Seller: Product & SKU CRUD', () => {
       price: 99.99,
       currency: 'USD',
     });
+
+    // Activate the product so it appears in the list (ListAsync filters Status == Active)
+    const activateResponse = await sellerApi.put(`/api/catalog/products/${product.id}/activate`, { data: {} });
+    expect(activateResponse.ok()).toBe(true);
 
     // Fetch the product list filtered by store
     const listResponse = await sellerApi.get('/api/catalog/products', {

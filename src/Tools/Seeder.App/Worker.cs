@@ -99,7 +99,7 @@ public class Worker : BackgroundService
             var techStoreId = await productSeeder.GetStoreIdAsync("Tech Store", stoppingToken);
             var homeStoreId = await productSeeder.GetStoreIdAsync("Home Store", stoppingToken);
 
-            var productIds = new Dictionary<string, (Guid StoreId, Guid ProductId)>();
+            var productIds = new Dictionary<string, (Guid StoreId, Guid ProductId, Guid SkuId)>();
 
             foreach (var product in products)
             {
@@ -113,10 +113,11 @@ public class Worker : BackgroundService
                     continue;
                 }
 
-                var productId = await productSeeder.EnsureProductExistsAsync(product, token, categoryId.Value, storeId.Value, stoppingToken);
-                if (productId != null)
+                var result = await productSeeder.EnsureProductExistsAsync(product, token, categoryId.Value, storeId.Value, stoppingToken);
+                if (result != null)
                 {
-                    productIds[product.Sku] = (storeId.Value, productId.Value);
+                    var (productId, skuId) = result.Value;
+                    productIds[product.Sku] = (storeId.Value, productId, skuId);
                 }
 
                 await Task.Delay(500, stoppingToken);

@@ -37,6 +37,8 @@ public class GetProductsQueryHandlerTests
                 MaxPrice: 10m,
                 Currency: "USD",
                 SkuCount: 1,
+                DefaultSkuId: System.Guid.NewGuid(),
+                DefaultSkuCode: "TEST-SKU",
                 CategoryName: "Cat",
                 Status: "Active",
                 ImageUrl: null,

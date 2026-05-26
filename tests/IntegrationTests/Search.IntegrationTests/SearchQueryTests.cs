@@ -23,35 +23,35 @@ public class SearchQueryTests
             new()
             {
                 Id = Guid.NewGuid(), Name = "Wireless Bluetooth Headphones", Description = "High quality audio",
-                Price = 59.99m, Currency = "USD", Sku = "HP-001", CategoryId = categoryId1,
+                MinPrice = 59.99m, MaxPrice = 59.99m, Currency = "USD", SkuCount = 1, CategoryId = categoryId1,
                 CategoryName = "Electronics", Tags = ["audio", "wireless"], StoreId = Guid.NewGuid(),
                 IsActive = true, CreatedAt = DateTime.UtcNow.AddHours(-1), UpdatedAt = DateTime.UtcNow
             },
             new()
             {
                 Id = Guid.NewGuid(), Name = "Bluetooth Speaker Portable", Description = "Portable audio device",
-                Price = 29.99m, Currency = "USD", Sku = "SP-001", CategoryId = categoryId1,
+                MinPrice = 29.99m, MaxPrice = 29.99m, Currency = "USD", SkuCount = 1, CategoryId = categoryId1,
                 CategoryName = "Electronics", Tags = ["audio", "portable"], StoreId = Guid.NewGuid(),
                 IsActive = true, CreatedAt = DateTime.UtcNow.AddHours(-2), UpdatedAt = DateTime.UtcNow
             },
             new()
             {
                 Id = Guid.NewGuid(), Name = "Running Shoes", Description = "Comfortable running shoes",
-                Price = 89.99m, Currency = "USD", Sku = "SH-001", CategoryId = categoryId2,
+                MinPrice = 89.99m, MaxPrice = 89.99m, Currency = "USD", SkuCount = 1, CategoryId = categoryId2,
                 CategoryName = "Sports", Tags = ["running", "shoes"], StoreId = Guid.NewGuid(),
                 IsActive = true, CreatedAt = DateTime.UtcNow.AddHours(-3), UpdatedAt = DateTime.UtcNow
             },
             new()
             {
                 Id = Guid.NewGuid(), Name = "Yoga Mat Premium", Description = "Non-slip exercise mat",
-                Price = 24.99m, Currency = "USD", Sku = "YM-001", CategoryId = categoryId2,
+                MinPrice = 24.99m, MaxPrice = 24.99m, Currency = "USD", SkuCount = 1, CategoryId = categoryId2,
                 CategoryName = "Sports", Tags = ["yoga", "exercise"], StoreId = Guid.NewGuid(),
                 IsActive = true, CreatedAt = DateTime.UtcNow.AddHours(-4), UpdatedAt = DateTime.UtcNow
             },
             new()
             {
                 Id = Guid.NewGuid(), Name = "Laptop Stand Aluminum", Description = "Ergonomic laptop stand",
-                Price = 45m, Currency = "USD", Sku = "LS-001", CategoryId = categoryId1,
+                MinPrice = 45m, MaxPrice = 45m, Currency = "USD", SkuCount = 1, CategoryId = categoryId1,
                 CategoryName = "Electronics", Tags = ["laptop", "ergonomic"], StoreId = Guid.NewGuid(),
                 IsActive = true, CreatedAt = DateTime.UtcNow.AddHours(-5), UpdatedAt = DateTime.UtcNow
             }
@@ -135,8 +135,8 @@ public class SearchQueryTests
         result.Items.Should().NotBeEmpty();
         result.Items.Should().AllSatisfy(p =>
         {
-            p.Price.Should().BeGreaterThanOrEqualTo(30m);
-            p.Price.Should().BeLessThanOrEqualTo(60m);
+            p.MinPrice.Should().BeGreaterThanOrEqualTo(30m);
+            p.MaxPrice.Should().BeLessThanOrEqualTo(60m);
         });
     }
 }

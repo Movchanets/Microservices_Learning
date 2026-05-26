@@ -72,7 +72,7 @@ public class OrderFlowSeeder
     /// </summary>
     public async Task RunOrderFlowAsync(
         string token,
-        Dictionary<string, (Guid StoreId, Guid ProductId)> productIds,
+        Dictionary<string, (Guid StoreId, Guid ProductId, Guid SkuId)> productIds,
         CancellationToken ct)
     {
         _client.DefaultRequestHeaders.Authorization =
@@ -97,7 +97,7 @@ public class OrderFlowSeeder
             }
 
             var addResp = await _client.PostAsJsonAsync("/api/cart/items",
-                new { ProductId = ids.ProductId, Quantity = qty }, ct);
+                new { ProductId = ids.ProductId, SkuId = ids.SkuId, SkuCode = sku, Quantity = qty }, ct);
 
             if (addResp.IsSuccessStatusCode)
             {

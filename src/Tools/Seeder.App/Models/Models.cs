@@ -11,4 +11,6 @@ public record UserDto { public Guid Id { get; set; } public string Email { get; 
 public record StoreDto { public Guid Id { get; set; } public string Name { get; set; } = ""; public string VerificationStatus { get; set; } = ""; }
 public record ProductModel(string StoreName, string CategoryName, string Name, string Description, decimal Price, string Currency, string Sku, string[] Tags, string ImageUrl, int InitialStock);
 public record ProductDto { public Guid Id { get; set; } }
+public record SkuResponseDto { public Guid Id { get; set; } public string SkuCode { get; set; } = ""; }
+public record ProductWithSkusDto { public Guid Id { get; set; } public List<SkuResponseDto>? Skus { get; set; } }
 public record InventoryItemDto(string Sku, int AvailableQuantity);

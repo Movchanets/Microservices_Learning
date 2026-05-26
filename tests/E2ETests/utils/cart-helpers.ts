@@ -7,8 +7,7 @@ import { getProductBySku } from './catalog-helpers';
 
 /**
  * Adds an item to the cart via the Cart API.
- * Uses the `POST /api/cart/` endpoint which accepts items with explicit prices,
- * bypassing the ProductPrices event-sync dependency.
+ * Resolves the product and SKU by skuCode, then sends full item data.
  */
 export async function addToCart(
   api: APIRequestContext,
@@ -22,8 +21,13 @@ export async function addToCart(
     throw new Error(`Product not found for SKU: ${skuCode}`);
   }
 
+  const sku = product.skus?.find(s => s.skuCode === skuCode);
+  if (!sku) {
+    throw new Error(`SKU '${skuCode}' not found in product ${product.id}`);
+  }
+
   const response = await api.post('/api/cart/items', {
-    data: { productId: product.id, quantity },
+    data: { productId: product.id, skuId: sku.id, skuCode: sku.skuCode, quantity },
   });
 
   if (!response.ok()) {

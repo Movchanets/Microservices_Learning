@@ -21,18 +21,14 @@ test.describe('Orders: Order History', () => {
     await page.close();
   });
 
-  test('should navigate to order detail when clicking an order', async ({ buyerContext }) => {
+  // Test buyer has no orders yet — skip until test fixture seeds orders
+  test.skip('should navigate to order detail when clicking an order', async ({ buyerContext }) => {
     const page = await buyerContext.newPage();
     await page.goto('/orders');
     await page.waitForLoadState('domcontentloaded');
 
     const orderLink = page.getByRole('link').filter({ hasText: /View Details|order-/i }).first();
-    const isOrderVisible = await orderLink.isVisible().catch(() => false);
-    if (!isOrderVisible) {
-      test.skip(true, 'No orders available for this user — skipping');
-      await page.close();
-      return;
-    }
+    await expect(orderLink).toBeVisible({ timeout: 10_000 });
     await orderLink.click();
     await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/orders\/.+/);

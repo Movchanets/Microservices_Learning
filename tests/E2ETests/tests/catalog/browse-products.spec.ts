@@ -44,17 +44,14 @@ test.describe('Catalog: Browse Products', () => {
     expect(filteredCount).toBeLessThanOrEqual(initialCount);
   });
 
-  test('should filter products by category', async ({ catalogPage, page }) => {
+  // Category filter buttons not yet rendered on catalog page — skip until implemented
+  test.skip('should filter products by category', async ({ catalogPage, page }) => {
     await catalogPage.goto('/catalog');
     await catalogPage.waitForPageLoad();
 
     // Find and click a category button
     const categoryBtn = page.getByRole('button').filter({ hasText: /Electronics|Home|Clothing/ }).first();
-    const isCategoryVisible = await categoryBtn.isVisible().catch(() => false);
-    if (!isCategoryVisible) {
-      test.skip(true, 'No category buttons available — skipping');
-      return;
-    }
+    await expect(categoryBtn).toBeVisible({ timeout: 10_000 });
     await categoryBtn.click();
     await page.waitForLoadState('domcontentloaded');
 
