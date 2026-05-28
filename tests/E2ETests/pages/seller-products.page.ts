@@ -3,26 +3,22 @@ import { BasePage } from './base.page';
 
 export class SellerProductsPage extends BasePage {
   readonly addProductBtn: Locator;
-  readonly productsTable: Locator;
+  readonly productsList: Locator;
   readonly productRows: Locator;
   readonly emptyState: Locator;
   readonly loadingSpinner: Locator;
   readonly searchInput: Locator;
-  readonly editBtns: Locator;
-  readonly deleteBtns: Locator;
-  readonly confirmDeleteBtn: Locator;
 
   constructor(page: Page) {
     super(page);
-    this.addProductBtn = page.getByRole('button', { name: /add product|create product|new product/i });
-    this.productsTable = page.locator('table');
-    this.productRows = this.productsTable.locator('tbody tr');
-    this.emptyState = page.getByText(/no products|empty/i);
+    // "Add Product" is an <a> link, not a button
+    this.addProductBtn = page.getByRole('link', { name: /add product/i });
+    // Product list is <ul> with <li> items, not a <table>
+    this.productsList = page.locator('ul.divide-y');
+    this.productRows = this.productsList.locator('> li');
+    this.emptyState = page.getByText(/no products yet/i);
     this.loadingSpinner = page.locator('[class*="animate-spin"]');
     this.searchInput = page.getByPlaceholder(/search/i);
-    this.editBtns = page.getByRole('button', { name: /edit/i });
-    this.deleteBtns = page.getByRole('button', { name: /delete|remove/i });
-    this.confirmDeleteBtn = page.getByRole('button', { name: /confirm|yes.*delete/i });
   }
 
   async goto() {
@@ -42,54 +38,46 @@ export class SellerProductsPage extends BasePage {
     await this.addProductBtn.click();
   }
 
+  /** Click the edit link for a product row (navigates to /seller/products/:id/edit). */
   async editProduct(index: number) {
     const row = this.productRows.nth(index);
-    await row.getByRole('button', { name: /edit/i }).click();
+    // Edit is an <a> with Pencil icon — match by href pattern
+    await row.locator('a[href*="/seller/products/"][href$="/edit"]').click();
   }
 
+  /** Click the delete button for a product row (triggers browser confirm dialog). */
   async deleteProduct(index: number) {
     const row = this.productRows.nth(index);
-    await row.getByRole('button', { name: /delete|remove/i }).click();
+    // Delete is the last <button> in the actions area (Trash2 icon)
+    await row.locator('button').last().click();
   }
 
-  async confirmDelete() {
-    await this.confirmDeleteBtn.click();
+  /** Click the activate button for a product row. */
+  async activateProduct(index: number) {
+    const row = this.productRows.nth(index);
+    await row.getByTestId('product-activate').click();
   }
 
-  async searchProducts(query: string) {
-    await this.searchInput.fill(query);
+  /** Click the deactivate button for a product row. */
+  async deactivateProduct(index: number) {
+    const row = this.productRows.nth(index);
+    await row.getByTestId('product-deactivate').click();
   }
 
   async getProductName(index: number): Promise<string> {
     const row = this.productRows.nth(index);
-    const nameCell = row.locator('td').first();
-    return nameCell.innerText();
+    return row.locator('p.font-medium').innerText();
   }
 
   async getProductStatus(index: number): Promise<string> {
     const row = this.productRows.nth(index);
-    const statusCell = row.locator('td').nth(2);
-    return statusCell.innerText();
+    return row.locator('span.text-xs').innerText();
   }
 
-  /**
-   * Returns the price range text for a product row.
-   * With the new SKU model, products show minPrice–maxPrice.
-   */
-  async getProductPriceRange(index: number): Promise<string> {
+  /** Returns combined SKU count + price text (e.g. "2 SKUs · $29.99"). */
+  async getProductMeta(index: number): Promise<string> {
     const row = this.productRows.nth(index);
-    // Price is typically the 3rd or 4th column
-    const priceCell = row.locator('td').nth(3);
-    return priceCell.innerText();
-  }
-
-  /**
-   * Returns the SKU count text for a product row.
-   */
-  async getProductSkuCount(index: number): Promise<string> {
-    const row = this.productRows.nth(index);
-    const skuCountCell = row.locator('td').nth(4);
-    return skuCountCell.innerText();
+    return row.locator('p.text-sm.text-muted').innerText();
   }
 
   async isLoading(): Promise<boolean> {

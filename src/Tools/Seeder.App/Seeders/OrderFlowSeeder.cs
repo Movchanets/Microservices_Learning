@@ -44,7 +44,10 @@ public class OrderFlowSeeder
             _logger.LogInformation("Registering buyer {Email}...", buyer.Email);
             var regResp = await _client.PostAsJsonAsync(
                 "/api/identity/auth/register", buyer, ct);
-            regResp.EnsureSuccessStatusCode();
+            if (regResp.StatusCode != System.Net.HttpStatusCode.Conflict)
+                regResp.EnsureSuccessStatusCode();
+            else
+                _logger.LogInformation("Buyer {Email} already exists, skipping registration.", buyer.Email);
         }
 
         var token = await LoginAsync(buyer.Email, buyer.Password, ct);

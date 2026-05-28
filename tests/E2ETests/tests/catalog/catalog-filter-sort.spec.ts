@@ -22,14 +22,8 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
 
     await catalogPage.search('zzzznonexistentproduct12345');
 
-    // Wait for the search API response to settle
-    await page.waitForResponse(resp => resp.url().includes('/api/catalog') || resp.url().includes('/api/search'))
-      .catch(() => {});
-    await page.waitForLoadState('domcontentloaded');
-
-    const isEmpty = await catalogPage.isEmpty();
-    const count = await catalogPage.getProductCount();
-    expect(isEmpty || count === 0).toBe(true);
+    // Wait for the empty state to appear (Angular re-renders after API response)
+    await expect(catalogPage.emptyState).toBeVisible({ timeout: 10_000 });
   });
 
   // ── Not yet implemented — UI components pending ───────────

@@ -14,7 +14,7 @@ export class SellerProductService {
   private readonly baseUrl = '/api/catalog/products';
 
   async getMyProducts(storeId: string): Promise<SellerProduct[]> {
-    const params = new HttpParams().set('storeId', storeId);
+    const params = new HttpParams().set('storeId', storeId).set('status', 'All');
     return firstValueFrom(
       this.http.get<PagedResult<SellerProduct>>(this.baseUrl, { params })
         .pipe(map(res => res.items))

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject, signal } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { CartStore } from '../../../features/cart/cart.store';
@@ -21,6 +21,17 @@ export class Header {
   user = this.authStore.user;
   isMenuOpen = signal(false);
   isMegaMenuOpen = signal(false);
+
+  /** Checks if user has any of the given roles (handles comma-separated role strings). */
+  hasRole = (...roles: string[]) => computed(() => {
+    const r = this.user()?.role;
+    if (!r) return false;
+    const userRoles = r.split(',').map(x => x.trim());
+    return roles.some(required => userRoles.includes(required));
+  });
+
+  isSellerOrAdmin = this.hasRole('Seller', 'Admin');
+  isAdmin = this.hasRole('Admin');
 
   readonly UserIcon = User;
   readonly LogOutIcon = LogOut;

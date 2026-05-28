@@ -1,6 +1,7 @@
 using BuildingBlocks.Infrastructure.Models;
 using Catalog.Application.DTOs;
 using Catalog.Application.Interfaces;
+using Catalog.Domain.Aggregates;
 using Catalog.Domain.Enums;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -105,13 +106,27 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         Guid? categoryId = null,
         Guid? storeId = null,
         string? search = null,
+        string? status = null,
         CancellationToken ct = default)
     {
-        var query = context.Products
+        IQueryable<Product> query = context.Products
             .AsNoTracking()
             .Include(p => p.Category)
-            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
-            .Where(p => p.Status == ProductStatus.Active);
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted));
+
+        // Status filter: null/empty/"Active" → Active only; "All" → all non-deleted; specific status → filter by it
+        if (string.IsNullOrWhiteSpace(status) || status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(p => p.Status == ProductStatus.Active);
+        }
+        else if (status.Equals("All", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(p => p.Status != ProductStatus.Deleted);
+        }
+        else if (Enum.TryParse<ProductStatus>(status, true, out var parsed))
+        {
+            query = query.Where(p => p.Status == parsed);
+        }
 
         if (categoryId.HasValue)
             query = query.Where(p => p.CategoryId == categoryId.Value);

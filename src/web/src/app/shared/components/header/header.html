@@ -113,7 +113,7 @@
                 <lucide-icon [name]="UserIcon" class="w-4 h-4"></lucide-icon>
                 My Orders
               </a>
-              @if (user()?.role === 'Seller' || user()?.role === 'Admin') {
+              @if (isSellerOrAdmin()) {
                 <a
                   routerLink="/seller"
                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"
@@ -123,7 +123,7 @@
                   Seller Dashboard
                 </a>
               }
-              @if (user()?.role === 'Admin') {
+              @if (isAdmin()) {
                 <a
                   routerLink="/admin"
                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"

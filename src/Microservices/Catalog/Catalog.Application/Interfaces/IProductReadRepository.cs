@@ -14,5 +14,6 @@ public interface IProductReadRepository
         Guid? categoryId = null,
         Guid? storeId = null,
         string? search = null,
+        string? status = null,
         CancellationToken ct = default);
 }

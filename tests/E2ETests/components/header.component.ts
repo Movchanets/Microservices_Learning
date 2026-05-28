@@ -4,13 +4,14 @@ export class HeaderComponent {
   readonly page: Page;
   readonly logo: Locator;
   readonly catalogLink: Locator;
-  readonly sellLink: Locator;
   readonly loginLink: Locator;
   readonly registerLink: Locator;
   readonly userMenuTrigger: Locator;
   readonly userDropdown: Locator;
   readonly profileLink: Locator;
   readonly logoutLink: Locator;
+  readonly ordersLink: Locator;
+  readonly sellerLink: Locator;
   readonly adminLink: Locator;
 
   // Mega menu
@@ -28,13 +29,14 @@ export class HeaderComponent {
     this.page = page;
     this.logo = page.getByTestId('header-logo');
     this.catalogLink = page.getByRole('button', { name: /catalog/i }).first();
-    this.sellLink = page.getByRole('link', { name: /sell/i });
     this.loginLink = page.getByTestId('nav-login');
     this.registerLink = page.getByTestId('nav-register');
     this.userMenuTrigger = page.getByTestId('user-menu-trigger');
     this.userDropdown = page.getByTestId('user-dropdown');
     this.profileLink = page.getByTestId('nav-profile');
     this.logoutLink = page.getByTestId('nav-logout');
+    this.ordersLink = page.getByTestId('nav-orders');
+    this.sellerLink = page.getByTestId('nav-seller');
     this.adminLink = page.getByTestId('nav-admin');
 
     // Mega menu — target the visible panel div, not the host element (which has 0 dimensions)
@@ -55,10 +57,6 @@ export class HeaderComponent {
 
   async clickCatalog() {
     await this.catalogLink.click();
-  }
-
-  async clickSell() {
-    await this.sellLink.click();
   }
 
   async clickLogin() {
@@ -86,6 +84,16 @@ export class HeaderComponent {
   async clickAdmin() {
     await this.openUserMenu();
     await this.adminLink.click();
+  }
+
+  async clickSellerDashboard() {
+    await this.openUserMenu();
+    await this.sellerLink.click();
+  }
+
+  async clickOrders() {
+    await this.openUserMenu();
+    await this.ordersLink.click();
   }
 
   // Mega menu

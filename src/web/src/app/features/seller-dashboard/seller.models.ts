@@ -15,6 +15,12 @@ export interface SellerProduct {
   storeId: string;
   tags: string[];
   skus: Sku[];
+  skuCount?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  currency?: string;
+  defaultSkuId?: string;
+  defaultSkuCode?: string;
   createdAt: string;
   updatedAt: string | null;
 }
