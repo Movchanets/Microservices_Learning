@@ -40,7 +40,7 @@ export class CatalogService {
   }
 
   getProduct(id: string): Promise<Product> {
-    return firstValueFrom(this.http.get<Product>(`/api/catalog/products/${id}`));
+    return firstValueFrom(this.http.get<Product>(`/bff/catalog/products/${id}`));
   }
 
   getRecommendations(productId: string): Promise<ProductListItem[]> {

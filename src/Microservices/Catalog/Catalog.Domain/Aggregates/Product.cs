@@ -213,4 +213,10 @@ public sealed class Product : AggregateRoot
         UpdatedAt = DateTime.UtcNow;
         AddDomainEvent(new ProductDeletedDomainEvent(Id));
     }
+
+    public void SetImageUrl(string? imageUrl)
+    {
+        ImageUrl = imageUrl?.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

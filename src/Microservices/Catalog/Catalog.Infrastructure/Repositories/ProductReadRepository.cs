@@ -35,12 +35,31 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
                         s.Price.Amount,
                         s.Price.Currency,
                         s.Status.ToString(),
+                        s.ImageUrl,
                         s.TypedAttributes,
                         s.FlexibleAttributes,
                         s.CreatedAt))
                     .ToList(),
                 p.CreatedAt,
                 p.UpdatedAt))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<SkuDto?> GetSkuByIdAsync(Guid skuId, CancellationToken ct = default)
+    {
+        return await context.Skus
+            .AsNoTracking()
+            .Where(s => s.Id == skuId && s.Status != SkuStatus.Deleted)
+            .Select(s => new SkuDto(
+                s.Id,
+                s.SkuCode,
+                s.Price.Amount,
+                s.Price.Currency,
+                s.Status.ToString(),
+                s.ImageUrl,
+                s.TypedAttributes,
+                s.FlexibleAttributes,
+                s.CreatedAt))
             .FirstOrDefaultAsync(ct);
     }
 

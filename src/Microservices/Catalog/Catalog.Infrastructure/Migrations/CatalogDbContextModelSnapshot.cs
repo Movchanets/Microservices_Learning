@@ -262,6 +262,10 @@ namespace Catalog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
 
@@ -447,7 +451,6 @@ namespace Catalog.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 

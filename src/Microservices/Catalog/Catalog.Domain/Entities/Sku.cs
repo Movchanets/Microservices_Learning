@@ -14,6 +14,7 @@ public sealed class Sku : Entity
     public string SkuCode { get; private set; } = string.Empty;
     public Money Price { get; private set; } = null!;
     public SkuStatus Status { get; private set; } = SkuStatus.Active;
+    public string? ImageUrl { get; private set; }
 
     /// <summary>
     /// Typed, filterable attributes (e.g., color, size, material).
@@ -39,7 +40,8 @@ public sealed class Sku : Entity
         string skuCode,
         Money price,
         Dictionary<string, string> typedAttributes,
-        Dictionary<string, string>? flexibleAttributes = null)
+        Dictionary<string, string>? flexibleAttributes = null,
+        string? imageUrl = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(skuCode);
         if (productId == Guid.Empty)
@@ -50,6 +52,7 @@ public sealed class Sku : Entity
             ProductId = productId,
             SkuCode = skuCode.Trim().ToUpperInvariant(),
             Price = price,
+            ImageUrl = imageUrl?.Trim(),
             TypedAttributes = typedAttributes ?? [],
             FlexibleAttributes = flexibleAttributes ?? [],
             Status = SkuStatus.Active,
@@ -60,6 +63,12 @@ public sealed class Sku : Entity
     public void ChangePrice(Money newPrice)
     {
         Price = newPrice;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetImageUrl(string? imageUrl)
+    {
+        ImageUrl = imageUrl?.Trim();
         UpdatedAt = DateTime.UtcNow;
     }
 

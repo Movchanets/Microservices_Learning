@@ -17,6 +17,7 @@ public sealed class SkuConfiguration : IEntityTypeConfiguration<Sku>
         builder.Property(s => s.ProductId).IsRequired();
         builder.Property(s => s.SkuCode).IsRequired().HasMaxLength(50);
         builder.Property(s => s.Status).IsRequired();
+        builder.Property(s => s.ImageUrl).HasMaxLength(2000);
 
         // Money Value Object (Owned Type)
         builder.OwnsOne(s => s.Price, priceBuilder =>

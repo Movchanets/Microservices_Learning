@@ -335,6 +335,21 @@ public static class ProductEndpoints
 
     private static void MapProductSkuEndpoints(this RouteGroupBuilder group)
     {
+        // Public: get SKU by ID
+        group.MapGet("/skus/{skuId:guid}", async (
+            Guid skuId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetSkuByIdQuery(skuId), ct);
+            return result is not null
+                ? Results.Ok(result)
+                : Results.NotFound();
+        })
+        .WithName("GetSkuById")
+        .WithOpenApi()
+        .Produces<SkuDto>()
+        .ProducesProblem(StatusCodes.Status404NotFound);
         // Authorized: add SKU to product
         group.MapPost("/{id:guid}/skus", async (
             Guid id,

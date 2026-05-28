@@ -20,7 +20,7 @@ public class SkuCreatedConsumerTests
     }
 
     [Fact]
-    public async Task Consume_ShouldUpdateProductPriceInSearchIndex()
+    public async Task Consume_ShouldAddSkuToProductInSearchIndex()
     {
         // Arrange
         var productId = Guid.NewGuid();
@@ -43,29 +43,16 @@ public class SkuCreatedConsumerTests
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        Guid? capturedProductId = null;
-        decimal? capturedPrice = null;
-        string? capturedCurrency = null;
         _searchServiceMock
-            .Setup(x => x.UpdateProductPriceAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<Guid, decimal, string, CancellationToken>((id, price, currency, _) =>
-            {
-                capturedProductId = id;
-                capturedPrice = price;
-                capturedCurrency = currency;
-            })
+            .Setup(x => x.AddSkuToProductAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
         await _consumer.Consume(consumeContext.Object);
 
         // Assert
-        capturedProductId.Should().Be(productId);
-        capturedPrice.Should().Be(29.99m);
-        capturedCurrency.Should().Be("USD");
-
         _searchServiceMock.Verify(
-            x => x.UpdateProductPriceAsync(productId, 29.99m, "USD", It.IsAny<CancellationToken>()),
+            x => x.AddSkuToProductAsync(productId, 29.99m, "USD", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }

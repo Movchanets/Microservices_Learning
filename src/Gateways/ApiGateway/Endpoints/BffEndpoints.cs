@@ -192,5 +192,41 @@ public static class BffEndpoints
         .WithOpenApi();
 
         // Health check moved to HealthEndpoints.cs — aggregated /bff/health
+
+        // ── BFF Product (enriched with gallery) ─────────────
+        app.MapGet("/bff/catalog/products/{id:guid}", async (
+            Guid id,
+            ProductBffService productBffService,
+            CancellationToken ct) =>
+        {
+            var result = await productBffService.GetProductWithGalleryAsync(id, ct);
+            return result is not null ? Results.Ok(result) : Results.NotFound();
+        })
+        .WithTags("Catalog")
+        .WithOpenApi();
+
+        // ── BFF SKU Detail (enriched with gallery) ──────────
+        app.MapGet("/bff/catalog/skus/{skuId:guid}", async (
+            Guid skuId,
+            ProductBffService productBffService,
+            CancellationToken ct) =>
+        {
+            var result = await productBffService.GetSkuWithGalleryAsync(skuId, ct);
+            return result is not null ? Results.Ok(result) : Results.NotFound();
+        })
+        .WithTags("Catalog")
+        .WithOpenApi();
+
+        // ── BFF SKU Gallery (gallery only, lightweight) ─────
+        app.MapGet("/bff/catalog/skus/{skuId:guid}/gallery", async (
+            Guid skuId,
+            ProductBffService productBffService,
+            CancellationToken ct) =>
+        {
+            var gallery = await productBffService.GetSkuGalleryAsync(skuId, ct);
+            return Results.Ok(gallery);
+        })
+        .WithTags("Catalog")
+        .WithOpenApi();
     }
 }

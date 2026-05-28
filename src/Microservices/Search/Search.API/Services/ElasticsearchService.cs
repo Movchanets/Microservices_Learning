@@ -71,6 +71,21 @@ public sealed class ElasticsearchService(
         await UpdateWithScript(productId, ScriptConstants.RemoveSku, null, ct);
     }
 
+    public async Task UpdateProductImageUrlAsync(Guid productId, string? imageUrl, CancellationToken ct = default)
+    {
+        var response = await client.UpdateAsync<ProductSearchDocument, object>(
+            IndexName,
+            productId.ToString(),
+            u => u
+                .RetryOnConflict(5)
+                .Doc(new { ImageUrl = imageUrl, UpdatedAt = DateTime.UtcNow }),
+            ct);
+
+        if (!response.IsValidResponse)
+            logger.LogWarning("Failed to update ImageUrl for product {ProductId}: {Error}",
+                productId, response.DebugInformation);
+    }
+
     public async Task DeleteProductAsync(Guid productId, CancellationToken ct = default)
     {
         var response = await client.DeleteAsync<ProductSearchDocument>(

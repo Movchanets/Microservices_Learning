@@ -59,6 +59,7 @@ public sealed class UpdateProductHandler(
                     s.Price.Amount,
                     s.Price.Currency,
                     s.Status.ToString(),
+                    s.ImageUrl,
                     s.TypedAttributes,
                     s.FlexibleAttributes,
                     s.CreatedAt))

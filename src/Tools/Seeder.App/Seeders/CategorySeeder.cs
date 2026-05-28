@@ -27,11 +27,18 @@ public class CategorySeeder
             return existing;
         }
 
-        var response = await _client.PostAsJsonAsync("/api/catalog/categories", category, ct);
+        var request = new
+        {
+            category.Name,
+            category.Description,
+            ParentCategoryId = category.ParentCategoryId
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/catalog/categories", request, ct);
         if (response.IsSuccessStatusCode)
         {
             var dto = await response.Content.ReadFromJsonAsync<CategoryDto>(cancellationToken: ct);
-            _logger.LogInformation("Created category: {Name}", category.Name);
+            _logger.LogInformation("Created category: {Name} (parent={ParentId})", category.Name, category.ParentCategoryId);
             return dto;
         }
         else

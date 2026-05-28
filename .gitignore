@@ -505,3 +505,6 @@ tests/E2ETests/playwright-report/index.html
 tests/E2ETests/playwright-report/index.html
 .openclaude/
 .gemini/
+.playwright-mcp/
+.antigravitycli/
+src/Tools/Seeder.App/Data/Images/

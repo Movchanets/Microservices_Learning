@@ -36,6 +36,7 @@ public sealed record SkuDto(
     decimal Price,
     string Currency,
     string Status,
+    string? ImageUrl,
     Dictionary<string, string> TypedAttributes,
     Dictionary<string, string> FlexibleAttributes,
     DateTime CreatedAt);

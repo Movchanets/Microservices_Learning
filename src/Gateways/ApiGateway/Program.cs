@@ -97,6 +97,7 @@ builder.Services.AddHttpClient("notification-worker", c => c.BaseAddress = new U
 // ── BFF Services ────────────────────────────────────────
 builder.Services.AddScoped<CartBffService>();
 builder.Services.AddScoped<OrderBffService>();
+builder.Services.AddScoped<ProductBffService>();
 
 // ── CORS (for Angular SPA) ──────────────────────────────
 builder.Services.AddCors(options =>

@@ -38,6 +38,7 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<SkuDeletedConsumer>();
     x.AddConsumer<SkuPriceChangedConsumer>();
     x.AddConsumer<ProductDeletedConsumer>();
+    x.AddConsumer<MediaGalleryUpdatedConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {

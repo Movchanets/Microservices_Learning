@@ -11,7 +11,9 @@ import { SellerProductStore } from '../seller-product.store';
 import { StoreSettingsStore } from '../store-settings.store';
 import { CategoryService, CategoryOption } from '../../../core/services/category.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { MediaService } from '../../../core/services/media.service';
 import { AddSkuRequest } from '../seller.models';
+import { GalleryItem } from '../../catalog/catalog.models';
 
 interface SkuFormEntry {
   id: string;
@@ -38,6 +40,7 @@ export class ProductFormComponent implements OnInit {
   private readonly storeSettingsStore = inject(StoreSettingsStore);
   private readonly categoryService = inject(CategoryService);
   private readonly toast = inject(ToastService);
+  private readonly mediaService = inject(MediaService);
 
   isEditing = signal(false);
   productId = signal<string | null>(null);
@@ -57,6 +60,11 @@ export class ProductFormComponent implements OnInit {
 
   // Existing SKUs for edit mode
   existingSkus = signal<{ skuCode: string; price: number; currency: string }[]>([]);
+
+  // Media upload state
+  uploading = signal(false);
+  uploadError = signal<string | null>(null);
+  uploadedImages = signal<GalleryItem[]>([]);
 
   constructor() {
     // Populate form fields when editing — fires once when selectedProduct loads
@@ -153,6 +161,60 @@ export class ProductFormComponent implements OnInit {
       .replace(/^-|-$/g, '');           // trim leading/trailing hyphens
   }
 
+  async onFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      this.uploadError.set('Only JPEG, PNG, GIF, and WebP images are allowed.');
+      return;
+    }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      this.uploadError.set('File size must be less than 10MB.');
+      return;
+    }
+
+    this.uploading.set(true);
+    this.uploadError.set(null);
+
+    try {
+      // Upload to Media.API targeting this product
+      // If we don't have a productId yet (create mode), we'll upload after product creation
+      const productId = this.productId();
+      if (productId) {
+        const isFirst = this.uploadedImages().length === 0;
+        const result = await this.mediaService.upload(file, productId, 'Product', isFirst);
+        this.uploadedImages.update(imgs => [...imgs, result]);
+      } else {
+        // Store the file for later upload after product creation
+        this.pendingUploads.update(files => [...files, file]);
+      }
+    } catch (err: unknown) {
+      this.uploadError.set('Failed to upload image. Please try again.');
+    } finally {
+      this.uploading.set(false);
+      // Reset file input
+      input.value = '';
+    }
+  }
+
+  async removeImage(mediaId: string): Promise<void> {
+    try {
+      await this.mediaService.delete(mediaId);
+      this.uploadedImages.update(imgs => imgs.filter(i => i.id !== mediaId));
+    } catch {
+      this.toast.error('Failed to delete image');
+    }
+  }
+
+  // Pending uploads for create mode (files stored until product is created)
+  pendingUploads = signal<File[]>([]);
+
   async onSubmit(event: Event): Promise<void> {
     event.preventDefault();
     this.formTouched.set(true);
@@ -226,6 +288,19 @@ export class ProductFormComponent implements OnInit {
       });
 
       if (product) {
+        // Upload any pending images for the newly created product
+        const pending = this.pendingUploads();
+        if (pending.length > 0) {
+          for (let i = 0; i < pending.length; i++) {
+            try {
+              await this.mediaService.upload(pending[i], product.id, 'Product', i === 0);
+            } catch {
+              // Non-fatal: product was created, image upload can be retried
+            }
+          }
+          this.pendingUploads.set([]);
+        }
+
         // Add each SKU to the newly created product
         const failedSkus: string[] = [];
         for (const skuEntry of this.skus()) {

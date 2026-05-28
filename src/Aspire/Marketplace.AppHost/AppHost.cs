@@ -18,6 +18,7 @@ var inventoryDb = postgres.AddDatabase("inventory-db");
 var paymentDb = postgres.AddDatabase("payment-db");
 var storeDb = postgres.AddDatabase("store-db");
 var cartDb = postgres.AddDatabase("cart-db");
+var mediaDb = postgres.AddDatabase("media-db");
 
 // Redis — used by Cart.API, Notification.Worker (SignalR backplane)
 var redis = builder.AddRedis("redis")
@@ -137,6 +138,8 @@ var storeApi = builder.AddProject<Projects.StoreManagement_API>("store-api")
 
 // Phase 6: Media.API
 var mediaApi = builder.AddProject<Projects.Media_API>("media-api")
+    .WithReference(mediaDb)
+    .WaitFor(mediaDb)
     .WithReference(blobs)
     .WaitFor(blobs)
     .WithReference(messaging)

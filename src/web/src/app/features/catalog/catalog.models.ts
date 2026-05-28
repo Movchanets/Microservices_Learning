@@ -7,6 +7,7 @@ export interface Sku {
   price: number;
   currency: string;
   status: string;
+  imageUrl: string | null;
   typedAttributes: Record<string, string>;
   flexibleAttributes: Record<string, string>;
   createdAt: string;
@@ -27,6 +28,7 @@ export interface Product {
   storeId: string;
   tags: string[];
   skus: Sku[];
+  gallery: GalleryItem[];
   createdAt: string;
   updatedAt: string | null;
 }
@@ -78,6 +80,22 @@ export interface Category {
 }
 
 export type ProductStatus = 'Draft' | 'Active' | 'Inactive' | 'Deleted';
+
+/**
+ * Gallery item from Media.API
+ */
+export interface GalleryItem {
+  id: string;
+  fileName: string;
+  contentType: string;
+  url: string;
+  thumbnailUrl: string | null;
+  sizeBytes: number;
+  type: 'Image' | 'Video';
+  sortOrder: number;
+  isPrimary: boolean;
+  createdAt: string;
+}
 
 /**
  * Mirrors backend Search.API.Models.SearchResult<T>

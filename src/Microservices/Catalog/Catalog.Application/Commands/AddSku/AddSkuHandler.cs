@@ -88,6 +88,7 @@ public sealed class AddSkuHandler(
             sku.Price.Amount,
             sku.Price.Currency,
             sku.Status.ToString(),
+            sku.ImageUrl,
             sku.TypedAttributes,
             sku.FlexibleAttributes,
             sku.CreatedAt));

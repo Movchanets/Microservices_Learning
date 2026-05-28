@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import { CreateReviewRequest, Sku } from '../catalog.models';
+import { CreateReviewRequest, GalleryItem, Sku } from '../catalog.models';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ReviewStore } from '../review.store';
 import { ProductDetailStore } from './product-detail.store';
@@ -11,6 +11,7 @@ import { StockIndicatorComponent } from '../../../shared/components/stock-indica
 import { ReviewSummaryComponent } from '../components/review-summary/review-summary';
 import { ReviewListComponent } from '../components/review-list/review-list';
 import { WriteReviewComponent } from '../components/write-review/write-review';
+import { ImageGalleryComponent } from '../components/image-gallery/image-gallery';
 
 @Component({
   selector: 'app-product-detail',
@@ -24,6 +25,7 @@ import { WriteReviewComponent } from '../components/write-review/write-review';
     ReviewSummaryComponent,
     ReviewListComponent,
     WriteReviewComponent,
+    ImageGalleryComponent,
   ],
   providers: [ProductDetailStore, ReviewStore],
   templateUrl: './product-detail.html',
@@ -50,6 +52,21 @@ export class ProductDetailComponent implements OnInit {
   protected hasMultipleSkus = computed(() => {
     const product = this.store.product();
     return (product?.skus?.length ?? 0) > 1;
+  });
+
+  /**
+   * Gallery images for the current view.
+   * Uses product-level gallery. SKU-specific gallery can be added later.
+   */
+  protected galleryImages = computed<GalleryItem[]>(() => {
+    const product = this.store.product();
+    return product?.gallery ?? [];
+  });
+
+  protected fallbackImageUrl = computed(() => {
+    const product = this.store.product();
+    const sku = this.selectedSku();
+    return sku?.imageUrl ?? product?.imageUrl ?? null;
   });
 
   ngOnInit(): void {
