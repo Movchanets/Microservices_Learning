@@ -10,8 +10,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
 
   reporter: process.env.CI
-    ? [["html"], ["junit", { outputFile: "results/junit.xml" }]]
-    : [["list"], ["html"]],
+    ? [["html"], ["junit", { outputFile: "results/junit.xml" }], ["allure-playwright"]]
+    : [["list"], ["html"], ["allure-playwright"]],
 
   use: {
     baseURL: process.env.BASE_URL || "http://localhost:4201",
@@ -21,6 +21,10 @@ export default defineConfig({
     screenshot: "on-first-retry",
     video: "on-first-retry",
     trace: "on-first-retry",
+  },
+
+  metadata: {
+    environment: process.env.CI ? "ci" : "local",
   },
 
   globalSetup: require.resolve("./globalSetup"),

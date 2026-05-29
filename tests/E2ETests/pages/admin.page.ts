@@ -1,6 +1,9 @@
 import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/admin` — admin panel with store management.
+ */
 export class AdminPage extends BasePage {
   readonly pageHeading: Locator;
   readonly usersTab: Locator;

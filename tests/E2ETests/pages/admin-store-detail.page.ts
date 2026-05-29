@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/admin/stores/:id` — store detail view for admins.
+ */
 export class AdminStoreDetailPage extends BasePage {
   readonly backToVerificationsLink: Locator;
   readonly storeNameHeading: Locator;

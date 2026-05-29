@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/checkout` — enhanced checkout with payment options.
+ */
 export class CheckoutEnhancedPage extends BasePage {
   readonly pageHeading: Locator;
   readonly placeOrderBtn: Locator;

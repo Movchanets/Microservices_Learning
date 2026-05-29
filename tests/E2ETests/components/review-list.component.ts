@@ -1,18 +1,17 @@
 import { Locator, Page } from '@playwright/test';
+import { BaseComponent } from './base.component';
 
-export class ReviewListComponent {
-  readonly page: Page;
-  readonly container: Locator;
+export class ReviewListComponent extends BaseComponent {
   readonly reviews: Locator;
   readonly emptyMessage: Locator;
   readonly loadMoreBtn: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.container = page.locator('app-review-list');
-    this.reviews = this.container.locator('[class*="border-b"], [class*="divide-y"] > div');
-    this.emptyMessage = this.container.getByText(/no reviews|be the first/i);
-    this.loadMoreBtn = this.container.getByRole('button', { name: /load more|show more/i });
+    const root = page.locator('app-review-list');
+    super(page, root);
+    this.reviews = this.root.locator('[class*="border-b"], [class*="divide-y"] > div');
+    this.emptyMessage = this.root.getByText(/no reviews|be the first/i);
+    this.loadMoreBtn = this.root.getByRole('button', { name: /load more|show more/i });
   }
 
   async getReviewCount(): Promise<number> {

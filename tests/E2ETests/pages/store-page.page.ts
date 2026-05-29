@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/store/:slug` — public store page.
+ */
 export class StorePagePage extends BasePage {
   readonly storeNameHeading: Locator;
   readonly storeDescription: Locator;

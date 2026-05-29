@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/profile` — user profile settings.
+ */
 export class ProfilePage extends BasePage {
   readonly logoutBtn: Locator;
   readonly userNameTitle: Locator;
@@ -15,11 +18,5 @@ export class ProfilePage extends BasePage {
 
   async logout() {
     await this.logoutBtn.click();
-  }
-
-  async expectUserDetails(firstName: string, lastName: string, email: string) {
-    await expect(this.userNameTitle).toContainText(firstName);
-    await expect(this.userNameTitle).toContainText(lastName);
-    await expect(this.page.locator('body')).toContainText(email);
   }
 }

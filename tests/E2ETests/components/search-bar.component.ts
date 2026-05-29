@@ -1,14 +1,16 @@
 import { Locator, Page } from '@playwright/test';
+import { BaseComponent } from './base.component';
 
-export class SearchBarComponent {
-  readonly page: Page;
+export class SearchBarComponent extends BaseComponent {
   readonly searchInput: Locator;
   readonly searchBtn: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.searchInput = page.getByPlaceholder('Search products...');
-    this.searchBtn = page.getByRole('button', { name: '' }).filter({ has: page.locator('lucide-icon[name="Search"]') });
+    const root = page.locator('app-search-bar');
+    super(page, root);
+
+    this.searchInput = this.root.getByPlaceholder('Search products...');
+    this.searchBtn = this.root.getByRole('button', { name: '' }).filter({ has: this.root.locator('lucide-icon[name="Search"]') });
   }
 
   async search(query: string) {

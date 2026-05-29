@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/cart` — shopping cart page.
+ */
 export class CartPage extends BasePage {
   readonly pageHeading: Locator;
   readonly emptyCartMessage: Locator;

@@ -1,21 +1,20 @@
 import { Locator, Page } from '@playwright/test';
+import { BaseComponent } from './base.component';
 
-export class ToastContainerComponent {
-  readonly page: Page;
-  readonly container: Locator;
+export class ToastContainerComponent extends BaseComponent {
   readonly toasts: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.container = page.locator('app-toast-container');
-    this.toasts = this.container.locator('[class*="rounded-xl"][class*="shadow-lg"]');
+    const root = page.locator('app-toast-container');
+    super(page, root);
+    this.toasts = this.root.locator('[class*="rounded-xl"][class*="shadow-lg"]');
   }
 
   async waitForToast(type?: 'success' | 'error' | 'info', timeout = 10000): Promise<void> {
     const toast = type
       ? this.toasts.filter({ hasText: new RegExp(type, 'i') }).first()
       : this.toasts.first();
-    await expect(toast).toBeVisible({ timeout });
+    await toast.waitFor({ state: 'visible', timeout });
   }
 
   async getToastMessage(index = 0): Promise<string> {
@@ -32,17 +31,13 @@ export class ToastContainerComponent {
     await dismissBtn.click();
   }
 
-  async expectSuccessToast(message: string, timeout = 10000): Promise<void> {
+  async waitForSuccessToast(message: string, timeout = 10000): Promise<void> {
     const toast = this.toasts.filter({ hasText: message });
-    await expect(toast).toBeVisible({ timeout });
+    await toast.waitFor({ state: 'visible', timeout });
   }
 
-  async expectErrorToast(message: string, timeout = 10000): Promise<void> {
+  async waitForErrorToast(message: string, timeout = 10000): Promise<void> {
     const toast = this.toasts.filter({ hasText: message });
-    await expect(toast).toBeVisible({ timeout });
-  }
-
-  async isVisible(): Promise<boolean> {
-    return this.container.isVisible();
+    await toast.waitFor({ state: 'visible', timeout });
   }
 }

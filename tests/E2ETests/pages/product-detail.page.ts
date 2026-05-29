@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/catalog/:id` — product detail page.
+ */
 export class ProductDetailPage extends BasePage {
   readonly productName: Locator;
   readonly productPrice: Locator;

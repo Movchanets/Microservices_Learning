@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/profile` — profile hub with tabs (overview, orders, settings).
+ */
 export class ProfileHubPage extends BasePage {
   readonly pageHeading: Locator;
   readonly sidebar: Locator;
@@ -101,23 +104,23 @@ export class ProfileHubPage extends BasePage {
     await this.updatePasswordBtn.click();
   }
 
-  async expectProfileUpdateSuccess(timeout = 10000) {
-    await expect(this.successMessage).toBeVisible({ timeout });
+  async waitForProfileUpdateSuccess(timeout = 10000) {
+    await this.successMessage.waitFor({ state: 'visible', timeout });
   }
 
-  async expectPasswordChangeSuccess(timeout = 10000) {
-    await expect(this.successMessage).toBeVisible({ timeout });
+  async waitForPasswordChangeSuccess(timeout = 10000) {
+    await this.successMessage.waitFor({ state: 'visible', timeout });
   }
 
-  async expectValidationError(message: string, timeout = 5000) {
-    await expect(this.validationErrors.filter({ hasText: message })).toBeVisible({ timeout });
+  async waitForValidationError(message: string, timeout = 5000) {
+    await this.validationErrors.filter({ hasText: message }).waitFor({ state: 'visible', timeout });
   }
 
-  async expectError(message?: string, timeout = 10000) {
+  async waitForError(message?: string, timeout = 10000) {
     if (message) {
-      await expect(this.errorMessage.filter({ hasText: message })).toBeVisible({ timeout });
+      await this.errorMessage.filter({ hasText: message }).waitFor({ state: 'visible', timeout });
     } else {
-      await expect(this.errorMessage).toBeVisible({ timeout });
+      await this.errorMessage.waitFor({ state: 'visible', timeout });
     }
   }
 }

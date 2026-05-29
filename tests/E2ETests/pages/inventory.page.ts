@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for seller inventory management.
+ */
 export class InventoryPage extends BasePage {
   readonly pageHeading: Locator;
   readonly lowStockAlert: Locator;

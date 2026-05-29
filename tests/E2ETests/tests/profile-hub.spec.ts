@@ -7,9 +7,15 @@ test.describe('User Profile Hub', () => {
     const page = await buyerContext.newPage();
     const profileHubPage = new ProfileHubPage(page);
 
-    await profileHubPage.goto();
-    await profileHubPage.waitForPageLoad();
-    await expect(profileHubPage.pageHeading).toBeVisible();
+    await test.step('Navigate to profile hub', async () => {
+      await profileHubPage.goto();
+      await profileHubPage.waitForPageLoad();
+    });
+
+    await test.step('Verify page heading is visible', async () => {
+      await expect(profileHubPage.pageHeading).toBeVisible();
+    });
+
     await page.close();
   });
 
@@ -17,16 +23,23 @@ test.describe('User Profile Hub', () => {
     const page = await buyerContext.newPage();
     const profileHubPage = new ProfileHubPage(page);
 
-    await profileHubPage.goto();
-    await profileHubPage.waitForPageLoad();
+    await test.step('Navigate to profile hub', async () => {
+      await profileHubPage.goto();
+      await profileHubPage.waitForPageLoad();
+    });
 
-    await profileHubPage.navigateToOrders();
-    await page.waitForLoadState('domcontentloaded');
-    await expect(page).toHaveURL(/\/profile\/orders/);
+    await test.step('Navigate to orders tab', async () => {
+      await profileHubPage.navigateToOrders();
+      await page.waitForLoadState('domcontentloaded');
+      await expect(page).toHaveURL(/\/profile\/orders/);
+    });
 
-    await profileHubPage.navigateToSettings();
-    await page.waitForLoadState('domcontentloaded');
-    await expect(page).toHaveURL(/\/profile\/settings/);
+    await test.step('Navigate to settings tab', async () => {
+      await profileHubPage.navigateToSettings();
+      await page.waitForLoadState('domcontentloaded');
+      await expect(page).toHaveURL(/\/profile\/settings/);
+    });
+
     await page.close();
   });
 
@@ -34,10 +47,16 @@ test.describe('User Profile Hub', () => {
     const page = await buyerContext.newPage();
     const profileHubPage = new ProfileHubPage(page);
 
-    await profileHubPage.goto();
-    await profileHubPage.navigateToSettings();
-    await profileHubPage.waitForPageLoad();
-    await expect(page.getByRole('heading', { name: 'Profile Information' })).toBeVisible();
+    await test.step('Navigate to profile settings', async () => {
+      await profileHubPage.goto();
+      await profileHubPage.navigateToSettings();
+      await profileHubPage.waitForPageLoad();
+    });
+
+    await test.step('Verify Profile Information heading', async () => {
+      await expect(page.getByRole('heading', { name: 'Profile Information' })).toBeVisible();
+    });
+
     await page.close();
   });
 
@@ -45,10 +64,16 @@ test.describe('User Profile Hub', () => {
     const page = await buyerContext.newPage();
     const profileHubPage = new ProfileHubPage(page);
 
-    await profileHubPage.goto();
-    await profileHubPage.navigateToSettings();
-    await profileHubPage.waitForPageLoad();
-    await expect(page.getByRole('heading', { name: 'Change Password' })).toBeVisible();
+    await test.step('Navigate to profile settings', async () => {
+      await profileHubPage.goto();
+      await profileHubPage.navigateToSettings();
+      await profileHubPage.waitForPageLoad();
+    });
+
+    await test.step('Verify Change Password heading', async () => {
+      await expect(page.getByRole('heading', { name: 'Change Password' })).toBeVisible();
+    });
+
     await page.close();
   });
 
@@ -56,13 +81,18 @@ test.describe('User Profile Hub', () => {
     const page = await buyerContext.newPage();
     const profileHubPage = new ProfileHubPage(page);
 
-    await profileHubPage.goto();
-    await profileHubPage.navigateToOrders();
-    await profileHubPage.waitForPageLoad();
+    await test.step('Navigate to profile orders', async () => {
+      await profileHubPage.goto();
+      await profileHubPage.navigateToOrders();
+      await profileHubPage.waitForPageLoad();
+    });
 
-    const hasOrders = await profileHubPage.getOrderCount();
-    const isEmpty = await profileHubPage.emptyOrdersMessage.isVisible();
-    expect(hasOrders > 0 || isEmpty).toBe(true);
+    await test.step('Verify order history or empty state', async () => {
+      const hasOrders = await profileHubPage.getOrderCount();
+      const isEmpty = await profileHubPage.emptyOrdersMessage.isVisible();
+      expect(hasOrders > 0 || isEmpty).toBe(true);
+    });
+
     await page.close();
   });
 });

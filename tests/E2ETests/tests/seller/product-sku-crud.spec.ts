@@ -19,11 +19,9 @@ import { authTest as test, expect } from '../../fixtures/auth.fixture';
 import {
   createStore,
   verifyStore,
-  getStoreBySellerId,
   createProduct,
   addSku,
   getProductById,
-  activateProduct,
   ensureCategoryExists,
 } from '../../utils/api-helpers';
 import type { StoreResult, ProductResult, SkuResult } from '../../utils/types';
@@ -44,54 +42,61 @@ test.describe('Seller: Product & SKU CRUD', () => {
   });
 
   test('should create a product without SKUs', async ({ sellerApi }) => {
-    const product = await createProduct(sellerApi, {
-      name: `CRUD Product ${uniqueId}`,
-      description: 'Product for testing CRUD operations',
-      categoryId,
-      storeId: store.id,
-      tags: ['e2e', 'crud-test'],
+    const product = await test.step('Create product via API', async () => {
+      return createProduct(sellerApi, {
+        name: `CRUD Product ${uniqueId}`,
+        description: 'Product for testing CRUD operations',
+        categoryId,
+        storeId: store.id,
+        tags: ['e2e', 'crud-test'],
+      });
     });
 
-    expect(product).toBeTruthy();
-    expect(product.id).toBeTruthy();
-    expect(product.name).toBe(`CRUD Product ${uniqueId}`);
-    expect(product.storeId).toBe(store.id);
-    expect(product.skus).toEqual([]);
+    await test.step('Verify product was created correctly', async () => {
+      expect(product).toBeTruthy();
+      expect(product.id).toBeTruthy();
+      expect(product.name).toBe(`CRUD Product ${uniqueId}`);
+      expect(product.storeId).toBe(store.id);
+      expect(product.skus).toEqual([]);
+    });
   });
 
   test('should add multiple SKUs to a product', async ({ sellerApi }) => {
-    // Create a fresh product for this test
-    const product = await createProduct(sellerApi, {
-      name: `Multi-SKU Product ${uniqueId}`,
-      description: 'Product with multiple SKUs',
-      categoryId,
-      storeId: store.id,
+    const product = await test.step('Create a fresh product', async () => {
+      return createProduct(sellerApi, {
+        name: `Multi-SKU Product ${uniqueId}`,
+        description: 'Product with multiple SKUs',
+        categoryId,
+        storeId: store.id,
+      });
     });
 
-    // Add first SKU (e.g., Small Red)
-    const sku1 = await addSku(sellerApi, product.id, {
-      skuCode: `MS-${uniqueId}-S-RED`,
-      price: 29.99,
-      currency: 'USD',
-      typedAttributes: { color: 'Red', size: 'S' },
+    const sku1 = await test.step('Add first SKU (Small Red)', async () => {
+      const sku = await addSku(sellerApi, product.id, {
+        skuCode: `MS-${uniqueId}-S-RED`,
+        price: 29.99,
+        currency: 'USD',
+        typedAttributes: { color: 'Red', size: 'S' },
+      });
+      expect(sku.id).toBeTruthy();
+      expect(sku.skuCode).toBe(`MS-${uniqueId}-S-RED`);
+      expect(sku.price).toBe(29.99);
+      expect(sku.currency).toBe('USD');
+      return sku;
     });
 
-    expect(sku1.id).toBeTruthy();
-    expect(sku1.skuCode).toBe(`MS-${uniqueId}-S-RED`);
-    expect(sku1.price).toBe(29.99);
-    expect(sku1.currency).toBe('USD');
-
-    // Add second SKU (e.g., Large Blue)
-    const sku2 = await addSku(sellerApi, product.id, {
-      skuCode: `MS-${uniqueId}-L-BLU`,
-      price: 34.99,
-      currency: 'USD',
-      typedAttributes: { color: 'Blue', size: 'L' },
+    const sku2 = await test.step('Add second SKU (Large Blue)', async () => {
+      const sku = await addSku(sellerApi, product.id, {
+        skuCode: `MS-${uniqueId}-L-BLU`,
+        price: 34.99,
+        currency: 'USD',
+        typedAttributes: { color: 'Blue', size: 'L' },
+      });
+      expect(sku.id).toBeTruthy();
+      expect(sku.skuCode).toBe(`MS-${uniqueId}-L-BLU`);
+      expect(sku.price).toBe(34.99);
+      return sku;
     });
-
-    expect(sku2.id).toBeTruthy();
-    expect(sku2.skuCode).toBe(`MS-${uniqueId}-L-BLU`);
-    expect(sku2.price).toBe(34.99);
 
     // Verify the product now has both SKUs
     const fetched = await getProductById(sellerApi, product.id);

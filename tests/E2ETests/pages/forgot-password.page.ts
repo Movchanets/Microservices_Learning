@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/auth/forgot-password` — password reset request.
+ */
 export class ForgotPasswordPage extends BasePage {
   readonly emailInput: Locator;
   readonly forgotSubmitBtn: Locator;

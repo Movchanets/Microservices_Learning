@@ -1,6 +1,9 @@
 import { Locator, expect, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/auth/register` — registration form.
+ */
 export class RegisterPage extends BasePage {
   readonly firstNameInput: Locator;
   readonly lastNameInput: Locator;

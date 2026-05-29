@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/seller/products` — seller product list.
+ */
 export class SellerProductsPage extends BasePage {
   readonly addProductBtn: Locator;
   readonly productsList: Locator;

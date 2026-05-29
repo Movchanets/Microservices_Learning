@@ -1,19 +1,23 @@
 import { Locator, Page } from '@playwright/test';
+import { BaseComponent } from './base.component';
 
-export class NotFoundComponent {
-  readonly page: Page;
+/**
+ * Component object for the 404 page.
+ */
+export class NotFoundComponent extends BaseComponent {
   readonly heading404: Locator;
   readonly messageText: Locator;
   readonly goHomeLink: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.heading404 = page.getByRole('heading', { name: '404' });
-    this.messageText = page.getByText('Page not found');
-    this.goHomeLink = page.getByRole('link', { name: /go home/i });
+    const root = page.locator('app-not-found');
+    super(page, root);
+    this.heading404 = this.root.getByRole('heading', { name: '404' });
+    this.messageText = this.root.getByText('Page not found');
+    this.goHomeLink = this.root.getByRole('link', { name: /go home/i });
   }
 
-  async isVisible(): Promise<boolean> {
+  override async isVisible(): Promise<boolean> {
     return this.heading404.isVisible();
   }
 

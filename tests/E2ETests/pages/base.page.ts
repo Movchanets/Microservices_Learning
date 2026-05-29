@@ -1,7 +1,17 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
+import { TIMEOUTS } from '../utils/constants';
 
+/**
+ * Abstract base for all page objects.
+ *
+ * Provides:
+ * - Shared header / footer components
+ * - `goto()` + `waitForPageLoad()` navigation helpers
+ * - `fillStable()` — Angular-safe input fill with retry
+ * - `submitWithRetry()` — form submit with fill + enable-check loop
+ */
 export abstract class BasePage {
   readonly page: Page;
   readonly header: HeaderComponent;
@@ -13,25 +23,31 @@ export abstract class BasePage {
     this.footer = new FooterComponent(page);
   }
 
+  // ── Navigation ──────────────────────────────────────────
+
+  /** Navigate to a route (relative to BASE_URL). */
   async goto(path: string) {
     await this.page.goto(path);
   }
 
+  /** Wait for DOMContentLoaded. Prefer `expect(header.logo).toBeVisible()` for Angular SSR pages. */
   async waitForPageLoad() {
     await this.page.waitForLoadState('domcontentloaded');
   }
 
+  // ── Form Helpers ────────────────────────────────────────
+
   /**
-   * Fills an input and verifies the value took effect.
+   * Fills an input and dispatches 'input' event for Angular signal-based forms.
    * Retries up to 3 times to handle reactive form interference.
-   * Uses expect() polling instead of waitForTimeout for reliability.
    */
   protected async fillStable(input: Locator, value: string): Promise<void> {
     for (let attempt = 0; attempt < 3; attempt++) {
       await input.fill(value);
+      await input.dispatchEvent('input');
 
       try {
-        await expect(input).toHaveValue(value, { timeout: 2000 });
+        await expect(input).toHaveValue(value, { timeout: TIMEOUTS.fillRetry });
         return;
       } catch {
         // Retry on next attempt
@@ -40,7 +56,8 @@ export abstract class BasePage {
 
     // Final attempt — let the assertion throw if it still fails
     await input.fill(value);
-    await expect(input).toHaveValue(value, { timeout: 3000 });
+    await input.dispatchEvent('input');
+    await expect(input).toHaveValue(value, { timeout: TIMEOUTS.quick });
   }
 
   /**
@@ -63,7 +80,7 @@ export abstract class BasePage {
       }
     }
 
-    await expect(submitBtn).toBeEnabled({ timeout: 3000 });
+    await expect(submitBtn).toBeEnabled({ timeout: TIMEOUTS.quick });
     await submitBtn.click();
   }
 }

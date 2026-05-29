@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/seller` — seller dashboard overview.
+ */
 export class SellerDashboardPage extends BasePage {
   readonly pageHeading: Locator;
   readonly settingsIcon: Locator;

@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/home` — landing page with featured products and categories.
+ */
 export class HomePage extends BasePage {
   readonly heroBanner: Locator;
   readonly shopByCategoryHeading: Locator;

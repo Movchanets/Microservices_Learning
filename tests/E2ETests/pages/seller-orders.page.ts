@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/seller/orders` — seller order management.
+ */
 export class SellerOrdersPage extends BasePage {
   readonly pageHeading: Locator;
   readonly ordersTable: Locator;

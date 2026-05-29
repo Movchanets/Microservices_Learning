@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/seller/settings` — store settings form.
+ */
 export class StoreSettingsPage extends BasePage {
   readonly storeNameInput: Locator;
   readonly storeDescInput: Locator;
@@ -56,15 +59,15 @@ export class StoreSettingsPage extends BasePage {
     await this.saveBtn.click();
   }
 
-  async expectSuccess(timeout = 10000) {
-    await expect(this.successMessage).toBeVisible({ timeout });
+  async waitForSuccess(timeout = 10000) {
+    await this.successMessage.waitFor({ state: 'visible', timeout });
   }
 
-  async expectError(message?: string, timeout = 10000) {
+  async waitForError(message?: string, timeout = 10000) {
     if (message) {
-      await expect(this.errorMessage.filter({ hasText: message })).toBeVisible({ timeout });
+      await this.errorMessage.filter({ hasText: message }).waitFor({ state: 'visible', timeout });
     } else {
-      await expect(this.errorMessage).toBeVisible({ timeout });
+      await this.errorMessage.waitFor({ state: 'visible', timeout });
     }
   }
 

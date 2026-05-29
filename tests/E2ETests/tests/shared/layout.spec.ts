@@ -1,65 +1,97 @@
 import { test, expect } from '../../fixtures/test-base';
+import { TIMEOUTS } from '../../utils/constants';
 import { authTest } from '../../fixtures/auth.fixture';
 import { HeaderComponent } from '../../components/header.component';
 
 test.describe('Shared Layout: Header', () => {
 
   test('should display logo, search bar, and cart button', async ({ page, header }) => {
-    await page.goto('/home');
-    await page.waitForLoadState('domcontentloaded');
+    await test.step('Navigate to home page', async () => {
+      await page.goto('/home');
+      await page.waitForLoadState('domcontentloaded');
+    });
 
-    await expect(header.logo).toBeVisible();
-    await expect(header.cartBtn).toBeVisible();
+    await test.step('Verify header elements are visible', async () => {
+      await expect(header.logo).toBeVisible();
+      await expect(header.cartBtn).toBeVisible();
+    });
   });
 
   test('should show Sign in link when not authenticated', async ({ page, header }) => {
-    await page.goto('/home');
-    await page.waitForLoadState('domcontentloaded');
+    await test.step('Navigate to home page', async () => {
+      await page.goto('/home');
+      await page.waitForLoadState('domcontentloaded');
+    });
 
-    await expect(header.loginLink).toBeVisible();
+    await test.step('Verify Sign in link is visible', async () => {
+      await expect(header.loginLink).toBeVisible();
+    });
   });
 
   test('should navigate to home when clicking logo', async ({ page, header }) => {
-    await page.goto('/catalog');
-    await page.waitForLoadState('domcontentloaded');
+    await test.step('Navigate to catalog page', async () => {
+      await page.goto('/catalog');
+      await page.waitForLoadState('domcontentloaded');
+    });
 
-    await header.clickLogo();
+    await test.step('Click the logo', async () => {
+      await header.clickLogo();
+    });
 
-    await expect(page).toHaveURL(/\/home/);
+    await test.step('Verify navigation to home page', async () => {
+      await expect(page).toHaveURL(/\/home/);
+    });
   });
 
   test('should open and close mega menu', async ({ page, header }) => {
-    await page.goto('/home');
-    await page.waitForLoadState('domcontentloaded');
+    await test.step('Navigate to home page', async () => {
+      await page.goto('/home');
+      await page.waitForLoadState('domcontentloaded');
+    });
 
-    // Open mega menu
-    await header.toggleMegaMenu();
-    await expect(header.megaMenu).toBeVisible();
+    await test.step('Open mega menu', async () => {
+      await header.toggleMegaMenu();
+      await expect(header.megaMenu).toBeVisible();
+    });
 
-    // Close mega menu by clicking the toggle again
-    await header.toggleMegaMenu();
-    await expect(header.megaMenu).toBeHidden();
+    await test.step('Close mega menu', async () => {
+      await header.toggleMegaMenu();
+      await expect(header.megaMenu).toBeHidden();
+    });
   });
 
   test('should open cart drawer when clicking cart button', async ({ page, header, cartDrawer }) => {
-    await page.goto('/home');
-    await page.waitForLoadState('domcontentloaded');
+    await test.step('Navigate to home page', async () => {
+      await page.goto('/home');
+      await page.waitForLoadState('domcontentloaded');
+      // Wait for Angular hydration — header must be interactive
+      await expect(header.logo).toBeVisible({ timeout: TIMEOUTS.element });
+    });
 
-    await header.openCart();
-    await cartDrawer.waitForOpen();
+    await test.step('Open cart drawer', async () => {
+      await header.openCart();
+      await cartDrawer.waitForOpen();
+    });
 
-    await expect(cartDrawer.heading).toBeVisible();
+    await test.step('Verify cart drawer is visible', async () => {
+      await expect(cartDrawer.heading).toBeVisible();
+    });
   });
 
   test('should close cart drawer', async ({ page, header, cartDrawer }) => {
-    await page.goto('/home');
-    await page.waitForLoadState('domcontentloaded');
+    await test.step('Navigate to home page', async () => {
+      await page.goto('/home');
+      await page.waitForLoadState('domcontentloaded');
+      // Wait for Angular hydration — header must be interactive
+      await expect(header.logo).toBeVisible({ timeout: TIMEOUTS.element });
+    });
 
-    await header.openCart();
-    await cartDrawer.waitForOpen();
-
-    await cartDrawer.close();
-    await cartDrawer.waitForClose();
+    await test.step('Open and close cart drawer', async () => {
+      await header.openCart();
+      await cartDrawer.waitForOpen();
+      await cartDrawer.close();
+      await cartDrawer.waitForClose();
+    });
   });
 });
 
@@ -68,24 +100,37 @@ authTest.describe('Shared Layout: Header (Authenticated)', () => {
   authTest('should show user menu when authenticated', async ({ buyerContext }) => {
     const authPage = await buyerContext.newPage();
     const authHeader = new HeaderComponent(authPage);
-    await authPage.goto('/home');
-    await authPage.waitForLoadState('domcontentloaded');
 
-    // Should show user menu trigger instead of login link
-    await expect(authHeader.userMenuTrigger).toBeVisible({ timeout: 15000 });
+    await test.step('Navigate to home page as authenticated user', async () => {
+      await authPage.goto('/home');
+      await authPage.waitForLoadState('domcontentloaded');
+    });
+
+    await test.step('Verify user menu trigger is visible', async () => {
+      await expect(authHeader.userMenuTrigger).toBeVisible({ timeout: TIMEOUTS.api });
+    });
+
     await authPage.close();
   });
 
   authTest('should open user dropdown and show profile link', async ({ buyerContext }) => {
     const authPage = await buyerContext.newPage();
     const authHeader = new HeaderComponent(authPage);
-    await authPage.goto('/home');
-    await authPage.waitForLoadState('domcontentloaded');
 
-    await authHeader.openUserMenu();
+    await test.step('Navigate to home page as authenticated user', async () => {
+      await authPage.goto('/home');
+      await authPage.waitForLoadState('domcontentloaded');
+    });
 
-    await expect(authHeader.profileLink).toBeVisible();
-    await expect(authHeader.logoutLink).toBeVisible();
+    await test.step('Open user menu', async () => {
+      await authHeader.openUserMenu();
+    });
+
+    await test.step('Verify profile and logout links', async () => {
+      await expect(authHeader.profileLink).toBeVisible();
+      await expect(authHeader.logoutLink).toBeVisible();
+    });
+
     await authPage.close();
   });
 });
@@ -93,35 +138,43 @@ authTest.describe('Shared Layout: Header (Authenticated)', () => {
 test.describe('Shared Layout: Footer', () => {
 
   test('should display theme toggle button', async ({ page, footer }) => {
-    await page.goto('/home');
-    await page.waitForLoadState('domcontentloaded');
+    await test.step('Navigate to home page', async () => {
+      await page.goto('/home');
+      await page.waitForLoadState('domcontentloaded');
+    });
 
-    await expect(footer.themeToggle).toBeVisible();
+    await test.step('Verify theme toggle is visible', async () => {
+      await expect(footer.themeToggle).toBeVisible();
+    });
   });
 
   test('should toggle theme via dropdown', async ({ page, footer }) => {
-    await page.goto('/home');
-    await page.waitForLoadState('domcontentloaded');
+    await test.step('Navigate to home page', async () => {
+      await page.goto('/home');
+      await page.waitForLoadState('domcontentloaded');
+    });
 
-    // Get initial dark class state
-    const hadDarkInitially = await page.locator('html').evaluate(
-      (el) => el.classList.contains('dark')
-    );
+    let hadDarkInitially: boolean;
+    await test.step('Get initial theme state', async () => {
+      hadDarkInitially = await page.locator('html').evaluate(
+        (el) => el.classList.contains('dark')
+      );
+    });
 
-    // Click theme button to open dropdown
-    await footer.themeToggle.click();
+    await test.step('Toggle theme', async () => {
+      await footer.themeToggle.click();
+      if (hadDarkInitially!) {
+        await page.getByRole('button', { name: /light/i }).click();
+      } else {
+        await page.getByRole('button', { name: /dark/i }).click();
+      }
+    });
 
-    // Select the opposite theme
-    if (hadDarkInitially) {
-      await page.getByRole('button', { name: /light/i }).click();
-    } else {
-      await page.getByRole('button', { name: /dark/i }).click();
-    }
-
-    // Verify the class changed — use expect.poll to handle Angular effect timing
-    await expect.poll(
-      () => page.locator('html').evaluate((el) => el.classList.contains('dark')),
-      { timeout: 5000 }
-    ).toBe(!hadDarkInitially);
+    await test.step('Verify theme changed', async () => {
+      await expect.poll(
+        () => page.locator('html').evaluate((el) => el.classList.contains('dark')),
+        { timeout: TIMEOUTS.quick }
+      ).toBe(!hadDarkInitially!);
+    });
   });
 });

@@ -1,26 +1,21 @@
 import { Locator, Page } from '@playwright/test';
+import { BaseComponent } from './base.component';
 
-export class PaginationComponent {
-  readonly page: Page;
-  readonly container: Locator;
+export class PaginationComponent extends BaseComponent {
   readonly prevBtn: Locator;
   readonly nextBtn: Locator;
   readonly pageButtons: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.container = page.locator('nav[aria-label="Pagination"]');
-    this.prevBtn = this.container.locator('button').first();
-    this.nextBtn = this.container.locator('button').last();
-    this.pageButtons = this.container.locator('button:not(:first-child):not(:last-child)');
-  }
-
-  async isVisible(): Promise<boolean> {
-    return this.container.isVisible();
+    const root = page.locator('nav[aria-label="Pagination"]');
+    super(page, root);
+    this.prevBtn = this.root.locator('button').first();
+    this.nextBtn = this.root.locator('button').last();
+    this.pageButtons = this.root.locator('button:not(:first-child):not(:last-child)');
   }
 
   async goToPage(n: number) {
-    const btn = this.container.locator('button', { hasText: String(n) });
+    const btn = this.root.locator('button', { hasText: String(n) });
     await btn.click();
   }
 
@@ -41,7 +36,7 @@ export class PaginationComponent {
   }
 
   async getCurrentPage(): Promise<number> {
-    const activeBtn = this.container.locator('button.bg-primary, button[class*="bg-primary"]');
+    const activeBtn = this.root.locator('button.bg-primary, button[class*="bg-primary"]');
     const text = await activeBtn.innerText();
     return parseInt(text, 10);
   }

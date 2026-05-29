@@ -1,15 +1,20 @@
 import { Locator, Page } from '@playwright/test';
+import { BaseComponent } from './base.component';
 
-export class MegaMenuComponent {
-  readonly page: Page;
+/**
+ * Component object for the mega menu dropdown.
+ */
+export class MegaMenuComponent extends BaseComponent {
   readonly rootCategories: Locator;
   readonly subcategoriesPanel: Locator;
   readonly categoryLinks: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.rootCategories = page.getByTestId('root-category-btn');
-    this.subcategoriesPanel = page.locator('.flex-1.p-8');
+    const root = page.getByTestId('mega-menu-panel');
+    super(page, root);
+
+    this.rootCategories = this.root.getByTestId('root-category-btn');
+    this.subcategoriesPanel = this.root.locator('.flex-1.p-8');
     this.categoryLinks = this.subcategoriesPanel.locator('a');
   }
 
