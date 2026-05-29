@@ -58,7 +58,8 @@ export class HeaderComponent extends BaseComponent {
     this.adminLink = this.root.getByTestId('nav-admin');
 
     // Mega Menu — target the visible panel div, not the host element (which has 0 dimensions)
-    this.megaMenu = this.page.getByTestId('mega-menu-panel');
+    // NOTE: Uses this.page because the mega menu panel renders outside <header> in the DOM
+    this.megaMenu = this.page.getByTestId('mega-menu-panel'); // eslint-disable-line @typescript-eslint/no-this-alias -- panel is outside header scope
     this.megaMenuToggle = this.root.getByRole('button', { name: /catalog/i }).first();
 
     // Search — scope to header to avoid matching standalone search bar on catalog page

@@ -1,5 +1,4 @@
 /**
-import { TIMEOUTS } from '../../utils/constants';
  * E2E Tests: Product Creation with SKU Galleries & Image Uploads
  *
  * Tests the full seller product creation workflow including:
@@ -21,7 +20,7 @@ import {
   getProductById,
   ensureCategoryExists,
 } from '../../utils/catalog-helpers';
-import { ensureStoreExists } from '../../utils/store-helpers';
+import { ensureStoreExists, ensureSellerStoreViaUi } from '../../utils/store-helpers';
 import {
   uploadMedia,
   getGallery,
@@ -235,31 +234,8 @@ test.describe('Seller: Product Creation with SKU Galleries', () => {
       return ensureCategoryExists(adminApi, 'Electronics', 'Devices and gadgets');
     });
 
-    await test.step('Ensure seller has a store', async () => {
-      await page.goto('/seller');
-      await page.waitForLoadState('domcontentloaded');
-
-      const createStoreHeading = page.getByRole('heading', { name: 'Create Your Store' });
-      const hasCreateForm = await createStoreHeading.isVisible({ timeout: TIMEOUTS.quick }).catch(() => false);
-
-      if (hasCreateForm) {
-        const storeNameInput = page.getByTestId('store-name-input');
-        const storeDescInput = page.getByPlaceholder('Tell customers what your store is about...');
-        const createStoreBtn = page.getByRole('button', { name: 'Create Store' });
-
-        await expect(storeNameInput).toBeVisible({ timeout: TIMEOUTS.quick });
-
-        // Clear and type into store name
-        await storeNameInput.click({ clickCount: 3 });
-        await storeNameInput.pressSequentially('E2E Store ' + uniqueId, { delay: 20 });
-        // Clear and type into description
-        await storeDescInput.click({ clickCount: 3 });
-        await storeDescInput.pressSequentially('Automated E2E test store for product creation', { delay: 20 });
-        await page.waitForTimeout(500);
-
-        await createStoreBtn.click({ timeout: TIMEOUTS.element });
-        await page.waitForTimeout(3000);
-      }
+    await test.step('Ensure seller has a store via UI', async () => {
+      await ensureSellerStoreViaUi(page, `E2E Store ${uniqueId}`, 'Automated E2E test store for product creation');
     });
 
     await test.step('Navigate to product creation form', async () => {
@@ -381,29 +357,8 @@ test.describe('Seller: Product Creation with SKU Galleries', () => {
     const page = await sellerContext.newPage();
     const productForm = new ProductFormPage(page);
 
-    await test.step('Ensure seller has a store', async () => {
-      await page.goto('/seller');
-      await page.waitForLoadState('domcontentloaded');
-
-      const createStoreHeading = page.getByRole('heading', { name: 'Create Your Store' });
-      const hasCreateForm = await createStoreHeading.isVisible({ timeout: TIMEOUTS.quick }).catch(() => false);
-
-      if (hasCreateForm) {
-        const storeNameInput = page.getByTestId('store-name-input');
-        const storeDescInput = page.getByPlaceholder('Tell customers what your store is about...');
-        const createStoreBtn = page.getByRole('button', { name: 'Create Store' });
-
-        await expect(storeNameInput).toBeVisible({ timeout: TIMEOUTS.quick });
-
-        await storeNameInput.click({ clickCount: 3 });
-        await storeNameInput.pressSequentially('E2E Store ' + uniqueId, { delay: 20 });
-        await storeDescInput.click({ clickCount: 3 });
-        await storeDescInput.pressSequentially('Automated E2E test store for validation', { delay: 20 });
-        await page.waitForTimeout(500);
-
-        await createStoreBtn.click({ timeout: TIMEOUTS.element });
-        await page.waitForTimeout(3000);
-      }
+    await test.step('Ensure seller has a store via UI', async () => {
+      await ensureSellerStoreViaUi(page, `E2E Store ${uniqueId}`, 'Automated E2E test store for validation');
     });
 
     await test.step('Navigate to product creation form', async () => {

@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
+import { TIMEOUTS } from '../utils/constants';
 
 export interface ProductFormFields {
   name: string;
@@ -122,7 +123,7 @@ export class ProductFormPage extends BasePage {
     await this.fileInput.setInputFiles(filePaths);
     // Wait for image preview to appear (Angular processes the file)
     await this.page.locator('app-image-gallery-uploader').first()
-      .locator('img').first().waitFor({ state: 'visible', timeout: 5000 });
+      .locator('img').first().waitFor({ state: 'visible', timeout: TIMEOUTS.quick });
   }
 
   async uploadSkuImages(skuIndex: number, filePaths: string[]) {
@@ -130,7 +131,7 @@ export class ProductFormPage extends BasePage {
     await this.skuFileInput.setInputFiles(filePaths);
     // Wait for image preview to appear
     await this.page.locator('app-image-gallery-uploader').last()
-      .locator('img').first().waitFor({ state: 'visible', timeout: 5000 });
+      .locator('img').first().waitFor({ state: 'visible', timeout: TIMEOUTS.quick });
   }
 
   async submit() {
@@ -138,7 +139,7 @@ export class ProductFormPage extends BasePage {
   }
 
   async waitForSuccess() {
-    await this.page.waitForURL('**/seller/products', { timeout: 15000 });
+    await this.page.waitForURL('**/seller/products', { timeout: TIMEOUTS.api });
   }
 
   async getFormErrors(): Promise<string[]> {

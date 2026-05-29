@@ -1,6 +1,7 @@
 import { APIRequestContext } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { GalleryEntry } from './types';
 
 const TEST_IMAGES_DIR = path.resolve(__dirname, '../test-data/test-images');
 
@@ -14,7 +15,7 @@ export async function uploadMedia(
   targetId: string,
   targetType: 'Product' | 'SKU',
   isPrimary = false
-): Promise<{ id: string; url: string; thumbnailUrl?: string }> {
+): Promise<GalleryEntry> {
   const absolutePath = path.isAbsolute(filePath)
     ? filePath
     : path.join(TEST_IMAGES_DIR, filePath);
@@ -49,14 +50,7 @@ export async function getGallery(
   api: APIRequestContext,
   targetType: string,
   targetId: string
-): Promise<
-  Array<{
-    id: string;
-    url: string;
-    thumbnailUrl?: string;
-    isPrimary: boolean;
-  }>
-> {
+): Promise<GalleryEntry[]> {
   const response = await api.get(
     `/api/media/gallery/${targetType}/${targetId}`
   );

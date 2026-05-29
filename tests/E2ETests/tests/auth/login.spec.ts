@@ -44,7 +44,7 @@ test.describe('Authentication: Login', () => {
     });
 
     await test.step('Verify error message is shown', async () => {
-      await loginPage.waitForErrorMessage('401', 15_000);
+      await loginPage.waitForErrorMessage('401', TIMEOUTS.api);
     });
   });
 

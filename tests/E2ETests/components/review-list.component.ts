@@ -1,6 +1,12 @@
 import { Locator, Page } from '@playwright/test';
 import { BaseComponent } from './base.component';
 
+/**
+ * Component object for the review list.
+ *
+ * Scoped to `<app-review-list>`. Provides review count, author/rating/text
+ * extraction by index, and "load more" pagination.
+ */
 export class ReviewListComponent extends BaseComponent {
   readonly reviews: Locator;
   readonly emptyMessage: Locator;

@@ -1,6 +1,12 @@
 import { Locator, Page } from '@playwright/test';
 import { BaseComponent } from './base.component';
 
+/**
+ * Component object for the write-review form.
+ *
+ * Scoped to `<app-write-review>`. Provides star rating, title/body inputs,
+ * and a composite `writeReview()` method for the full flow.
+ */
 export class WriteReviewComponent extends BaseComponent {
   readonly ratingStars: Locator;
   readonly titleInput: Locator;

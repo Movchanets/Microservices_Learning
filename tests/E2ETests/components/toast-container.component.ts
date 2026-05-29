@@ -1,6 +1,12 @@
 import { Locator, Page } from '@playwright/test';
 import { BaseComponent } from './base.component';
 
+/**
+ * Component object for the toast notification container.
+ *
+ * Scoped to `<app-toast-container>`. Toasts are transient — use `waitForToast()`
+ * or `waitForSuccessToast()` before asserting on content.
+ */
 export class ToastContainerComponent extends BaseComponent {
   readonly toasts: Locator;
 

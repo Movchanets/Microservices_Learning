@@ -1,6 +1,11 @@
 import { Locator, Page } from '@playwright/test';
 import { BaseComponent } from './base.component';
 
+/**
+ * Component object for the standalone search bar (catalog page).
+ *
+ * Scoped to `<app-search-bar>`. For header search, use `HeaderComponent.searchInput`.
+ */
 export class SearchBarComponent extends BaseComponent {
   readonly searchInput: Locator;
   readonly searchBtn: Locator;

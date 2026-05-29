@@ -89,6 +89,15 @@ export interface OrderItemResult {
   totalPrice: number;
 }
 
+/** A single image in a product or SKU gallery. */
+export interface GalleryEntry {
+  id: string;
+  url: string;
+  thumbnailUrl?: string;
+  isPrimary: boolean;
+  fileName: string;
+}
+
 export interface InventoryResult {
   skuId: string;
   skuCode: string;

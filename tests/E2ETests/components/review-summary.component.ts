@@ -1,6 +1,11 @@
 import { Locator, Page } from '@playwright/test';
 import { BaseComponent } from './base.component';
 
+/**
+ * Component object for the review summary (average rating, total count, distribution).
+ *
+ * Scoped to `<app-review-summary>`. Displayed on product detail pages.
+ */
 export class ReviewSummaryComponent extends BaseComponent {
   readonly averageRating: Locator;
   readonly totalReviews: Locator;

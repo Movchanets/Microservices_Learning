@@ -1,6 +1,12 @@
 import { Locator, Page } from '@playwright/test';
 import { BaseComponent } from './base.component';
 
+/**
+ * Component object for the pagination nav.
+ *
+ * Scoped to `<nav aria-label="Pagination">`. Provides page navigation,
+ * prev/next buttons, and current page detection.
+ */
 export class PaginationComponent extends BaseComponent {
   readonly prevBtn: Locator;
   readonly nextBtn: Locator;
