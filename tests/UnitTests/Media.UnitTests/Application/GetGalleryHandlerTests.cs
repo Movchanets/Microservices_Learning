@@ -25,19 +25,19 @@ public class GetGalleryHandlerTests
     {
         // Arrange
         var targetId = Guid.NewGuid();
-        var mediaId1 = Guid.NewGuid();
-        var mediaId2 = Guid.NewGuid();
-
-        var entries = new List<GalleryEntry>
-        {
-            GalleryEntry.Create(mediaId1, targetId, "Product", 0, true),
-            GalleryEntry.Create(mediaId2, targetId, "Product", 1, false)
-        };
 
         var mediaItems = new List<MediaItem>
         {
             MediaItem.Create("primary.jpg", "image/jpeg", "blob1", "https://url1", 100, MediaType.Image, "thumb_blob1", null),
             MediaItem.Create("secondary.jpg", "image/png", "blob2", "https://url2", 200, MediaType.Image, null, null)
+        };
+        var mediaId1 = mediaItems[0].Id;
+        var mediaId2 = mediaItems[1].Id;
+
+        var entries = new List<GalleryEntry>
+        {
+            GalleryEntry.Create(mediaId1, targetId, "Product", 0, true),
+            GalleryEntry.Create(mediaId2, targetId, "Product", 1, false)
         };
 
         _galleryRepo.Setup(r => r.GetByTargetAsync(targetId, "Product", It.IsAny<CancellationToken>()))
@@ -81,8 +81,10 @@ public class GetGalleryHandlerTests
     {
         // Arrange
         var targetId = Guid.NewGuid();
-        var mediaId1 = Guid.NewGuid();
-        var mediaId2 = Guid.NewGuid();
+
+        var existingMedia = MediaItem.Create("existing.jpg", "image/jpeg", "blob1", "https://url1", 100, MediaType.Image, null, null);
+        var mediaId1 = existingMedia.Id;
+        var mediaId2 = Guid.NewGuid(); // Deleted media — not in DB
 
         var entries = new List<GalleryEntry>
         {
@@ -91,10 +93,7 @@ public class GetGalleryHandlerTests
         };
 
         // Only one media item returned — mediaId2 was deleted
-        var mediaItems = new List<MediaItem>
-        {
-            MediaItem.Create("existing.jpg", "image/jpeg", "blob1", "https://url1", 100, MediaType.Image, null, null)
-        };
+        var mediaItems = new List<MediaItem> { existingMedia };
 
         _galleryRepo.Setup(r => r.GetByTargetAsync(targetId, "Product", It.IsAny<CancellationToken>()))
             .ReturnsAsync(entries);

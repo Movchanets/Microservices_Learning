@@ -15,7 +15,6 @@ public class SetPrimaryMediaHandlerTests
 {
     private readonly Mock<IGalleryRepository> _galleryRepo = new();
     private readonly Mock<IMediaRepository> _mediaRepo = new();
-    private readonly Mock<IMediaStorageService> _storage = new();
     private readonly Mock<IPublishEndpoint> _publishEndpoint = new();
     private readonly Mock<IUnitOfWork> _uow = new();
     private readonly Mock<ILogger<SetPrimaryMediaHandler>> _logger = new();
@@ -26,7 +25,6 @@ public class SetPrimaryMediaHandlerTests
         _handler = new SetPrimaryMediaHandler(
             _galleryRepo.Object,
             _mediaRepo.Object,
-            _storage.Object,
             _publishEndpoint.Object,
             _uow.Object,
             _logger.Object);
