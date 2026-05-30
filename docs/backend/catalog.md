@@ -13,26 +13,14 @@
 
 | Entity | Type | Key Properties |
 |:---|:---|:---|
-| `Product` | Aggregate Root | Name, Description, Brand, ImageUrl, Tags, Status (Draft/Active/Inactive/Deleted), CategoryId, StoreId |
-| `Sku` | Child Entity (of Product) | ProductId, SkuCode, Price (Money VO), Status, TypedAttributes (jsonb), FlexibleAttributes (jsonb) |
+| `Product` | Aggregate Root | Name, Description, Brand, **ImageUrl** (cached), Tags, Status (Draft/Active/Inactive/Deleted), CategoryId, StoreId |
+| `Sku` | Child Entity (of Product) | ProductId, SkuCode, Price (Money VO), Status, **ImageUrl** (cached), TypedAttributes (jsonb), FlexibleAttributes (jsonb) |
 | `Category` | Entity | Name, ParentId (tree), AttributeDefinitions |
 | `AttributeDefinition` | Entity | Key, DisplayName, Target (Product/Sku), ValueType, IsFilterable, IsRequired, AllowedValues |
 | `Review` | Aggregate Root | ProductId, UserId, Rating, Title, Body, Photos, SellerResponse |
 | `ReviewVote` | Entity | ReviewId, UserId, IsHelpful |
 
-### SKU Refactor Status
-
-The SKU refactoring (Phases 1–8) is **complete in the domain model**. SKUs are child entities of Product carrying their own Price, TypedAttributes, and FlexibleAttributes.
-
-**Domain events now raised:**
-- `ProductCreatedDomainEvent` → `ProductCreatedEvent` ✅
-- `ProductUpdatedDomainEvent` → `ProductUpdatedEvent` ✅
-- `ProductDeletedDomainEvent` → `ProductDeletedEvent` ✅
-- `SkuCreatedDomainEvent` → `SkuCreatedIntegrationEvent` ✅
-- `SkuDeletedDomainEvent` → `SkuDeletedEvent` ✅ (handler created)
-- `SkuPriceChangedDomainEvent` → `SkuPriceChangedEvent` ✅ (handler created)
-
-**Price changes** now go through `Product.ChangeSkuPrice()` which captures old price before mutation and fires `SkuPriceChangedDomainEvent`.
+**ImageUrl caching:** `Product.ImageUrl` and `Sku.ImageUrl` are denormalized caches of the primary gallery image. They're synced by Media integration events (see below). This avoids N+1 calls to Media.API in list views.
 
 ## API Endpoints
 
@@ -57,6 +45,7 @@ The SKU refactoring (Phases 1–8) is **complete in the domain model**. SKUs are
 
 | Method | Path | Handler | Auth |
 |:---|:---|:---|:---:|
+| `GET` | `/skus/{skuId}` | `GetSkuByIdQuery` | Public |
 | `POST` | `/{id}/skus` | `AddSkuCommand` | Authenticated |
 | `DELETE` | `/{id}/skus/{skuId}` | `RemoveSkuCommand` | Authenticated |
 | `PATCH` | `/{id}/skus/{skuId}/price` | `ChangePriceCommand` | Authenticated |
@@ -97,14 +86,20 @@ The SKU refactoring (Phases 1–8) is **complete in the domain model**. SKUs are
 | `SkuDeletedEvent` | Product.RemoveSku() |
 | `SkuPriceChangedEvent` | Product.ChangeSkuPrice() |
 
-### Legacy (backward-compat fields)
+### Consumed (from Media.API)
 
-`ProductCreatedEvent` and `ProductUpdatedEvent` carry `Price=0`, `Sku=""` backward-compat fields. **These should be removed** once all consumers are migrated to SKU-level events.
+| Event | Consumer | Action |
+|:---|:---|:---|
+| `MediaUploadedIntegrationEvent` | `MediaUploadedConsumer` | Updates Product/SKU.ImageUrl when IsPrimary=true |
+| `GalleryUpdatedIntegrationEvent` | `GalleryUpdatedConsumer` | Updates Product/SKU.ImageUrl from primary gallery item |
+| `MediaDeletedIntegrationEvent` | `MediaDeletedConsumer` | Clears Product/SKU.ImageUrl if WasPrimary |
 
-## Current Status & Known Issues
+These consumers implement the **hybrid caching pattern**: list views use the cached ImageUrl (no Media.API call), detail pages fetch full gallery via BFF.
 
-- ✅ SKU refactor complete in domain model with all 6 domain events
-- ✅ All event handlers created (SkuDeleted, SkuPriceChanged)
-- 🔴 **Seeder AddSku returns 409** — `AddSkuValidator` regex or `ValidateRequiredAttributes()` throws `InvalidOperationException` mapped to 409 by GlobalExceptionMiddleware. Blocks product activation.
-- 🟡 Backward-compat fields on ProductCreatedEvent/ProductUpdatedEvent still present
-- 🟡 `Product.ChangeSkuPrice()` correctly captures old price before mutation
+## Current Status
+
+- ✅ SKU refactor complete with all 6 domain events
+- ✅ Media consumers for ImageUrl caching (upload, gallery update, delete)
+- ✅ GetSkuById endpoint for SKU detail pages
+- ✅ Reviews with seller responses and helpful votes
+- ✅ Product recommendations (same category)

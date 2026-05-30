@@ -4,47 +4,88 @@
 
 | Property | Value |
 |:---|:---|
-| **Service Type** | Thin (API-only, no Domain/Application layers) |
+| **Service Type** | Thin (single project with folder-based layers) |
 | **Storage** | Azure Blob Storage (Azurite locally) |
-| **Messaging** | None |
-| **Project Path** | `src/Microservices/Media/` |
+| **Messaging** | MassTransit (RabbitMQ) with EF Outbox |
+| **Project Path** | `src/Microservices/Media/Media.API/` |
+
+## Architecture
+
+Single project with folder-based layers (no separate .csproj — Media is "thin"):
+
+```
+Media.API/
+├── Domain/          — MediaItem, GalleryEntry, MediaType enum, repository interfaces
+├── Application/     — Commands (Upload, Delete, Reorder, SetPrimary), Query (GetGallery)
+├── Infrastructure/  — MediaDbContext, repositories, AzureBlobStorageService, DI
+├── Endpoints/       — 7 Minimal API endpoints
+├── Services/        — ImageProcessingService (thumbnails)
+└── Program.cs
+```
+
+## API Endpoints (`/api/media`)
+
+| Method | Path | Auth | Description |
+|:---|:---|:---:|:---|
+| `POST` | `/upload` | Yes | Upload image/video (multipart/form-data) |
+| `GET` | `/gallery/{targetType}/{targetId}` | No | Get gallery for target (Product/SKU) |
+| `GET` | `/{mediaId}` | No | Serve file binary |
+| `GET` | `/{mediaId}/thumbnail` | No | Serve thumbnail |
+| `DELETE` | `/{mediaId}` | Yes | Delete media + blob |
+| `PUT` | `/gallery/{targetType}/{targetId}/reorder` | Yes | Reorder gallery |
+| `PUT` | `/gallery/{targetType}/{targetId}/primary/{mediaItemId}` | Yes | Set primary image |
+
+## Domain Model
+
+| Entity | Description |
+|:---|:---|
+| `MediaItem` | File metadata (FileName, ContentType, BlobName, Url, SizeBytes, Type, ThumbnailBlobName) |
+| `GalleryEntry` | Links media to target (MediaItemId → TargetId/TargetType, SortOrder, IsPrimary) |
+| `MediaType` | Enum: Image, Video |
+
+**Key convention:** `TargetType` is normalized to UPPERCASE in `GalleryEntry.Create()`. All repository queries use `ToUpperInvariant()` for consistent matching.
+
+## Integration Events
+
+| Event | Trigger | Consumers |
+|:---|:---|:---|
+| `MediaUploadedIntegrationEvent` | Image uploaded with IsPrimary=true | Catalog (updates Product/SKU.ImageUrl) |
+| `GalleryUpdatedIntegrationEvent` | Gallery reordered or primary changed | Catalog + Search |
+| `MediaDeletedIntegrationEvent` | Image deleted | Catalog (clears ImageUrl if WasPrimary) |
 
 ## Storage Architecture
 
 - **Container:** `media`
 - **Naming:** `{guid}.{ext}` for originals, `thumb_{guid}.{ext}` for thumbnails
-- **Allowed types:** image/jpeg, image/png, image/gif, image/webp, application/pdf
-- **Max size:** 10 MB
+- **Allowed types:** image/jpeg, image/png, image/gif, image/webp, video/mp4
+- **Max size:** 10 MB (images), 100 MB (video)
 
-## API Endpoints (`/api/media`)
+## BFF Integration
 
-| Method | Path | Handler | Auth |
-|:---|:---|:---|:---:|
-| `POST` | `/upload` | Upload (multipart/form-data) | Authenticated |
-| `GET` | `/{blobName}` | Download/serve file | Public |
-| `GET` | `/{blobName}/thumbnail` | Serve thumbnail | Public |
-| `GET` | `/` | List all files | Authenticated |
-| `DELETE` | `/{blobName}` | Delete file + thumbnail | Authenticated |
+The Gateway's `ProductBffService` fetches gallery from Media.API in parallel with catalog data:
 
-### Upload Response
+| BFF Endpoint | Description |
+|:---|:---|
+| `GET /bff/catalog/products/{id}` | Product + gallery (parallel fetch) |
+| `GET /bff/catalog/skus/{skuId}` | SKU + gallery (parallel fetch) |
+| `GET /bff/catalog/skus/{skuId}/gallery` | SKU gallery only |
 
-```csharp
-record MediaUploadResponse(string BlobName, string Url, string ContentType, long Size);
-```
+## Key Files
 
-## Features
+| File | Purpose |
+|:---|:---|
+| `Endpoints/MediaEndpoints.cs` | 7 Minimal API endpoints |
+| `Domain/Entities/MediaItem.cs` | File metadata entity |
+| `Domain/Entities/GalleryEntry.cs` | Links media to targets |
+| `Application/Commands/UploadMedia/UploadMediaHandler.cs` | Upload + thumbnail + gallery entry |
+| `Application/MediaUrlExtensions.cs` | URL building (relative, not blob URLs) |
+| `Infrastructure/Repositories/GalleryRepository.cs` | Gallery queries with TargetType normalization |
 
-- **Automatic thumbnail generation** for image uploads (via `ImageProcessingService`)
-- **Antiforgery disabled** on upload endpoint (required for multipart/form-data)
-- **Thumbnail cleanup** on delete (removes both original and `thumb_` prefixed thumbnail)
-
-## Integration Events
-
-None — Media is a standalone service with no event publishing or consumption.
-
-## Current Status & Known Issues
+## Current Status
 
 - ✅ Full CRUD with thumbnail support
+- ✅ Gallery management (reorder, set primary)
+- ✅ Integration events (MediaUploaded, GalleryUpdated, MediaDeleted)
+- ✅ BFF parallel fetch for product detail pages
 - ✅ Content-type validation and size limits
-- ⚠️ No access control on file retrieval (anyone with blob name can download)
 - ⚠️ No virus scanning or content moderation

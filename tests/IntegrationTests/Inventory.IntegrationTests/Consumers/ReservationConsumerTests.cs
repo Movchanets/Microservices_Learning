@@ -44,7 +44,7 @@ public class ReservationConsumerTests
 
         var orderId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        var items = new List<OrderItemContract> { new(productId, Guid.NewGuid(), "TEST-SKU", "Test Product", 3, 25.00m, storeId) };
+        var items = new List<OrderItemContract> { new(productId, skuId, "TEST-SKU", "Test Product", 3, 25.00m, storeId) };
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
 
         // Resolve real ISender from DI (MediatR with real handlers)
@@ -97,7 +97,7 @@ public class ReservationConsumerTests
 
         var orderId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        var items = new List<OrderItemContract> { new(productId2, Guid.NewGuid(), "TEST-SKU", "Test Product", 5, 10.00m, storeId2) };
+        var items = new List<OrderItemContract> { new(productId2, skuId2, "TEST-SKU", "Test Product", 5, 10.00m, storeId2) };
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
 
         using var scope = _fixture.CreateScope();
@@ -156,8 +156,8 @@ public class ReservationConsumerTests
         var correlationId = Guid.NewGuid();
         var items = new List<OrderItemContract>
         {
-            new(productId1, Guid.NewGuid(), "TEST-SKU", "Test Product", 4, 15.00m, storeId3),
-            new(productId2b, Guid.NewGuid(), "TEST-SKU", "Test Product", 7, 30.00m, storeId3)
+            new(productId1, skuId1, "TEST-SKU", "Test Product", 4, 15.00m, storeId3),
+            new(productId2b, skuId2, "TEST-SKU", "Test Product", 7, 30.00m, storeId3)
         };
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
 
@@ -215,7 +215,7 @@ public class ReservationConsumerTests
 
         var orderId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        var items = new List<OrderItemContract> { new(productId3, Guid.NewGuid(), "TEST-SKU", "Test Product", 4, 25.00m, storeId4) };
+        var items = new List<OrderItemContract> { new(productId3, skuId3, "TEST-SKU", "Test Product", 4, 25.00m, storeId4) };
         var command = new CancelReservationCommand(correlationId, orderId, items);
 
         using var scope = _fixture.CreateScope();

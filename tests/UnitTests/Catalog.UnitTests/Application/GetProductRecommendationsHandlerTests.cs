@@ -117,7 +117,7 @@ public class GetProductRecommendationsHandlerTests
             .ReturnsAsync(product);
 
         _readRepositoryMock
-            .Setup(repo => repo.ListAsync(1, 4, categoryId, null, null, It.IsAny<CancellationToken>()))
+            .Setup(repo => repo.ListAsync(1, 4, categoryId, null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedResult);
 
         // Act
@@ -179,7 +179,7 @@ public class GetProductRecommendationsHandlerTests
             .ReturnsAsync(product);
 
         _readRepositoryMock
-            .Setup(repo => repo.ListAsync(1, 4, categoryId, null, null, It.IsAny<CancellationToken>()))
+            .Setup(repo => repo.ListAsync(1, 4, categoryId, null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedResult);
 
         // Act

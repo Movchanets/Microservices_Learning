@@ -105,6 +105,6 @@ public class IndexingTests
         response.Found.Should().BeTrue();
         var retrieved = response.Source!;
         retrieved.Name.Should().Be("Updated Name");
-        retrieved.Currency.Should().Be("EUR");
+        retrieved.Currency.Should().Be("USD"); // Currency is not changed by metadata update
     }
 }

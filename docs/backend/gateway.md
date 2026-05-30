@@ -44,9 +44,12 @@ Angular SPA ──► Gateway (Cookie + CSRF) ──► YARP ──► Microserv
 | `POST` | `/bff/auth/logout` | Clears session + CSRF cookies | Authenticated |
 | `GET` | `/bff/user` | Returns user profile from cookie claims | Authenticated |
 | `GET` | `/bff/csrf` | Issues fresh XSRF-TOKEN cookie | Public |
-| `GET` | `/bff/cart` | Cart enriched with product details (CartBffService) | Public |
-| `GET` | `/bff/orders/buyer/{buyerId}` | Orders enriched with product details (OrderBffService) | Authenticated |
+| `GET` | `/bff/cart` | Cart enriched with product details | Public |
+| `GET` | `/bff/orders/buyer/{buyerId}` | Orders enriched with product details | Authenticated |
 | `GET` | `/bff/orders/{id}` | Single order enriched with details | Authenticated |
+| `GET` | `/bff/catalog/products/{id}` | Product + gallery (parallel fetch) | Public |
+| `GET` | `/bff/catalog/skus/{skuId}` | SKU + gallery (parallel fetch) | Public |
+| `GET` | `/bff/catalog/skus/{skuId}/gallery` | SKU gallery only | Public |
 
 ## Auth Flow
 
@@ -74,12 +77,28 @@ Angular SPA ──► Gateway (Cookie + CSRF) ──► YARP ──► Microserv
 |:---|:---|
 | `CartBffService` | Enriches cart items with product names/prices from Catalog API |
 | `OrderBffService` | Enriches order items with product details from Catalog API |
+| `ProductBffService` | Fetches product/SKU + gallery in parallel from Catalog + Media APIs |
 
-## Current Status & Known Issues
+## Middleware Pipeline (order matters)
+
+```
+MapDefaultEndpoints()    → Health checks (/health, /alive)
+UseRateLimiter()         → 100 req/min fixed window
+UseCors()                → Angular SPA origins
+RequestLoggingMiddleware → HTTP method/path/status/duration
+EnableBuffering()        → YARP can re-read request body
+UseAuthentication()      → Cookie + JWT Bearer
+CookieToBearerMiddleware → Cookie → Bearer transform (MUST run before CSRF)
+CsrfValidationMiddleware → X-XSRF-TOKEN check (skips when Bearer present)
+UseAuthorization()       → Role/policy checks
+```
+
+## Current Status
 
 - ✅ Full BFF pattern with cookie-based auth for SPA
 - ✅ CSRF protection with automatic token management
 - ✅ YARP reverse proxy with Aspire service discovery
 - ✅ Rate limiting configured
+- ✅ ProductBffService — parallel catalog + gallery fetch
 - ⚠️ Angular dev server may exit if Gateway is down (dependency)
 - ⚠️ Scalar container failed to start (API docs, non-blocking)

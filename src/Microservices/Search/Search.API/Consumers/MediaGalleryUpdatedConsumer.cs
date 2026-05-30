@@ -7,8 +7,13 @@ namespace Search.API.Consumers;
 /// <summary>
 /// Consumes GalleryUpdatedIntegrationEvent from Media.API.
 /// Updates ProductSearchDocument.ImageUrl in Elasticsearch when the primary image changes.
+///
 /// This ensures search results show the correct thumbnail without waiting for
-/// a Catalog domain event to propagate.
+/// a Catalog domain event to propagate. It's a "fast path" — the Catalog consumer
+/// (GalleryUpdatedConsumer) handles the canonical Product.ImageUrl update,
+/// but this consumer keeps Elasticsearch in sync directly from Media events.
+///
+/// Only handles Product targets — SKU-level images don't appear in search results.
 /// </summary>
 public sealed class MediaGalleryUpdatedConsumer(
     ISearchService searchService,
@@ -33,6 +38,7 @@ public sealed class MediaGalleryUpdatedConsumer(
 
         await searchService.UpdateProductImageUrlAsync(evt.TargetId, primaryUrl, ct);
 
-        logger.LogInformation("Updated ProductSearchDocument.ImageUrl for {ProductId}", evt.TargetId);
+        logger.LogInformation(
+            "Updated ProductSearchDocument.ImageUrl for {ProductId}", evt.TargetId);
     }
 }

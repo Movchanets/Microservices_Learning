@@ -14,6 +14,20 @@ using Microsoft.Extensions.Logging;
 
 namespace Media.API.Application.Commands.UploadMedia;
 
+/// <summary>
+/// Handles media upload: validates file, stores in blob storage, generates thumbnail,
+/// creates domain entities, publishes integration event, and commits via Outbox.
+///
+/// Flow:
+///   1. Validate content type and file size
+///   2. Upload original file to blob storage
+///   3. Generate thumbnail (images only, non-fatal if fails)
+///   4. Create MediaItem domain entity
+///   5. Handle primary image logic (unset existing primary if needed)
+///   6. Create GalleryEntry linking media to target
+///   7. Publish MediaUploadedIntegrationEvent (captured by Outbox)
+///   8. SaveChanges (Outbox atomically captures event + entities)
+/// </summary>
 public sealed class UploadMediaHandler(
     IMediaRepository mediaRepository,
     IGalleryRepository galleryRepository,
@@ -24,7 +38,10 @@ public sealed class UploadMediaHandler(
     ILogger<UploadMediaHandler> logger)
     : IRequestHandler<UploadMediaCommand, Result<MediaItemDto>>
 {
-    private static readonly Dictionary<string, MediaType> ContentTypeToMediaType = new(StringComparer.OrdinalIgnoreCase)
+    // ── Allowed Content Types ────────────────────────────────────
+
+    private static readonly Dictionary<string, MediaType> ContentTypeToMediaType = new(
+        StringComparer.OrdinalIgnoreCase)
     {
         ["image/jpeg"] = MediaType.Image,
         ["image/png"] = MediaType.Image,
@@ -33,63 +50,64 @@ public sealed class UploadMediaHandler(
         ["video/mp4"] = MediaType.Video
     };
 
+    // ── Handler ──────────────────────────────────────────────────
+
     public async Task<Result<MediaItemDto>> Handle(
         UploadMediaCommand request, CancellationToken cancellationToken)
     {
         logger.LogInformation(
-            "UploadMedia received: FileName={FileName}, TargetType={TargetType}, TargetId={TargetId}, IsPrimary={IsPrimary}, ContentType={ContentType}",
-            request.FileName, request.TargetType, request.TargetId, request.IsPrimary, request.ContentType);
+            "UploadMedia received: FileName={FileName}, TargetType={TargetType}, " +
+            "TargetId={TargetId}, IsPrimary={IsPrimary}, ContentType={ContentType}",
+            request.FileName, request.TargetType, request.TargetId,
+            request.IsPrimary, request.ContentType);
 
+        // ── Step 1: Validate content type ────────────────────────
         if (!ContentTypeToMediaType.TryGetValue(request.ContentType, out var mediaType))
             return Result<MediaItemDto>.Failure(
-                $"Content type '{request.ContentType}' is not allowed.", "INVALID_CONTENT_TYPE");
+                $"Content type '{request.ContentType}' is not allowed.",
+                "INVALID_CONTENT_TYPE");
 
-        var maxSize = mediaType == MediaType.Video ? 100L * 1024 * 1024 : 10L * 1024 * 1024;
+        // ── Step 2: Validate file size ───────────────────────────
+        var maxSize = mediaType == MediaType.Video
+            ? 100L * 1024 * 1024   // 100MB for video
+            : 10L * 1024 * 1024;   // 10MB for images
+
         if (request.FileStream.Length > maxSize)
             return Result<MediaItemDto>.Failure(
-                $"File size exceeds maximum of {maxSize / 1024 / 1024}MB.", "FILE_TOO_LARGE");
+                $"File size exceeds maximum of {maxSize / 1024 / 1024}MB.",
+                "FILE_TOO_LARGE");
 
-        // Upload original file
+        // ── Step 3: Upload original to blob storage ──────────────
         var uploadResult = await storageService.UploadAsync(
             request.FileStream, request.FileName, request.ContentType, cancellationToken);
 
-        // Generate thumbnail for images
+        // ── Step 4: Generate thumbnail (images only) ─────────────
         string? thumbnailBlobName = null;
         if (mediaType == MediaType.Image)
         {
-            try
-            {
-                request.FileStream.Position = 0;
-                var thumbStream = await imageProcessingService.CreateThumbnailAsync(
-                    request.FileStream, cancellationToken);
-                var thumbResult = await storageService.UploadAsync(
-                    thumbStream, $"thumb_{request.FileName}", "image/jpeg", cancellationToken);
-                thumbnailBlobName = thumbResult.BlobName;
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Failed to generate thumbnail for {FileName}, continuing without", request.FileName);
-            }
+            thumbnailBlobName = await TryGenerateThumbnailAsync(
+                request.FileStream, request.FileName, cancellationToken);
         }
 
-        // Create domain entity with API-served URL (not blob URL)
+        // ── Step 5: Create domain entity ─────────────────────────
         var mediaItem = MediaItem.Create(
             request.FileName,
             request.ContentType,
             uploadResult.BlobName,
-            uploadResult.Url, // placeholder, overridden below
+            uploadResult.Url,      // placeholder — overridden below
             uploadResult.SizeBytes,
             mediaType,
             thumbnailBlobName,
             request.CreatedBy);
 
+        // Set the API-served URL (not the raw blob URL)
         mediaItem.SetUrl(mediaItem.GetMediaUrl());
 
-        // Single query — reuse for both primary check and sort order (#9 fix)
+        // ── Step 6: Handle primary image + gallery entry ─────────
         var existingEntries = await galleryRepository.GetByTargetAsync(
             request.TargetId, request.TargetType, cancellationToken);
 
-        // If setting as primary, unset existing primary
+        // If setting as primary, unset existing primary entries
         if (request.IsPrimary)
         {
             var primaries = existingEntries.Where(e => e.IsPrimary).ToList();
@@ -103,17 +121,20 @@ public sealed class UploadMediaHandler(
             mediaItem.Id,
             request.TargetId,
             request.TargetType,
-            existingEntries.Count,
+            existingEntries.Count,  // sort order = append to end
             request.IsPrimary);
 
         mediaRepository.Add(mediaItem);
         galleryRepository.Add(galleryEntry);
 
         logger.LogInformation(
-            "GalleryEntry created: Id={EntryId}, MediaItemId={MediaItemId}, TargetType={TargetType}, TargetId={TargetId}, SortOrder={SortOrder}, IsPrimary={IsPrimary}",
-            galleryEntry.Id, galleryEntry.MediaItemId, galleryEntry.TargetType, galleryEntry.TargetId, galleryEntry.SortOrder, galleryEntry.IsPrimary);
+            "GalleryEntry created: Id={EntryId}, MediaItemId={MediaItemId}, " +
+            "TargetType={TargetType}, TargetId={TargetId}, SortOrder={SortOrder}, " +
+            "IsPrimary={IsPrimary}",
+            galleryEntry.Id, galleryEntry.MediaItemId, galleryEntry.TargetType,
+            galleryEntry.TargetId, galleryEntry.SortOrder, galleryEntry.IsPrimary);
 
-        // Publish BEFORE SaveChanges — MassTransit outbox captures this atomically
+        // ── Step 7: Publish integration event (Outbox captures atomically) ──
         await publishEndpoint.Publish(new MediaUploadedIntegrationEvent(
             mediaItem.Id,
             request.TargetId,
@@ -123,6 +144,7 @@ public sealed class UploadMediaHandler(
             request.IsPrimary,
             DateTime.UtcNow), cancellationToken);
 
+        // ── Step 8: Commit (Outbox atomically saves event + entities) ───────
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
@@ -140,5 +162,30 @@ public sealed class UploadMediaHandler(
             galleryEntry.SortOrder,
             galleryEntry.IsPrimary,
             mediaItem.CreatedAt));
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Generates a thumbnail for an image. Non-fatal — if thumbnail generation
+    /// fails, the upload still succeeds (just without a thumbnail).
+    /// </summary>
+    private async Task<string?> TryGenerateThumbnailAsync(
+        Stream fileStream, string fileName, CancellationToken ct)
+    {
+        try
+        {
+            fileStream.Position = 0;
+            var thumbStream = await imageProcessingService.CreateThumbnailAsync(fileStream, ct);
+            var thumbResult = await storageService.UploadAsync(
+                thumbStream, $"thumb_{fileName}", "image/jpeg", ct);
+            return thumbResult.BlobName;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Failed to generate thumbnail for {FileName}, continuing without", fileName);
+            return null;
+        }
     }
 }

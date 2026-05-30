@@ -6,6 +6,21 @@ using Seeder.App.Seeders;
 
 namespace Seeder.App;
 
+/// <summary>
+/// Orchestrates the full database seeding pipeline.
+/// Runs as a BackgroundService — starts on app launch, stops when done.
+///
+/// Pipeline order:
+///   1. Users — create admin + sellers, get auth tokens
+///   2. Stores — create stores for each seller
+///   3. Categories — create from categories.json + Rozetka breadcrumbs
+///   4. Products — create products + variant SKUs
+///   5. Inventory — stock initial quantities
+///   6. Media — upload product/SKU gallery images
+///   7. Orders — run a sample order flow (buyer checkout)
+///
+/// Each step is idempotent — re-running the seeder skips existing data.
+/// </summary>
 public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
@@ -13,7 +28,10 @@ public class Worker : BackgroundService
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly string _dataDirectory;
 
-    public Worker(ILogger<Worker> logger, IHttpClientFactory httpClientFactory, IHostApplicationLifetime hostApplicationLifetime)
+    public Worker(
+        ILogger<Worker> logger,
+        IHttpClientFactory httpClientFactory,
+        IHostApplicationLifetime hostApplicationLifetime)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
@@ -36,37 +54,43 @@ public class Worker : BackgroundService
             var productSeeder = new ProductSeeder(httpClient, _logger);
             var inventorySeeder = new InventorySeeder(httpClient, _logger);
 
-            // 1. Seed Users & get tokens
-            var (adminToken, techSellerToken, homeSellerToken) = await SeedUsersAsync(userSeeder, stoppingToken);
+            // ── Step 1: Users & Auth Tokens ──────────────────────
+            var (adminToken, techSellerToken, homeSellerToken) =
+                await SeedUsersAsync(userSeeder, stoppingToken);
 
-            // 2. Seed Stores
-            await SeedStoresAsync(storeSeeder, userSeeder, adminToken, techSellerToken, homeSellerToken, stoppingToken);
+            // ── Step 2: Stores ───────────────────────────────────
+            await SeedStoresAsync(storeSeeder, userSeeder,
+                adminToken, techSellerToken, homeSellerToken, stoppingToken);
 
             _logger.LogInformation("Waiting for store verification events to propagate...");
             await Task.Delay(3000, stoppingToken);
 
-            // 3. Seed Categories
+            // ── Step 3: Categories ───────────────────────────────
             var products = await LoadJsonAsync<List<ProductModel>>("products.json");
-            var resultCategories = await SeedCategoriesAsync(categorySeeder, adminToken, products, stoppingToken);
+            var resultCategories = await SeedCategoriesAsync(
+                categorySeeder, adminToken, products, stoppingToken);
 
-            // 4. Load category mapping
+            // ── Step 4: Category Mapping ─────────────────────────
             var categoryMapping = await LoadCategoryMappingAsync();
 
-            // 5. Seed Products
+            // ── Step 5: Products + SKUs ──────────────────────────
             var productIds = await SeedProductsAsync(
                 productSeeder, products, resultCategories, categoryMapping,
                 techSellerToken, homeSellerToken, stoppingToken);
 
-            // 6. Seed Inventory
-            await SeedInventoryAsync(inventorySeeder, products, productIds, techSellerToken, homeSellerToken, stoppingToken);
+            // ── Step 6: Inventory ────────────────────────────────
+            await SeedInventoryAsync(inventorySeeder, products, productIds,
+                techSellerToken, homeSellerToken, stoppingToken);
 
-            // 7. Upload product images (direct to MediaApi, bypasses YARP gateway)
+            // ── Step 7: Media Upload ─────────────────────────────
             var downloadClient = _httpClientFactory.CreateClient("download");
             var mediaClient = _httpClientFactory.CreateClient("MediaApi");
-            var mediaSeeder = new MediaSeeder(httpClient, mediaClient, downloadClient, _logger, _dataDirectory);
-            await UploadProductImagesAsync(mediaSeeder, products, productIds, techSellerToken, homeSellerToken, stoppingToken);
+            var mediaSeeder = new MediaSeeder(
+                httpClient, mediaClient, downloadClient, _logger, _dataDirectory);
+            await UploadProductImagesAsync(mediaSeeder, products, productIds,
+                techSellerToken, homeSellerToken, stoppingToken);
 
-            // 8. Order flow
+            // ── Step 8: Order Flow ───────────────────────────────
             await RunOrderFlowAsync(httpClient, productIds, stoppingToken);
 
             _logger.LogInformation("Seeding completed successfully.");
@@ -81,6 +105,14 @@ public class Worker : BackgroundService
         }
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // SEEDING STEPS
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Creates users and obtains auth tokens.
+    /// Returns (adminToken, techSellerToken, homeSellerToken).
+    /// </summary>
     private async Task<(string AdminToken, string TechSellerToken, string HomeSellerToken)> SeedUsersAsync(
         UserSeeder userSeeder, CancellationToken ct)
     {
@@ -103,9 +135,13 @@ public class Worker : BackgroundService
         return (adminToken, techSellerToken, homeSellerToken);
     }
 
+    /// <summary>
+    /// Creates stores for each seller. Skips if store already exists.
+    /// </summary>
     private async Task SeedStoresAsync(
         StoreSeeder storeSeeder, UserSeeder userSeeder,
-        string adminToken, string techSellerToken, string homeSellerToken, CancellationToken ct)
+        string adminToken, string techSellerToken, string homeSellerToken,
+        CancellationToken ct)
     {
         var stores = await LoadJsonAsync<List<StoreModel>>("stores.json");
         foreach (var store in stores)
@@ -113,37 +149,47 @@ public class Worker : BackgroundService
             var sellerToken = GetSellerToken(store.SellerEmail, techSellerToken, homeSellerToken);
             var sellerId = await userSeeder.GetUserIdAsync(store.SellerEmail, adminToken, ct);
             if (sellerId != null)
-                await storeSeeder.EnsureStoreExistsAsync(store, sellerId.Value, sellerToken, adminToken, ct);
+                await storeSeeder.EnsureStoreExistsAsync(
+                    store, sellerId.Value, sellerToken, adminToken, ct);
             else
-                _logger.LogWarning("Could not find user ID for seller {Email}. Skipping store.", store.SellerEmail);
+                _logger.LogWarning(
+                    "Could not find user ID for seller {Email}. Skipping store.",
+                    store.SellerEmail);
             await Task.Delay(500, ct);
         }
     }
 
+    /// <summary>
+    /// Creates categories from categories.json + Rozetka breadcrumb paths.
+    /// Builds parent→child hierarchy from breadcrumb segments.
+    /// </summary>
     private async Task<List<CategoryDto>> SeedCategoriesAsync(
-        CategorySeeder categorySeeder, string adminToken, List<ProductModel> rozetkaProducts, CancellationToken ct)
+        CategorySeeder categorySeeder, string adminToken,
+        List<ProductModel> rozetkaProducts, CancellationToken ct)
     {
         var categoriesToSeed = await LoadJsonAsync<List<CategoryModel>>("categories.json");
         var existingCategories = await categorySeeder.GetExistingCategoriesAsync(ct);
         var resultCategories = new List<CategoryDto>(existingCategories);
 
+        // Create categories from categories.json
         foreach (var category in categoriesToSeed)
         {
-            var createdCategory = await categorySeeder.EnsureCategoryExistsAsync(category, adminToken, existingCategories, ct);
-            if (createdCategory != null && !resultCategories.Any(c => c.Name == createdCategory.Name))
+            var createdCategory = await categorySeeder.EnsureCategoryExistsAsync(
+                category, adminToken, existingCategories, ct);
+            if (createdCategory != null
+                && !resultCategories.Any(c => c.Name == createdCategory.Name))
                 resultCategories.Add(createdCategory);
         }
 
-        // Also create nested categories from Rozetka breadcrumbs
-        // Parse breadcrumb paths like "Мобільні телефони > Мобільні телефони Apple > ..."
-        // and create parent→child hierarchy
+        // Create nested categories from Rozetka breadcrumbs
+        // Parse paths like "Мобільні телефони > Мобільні телефони Apple > ..."
         var breadcrumbPaths = rozetkaProducts
             .Where(p => p.CategoryName.Contains('>'))
             .Select(p => p.CategoryName)
             .Distinct()
             .ToList();
 
-        // Collect all unique segments in order (parents before children)
+        // Collect unique segments in order (parents before children)
         var segmentOrder = new List<string>();
         foreach (var path in breadcrumbPaths)
         {
@@ -160,32 +206,11 @@ public class Worker : BackgroundService
         // Create categories depth-first: parent first, then children
         foreach (var catName in segmentOrder)
         {
-            if (resultCategories.Any(c => c.Name.Equals(catName, StringComparison.OrdinalIgnoreCase)))
+            if (resultCategories.Any(c =>
+                c.Name.Equals(catName, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
-            // Find parent: look for the breadcrumb path that contains this segment
-            // and use the segment before it as the parent
-            Guid? parentId = null;
-            foreach (var path in breadcrumbPaths)
-            {
-                var segments = path.Split('>').Select(s => s.Trim()).ToList();
-                var idx = segments.FindIndex(s => s.Equals(catName, StringComparison.OrdinalIgnoreCase));
-                if (idx > 0)
-                {
-                    // The segment before this one is the parent
-                    var parentName = segments[idx - 1].Trim();
-                    if (parentName.Length > 2 && parentName != "Інтернет-магазин Rozetka")
-                    {
-                        var parentCat = resultCategories.FirstOrDefault(c =>
-                            c.Name.Equals(parentName, StringComparison.OrdinalIgnoreCase));
-                        if (parentCat != null)
-                        {
-                            parentId = parentCat.Id;
-                            break;
-                        }
-                    }
-                }
-            }
+            Guid? parentId = FindParentCategory(catName, breadcrumbPaths, resultCategories);
 
             var created = await categorySeeder.EnsureCategoryExistsAsync(
                 new CategoryModel(catName, $"Rozetka: {catName}", parentId),
@@ -197,6 +222,10 @@ public class Worker : BackgroundService
         return resultCategories;
     }
 
+    /// <summary>
+    /// Loads category mapping from category-mapping.json (optional).
+    /// Maps Rozetka category names to existing marketplace categories.
+    /// </summary>
     private async Task<Dictionary<string, string>> LoadCategoryMappingAsync()
     {
         try
@@ -205,7 +234,8 @@ public class Worker : BackgroundService
             if (File.Exists(mappingPath))
             {
                 var mappingJson = await File.ReadAllTextAsync(mappingPath);
-                var mapping = JsonSerializer.Deserialize<Dictionary<string, string>>(mappingJson) ?? new();
+                var mapping = JsonSerializer.Deserialize<Dictionary<string, string>>(mappingJson)
+                    ?? new();
                 _logger.LogInformation("Loaded {Count} category mappings", mapping.Count);
                 return mapping;
             }
@@ -217,6 +247,10 @@ public class Worker : BackgroundService
         return new();
     }
 
+    /// <summary>
+    /// Creates products and their variant SKUs via Catalog API.
+    /// Returns a lookup: skuCode → (storeId, productId, skuId).
+    /// </summary>
     private async Task<Dictionary<string, (Guid StoreId, Guid ProductId, Guid SkuId)>> SeedProductsAsync(
         ProductSeeder productSeeder,
         List<ProductModel> products,
@@ -235,14 +269,17 @@ public class Worker : BackgroundService
             var token = GetSellerToken(product.StoreName, techSellerToken, homeSellerToken);
             var storeId = GetStoreId(product.StoreName, techStoreId, homeStoreId);
 
-            var categoryId = FindBestCategory(product.CategoryName, categories, categoryMapping);
+            var categoryId = FindBestCategory(
+                product.CategoryName, categories, categoryMapping);
             if (categoryId == null || storeId == null)
             {
-                _logger.LogWarning("Skipping product {Name} - missing category or store.", product.Name);
+                _logger.LogWarning(
+                    "Skipping product {Name} - missing category or store.", product.Name);
                 continue;
             }
 
-            var result = await productSeeder.EnsureProductExistsAsync(product, token, categoryId.Value, storeId.Value, ct);
+            var result = await productSeeder.EnsureProductExistsAsync(
+                product, token, categoryId.Value, storeId.Value, ct);
             if (result != null)
             {
                 var (productId, skuIds) = result.Value;
@@ -256,6 +293,9 @@ public class Worker : BackgroundService
         return productIds;
     }
 
+    /// <summary>
+    /// Stocks initial inventory for all products and their variants.
+    /// </summary>
     private async Task SeedInventoryAsync(
         InventorySeeder inventorySeeder,
         List<ProductModel> products,
@@ -269,9 +309,11 @@ public class Worker : BackgroundService
             if (productIds.TryGetValue(product.Sku, out var ids))
             {
                 var token = GetSellerToken(product.StoreName, techSellerToken, homeSellerToken);
-                await inventorySeeder.EnsureInventoryStockedAsync(product, token, ids.StoreId, ids.ProductId, ct);
+                await inventorySeeder.EnsureInventoryStockedAsync(
+                    product, token, ids.StoreId, ids.ProductId, ct);
             }
 
+            // Also stock variant SKUs
             if (product.Variants != null)
             {
                 foreach (var variant in product.Variants)
@@ -279,15 +321,21 @@ public class Worker : BackgroundService
                     var variantSku = $"ROZ-{variant.RozetkaCode}";
                     if (productIds.TryGetValue(variantSku, out var variantIds))
                     {
-                        var token = GetSellerToken(product.StoreName, techSellerToken, homeSellerToken);
+                        var token = GetSellerToken(
+                            product.StoreName, techSellerToken, homeSellerToken);
                         await inventorySeeder.EnsureInventoryStockedAsync(
-                            product with { Sku = variantSku }, token, variantIds.StoreId, variantIds.ProductId, ct);
+                            product with { Sku = variantSku },
+                            token, variantIds.StoreId, variantIds.ProductId, ct);
                     }
                 }
             }
         }
     }
 
+    /// <summary>
+    /// Uploads gallery images for all products and their variant SKUs.
+    /// Non-fatal — failures are logged and skipped.
+    /// </summary>
     private async Task UploadProductImagesAsync(
         MediaSeeder mediaSeeder,
         List<ProductModel> products,
@@ -303,19 +351,26 @@ public class Worker : BackgroundService
 
             try
             {
-                var token = GetSellerToken(product.StoreName, techSellerToken, homeSellerToken);
+                var token = GetSellerToken(
+                    product.StoreName, techSellerToken, homeSellerToken);
                 await mediaSeeder.UploadProductAndVariantGalleriesAsync(
-                    ids.ProductId, productIds.ToDictionary(k => k.Key, v => v.Value.SkuId), product, token, ct);
+                    ids.ProductId,
+                    productIds.ToDictionary(k => k.Key, v => v.Value.SkuId),
+                    product, token, ct);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Media upload failed for {Name} (non-fatal)", product.Name);
+                _logger.LogWarning(ex,
+                    "Media upload failed for {Name} (non-fatal)", product.Name);
             }
 
             await Task.Delay(500, ct);
         }
     }
 
+    /// <summary>
+    /// Runs a sample buyer checkout flow to verify the full order pipeline.
+    /// </summary>
     private async Task RunOrderFlowAsync(
         HttpClient httpClient,
         Dictionary<string, (Guid StoreId, Guid ProductId, Guid SkuId)> productIds,
@@ -339,10 +394,15 @@ public class Worker : BackgroundService
         }
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ════════════════════════════════════════════════════════════════
+
     /// <summary>
-    /// Resolves seller token based on store name convention.
+    /// Resolves seller token based on store name convention ("Tech" → techSellerToken).
     /// </summary>
-    private static string GetSellerToken(string sellerEmailOrStoreName, string techSellerToken, string homeSellerToken)
+    private static string GetSellerToken(
+        string sellerEmailOrStoreName, string techSellerToken, string homeSellerToken)
     {
         return sellerEmailOrStoreName.Contains("Tech", StringComparison.OrdinalIgnoreCase)
             ? techSellerToken
@@ -350,14 +410,30 @@ public class Worker : BackgroundService
     }
 
     /// <summary>
-    /// Resolves store ID based on store name convention.
+    /// Resolves store ID based on store name convention ("Tech" → techStoreId).
     /// </summary>
-    private static Guid? GetStoreId(string storeName, Guid? techStoreId, Guid? homeStoreId)
+    private static Guid? GetStoreId(
+        string storeName, Guid? techStoreId, Guid? homeStoreId)
     {
-        return storeName.Contains("Tech", StringComparison.OrdinalIgnoreCase) ? techStoreId : homeStoreId;
+        return storeName.Contains("Tech", StringComparison.OrdinalIgnoreCase)
+            ? techStoreId
+            : homeStoreId;
     }
 
-    private static Guid? FindBestCategory(string categoryName, List<CategoryDto> categories, Dictionary<string, string>? mapping = null)
+    /// <summary>
+    /// Finds the best matching category for a product's category name.
+    ///
+    /// Priority:
+    ///   1. Exact mapping from category-mapping.json
+    ///   2. Exact name match (case-insensitive)
+    ///   3. Breadcrumb path — last segment first (most specific)
+    ///   4. Partial match (contains)
+    ///   5. First breadcrumb segment fallback
+    /// </summary>
+    private static Guid? FindBestCategory(
+        string categoryName,
+        List<CategoryDto> categories,
+        Dictionary<string, string>? mapping = null)
     {
         // Priority 1: Exact mapping from category-mapping.json
         if (mapping != null)
@@ -377,7 +453,8 @@ public class Worker : BackgroundService
         }
 
         // Priority 2: Exact name match (case-insensitive)
-        var exact = categories.FirstOrDefault(c => c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+        var exact = categories.FirstOrDefault(c =>
+            c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
         if (exact != null) return exact.Id;
 
         // Priority 3: Breadcrumb path — try last segment first (most specific)
@@ -386,7 +463,8 @@ public class Worker : BackgroundService
             var segments = categoryName.Split('>').Select(s => s.Trim()).Reverse();
             foreach (var segment in segments)
             {
-                var match = categories.FirstOrDefault(c => c.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
+                var match = categories.FirstOrDefault(c =>
+                    c.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
                 if (match != null) return match.Id;
             }
         }
@@ -401,7 +479,8 @@ public class Worker : BackgroundService
         if (categoryName.Contains('>'))
         {
             var first = categoryName.Split('>')[0].Trim();
-            var firstMatch = categories.FirstOrDefault(c => c.Name.Equals(first, StringComparison.OrdinalIgnoreCase));
+            var firstMatch = categories.FirstOrDefault(c =>
+                c.Name.Equals(first, StringComparison.OrdinalIgnoreCase));
             if (firstMatch != null) return firstMatch.Id;
         }
 
@@ -418,13 +497,46 @@ public class Worker : BackgroundService
         if (!mapping.TryGetValue(name, out var mappedName))
             return false;
 
-        var match = categories.FirstOrDefault(c => c.Name.Equals(mappedName, StringComparison.OrdinalIgnoreCase));
+        var match = categories.FirstOrDefault(c =>
+            c.Name.Equals(mappedName, StringComparison.OrdinalIgnoreCase));
         if (match == null) return false;
 
         categoryId = match.Id;
         return true;
     }
 
+    /// <summary>
+    /// Finds the parent category from a breadcrumb path.
+    /// Looks for the segment before the given category name in any breadcrumb path.
+    /// </summary>
+    private static Guid? FindParentCategory(
+        string catName,
+        List<string> breadcrumbPaths,
+        List<CategoryDto> resultCategories)
+    {
+        foreach (var path in breadcrumbPaths)
+        {
+            var segments = path.Split('>').Select(s => s.Trim()).ToList();
+            var idx = segments.FindIndex(s =>
+                s.Equals(catName, StringComparison.OrdinalIgnoreCase));
+            if (idx > 0)
+            {
+                var parentName = segments[idx - 1].Trim();
+                if (parentName.Length > 2 && parentName != "Інтернет-магазин Rozetka")
+                {
+                    var parentCat = resultCategories.FirstOrDefault(c =>
+                        c.Name.Equals(parentName, StringComparison.OrdinalIgnoreCase));
+                    if (parentCat != null)
+                        return parentCat.Id;
+                }
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Waits for the API Gateway to become responsive (up to 60 seconds).
+    /// </summary>
     private async Task WaitForServicesReadyAsync(HttpClient client, CancellationToken ct)
     {
         _logger.LogInformation("Waiting for API Gateway to become responsive...");
@@ -447,12 +559,16 @@ public class Worker : BackgroundService
         throw new Exception("API Gateway did not become responsive in time.");
     }
 
+    /// <summary>
+    /// Loads and deserializes a JSON file from the Data directory.
+    /// </summary>
     private async Task<T> LoadJsonAsync<T>(string fileName)
     {
         var path = Path.Combine(_dataDirectory, fileName);
         if (!File.Exists(path))
             throw new FileNotFoundException($"Seed data file not found: {path}");
         using var stream = File.OpenRead(path);
-        return await JsonSerializer.DeserializeAsync<T>(stream) ?? throw new InvalidOperationException($"Failed to deserialize {fileName}");
+        return await JsonSerializer.DeserializeAsync<T>(stream)
+            ?? throw new InvalidOperationException($"Failed to deserialize {fileName}");
     }
 }

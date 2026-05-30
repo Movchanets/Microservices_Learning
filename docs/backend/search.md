@@ -13,7 +13,7 @@
 
 | Model | Key Fields |
 |:---|:---|
-| `ProductSearchDocument` | Id, Name, Description, Price, Currency, Sku, CategoryId, CategoryName, Tags, ImageUrl, StoreId, IsActive, Brand, Attributes (dict), Rating, ReviewCount, InStock |
+| `ProductSearchDocument` | Id, Name, Description, Price, Currency, Sku, CategoryId, CategoryName, Tags, **ImageUrl** (cached), StoreId, IsActive, Brand, Attributes (dict), Rating, ReviewCount, InStock |
 | `SearchResult<T>` | Items, TotalCount, Page, PageSize, Facets |
 | `FacetValue` | Key, Count |
 
@@ -52,7 +52,7 @@ Search index is **product-level** with single-valued fields:
 
 ## Integration Events
 
-### Consumed
+### Consumed (from Catalog.API)
 
 | Event | Consumer | Action |
 |:---|:---|:---|
@@ -60,11 +60,20 @@ Search index is **product-level** with single-valued fields:
 | `SkuDeletedEvent` | `SkuDeletedConsumer` | Updates product index (removes SKU data) |
 | `SkuPriceChangedEvent` | `SkuPriceChangedConsumer` | Updates price in search index |
 | `ProductDeletedEvent` | `ProductDeletedConsumer` | Removes product from index |
+| `ProductUpdatedEvent` | `ProductUpdatedConsumer` | Re-indexes product (name, description, tags, ImageUrl) |
 
-## Current Status & Known Issues
+### Consumed (from Media.API)
+
+| Event | Consumer | Action |
+|:---|:---|:---|
+| `GalleryUpdatedIntegrationEvent` | `MediaGalleryUpdatedConsumer` | Updates ProductSearchDocument.ImageUrl when primary image changes |
+
+This is a **fast path** — the Catalog consumer handles the canonical Product.ImageUrl update, but this consumer keeps Elasticsearch in sync directly from Media events without waiting for the Catalog domain event to propagate.
+
+## Current Status
 
 - ✅ Full-text search with faceted filtering
-- ✅ SKU-level consumers created (SkuCreated, SkuDeleted, SkuPriceChanged)
+- ✅ SKU-level consumers (SkuCreated, SkuDeleted, SkuPriceChanged)
+- ✅ Media gallery consumer for ImageUrl sync
 - 🟠 **Product-level index** — single Price/Sku/Attributes per product document
 - 🟡 `InStock` field not updated on stock changes (no inventory event for AddStock)
-- 🟡 Backward-compat Price=0 from ProductCreatedEvent may index incorrect data

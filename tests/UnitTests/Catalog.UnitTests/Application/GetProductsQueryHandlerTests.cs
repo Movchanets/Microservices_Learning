@@ -55,6 +55,7 @@ public class GetProductsQueryHandlerTests
                 query.CategoryId,
                 query.StoreId,
                 query.Search,
+                null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedResult);
 
@@ -73,6 +74,7 @@ public class GetProductsQueryHandlerTests
                 query.CategoryId,
                 query.StoreId,
                 query.Search,
+                null,
                 It.IsAny<CancellationToken>()), Times.Once);
     }
 }

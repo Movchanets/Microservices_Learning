@@ -58,7 +58,7 @@ public class CatalogToSearchContractTests
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         _searchServiceMock
-            .Setup(x => x.UpdateProductPriceAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.AddSkuToProductAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -66,7 +66,7 @@ public class CatalogToSearchContractTests
 
         // Assert - verify the contract mapping
         _searchServiceMock.Verify(
-            x => x.UpdateProductPriceAsync(productId, 99.99m, "USD", It.IsAny<CancellationToken>()),
+            x => x.AddSkuToProductAsync(productId, 99.99m, "USD", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

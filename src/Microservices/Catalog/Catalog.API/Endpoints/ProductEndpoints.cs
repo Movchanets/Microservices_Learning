@@ -19,6 +19,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Catalog.API.Endpoints;
 
+/// <summary>
+/// Catalog API endpoints for products, SKUs, and reviews.
+/// All business logic is delegated to MediatR handlers — endpoints only
+/// handle HTTP concerns (routing, auth, response mapping).
+///
+/// Endpoint groups:
+///   /api/catalog/products           — Product CRUD + search
+///   /api/catalog/products/{id}/skus — SKU management
+///   /api/catalog/products/{id}/reviews — Reviews
+/// </summary>
 public static class ProductEndpoints
 {
     public static void MapProductEndpoints(this IEndpointRouteBuilder app)
@@ -32,9 +42,13 @@ public static class ProductEndpoints
         group.MapProductSkuEndpoints();
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // PRODUCT CRUD
+    // ════════════════════════════════════════════════════════════════
+
     private static void MapProductCrudEndpoints(this RouteGroupBuilder group)
     {
-        // Public: featured products (for homepage)
+        // ── Public: Featured Products (Homepage) ─────────────────
         group.MapGet("/featured", async (
             [FromQuery] string? tag,
             ISender sender,
@@ -46,14 +60,17 @@ public static class ProductEndpoints
         .WithName("GetFeaturedProducts")
         .Produces<List<ProductListDto>>();
 
-        // Public: batch lookup products by IDs (for BFF cart enrichment)
+        // ── Public: Batch Lookup by IDs (BFF Cart Enrichment) ───
         group.MapPost("/by-ids", async (
             List<Guid> ids,
             ISender sender,
             CancellationToken ct) =>
         {
-            if (ids.Count == 0) return Results.Ok(new List<ProductListDto>());
-            if (ids.Count > 100) return Results.BadRequest(new { error = "Maximum 100 product IDs allowed." });
+            if (ids.Count == 0)
+                return Results.Ok(new List<ProductListDto>());
+            if (ids.Count > 100)
+                return Results.BadRequest(new { error = "Maximum 100 product IDs allowed." });
+
             var result = await sender.Send(new GetProductsByIdsQuery(ids), ct);
             return Results.Ok(result);
         })
@@ -61,22 +78,20 @@ public static class ProductEndpoints
         .Produces<List<ProductListDto>>()
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Public: get product by SKU
+        // ── Public: Get Product by SKU Code ──────────────────────
         group.MapGet("/sku/{sku}", async (
             string sku,
             ISender sender,
             CancellationToken ct) =>
         {
             var product = await sender.Send(new GetProductBySkuQuery(sku), ct);
-            return product is not null
-                ? Results.Ok(product)
-                : Results.NotFound();
+            return product is not null ? Results.Ok(product) : Results.NotFound();
         })
         .WithName("GetProductBySku")
         .Produces<ProductDto>()
         .ProducesProblem(StatusCodes.Status404NotFound);
 
-        // Public: list products
+        // ── Public: List Products (Paginated, Filterable) ────────
         group.MapGet("/", async (
             ISender sender,
             [FromQuery] Guid? categoryId = null,
@@ -91,28 +106,27 @@ public static class ProductEndpoints
                 page > 0 ? page : 1,
                 pageSize > 0 ? Math.Min(pageSize, 100) : 20,
                 categoryId, storeId, search, status);
+
             var result = await sender.Send(query, ct);
             return Results.Ok(result);
         })
         .WithName("ListProducts")
         .Produces<PagedResult<ProductListDto>>();
 
-        // Public: get product by ID
+        // ── Public: Get Product by ID ────────────────────────────
         group.MapGet("/{id:guid}", async (
             Guid id,
             ISender sender,
             CancellationToken ct) =>
         {
             var product = await sender.Send(new GetProductByIdQuery(id), ct);
-            return product is not null
-                ? Results.Ok(product)
-                : Results.NotFound();
+            return product is not null ? Results.Ok(product) : Results.NotFound();
         })
         .WithName("GetProductById")
         .Produces<ProductDto>()
         .ProducesProblem(StatusCodes.Status404NotFound);
 
-        // Authorized: create product (seller/admin)
+        // ── Authorized: Create Product (Seller/Admin) ────────────
         group.MapPost("/", async (
             CreateProductCommand command,
             ISender sender,
@@ -128,14 +142,13 @@ public static class ProductEndpoints
         .Produces<ProductDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Authorized: update product
+        // ── Authorized: Update Product ───────────────────────────
         group.MapPut("/{id:guid}", async (
             Guid id,
             UpdateProductCommand command,
             ISender sender,
             CancellationToken ct) =>
         {
-            // Ensure route ID matches command
             var cmd = command with { ProductId = id };
             var result = await sender.Send(cmd, ct);
             return result.IsSuccess
@@ -147,7 +160,7 @@ public static class ProductEndpoints
         .Produces<ProductDto>()
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Authorized: change price
+        // ── Authorized: Change Price ─────────────────────────────
         group.MapPatch("/{id:guid}/price", async (
             Guid id,
             ChangePriceCommand command,
@@ -165,7 +178,7 @@ public static class ProductEndpoints
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Public: get product recommendations (same category)
+        // ── Public: Product Recommendations (Same Category) ──────
         group.MapGet("/{id:guid}/recommendations", async (
             Guid id,
             ISender sender,
@@ -177,48 +190,42 @@ public static class ProductEndpoints
         .WithName("GetProductRecommendations")
         .Produces<List<ProductListDto>>();
 
-        // Authorized: activate product
+        // ── Authorized: Activate Product ─────────────────────────
         group.MapPut("/{id:guid}/activate", async (
             Guid id,
             ISender sender,
             CancellationToken ct) =>
         {
             var result = await sender.Send(new ActivateProductCommand(id), ct);
-            return result.IsSuccess
-                ? Results.NoContent()
-                : Results.NotFound();
+            return result.IsSuccess ? Results.NoContent() : Results.NotFound();
         })
         .WithName("ActivateProduct")
         .RequireAuthorization()
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status404NotFound);
 
-        // Authorized: deactivate product
+        // ── Authorized: Deactivate Product ───────────────────────
         group.MapPut("/{id:guid}/deactivate", async (
             Guid id,
             ISender sender,
             CancellationToken ct) =>
         {
             var result = await sender.Send(new DeactivateProductCommand(id), ct);
-            return result.IsSuccess
-                ? Results.NoContent()
-                : Results.NotFound();
+            return result.IsSuccess ? Results.NoContent() : Results.NotFound();
         })
         .WithName("DeactivateProduct")
         .RequireAuthorization()
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status404NotFound);
 
-        // Authorized: soft-delete product
+        // ── Authorized: Soft-Delete Product ──────────────────────
         group.MapDelete("/{id:guid}", async (
             Guid id,
             ISender sender,
             CancellationToken ct) =>
         {
             var result = await sender.Send(new DeleteProductCommand(id), ct);
-            return result.IsSuccess
-                ? Results.NoContent()
-                : Results.NotFound();
+            return result.IsSuccess ? Results.NoContent() : Results.NotFound();
         })
         .WithName("DeleteProduct")
         .RequireAuthorization()
@@ -226,9 +233,13 @@ public static class ProductEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound);
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // PRODUCT REVIEWS
+    // ════════════════════════════════════════════════════════════════
+
     private static void MapProductReviewEndpoints(this RouteGroupBuilder group)
     {
-        // Public: get product review summary
+        // ── Public: Review Summary (Rating Distribution) ─────────
         group.MapGet("/{id:guid}/reviews/summary", async (
             Guid id,
             ISender sender,
@@ -240,7 +251,7 @@ public static class ProductEndpoints
         .WithName("GetReviewSummary")
         .Produces<ReviewSummaryDto>();
 
-        // Public: get product reviews (paginated, filterable)
+        // ── Public: List Reviews (Paginated, Filterable) ─────────
         group.MapGet("/{id:guid}/reviews", async (
             Guid id,
             ISender sender,
@@ -258,13 +269,14 @@ public static class ProductEndpoints
                 sort ?? "helpful",
                 rating,
                 photoOnly);
+
             var result = await sender.Send(query, ct);
             return Results.Ok(result);
         })
         .WithName("GetProductReviews")
         .Produces<PagedResult<ReviewDto>>();
 
-        // Authorized: create review
+        // ── Authorized: Create Review ────────────────────────────
         group.MapPost("/{id:guid}/reviews", async (
             Guid id,
             CreateReviewCommand command,
@@ -273,10 +285,17 @@ public static class ProductEndpoints
             CancellationToken ct) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId)) return Results.Unauthorized();
+            if (string.IsNullOrEmpty(userId))
+                return Results.Unauthorized();
 
             var userName = user.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
-            var cmd = command with { ProductId = id, UserId = Guid.Parse(userId), UserName = userName };
+            var cmd = command with
+            {
+                ProductId = id,
+                UserId = Guid.Parse(userId),
+                UserName = userName
+            };
+
             var result = await sender.Send(cmd, ct);
             return result.IsSuccess
                 ? Results.Created($"/api/catalog/products/{id}/reviews", result.Value)
@@ -287,7 +306,7 @@ public static class ProductEndpoints
         .Produces<ReviewDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Authorized: vote on review
+        // ── Authorized: Vote on Review (Helpful/Not Helpful) ─────
         group.MapPost("/reviews/{reviewId:guid}/vote", async (
             Guid reviewId,
             VoteReviewCommand command,
@@ -296,7 +315,8 @@ public static class ProductEndpoints
             CancellationToken ct) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId)) return Results.Unauthorized();
+            if (string.IsNullOrEmpty(userId))
+                return Results.Unauthorized();
 
             var cmd = command with { ReviewId = reviewId, UserId = Guid.Parse(userId) };
             var result = await sender.Send(cmd, ct);
@@ -309,7 +329,7 @@ public static class ProductEndpoints
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Authorized: seller response to review (seller role only)
+        // ── Authorized: Seller Response to Review ────────────────
         group.MapPost("/reviews/{reviewId:guid}/response", async (
             Guid reviewId,
             SellerResponseCommand command,
@@ -317,9 +337,10 @@ public static class ProductEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
-            // Extract storeId from claims — sellers have StoreId in their claims
+            // Extract storeId from claims — sellers have StoreId in their JWT
             var storeIdClaim = user.FindFirstValue("StoreId");
-            if (string.IsNullOrEmpty(storeIdClaim) || !Guid.TryParse(storeIdClaim, out var storeId))
+            if (string.IsNullOrEmpty(storeIdClaim)
+                || !Guid.TryParse(storeIdClaim, out var storeId))
                 return Results.Forbid();
 
             var cmd = command with { ReviewId = reviewId, StoreId = storeId };
@@ -334,24 +355,27 @@ public static class ProductEndpoints
         .ProducesProblem(StatusCodes.Status400BadRequest);
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // SKU MANAGEMENT
+    // ════════════════════════════════════════════════════════════════
+
     private static void MapProductSkuEndpoints(this RouteGroupBuilder group)
     {
-        // Public: get SKU by ID
+        // ── Public: Get SKU by ID ────────────────────────────────
         group.MapGet("/skus/{skuId:guid}", async (
             Guid skuId,
             ISender sender,
             CancellationToken ct) =>
         {
             var result = await sender.Send(new GetSkuByIdQuery(skuId), ct);
-            return result is not null
-                ? Results.Ok(result)
-                : Results.NotFound();
+            return result is not null ? Results.Ok(result) : Results.NotFound();
         })
         .WithName("GetSkuById")
         .WithOpenApi()
         .Produces<SkuDto>()
         .ProducesProblem(StatusCodes.Status404NotFound);
-        // Authorized: add SKU to product
+
+        // ── Authorized: Add SKU to Product ───────────────────────
         group.MapPost("/{id:guid}/skus", async (
             Guid id,
             AddSkuCommand command,
@@ -361,7 +385,8 @@ public static class ProductEndpoints
             var cmd = command with { ProductId = id };
             var result = await sender.Send(cmd, ct);
             return result.IsSuccess
-                ? Results.Created($"/api/catalog/products/{id}/skus/{result.Value!.Id}", result.Value)
+                ? Results.Created(
+                    $"/api/catalog/products/{id}/skus/{result.Value!.Id}", result.Value)
                 : Results.BadRequest(new { result.Error, result.ErrorCode });
         })
         .WithName("AddSku")
@@ -369,7 +394,7 @@ public static class ProductEndpoints
         .Produces<SkuDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Authorized: remove SKU from product
+        // ── Authorized: Remove SKU from Product ──────────────────
         group.MapDelete("/{id:guid}/skus/{skuId:guid}", async (
             Guid id,
             Guid skuId,
@@ -386,7 +411,7 @@ public static class ProductEndpoints
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Authorized: change SKU price
+        // ── Authorized: Change SKU Price ─────────────────────────
         group.MapPatch("/{id:guid}/skus/{skuId:guid}/price", async (
             Guid id,
             Guid skuId,
