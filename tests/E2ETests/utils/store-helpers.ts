@@ -136,8 +136,11 @@ export async function ensureSellerStoreViaUi(
   await storeNameInput.pressSequentially(storeName, { delay: 20 });
   await storeDescInput.click({ clickCount: 3 });
   await storeDescInput.pressSequentially(storeDescription, { delay: 20 });
-  await page.waitForTimeout(500);
 
-  await createStoreBtn.click({ timeout: TIMEOUTS.element });
-  await page.waitForTimeout(3000);
+  // Wait for Angular form reactivity — button becomes enabled when form is valid
+  await expect(createStoreBtn).toBeEnabled({ timeout: TIMEOUTS.element });
+  await createStoreBtn.click();
+
+  // Wait for store creation to complete — heading disappears when store exists
+  await createStoreHeading.waitFor({ state: 'hidden', timeout: TIMEOUTS.api });
 }

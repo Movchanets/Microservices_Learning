@@ -12,8 +12,8 @@ describe('SellerProductService', () => {
   let service: SellerProductService;
   let httpMock: HttpTestingController;
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
       providers: [SellerProductService, provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(SellerProductService);
@@ -22,6 +22,7 @@ describe('SellerProductService', () => {
 
   afterEach(() => {
     httpMock.verify();
+    TestBed.resetTestingModule();
   });
 
   it('should be created', () => {
@@ -34,7 +35,7 @@ describe('SellerProductService', () => {
       const mockPaged = { items: mockProducts, totalCount: 1, page: 1, pageSize: 20, totalPages: 1, hasPrevious: false, hasNext: false };
       const promise = service.getMyProducts('store-1');
 
-      const req = httpMock.expectOne('/api/catalog/products?storeId=store-1');
+      const req = httpMock.expectOne('/api/catalog/products?storeId=store-1&status=All');
       expect(req.request.method).toBe('GET');
       req.flush(mockPaged);
 

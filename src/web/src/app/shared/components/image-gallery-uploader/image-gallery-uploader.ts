@@ -110,6 +110,18 @@ export interface PendingImage {
     </div>
   `,
 })
+/**
+ * Reusable image gallery with drag-and-drop upload, preview, and primary selection.
+ *
+ * Supports two image sources:
+ *   - `uploadedImages` — already persisted on the server (show URL + remove + set primary)
+ *   - `pendingImages` — selected but not yet uploaded (show blob preview + remove)
+ *
+ * Emits `filesSelected` when the user drops/selects files. The parent is responsible
+ * for calling the upload API and moving files from pending → uploaded.
+ *
+ * Validation: JPEG/PNG/GIF/WebP, max 10MB per file.
+ */
 export class ImageGalleryUploaderComponent {
   uploadedImages = input<GalleryItem[]>([]);
   pendingImages = input<PendingImage[]>([]);

@@ -24,6 +24,9 @@ describe('OrderTimelineComponent', () => {
       providers: [importProvidersFrom(LucideAngularModule.pick({ Check, X }))],
     }).compileComponents();
 
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
     fixture = TestBed.createComponent(OrderTimelineComponent);
     component = fixture.componentInstance;
   });

@@ -138,9 +138,7 @@
               @for (sku of skus(); track sku.id; let i = $index) {
                 <button type="button"
                   (click)="activeSkuTab.set(i)"
-                  [class]="i === activeSkuTab()
-                    ? 'px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium whitespace-nowrap cursor-pointer'
-                    : 'px-4 py-2 bg-muted/10 text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted/20 whitespace-nowrap cursor-pointer'">
+                  [class]="skuTabClass(i)">
                   {{ sku.skuCode || 'Variant ' + (i + 1) }}
                 </button>
               }

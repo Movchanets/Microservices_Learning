@@ -17,7 +17,7 @@ export class ForgotPasswordPage extends BasePage {
   async goto() {
     await this.page.goto('/auth/forgot-password');
     // Wait for Angular hydration to complete — the form is inside @else block
-    await this.forgotSubmitBtn.waitFor({ state: 'visible', timeout: 15000 });
+    await this.forgotSubmitBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.api });
   }
 
   async resetPassword(email: string) {

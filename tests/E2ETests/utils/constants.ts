@@ -22,4 +22,7 @@ export const TIMEOUTS = {
 
   /** Retry-stable fill verification */
   fillRetry: 2_000,
+
+  /** Slow external resources (scrapers, cold starts) */
+  slow: 60_000,
 } as const;

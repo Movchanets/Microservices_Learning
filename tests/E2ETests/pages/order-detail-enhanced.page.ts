@@ -63,7 +63,7 @@ export class OrderDetailEnhancedPage extends BasePage {
   }
 
   async waitForLoaded() {
-    await this.loadingSpinner.waitFor({ state: 'hidden', timeout: 10000 });
+    await this.loadingSpinner.waitFor({ state: 'hidden', timeout: TIMEOUTS.element });
   }
 
   async getOrderId(): Promise<string> {
