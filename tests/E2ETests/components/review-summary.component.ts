@@ -33,8 +33,4 @@ export class ReviewSummaryComponent extends BaseComponent {
   async clickWriteReview() {
     await this.writeReviewBtn.click();
   }
-
-  async isVisible(): Promise<boolean> {
-    return this.root.isVisible();
-  }
 }

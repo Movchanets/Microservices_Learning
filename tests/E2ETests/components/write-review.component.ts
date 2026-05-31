@@ -15,11 +15,11 @@ export class WriteReviewComponent extends BaseComponent {
   readonly cancelBtn: Locator;
 
   constructor(page: Page) {
-    const root = page.locator('app-write-review, [class*="review-form"], form').filter({ has: page.locator('[class*="star"], button') });
+    const root = page.locator('app-write-review');
     super(page, root);
     this.ratingStars = this.root.locator('button, [role="button"]').filter({ has: this.root.locator('lucide-icon[name="Star"]') });
-    this.titleInput = this.root.getByLabel(/title/i).or(this.root.getByPlaceholder(/title/i));
-    this.bodyInput = this.root.getByLabel(/review|comment|body/i).or(this.root.getByPlaceholder(/review|comment|write/i));
+    this.titleInput = this.root.getByLabel(/title/i);
+    this.bodyInput = this.root.getByLabel(/review|comment|body/i);
     this.submitBtn = this.root.getByRole('button', { name: /submit|post|save/i });
     this.cancelBtn = this.root.getByRole('button', { name: /cancel/i });
   }

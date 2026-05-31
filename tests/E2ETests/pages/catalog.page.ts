@@ -1,10 +1,16 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
+import { CategorySidebarComponent } from '../components/category-sidebar.component';
+import { PaginationComponent } from '../components/pagination.component';
 
 /**
  * Page object for `/catalog` — product listing with search, filtering, sorting, and pagination.
  */
 export class CatalogPage extends BasePage {
+  // ── Components ──────────────────────────────────────────
+  readonly sidebar: CategorySidebarComponent;
+  readonly pagination: PaginationComponent;
+
   // ── Search ──────────────────────────────────────────────
   readonly searchInput: Locator;
   readonly emptyState: Locator;
@@ -16,21 +22,19 @@ export class CatalogPage extends BasePage {
   readonly catalogTitle: Locator;
 
   // ── Filtering & Sorting ─────────────────────────────────
-  readonly categorySidebar: Locator;
   readonly sortDropdown: Locator;
+  readonly searchFacets: Locator;
   readonly priceMinInput: Locator;
   readonly priceMaxInput: Locator;
   readonly inStockCheckbox: Locator;
-  readonly searchFacets: Locator;
   readonly productCount: Locator;
-
-  // ── Pagination ──────────────────────────────────────────
-  readonly pagination: Locator;
-  readonly paginationPrev: Locator;
-  readonly paginationNext: Locator;
 
   constructor(page: Page) {
     super(page);
+
+    // Components
+    this.sidebar = new CategorySidebarComponent(page);
+    this.pagination = new PaginationComponent(page);
 
     // Search
     this.searchInput = page.getByTestId('search-input');
@@ -43,7 +47,6 @@ export class CatalogPage extends BasePage {
     this.catalogTitle = page.getByTestId('catalog-title');
 
     // Filtering & Sorting
-    this.categorySidebar = page.locator('app-category-sidebar');
     this.sortDropdown = page.locator('select').filter({ hasText: /sort|relevance|price|name/i })
       .or(page.getByRole('combobox'));
     this.searchFacets = page.locator('app-search-facets');
@@ -51,19 +54,14 @@ export class CatalogPage extends BasePage {
     this.priceMaxInput = this.searchFacets.getByPlaceholder(/max/i);
     this.inStockCheckbox = this.searchFacets.getByRole('checkbox');
     this.productCount = page.getByText(/\d+ product/i);
-
-    // Pagination
-    this.pagination = page.locator('nav[aria-label="Pagination"]');
-    this.paginationPrev = this.pagination.locator('button').first();
-    this.paginationNext = this.pagination.locator('button').last();
   }
 
   // ── Actions ─────────────────────────────────────────────
 
-  /** Type a query and press Enter to search. */
+  /** Type a query character-by-character (reliable for Angular ngModelChange) and wait for results. */
   async search(query: string) {
-    await this.searchInput.fill(query);
-    await this.searchInput.press('Enter');
+    await this.searchInput.clear();
+    await this.searchInput.type(query, { delay: 10 });
   }
 
   /** Select a sort option from the dropdown (e.g. "Price: Low to High"). */
@@ -73,8 +71,7 @@ export class CatalogPage extends BasePage {
 
   /** Click a category button in the sidebar. */
   async filterByCategory(name: string) {
-    const btn = this.categorySidebar.getByRole('button', { name });
-    await btn.click();
+    await this.sidebar.selectCategory(name);
   }
 
   /** Fill min/max price inputs and trigger the filter via Tab. */
@@ -91,8 +88,7 @@ export class CatalogPage extends BasePage {
 
   /** Click a specific pagination page number. */
   async goToPage(n: number) {
-    const pageBtn = this.pagination.locator('button', { hasText: String(n) });
-    await pageBtn.click();
+    await this.pagination.goToPage(n);
   }
 
   // ── Queries ─────────────────────────────────────────────

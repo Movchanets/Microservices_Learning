@@ -4,7 +4,7 @@
 // Each worker gets its own storage state files (worker-indexed) to prevent
 // race conditions when running tests in parallel.
 
-import { test as base, APIRequestContext, BrowserContext } from '@playwright/test';
+import { APIRequestContext, BrowserContext } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';

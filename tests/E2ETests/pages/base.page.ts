@@ -9,8 +9,7 @@ import { TIMEOUTS } from '../utils/constants';
  * Provides:
  * - Shared header / footer components
  * - `goto()` + `waitForPageLoad()` navigation helpers
- * - `fillStable()` — Angular-safe input fill with retry
- * - `submitWithRetry()` — form submit with fill + enable-check loop
+ * - `submitWithRetry()` — form submit with Angular zoneless compatibility
  */
 export abstract class BasePage {
   readonly page: Page;
@@ -38,49 +37,33 @@ export abstract class BasePage {
   // ── Form Helpers ────────────────────────────────────────
 
   /**
-   * Fills an input and dispatches 'input' event for Angular signal-based forms.
-   * Retries up to 3 times to handle reactive form interference.
-   */
-  protected async fillStable(input: Locator, value: string): Promise<void> {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await input.fill(value);
-      await input.dispatchEvent('input');
-
-      try {
-        await expect(input).toHaveValue(value, { timeout: TIMEOUTS.fillRetry });
-        return;
-      } catch {
-        // Retry on next attempt
-      }
-    }
-
-    // Final attempt — let the assertion throw if it still fails
-    await input.fill(value);
-    await input.dispatchEvent('input');
-    await expect(input).toHaveValue(value, { timeout: TIMEOUTS.quick });
-  }
-
-  /**
-   * Clicks a submit button with retry logic for reactive forms.
-   * Fills all provided inputs via fillStable, then waits for the button
-   * to become enabled before clicking. Retries up to 3 times.
+   * Fills form fields and submits. Handles Angular 21 zoneless reactive forms
+   * where `fill()` alone doesn't trigger formControlName validity updates.
+   *
+   * Strategy:
+   * 1. `fill()` — sets the native input value atomically
+   * 2. `evaluate` dispatches real bubbling `input` + `change` events
+   * 3. `press('Tab')` — blur triggers onTouched → change detection
+   * 4. Brief wait for Angular zoneless scheduler to process
    */
   protected async submitWithRetry(
     submitBtn: Locator,
     fields: Array<{ input: Locator; value: string }>
   ): Promise<void> {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      for (const { input, value } of fields) {
-        await this.fillStable(input, value);
-      }
-
-      if (await submitBtn.isEnabled()) {
-        await submitBtn.click();
-        return;
-      }
+    for (const { input, value } of fields) {
+      await input.click();
+      // Use fill() + explicit JS event dispatch for Angular zoneless compatibility
+      await input.fill(value);
+      await input.evaluate((el) => {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
+      });
     }
 
-    await expect(submitBtn).toBeEnabled({ timeout: TIMEOUTS.quick });
+    // Give Angular zoneless scheduler time to run form validity check
+    await this.page.waitForTimeout(200);
+    await expect(submitBtn).toBeEnabled({ timeout: TIMEOUTS.element });
     await submitBtn.click();
   }
 }

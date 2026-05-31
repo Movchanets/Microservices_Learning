@@ -85,14 +85,18 @@ export class ProductFormPage extends BasePage {
   }
 
   async fillProductInfo(fields: ProductFormFields) {
-    await this.fillStable(this.nameInput, fields.name);
-    await this.fillStable(this.descriptionInput, fields.description);
+    await this.nameInput.fill(fields.name);
+    await this.nameInput.dispatchEvent('input');
+    await this.descriptionInput.fill(fields.description);
+    await this.descriptionInput.dispatchEvent('input');
     if (fields.brand) {
-      await this.fillStable(this.brandInput, fields.brand);
+      await this.brandInput.fill(fields.brand);
+      await this.brandInput.dispatchEvent('input');
     }
     await this.categorySelect.selectOption({ label: fields.category });
     if (fields.tags) {
-      await this.fillStable(this.tagsInput, fields.tags);
+      await this.tagsInput.fill(fields.tags);
+      await this.tagsInput.dispatchEvent('input');
     }
   }
 
@@ -107,8 +111,10 @@ export class ProductFormPage extends BasePage {
 
   async fillSkuInfo(index: number, fields: SkuFormFields) {
     await this.switchToSkuTab(index);
-    await this.fillStable(this.skuCodeInput, fields.skuCode);
-    await this.fillStable(this.skuPriceInput, fields.price);
+    await this.skuCodeInput.fill(fields.skuCode);
+    await this.skuCodeInput.dispatchEvent('input');
+    await this.skuPriceInput.fill(fields.price);
+    await this.skuPriceInput.dispatchEvent('input');
     if (fields.currency) {
       await this.skuCurrencySelect.selectOption(fields.currency);
     }

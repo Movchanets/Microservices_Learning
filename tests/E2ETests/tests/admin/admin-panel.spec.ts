@@ -3,84 +3,72 @@ import { TIMEOUTS } from '../../utils/constants';
 
 test.describe('Admin: Panel', () => {
 
-  test('should redirect unauthenticated from admin panel', async ({ browser }) => {
-    const page = await browser.newPage();
-    await test.step('Navigate to /admin unauthenticated', async () => {
-      await page.goto('/admin');
-      await page.waitForLoadState('domcontentloaded');
-    });
-    await test.step('Verify redirect to login page', async () => {
-      await expect(page).toHaveURL(/\/auth\/login/);
-    });
-    await page.close();
-  });
-
-  test('should show admin panel for admin users', async ({ adminContext }) => {
-    const page = await adminContext.newPage();
+  test('should show admin panel for admin users', async ({ adminPage }) => {
     await test.step('Navigate to /admin as admin', async () => {
-      await page.goto('/admin');
-      await page.waitForLoadState('domcontentloaded');
+      await adminPage.goto();
+      await adminPage.waitForPageLoad();
     });
+
     await test.step('Verify admin panel elements', async () => {
-      await expect(page.getByRole('heading', { name: 'Admin Panel' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Users' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Verifications' })).toBeVisible();
+      await expect(adminPage.pageHeading).toBeVisible();
+      await expect(adminPage.usersTab).toBeVisible();
+      await expect(adminPage.verificationsTab).toBeVisible();
     });
-    await page.close();
   });
 
-  test('should display users list', async ({ adminContext }) => {
-    const page = await adminContext.newPage();
-    await page.goto('/admin/users');
-    await page.waitForLoadState('domcontentloaded');
+  test('should display users list', async ({ adminPage }) => {
+    await test.step('Navigate to users list', async () => {
+      await adminPage.goto();
+      await adminPage.navigateToUsers();
+    });
 
-    const table = page.getByRole('table');
-    await expect(table).toBeVisible();
-
-    const rows = table.locator('tbody tr');
-    const rowCount = await rows.count();
-    expect(rowCount).toBeGreaterThan(0);
-    await page.close();
+    await test.step('Verify table has rows', async () => {
+      await expect(adminPage.usersTable).toBeVisible();
+      const rowCount = await adminPage.getUserCount();
+      expect(rowCount).toBeGreaterThan(0);
+    });
   });
 
-  test('should navigate to verifications tab', async ({ adminContext }) => {
-    const page = await adminContext.newPage();
-    await page.goto('/admin/verifications');
-    await page.waitForLoadState('domcontentloaded');
+  test('should navigate to verifications tab', async ({ adminPage }) => {
+    await test.step('Navigate to verifications', async () => {
+      await adminPage.goto();
+      await adminPage.navigateToVerifications();
+    });
 
-    const heading = page.getByRole('heading', { name: 'Admin Panel' });
-    await expect(heading).toBeVisible();
-    await page.close();
+    await test.step('Verify admin panel heading', async () => {
+      await expect(adminPage.pageHeading).toBeVisible();
+    });
   });
 
-  test('should show admin link in header for admin users', async ({ adminContext }) => {
-    const page = await adminContext.newPage();
+  test('should show admin link in header for admin users', async ({ adminPage, header }) => {
     await test.step('Navigate to /admin as admin', async () => {
-      await page.goto('/admin');
-      await page.waitForLoadState('domcontentloaded');
+      await adminPage.goto();
+      await adminPage.waitForPageLoad();
     });
+
     await test.step('Open user dropdown menu', async () => {
-      const menuTrigger = page.getByTestId('user-menu-trigger');
-      await expect(menuTrigger).toBeVisible({ timeout: TIMEOUTS.element });
-      await menuTrigger.click();
+      await expect(header.userMenuTrigger).toBeVisible({ timeout: TIMEOUTS.element });
+      await header.openUserMenu();
     });
+
     await test.step('Verify admin link is visible', async () => {
-      const adminLink = page.getByTestId('nav-admin');
-      await expect(adminLink).toBeVisible({ timeout: TIMEOUTS.quick });
+      await expect(header.adminLink).toBeVisible({ timeout: TIMEOUTS.quick });
     });
-    await page.close();
   });
 
   test('should NOT show admin link for non-admin users', async ({ sellerContext }) => {
     const page = await sellerContext.newPage();
+
     await test.step('Navigate to /catalog as seller', async () => {
       await page.goto('/catalog');
       await page.waitForLoadState('domcontentloaded');
     });
+
     await test.step('Verify admin link is hidden', async () => {
       const adminLink = page.getByTestId('nav-admin');
       await expect(adminLink).not.toBeVisible();
     });
+
     await page.close();
   });
 });

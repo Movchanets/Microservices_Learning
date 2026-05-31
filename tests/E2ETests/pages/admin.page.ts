@@ -1,5 +1,6 @@
 import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './base.page';
+import { TIMEOUTS } from '../utils/constants';
 
 /**
  * Page object for `/admin` — admin panel with store management.

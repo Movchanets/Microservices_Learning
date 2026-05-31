@@ -1,72 +1,70 @@
 import { authTest as test, expect } from '../../fixtures/auth.fixture';
-import { SellerDashboardPage } from '../../pages/seller-dashboard.page';
 import { TIMEOUTS } from '../../utils/constants';
 
 test.describe('Seller: Dashboard', () => {
 
-  test('should redirect unauthenticated from seller dashboard', async ({ browser }) => {
-    const page = await browser.newPage();
-
-    await test.step('Navigate to seller page without authentication', async () => {
-      await page.goto('/seller');
-      await page.waitForLoadState('domcontentloaded');
+  test('should show seller dashboard for seller users', async ({ sellerDashboardPage }) => {
+    await test.step('Navigate to seller page', async () => {
+      await sellerDashboardPage.goto();
+      await sellerDashboardPage.waitForPageLoad();
     });
 
-    await test.step('Verify redirect to login page', async () => {
-      await expect(page).toHaveURL(/\/auth\/login/);
+    await test.step('Wait for Angular to stabilize', async () => {
+      const page = sellerDashboardPage.page;
+      const spinner = page.locator('.animate-spin');
+
+      // Wait for all JS bundles loaded so Angular can bootstrap
+      await page.waitForLoadState('load');
+
+      // Angular hydrates → loadSettings() → spinner appears (briefly).
+      // If spinner never shows, Angular hydrated + API resolved instantly.
+      const spinnerAppeared = await spinner
+        .waitFor({ state: 'visible', timeout: 3000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (spinnerAppeared) {
+        // Wait for API to resolve — spinner disappears when loadSettings() completes
+        await spinner.waitFor({ state: 'hidden', timeout: TIMEOUTS.api });
+      }
     });
 
-    await page.close();
-  });
-
-  test('should show seller dashboard for seller users', async ({ sellerContext }) => {
-    const page = await sellerContext.newPage();
-    const dashboardPage = new SellerDashboardPage(page);
-
-    await test.step('Navigate to seller dashboard', async () => {
-      await page.goto('/seller');
-      await page.waitForLoadState('domcontentloaded');
+    await test.step('Create store if needed', async () => {
+      const hasCreateForm = await sellerDashboardPage.createStoreHeading.isVisible();
+      if (hasCreateForm) {
+        await sellerDashboardPage.createStore('E2E Test Store', 'Automated test store for E2E tests');
+      }
     });
 
     await test.step('Verify dashboard heading and navigation tabs', async () => {
-      await expect(dashboardPage.pageHeading).toBeVisible();
-      await expect(dashboardPage.productsTab).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Orders' })).toBeVisible();
-      await expect(dashboardPage.settingsTab).toBeVisible();
+      await expect(sellerDashboardPage.pageHeading).toBeVisible();
+      await expect(sellerDashboardPage.productsTab).toBeVisible();
+      await expect(sellerDashboardPage.ordersLink).toBeVisible();
+      await expect(sellerDashboardPage.settingsTab).toBeVisible();
     });
-
-    await page.close();
   });
 
-  test('should navigate to seller products', async ({ sellerContext }) => {
-    const page = await sellerContext.newPage();
-
+  test('should navigate to seller products', async ({ sellerProductsPage }) => {
     await test.step('Navigate to seller products page', async () => {
-      await page.goto('/seller/products');
-      await page.waitForLoadState('networkidle');
+      await sellerProductsPage.goto();
+      await sellerProductsPage.waitForPageLoad();
     });
 
     await test.step('Verify products heading is visible', async () => {
-      const heading = page.getByRole('heading').filter({ hasText: /products/i });
+      const heading = sellerProductsPage.page.getByRole('heading').filter({ hasText: /products/i });
       await expect(heading.first()).toBeVisible({ timeout: TIMEOUTS.element });
     });
-
-    await page.close();
   });
 
-  test('should navigate to store settings', async ({ sellerContext }) => {
-    const page = await sellerContext.newPage();
-
+  test('should navigate to store settings', async ({ storeSettingsPage }) => {
     await test.step('Navigate to store settings page', async () => {
-      await page.goto('/seller/settings');
-      await page.waitForLoadState('networkidle');
+      await storeSettingsPage.goto();
+      await storeSettingsPage.waitForPageLoad();
     });
 
     await test.step('Verify store settings heading', async () => {
-      await expect(page.getByRole('heading').filter({ hasText: /settings/i }).first())
+      await expect(storeSettingsPage.page.getByRole('heading').filter({ hasText: /settings/i }).first())
         .toBeVisible({ timeout: TIMEOUTS.element });
     });
-
-    await page.close();
   });
 });

@@ -1,4 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
+import * as path from "path";
+
+const AUTH_DIR=path.join(__dirname, "playwright/.auth");
 
 export default defineConfig({
   testDir: "./tests",
@@ -31,9 +34,71 @@ export default defineConfig({
   globalTeardown: require.resolve("./globalTeardown"),
 
   projects: [
+    // ── Auth Setup ────────────────────────────────────────
+    {
+      name: "auth-setup",
+      testMatch: /auth\.setup\.ts$/,
+    },
+
+    // ── Unauthenticated Tests ─────────────────────────────
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+      },
+      dependencies: ["auth-setup"],
+      testIgnore: [
+        /\/orders\/.*\.spec\.ts$/,
+        /\/checkout\/.*\.spec\.ts$/,
+        /profile-hub\.spec\.ts$/,
+        /\/seller\/.*\.spec\.ts$/,
+        /\/admin\/.*\.spec\.ts$/,
+        /\/auth\/profile\.spec\.ts$/,
+        /layout-auth\.spec\.ts$/,
+      ],
+    },
+
+    // ── Buyer-Authenticated Tests ─────────────────────────
+    {
+      name: "buyer",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: path.join(AUTH_DIR, "buyer/state.json"),
+      },
+      dependencies: ["auth-setup"],
+      testMatch: [
+        /\/orders\/.*\.spec\.ts$/,
+        /\/checkout\/.*\.spec\.ts$/,
+        /profile-hub\.spec\.ts$/,
+        /layout-auth\.spec\.ts$/,
+      ],
+    },
+
+    // ── Seller-Authenticated Tests ────────────────────────
+    {
+      name: "seller",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: path.join(AUTH_DIR, "seller/state.json"),
+      },
+      dependencies: ["auth-setup"],
+      testMatch: [
+        /\/seller\/.*\.spec\.ts$/,
+      ],
+    },
+
+    // ── Admin-Authenticated Tests ─────────────────────────
+    {
+      name: "admin",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: path.join(AUTH_DIR, "admin/state.json"),
+      },
+      dependencies: ["auth-setup"],
+      testMatch: [
+        /\/admin\/.*\.spec\.ts$/,
+        /\/auth\/profile\.spec\.ts$/,
+      ],
     },
   ],
 });

@@ -5,6 +5,7 @@
 
 import { APIRequestContext, Browser, BrowserContext, Page } from '@playwright/test';
 import type { BffUser } from './types';
+import { TIMEOUTS } from './constants';
 import { ensureStoreExists } from './store-helpers';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:4200';

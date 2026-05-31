@@ -36,22 +36,22 @@ export class StoreSettingsPage extends BasePage {
   }
 
   async createStore(name: string, description: string) {
-    await this.fillStable(this.storeNameInput, name);
+    await this.storeNameInput.fill(name);
     await this.storeDescInput.fill(description);
     await this.createStoreBtn.click();
   }
 
   async updateStore(name: string, description: string) {
-    await this.fillStable(this.storeNameInput, name);
+    await this.storeNameInput.fill(name);
     await this.storeDescInput.fill(description);
     await this.saveBtn.click();
   }
 
   async fillStoreForm(name: string, description: string, email?: string) {
-    await this.fillStable(this.storeNameInput, name);
+    await this.storeNameInput.fill(name);
     await this.storeDescInput.fill(description);
     if (email) {
-      await this.fillStable(this.contactEmailInput, email);
+      await this.contactEmailInput.fill(email);
     }
   }
 

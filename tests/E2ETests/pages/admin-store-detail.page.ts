@@ -43,4 +43,9 @@ export class AdminStoreDetailPage extends BasePage {
     this.page.once('dialog', dialog => dialog.accept(reason));
     await this.rejectBtn.click();
   }
+
+  /** Navigate to a specific store's detail page. */
+  async goto(storeId: string) {
+    await this.page.goto(`/admin/stores/${storeId}`);
+  }
 }

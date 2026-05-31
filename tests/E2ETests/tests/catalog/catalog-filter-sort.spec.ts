@@ -37,13 +37,6 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
       await catalogPage.search('zzzznonexistentproduct12345');
     });
 
-    await test.step('Wait for search results to load', async () => {
-      // Wait for loading skeleton to disappear (API response received)
-      await catalogPage.loadingSkeleton.waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {});
-      // Give Angular time to render the empty state after API response
-      await page.waitForTimeout(1000);
-    });
-
     await test.step('Verify empty state is shown', async () => {
       await expect(catalogPage.emptyState).toBeVisible({ timeout: TIMEOUTS.api });
     });
@@ -61,7 +54,7 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
     });
 
     await test.step('Verify category sidebar is visible', async () => {
-      await expect(catalogPage.categorySidebar).toBeVisible({ timeout: TIMEOUTS.element });
+      await expect(catalogPage.sidebar.root).toBeVisible({ timeout: TIMEOUTS.element });
     });
 
     let initialCount: number;
@@ -129,7 +122,7 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
     });
 
     await test.step('Verify pagination is visible', async () => {
-      await expect(catalogPage.pagination).toBeVisible({ timeout: TIMEOUTS.element });
+      await expect(catalogPage.pagination.root).toBeVisible({ timeout: TIMEOUTS.element });
     });
 
     await test.step('Navigate to page 2', async () => {
