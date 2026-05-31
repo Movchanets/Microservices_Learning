@@ -30,14 +30,14 @@ public class AddCartItemCommandHandlerTests
         Guid? buyerId = Guid.NewGuid();
         var price = 29.99m;
 
-        _priceRepositoryMock.Setup(r => r.GetByIdAsync(TestProductId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ProductPrice.Create(TestProductId, "PROD-001", "Test Product", price, "USD", TestStoreId));
+        _priceRepositoryMock.Setup(r => r.GetBySkuIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ProductPrice.Create(TestProductId, Guid.NewGuid(), "TEST-SKU", "Test Product", price, "USD", TestStoreId));
 
         var freshCart = new ShoppingCart(buyerId);
         _repositoryMock.Setup(r => r.GetOrCreateTrackedCartAsync(buyerId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(freshCart);
 
-        var command = new AddCartItemCommand(buyerId, null, TestProductId, 2);
+        var command = new AddCartItemCommand(buyerId, null, TestProductId, Guid.NewGuid(), "TEST-SKU", 2);
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -51,10 +51,10 @@ public class AddCartItemCommandHandlerTests
     [Fact]
     public async Task Handle_ProductNotFound_ShouldReturnFailure()
     {
-        _priceRepositoryMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        _priceRepositoryMock.Setup(r => r.GetBySkuIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ProductPrice?)null);
 
-        var command = new AddCartItemCommand(Guid.NewGuid(), null, TestProductId, 1);
+        var command = new AddCartItemCommand(Guid.NewGuid(), null, TestProductId, Guid.NewGuid(), "TEST-SKU", 1);
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();

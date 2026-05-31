@@ -1,14 +1,19 @@
 import { Locator, Page } from '@playwright/test';
+import { BaseComponent } from './base.component';
 
-export class FooterComponent {
-  readonly page: Page;
+/**
+ * Component object for the site footer.
+ */
+export class FooterComponent extends BaseComponent {
   readonly themeToggle: Locator;
   readonly langToggle: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.themeToggle = page.getByTestId('theme-toggle-btn');
-    this.langToggle = page.getByTestId('lang-toggle-btn');
+    const root = page.locator('footer');
+    super(page, root);
+
+    this.themeToggle = this.root.getByTestId('theme-toggle-btn');
+    this.langToggle = this.root.getByTestId('lang-toggle-btn');
   }
 
   async toggleTheme() {

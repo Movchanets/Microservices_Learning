@@ -1,7 +1,15 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
+import { CartDrawerComponent } from '../components/cart-drawer.component';
 
+/**
+ * Page object for `/home` — landing page with featured products and categories.
+ */
 export class HomePage extends BasePage {
+  // ── Components ──────────────────────────────────────────
+  readonly cartDrawer: CartDrawerComponent;
+
+  // ── Locators ────────────────────────────────────────────
   readonly heroBanner: Locator;
   readonly shopByCategoryHeading: Locator;
   readonly categoryTiles: Locator;
@@ -12,6 +20,7 @@ export class HomePage extends BasePage {
 
   constructor(page: Page) {
     super(page);
+    this.cartDrawer = new CartDrawerComponent(page);
     this.heroBanner = page.locator('app-hero-banner');
     this.shopByCategoryHeading = page.getByRole('heading', { name: /shop by category/i });
     this.categoryTiles = page.locator('app-category-tiles');

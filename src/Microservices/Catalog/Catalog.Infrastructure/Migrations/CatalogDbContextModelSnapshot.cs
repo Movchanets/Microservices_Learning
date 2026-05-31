@@ -28,6 +28,10 @@ namespace Catalog.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Brand")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
 
@@ -48,11 +52,6 @@ namespace Catalog.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("Sku")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -69,9 +68,6 @@ namespace Catalog.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
-
-                    b.HasIndex("Sku")
-                        .IsUnique();
 
                     b.HasIndex("StoreId");
 
@@ -166,6 +162,54 @@ namespace Catalog.Infrastructure.Migrations
                     b.ToTable("ReviewVotes", (string)null);
                 });
 
+            modelBuilder.Entity("Catalog.Domain.Entities.AttributeDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string>("AllowedValues")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<bool>("IsFilterable")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Target")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ValueType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("CategoryId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("AttributeDefinitions", (string)null);
+                });
+
             modelBuilder.Entity("Catalog.Domain.Entities.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -203,6 +247,51 @@ namespace Catalog.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Categories", (string)null);
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Entities.Sku", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FlexibleAttributes")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SkuCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TypedAttributes")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SkuCode")
+                        .IsUnique();
+
+                    b.ToTable("Skus", (string)null);
                 });
 
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
@@ -362,7 +451,6 @@ namespace Catalog.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 
@@ -381,9 +469,29 @@ namespace Catalog.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Entities.AttributeDefinition", b =>
+                {
+                    b.HasOne("Catalog.Domain.Entities.Category", null)
+                        .WithMany("AttributeDefinitions")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Entities.Sku", b =>
+                {
+                    b.HasOne("Catalog.Domain.Aggregates.Product", null)
+                        .WithMany("Skus")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.OwnsOne("Catalog.Domain.ValueObjects.Money", "Price", b1 =>
                         {
-                            b1.Property<Guid>("ProductId")
+                            b1.Property<Guid>("SkuId")
                                 .HasColumnType("uuid");
 
                             b1.Property<decimal>("Amount")
@@ -397,15 +505,13 @@ namespace Catalog.Infrastructure.Migrations
                                 .HasColumnType("character varying(3)")
                                 .HasColumnName("PriceCurrency");
 
-                            b1.HasKey("ProductId");
+                            b1.HasKey("SkuId");
 
-                            b1.ToTable("Products");
+                            b1.ToTable("Skus");
 
                             b1.WithOwner()
-                                .HasForeignKey("ProductId");
+                                .HasForeignKey("SkuId");
                         });
-
-                    b.Navigation("Category");
 
                     b.Navigation("Price")
                         .IsRequired();
@@ -421,6 +527,16 @@ namespace Catalog.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("InboxMessageId", "InboxConsumerId")
                         .HasPrincipalKey("MessageId", "ConsumerId");
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Aggregates.Product", b =>
+                {
+                    b.Navigation("Skus");
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Entities.Category", b =>
+                {
+                    b.Navigation("AttributeDefinitions");
                 });
 #pragma warning restore 612, 618
         }

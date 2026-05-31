@@ -48,8 +48,8 @@ builder.Services.AddMassTransit(x =>
 
     x.AddConsumer<ReserveInventoryConsumer>();
     x.AddConsumer<CancelReservationConsumer>();
-    x.AddConsumer<ProductCreatedConsumer>();
-    x.AddConsumer<ProductUpdatedConsumer>();
+    x.AddConsumer<SkuCreatedConsumer>();
+    x.AddConsumer<SkuDeletedConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {

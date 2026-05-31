@@ -1,6 +1,10 @@
 import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './base.page';
+import { TIMEOUTS } from '../utils/constants';
 
+/**
+ * Page object for `/admin` — admin panel with store management.
+ */
 export class AdminPage extends BasePage {
   readonly pageHeading: Locator;
   readonly usersTab: Locator;
@@ -82,7 +86,7 @@ export class AdminPage extends BasePage {
     const deactivateBtn = row.getByRole('button', { name: /deactivate|userx/i });
 
     // Register dialog handler BEFORE clicking
-    const dialogPromise = this.page.waitForEvent('dialog', { timeout: 5000 }).catch(() => null);
+    const dialogPromise = this.page.waitForEvent('dialog', { timeout: TIMEOUTS.quick }).catch(() => null);
     await deactivateBtn.click();
     const dialog = await dialogPromise;
     if (dialog) {
@@ -111,7 +115,7 @@ export class AdminPage extends BasePage {
     const card = await this.getVerificationCard(storeName);
     const rejectBtn = card.getByRole('button', { name: 'Reject' });
 
-    const dialogPromise = this.page.waitForEvent('dialog', { timeout: 5000 }).catch(() => null);
+    const dialogPromise = this.page.waitForEvent('dialog', { timeout: TIMEOUTS.quick }).catch(() => null);
     await rejectBtn.click();
     const dialog = await dialogPromise;
     if (dialog) {

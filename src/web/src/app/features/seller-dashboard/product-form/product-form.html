@@ -1,123 +1,232 @@
-<div class="bg-card rounded-3xl border border-border p-6 max-w-2xl mx-auto">
-  <h2 class="text-xl font-bold font-lexend mb-6">
-    {{ isEditing() ? 'Edit Product' : 'Add Product' }}
-  </h2>
+<div class="min-h-screen bg-background p-6 pt-10">
+  <div class="container mx-auto max-w-4xl">
+    <!-- Back link -->
+    <a routerLink="/seller/products"
+       class="inline-flex items-center text-muted hover:text-primary transition-colors mb-6">
+      <lucide-icon name="ChevronLeft" class="w-4 h-4 mr-1"></lucide-icon>
+      Back to Products
+    </a>
 
-  @if (store.error()) {
-    <div class="mb-4 p-3 bg-red-500/10 text-red-500 rounded-xl text-sm">{{ store.error() }}</div>
-  }
+    <h1 class="text-2xl font-bold font-lexend mb-8">
+      {{ isEditing() ? 'Edit Product' : 'Create Product' }}
+    </h1>
 
-  <form (submit)="onSubmit($event)" class="space-y-5" novalidate>
+    @if (store.error()) {
+      <div class="mb-6 p-4 bg-red-500/10 text-red-500 rounded-xl text-sm">{{ store.error() }}</div>
+    }
+
     @if (formErrors().length > 0) {
-      <div class="p-3 bg-red-500/10 text-red-500 rounded-xl text-sm space-y-1">
+      <div class="mb-6 p-4 bg-red-500/10 text-red-500 rounded-xl text-sm space-y-1">
         @for (err of formErrors(); track err) {
           <p>{{ err }}</p>
         }
       </div>
     }
-    <div>
-      <label class="block text-sm font-medium mb-1.5" i18n>Product Name</label>
-      <input #nameInput [value]="name()" (input)="name.set(nameInput.value)"
-             class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-             required />
-      @if (formTouched() && !name().trim()) {
-        <p class="text-xs text-red-500 mt-1" aria-live="polite">Product name is required.</p>
-      }
-    </div>
 
-    <div>
-      <label class="block text-sm font-medium mb-1.5" i18n>SKU</label>
-      <div class="flex gap-2">
-        <input #skuInput [value]="sku()" (input)="onSkuInput(skuInput.value)"
-               placeholder="e.g. WIDGET-001"
-               class="flex-1 px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-               [disabled]="isEditing()"
-               required />
-        @if (!isEditing()) {
-          <button type="button" (click)="generateSku()"
-                  class="px-4 py-2.5 bg-muted/20 text-foreground rounded-xl text-sm font-medium hover:bg-muted/30 transition-colors cursor-pointer whitespace-nowrap">
-            Generate
-          </button>
+    <form (submit)="onSubmit($event)" novalidate class="space-y-8">
+
+      <!-- ═══════════ PRODUCT INFO ═══════════ -->
+      <section class="bg-card border border-border rounded-2xl p-6 space-y-5">
+        <h2 class="text-lg font-semibold font-lexend">Product Information</h2>
+
+        <div>
+          <label class="block text-sm font-medium mb-1.5">Product Name</label>
+          <input #nameInput [value]="name()" (input)="name.set(nameInput.value)"
+                 placeholder="e.g. Apple iPhone 17 Pro Max"
+                 class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                 required />
+          @if (formTouched() && !name().trim()) {
+            <p class="text-xs text-red-500 mt-1">Product name is required.</p>
+          }
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1.5">Description</label>
+          <textarea #descInput [value]="description()" (input)="description.set(descInput.value)"
+                    rows="4" placeholder="Describe your product..."
+                    class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1.5">Brand</label>
+            <input #brandInput [value]="brand()" (input)="brand.set(brandInput.value)"
+                   placeholder="e.g. Nike, Apple"
+                   class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1.5">Category</label>
+            <select #categorySelect [value]="categoryId()" (change)="categoryId.set(categorySelect.value)"
+                    class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    required>
+              <option value="" disabled>Select a category</option>
+              @for (cat of categories(); track cat.id) {
+                <option [value]="cat.id">{{ cat.name }}</option>
+              }
+            </select>
+            @if (formTouched() && !categoryId()) {
+              <p class="text-xs text-red-500 mt-1">Category is required.</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1.5">Tags</label>
+          <input #tagsInputEl [value]="tagsInput()" (input)="tagsInput.set(tagsInputEl.value)"
+                 placeholder="electronics, gadgets, wireless"
+                 class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+          <p class="text-xs text-muted mt-1">Comma-separated tags for search</p>
+        </div>
+      </section>
+
+      <!-- ═══════════ PRODUCT IMAGES ═══════════ -->
+      <section class="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div>
+          <h2 class="text-lg font-semibold font-lexend">Product Images</h2>
+          <p class="text-sm text-muted mt-1">Main product images shown on the product page. Click an image to set it as primary.</p>
+        </div>
+
+        <app-image-gallery-uploader
+          [uploadedImages]="productImages()"
+          [pendingImages]="productPendingUploads()"
+          [uploading]="uploading()"
+          [error]="uploadError()"
+          (filesSelected)="onProductFilesSelected($event)"
+          (removeUploaded)="removeProductUploaded($event)"
+          (removePending)="removeProductPending($event)"
+          (setPrimary)="setProductPrimary($event)"
+        />
+      </section>
+
+      <!-- ═══════════ SKUs ═══════════ -->
+      <section class="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold font-lexend">SKUs / Variants</h2>
+            <p class="text-sm text-muted mt-1">Each variant can have its own images and pricing.</p>
+          </div>
+          @if (!isEditing()) {
+            <button type="button" (click)="addSkuRow()"
+                    class="px-4 py-2 bg-primary/10 text-primary rounded-xl text-sm font-medium hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-1.5">
+              <lucide-icon name="Plus" class="w-4 h-4"></lucide-icon>
+              Add Variant
+            </button>
+          }
+        </div>
+
+        @if (isEditing()) {
+          <!-- Edit mode: show existing SKUs read-only -->
+          @for (sku of existingSkus(); track sku.skuCode) {
+            <div class="p-4 bg-muted/10 rounded-xl">
+              <div class="flex items-center gap-3 mb-3">
+                <span class="font-mono text-sm font-medium">{{ sku.skuCode }}</span>
+                <span class="text-sm text-muted">{{ sku.price | number:'1.2-2' }} {{ sku.currency }}</span>
+              </div>
+              @if (sku.images.length > 0) {
+                <div class="flex gap-2">
+                  @for (img of sku.images; track img.id) {
+                    <img [src]="img.thumbnailUrl ?? img.url" class="w-16 h-16 rounded-lg object-cover border border-border" />
+                  }
+                </div>
+              }
+            </div>
+          }
+        } @else {
+          <!-- Create mode: SKU tabs -->
+          @if (skus().length > 1) {
+            <div class="flex gap-1 overflow-x-auto pb-1">
+              @for (sku of skus(); track sku.id; let i = $index) {
+                <button type="button"
+                  (click)="activeSkuTab.set(i)"
+                  [class]="skuTabClass(i)">
+                  {{ sku.skuCode || 'Variant ' + (i + 1) }}
+                </button>
+              }
+            </div>
+          }
+
+          <!-- Active SKU detail — direct access to avoid @for/@if binding staleness -->
+          @if (skus().length > 0) {
+            <div class="space-y-4 p-4 bg-muted/5 rounded-xl border border-border">
+              <!-- SKU fields -->
+              <div class="grid grid-cols-1 sm:grid-cols-[1fr_140px_120px_auto] gap-3 items-end">
+                <div>
+                  <label class="block text-xs text-muted mb-1">SKU Code</label>
+                  <div class="flex gap-2">
+                    <input #skuInput [value]="skus()[activeSkuTab()].skuCode"
+                           (input)="updateSkuCode(activeSkuTab(), skuInput.value)"
+                           placeholder="e.g. WIDGET-001"
+                           class="flex-1 px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
+                           required />
+                    <button type="button" (click)="generateSkuFor(activeSkuTab())"
+                            class="px-3 py-2 bg-muted/20 text-foreground rounded-lg text-xs font-medium hover:bg-muted/30 transition-colors cursor-pointer whitespace-nowrap">
+                      Generate
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-muted mb-1">Price</label>
+                  <input #priceInput type="number"
+                         [value]="skus()[activeSkuTab()].price"
+                         (input)="updateSkuPrice(activeSkuTab(), +priceInput.value)"
+                         min="0" step="0.01"
+                         class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
+                         required />
+                </div>
+                <div>
+                  <label class="block text-xs text-muted mb-1">Currency</label>
+                  <select #currencySelect
+                          [value]="skus()[activeSkuTab()].currency"
+                          (change)="updateSkuCurrency(activeSkuTab(), currencySelect.value)"
+                          class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm">
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="UAH">UAH</option>
+                  </select>
+                </div>
+                @if (skus().length > 1) {
+                  <button type="button" (click)="removeSkuRow(activeSkuTab())"
+                          class="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                          aria-label="Remove variant">
+                    <lucide-icon name="Trash2" class="w-4 h-4"></lucide-icon>
+                  </button>
+                }
+              </div>
+
+              <!-- Per-SKU images — bound to active SKU directly -->
+              <div>
+                <label class="block text-sm font-medium mb-2">Variant Images</label>
+                <p class="text-xs text-muted mb-3">Images specific to this variant (e.g. different color). Click to set primary.</p>
+                <app-image-gallery-uploader
+                  [uploadedImages]="skus()[activeSkuTab()].images"
+                  [pendingImages]="skus()[activeSkuTab()].pendingUploads"
+                  (filesSelected)="onSkuFilesSelected(activeSkuTab(), $event)"
+                  (removeUploaded)="removeSkuUploaded(activeSkuTab(), $event)"
+                  (removePending)="removeSkuPending(activeSkuTab(), $event)"
+                  (setPrimary)="setSkuPrimary(activeSkuTab(), $event)"
+                />
+              </div>
+            </div>
+          }
         }
+      </section>
+
+      <!-- ═══════════ SUBMIT ═══════════ -->
+      <div class="flex items-center gap-3">
+        <button type="submit"
+                [disabled]="store.loading()"
+                class="px-8 py-3 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors disabled:opacity-50 cursor-pointer">
+          @if (store.loading()) {
+            Saving...
+          } @else {
+            {{ isEditing() ? 'Update Product' : 'Create Product' }}
+          }
+        </button>
+        <a routerLink="/seller/products" class="px-6 py-3 text-muted hover:text-foreground transition-colors">
+          Cancel
+        </a>
       </div>
-      <p class="text-xs text-muted mt-1">Alphanumeric and hyphens only (e.g. MY-PRODUCT-01)</p>
-      @if (formTouched() && !sku().trim()) {
-        <p class="text-xs text-red-500 mt-1" aria-live="polite">SKU is required.</p>
-      }
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium mb-1.5" i18n>Description</label>
-      <textarea #descInput [value]="description()" (input)="description.set(descInput.value)"
-                rows="3"
-                class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"></textarea>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1.5" i18n>Price</label>
-        <input #priceInput type="number" [value]="price()" (input)="price.set(+priceInput.value)"
-               min="0" step="0.01"
-               class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-               required />
-        @if (formTouched() && price() <= 0) {
-          <p class="text-xs text-red-500 mt-1" aria-live="polite">Price must be greater than zero.</p>
-        }
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1.5" i18n>Currency</label>
-        <select #currencySelect [value]="currency()" (change)="currency.set(currencySelect.value)"
-                class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-          <option value="GBP">GBP</option>
-        </select>
-      </div>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium mb-1.5" i18n>Category</label>
-      <select #categorySelect [value]="categoryId()" (change)="categoryId.set(categorySelect.value)"
-              class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              required>
-        <option value="" disabled>Select a category</option>
-        @for (cat of categories(); track cat.id) {
-          <option [value]="cat.id">{{ cat.name }}</option>
-        }
-      </select>
-      @if (formTouched() && !categoryId()) {
-        <p class="text-xs text-red-500 mt-1" aria-live="polite">Category is required.</p>
-      }
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium mb-1.5" i18n>Image URL</label>
-      <input #imageUrlInput [value]="imageUrl()" (input)="imageUrl.set(imageUrlInput.value)"
-             placeholder="https://example.com/image.jpg"
-             class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-      @if (formTouched() && imageUrl() && !/^https?:\/\/.+/.test(imageUrl())) {
-        <p class="text-xs text-red-500 mt-1" aria-live="polite">Must start with http:// or https://</p>
-      }
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium mb-1.5" i18n>Tags</label>
-      <input #tagsInputElement [value]="tagsInput()" (input)="tagsInput.set(tagsInputElement.value)"
-             placeholder="electronics, gadgets, wireless (comma-separated)"
-             class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-      <p class="text-xs text-muted mt-1" i18n>Separate tags with commas</p>
-    </div>
-
-    <div class="flex items-center gap-3 pt-2">
-      <button type="submit"
-              [disabled]="store.loading()"
-              class="px-6 py-2.5 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors disabled:opacity-50 cursor-pointer">
-        {{ store.loading() ? 'Saving...' : (isEditing() ? 'Update' : 'Create') }}
-      </button>
-      <a routerLink="/seller/products"
-         class="px-6 py-2.5 text-muted hover:text-foreground transition-colors">
-        Cancel
-      </a>
-    </div>
-  </form>
+    </form>
+  </div>
 </div>

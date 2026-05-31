@@ -250,7 +250,7 @@ public sealed class CartRepository(
     {
         foreach (var sourceItem in source.Items.ToList())
         {
-            var existing = target.Items.FirstOrDefault(i => i.MatchesProduct(sourceItem.ProductId));
+            var existing = target.Items.FirstOrDefault(i => i.MatchesProduct(sourceItem.ProductId, sourceItem.SkuId));
             if (existing is not null)
             {
                 existing.AddQuantity(sourceItem.Quantity);
@@ -258,7 +258,7 @@ public sealed class CartRepository(
             else
             {
                 // Move item to target cart
-                target.AddItem(sourceItem.ProductId, sourceItem.Quantity, sourceItem.StoreId, sourceItem.Price);
+                target.AddItem(sourceItem.ProductId, sourceItem.SkuId, sourceItem.SkuCode, sourceItem.Quantity, sourceItem.StoreId, sourceItem.Price);
             }
         }
     }

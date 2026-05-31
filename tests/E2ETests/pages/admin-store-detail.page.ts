@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/admin/stores/:id` — store detail view for admins.
+ */
 export class AdminStoreDetailPage extends BasePage {
   readonly backToVerificationsLink: Locator;
   readonly storeNameHeading: Locator;
@@ -39,5 +42,10 @@ export class AdminStoreDetailPage extends BasePage {
     // Handle the prompt that asks for rejection reason
     this.page.once('dialog', dialog => dialog.accept(reason));
     await this.rejectBtn.click();
+  }
+
+  /** Navigate to a specific store's detail page. */
+  async goto(storeId: string) {
+    await this.page.goto(`/admin/stores/${storeId}`);
   }
 }

@@ -129,7 +129,9 @@ export class StorePageComponent implements OnInit {
     }
   }
 
-  onAddToCart(productId: string): void {
-    this.cartStore.addToCart(productId, 1);
+  onAddToCart(product: ProductListItem): void {
+    if (product.defaultSkuId && product.defaultSkuCode) {
+      this.cartStore.addToCart(product.id, product.defaultSkuId, product.defaultSkuCode, 1);
+    }
   }
 }

@@ -1,8 +1,13 @@
 import { Locator, Page } from '@playwright/test';
+import { BaseComponent } from './base.component';
 
-export class WriteReviewComponent {
-  readonly page: Page;
-  readonly container: Locator;
+/**
+ * Component object for the write-review form.
+ *
+ * Scoped to `<app-write-review>`. Provides star rating, title/body inputs,
+ * and a composite `writeReview()` method for the full flow.
+ */
+export class WriteReviewComponent extends BaseComponent {
   readonly ratingStars: Locator;
   readonly titleInput: Locator;
   readonly bodyInput: Locator;
@@ -10,13 +15,13 @@ export class WriteReviewComponent {
   readonly cancelBtn: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.container = page.locator('app-write-review, [class*="review-form"], form').filter({ has: page.locator('[class*="star"], button') });
-    this.ratingStars = this.container.locator('button, [role="button"]').filter({ has: page.locator('lucide-icon[name="Star"]') });
-    this.titleInput = this.container.getByLabel(/title/i).or(this.container.getByPlaceholder(/title/i));
-    this.bodyInput = this.container.getByLabel(/review|comment|body/i).or(this.container.getByPlaceholder(/review|comment|write/i));
-    this.submitBtn = this.container.getByRole('button', { name: /submit|post|save/i });
-    this.cancelBtn = this.container.getByRole('button', { name: /cancel/i });
+    const root = page.locator('app-write-review');
+    super(page, root);
+    this.ratingStars = this.root.locator('button, [role="button"]').filter({ has: this.root.locator('lucide-icon[name="Star"]') });
+    this.titleInput = this.root.getByLabel(/title/i);
+    this.bodyInput = this.root.getByLabel(/review|comment|body/i);
+    this.submitBtn = this.root.getByRole('button', { name: /submit|post|save/i });
+    this.cancelBtn = this.root.getByRole('button', { name: /cancel/i });
   }
 
   async setRating(stars: number) {
@@ -45,9 +50,5 @@ export class WriteReviewComponent {
     await this.fillTitle(title);
     await this.fillBody(body);
     await this.submit();
-  }
-
-  async isVisible(): Promise<boolean> {
-    return this.container.isVisible();
   }
 }

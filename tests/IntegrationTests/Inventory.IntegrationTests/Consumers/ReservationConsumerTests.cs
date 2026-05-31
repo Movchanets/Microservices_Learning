@@ -33,17 +33,18 @@ public class ReservationConsumerTests
         var sku = $"SKU-RESRV-{Guid.NewGuid():N}".ToUpperInvariant();
         var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var productId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
         using (var seedScope = _fixture.CreateScope())
         {
             var ctx = seedScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var repo = new InventoryItemRepository(ctx);
-            repo.Add(InventoryItem.Create(sku, 10, storeId, productId));
+            repo.Add(InventoryItem.Create(skuId, productId, sku, 10, storeId));
             await ctx.SaveChangesAsync();
         }
 
         var orderId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        var items = new List<OrderItemContract> { new(productId, 3, 25.00m, storeId) };
+        var items = new List<OrderItemContract> { new(productId, skuId, "TEST-SKU", "Test Product", 3, 25.00m, storeId) };
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
 
         // Resolve real ISender from DI (MediatR with real handlers)
@@ -73,7 +74,7 @@ public class ReservationConsumerTests
         using var assertScope = _fixture.CreateScope();
         var assertCtx = assertScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var assertRepo = new InventoryItemRepository(assertCtx);
-        var updated = await assertRepo.GetBySkuAsync(sku);
+        var updated = await assertRepo.GetBySkuCodeAsync(sku);
         updated.Should().NotBeNull();
         updated!.AvailableQuantity.Should().Be(7); // 10 - 3
     }
@@ -85,17 +86,18 @@ public class ReservationConsumerTests
         var sku = $"SKU-LOW-{Guid.NewGuid():N}".ToUpperInvariant();
         var storeId2 = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var productId2 = Guid.NewGuid();
+        var skuId2 = Guid.NewGuid();
         using (var seedScope = _fixture.CreateScope())
         {
             var ctx = seedScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var repo = new InventoryItemRepository(ctx);
-            repo.Add(InventoryItem.Create(sku, 1, storeId2, productId2));
+            repo.Add(InventoryItem.Create(skuId2, productId2, sku, 1, storeId2));
             await ctx.SaveChangesAsync();
         }
 
         var orderId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        var items = new List<OrderItemContract> { new(productId2, 5, 10.00m, storeId2) };
+        var items = new List<OrderItemContract> { new(productId2, skuId2, "TEST-SKU", "Test Product", 5, 10.00m, storeId2) };
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
 
         using var scope = _fixture.CreateScope();
@@ -125,7 +127,7 @@ public class ReservationConsumerTests
         using var assertScope = _fixture.CreateScope();
         var assertCtx = assertScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var assertRepo = new InventoryItemRepository(assertCtx);
-        var unchanged = await assertRepo.GetBySkuAsync(sku);
+        var unchanged = await assertRepo.GetBySkuCodeAsync(sku);
         unchanged.Should().NotBeNull();
         unchanged!.AvailableQuantity.Should().Be(1);
     }
@@ -139,12 +141,14 @@ public class ReservationConsumerTests
         var storeId3 = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var productId1 = Guid.NewGuid();
         var productId2b = Guid.NewGuid();
+        var skuId1 = Guid.NewGuid();
+        var skuId2 = Guid.NewGuid();
         using (var seedScope = _fixture.CreateScope())
         {
             var ctx = seedScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var repo = new InventoryItemRepository(ctx);
-            repo.Add(InventoryItem.Create(sku1, 10, storeId3, productId1));
-            repo.Add(InventoryItem.Create(sku2, 20, storeId3, productId2b));
+            repo.Add(InventoryItem.Create(skuId1, productId1, sku1, 10, storeId3));
+            repo.Add(InventoryItem.Create(skuId2, productId2b, sku2, 20, storeId3));
             await ctx.SaveChangesAsync();
         }
 
@@ -152,8 +156,8 @@ public class ReservationConsumerTests
         var correlationId = Guid.NewGuid();
         var items = new List<OrderItemContract>
         {
-            new(productId1, 4, 15.00m, storeId3),
-            new(productId2b, 7, 30.00m, storeId3)
+            new(productId1, skuId1, "TEST-SKU", "Test Product", 4, 15.00m, storeId3),
+            new(productId2b, skuId2, "TEST-SKU", "Test Product", 7, 30.00m, storeId3)
         };
         var command = new ReserveInventoryCommand(correlationId, orderId, items);
 
@@ -182,10 +186,10 @@ public class ReservationConsumerTests
         var assertCtx = assertScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var assertRepo = new InventoryItemRepository(assertCtx);
 
-        var item1 = await assertRepo.GetBySkuAsync(sku1);
+        var item1 = await assertRepo.GetBySkuCodeAsync(sku1);
         item1!.AvailableQuantity.Should().Be(6); // 10 - 4
 
-        var item2 = await assertRepo.GetBySkuAsync(sku2);
+        var item2 = await assertRepo.GetBySkuCodeAsync(sku2);
         item2!.AvailableQuantity.Should().Be(13); // 20 - 7
     }
 
@@ -198,11 +202,12 @@ public class ReservationConsumerTests
         var sku = $"SKU-CANC-{Guid.NewGuid():N}".ToUpperInvariant();
         var storeId4 = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var productId3 = Guid.NewGuid();
+        var skuId3 = Guid.NewGuid();
         using (var seedScope = _fixture.CreateScope())
         {
             var ctx = seedScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var repo = new InventoryItemRepository(ctx);
-            var item = InventoryItem.Create(sku, 10, storeId4, productId3);
+            var item = InventoryItem.Create(skuId3, productId3, sku, 10, storeId4);
             item.Reserve(4); // 10 → 6
             repo.Add(item);
             await ctx.SaveChangesAsync();
@@ -210,7 +215,7 @@ public class ReservationConsumerTests
 
         var orderId = Guid.NewGuid();
         var correlationId = Guid.NewGuid();
-        var items = new List<OrderItemContract> { new(productId3, 4, 25.00m, storeId4) };
+        var items = new List<OrderItemContract> { new(productId3, skuId3, "TEST-SKU", "Test Product", 4, 25.00m, storeId4) };
         var command = new CancelReservationCommand(correlationId, orderId, items);
 
         using var scope = _fixture.CreateScope();
@@ -239,7 +244,7 @@ public class ReservationConsumerTests
         using var assertScope = _fixture.CreateScope();
         var assertCtx = assertScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var assertRepo = new InventoryItemRepository(assertCtx);
-        var updated = await assertRepo.GetBySkuAsync(sku);
+        var updated = await assertRepo.GetBySkuCodeAsync(sku);
         updated.Should().NotBeNull();
         updated!.AvailableQuantity.Should().Be(10); // 6 + 4
     }

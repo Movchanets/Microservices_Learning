@@ -40,6 +40,13 @@ namespace Cart.Infrastructure.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
+                    b.Property<string>("SkuCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SkuId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("StoreId")
                         .HasColumnType("uuid");
 
@@ -100,10 +107,16 @@ namespace Cart.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<string>("Sku")
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("SkuId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("StoreId")
                         .HasColumnType("uuid");
@@ -113,7 +126,9 @@ namespace Cart.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Sku")
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SkuId")
                         .IsUnique();
 
                     b.ToTable("ProductPrices", (string)null);

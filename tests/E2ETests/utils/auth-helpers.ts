@@ -5,6 +5,7 @@
 
 import { APIRequestContext, Browser, BrowserContext, Page } from '@playwright/test';
 import type { BffUser } from './types';
+import { TIMEOUTS } from './constants';
 import { ensureStoreExists } from './store-helpers';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:4200';
@@ -202,14 +203,14 @@ export async function ensureAuthenticatedPage(
   await page.getByTestId('register-submit-btn').click();
 
   // Wait for redirect — either to catalog (auto-login) or login page
-  await page.waitForURL(/\/(catalog|auth\/login)$/, { timeout: 15000 });
+  await page.waitForURL(/\/(catalog|auth\/login)$/, { timeout: TIMEOUTS.api });
 
   // If redirected to login, perform login
   if (page.url().includes('/auth/login')) {
     await page.getByTestId('email-input').fill(email);
     await page.getByTestId('password-input').fill(password);
     await page.getByTestId('login-submit-btn').click();
-    await page.waitForURL(/\/catalog/, { timeout: 15000 });
+    await page.waitForURL(/\/catalog/, { timeout: TIMEOUTS.api });
   }
 
   return { page, context, email, password };

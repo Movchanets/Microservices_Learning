@@ -1,6 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { InventoryStore, InventoryDisplayItem } from '../inventory.store';
 import { ToastService } from '../../../core/services/toast.service';
@@ -8,7 +7,7 @@ import { ToastService } from '../../../core/services/toast.service';
 @Component({
   selector: 'app-inventory-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DatePipe, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule],
   template: `
     <div class="space-y-6">
       <!-- Low Stock Alert Banner -->

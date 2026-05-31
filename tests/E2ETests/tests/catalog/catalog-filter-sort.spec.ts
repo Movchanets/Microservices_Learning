@@ -1,104 +1,138 @@
 import { test, expect } from '../../fixtures/test-base';
+import { TIMEOUTS } from '../../utils/constants';
 
 test.describe('Catalog: Filtering, Sorting & Pagination', () => {
 
-  test('should filter products by category via sidebar', async ({ page, catalogPage }) => {
-    await catalogPage.goto('/catalog');
-    await catalogPage.waitForPageLoad();
-
-    const sidebarVisible = await catalogPage.categorySidebar.isVisible().catch(() => false);
-    if (!sidebarVisible) {
-      test.skip(true, 'Category sidebar not visible — skipping');
-      return;
-    }
-
-    const initialCount = await catalogPage.getProductCount();
-    await catalogPage.filterByCategory('Electronics');
-    await page.waitForLoadState('domcontentloaded');
-
-    const filteredCount = await catalogPage.getProductCount();
-    expect(filteredCount).toBeLessThanOrEqual(initialCount);
-  });
-
-  test('should sort products by price', async ({ page, catalogPage }) => {
-    await catalogPage.goto('/catalog');
-    await catalogPage.waitForPageLoad();
-
-    const sortVisible = await catalogPage.sortDropdown.isVisible().catch(() => false);
-    if (!sortVisible) {
-      test.skip(true, 'Sort dropdown not visible — skipping');
-      return;
-    }
-
-    await catalogPage.sortBy('Price: Low to High');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Verify products are still displayed
-    const count = await catalogPage.getProductCount();
-    expect(count).toBeGreaterThan(0);
-  });
-
-  test('should filter by price range', async ({ page, catalogPage }) => {
-    await catalogPage.goto('/catalog');
-    await catalogPage.waitForPageLoad();
-
-    const facetsVisible = await catalogPage.searchFacets.isVisible().catch(() => false);
-    if (!facetsVisible) {
-      test.skip(true, 'Search facets not visible — skipping');
-      return;
-    }
-
-    await catalogPage.setPriceRange(10, 100);
-    await page.waitForLoadState('domcontentloaded');
-
-    // Products should still be visible (or empty if no products in range)
-    const count = await catalogPage.getProductCount();
-    expect(count).toBeGreaterThanOrEqual(0);
-  });
-
-  test('should paginate through product pages', async ({ page, catalogPage }) => {
-    await catalogPage.goto('/catalog');
-    await catalogPage.waitForPageLoad();
-
-    const paginationVisible = await catalogPage.pagination.isVisible().catch(() => false);
-    if (!paginationVisible) {
-      test.skip(true, 'Pagination not visible (single page of results) — skipping');
-      return;
-    }
-
-    await catalogPage.goToPage(2);
-    await page.waitForLoadState('domcontentloaded');
-
-    // Should have products on page 2
-    const count = await catalogPage.getProductCount();
-    expect(count).toBeGreaterThan(0);
-  });
+  // ── Implemented features ──────────────────────────────────
 
   test('should search and reduce product count', async ({ page, catalogPage }) => {
-    await catalogPage.goto('/catalog');
-    await catalogPage.waitForPageLoad();
+    await test.step('Navigate to catalog page', async () => {
+      await catalogPage.goto('/catalog');
+      await catalogPage.waitForPageLoad();
+    });
 
-    const initialCount = await catalogPage.getProductCount();
-    await catalogPage.search('iPhone');
-    await page.waitForLoadState('domcontentloaded');
+    let initialCount: number;
+    await test.step('Record initial product count', async () => {
+      initialCount = await catalogPage.getProductCount();
+    });
 
-    const filteredCount = await catalogPage.getProductCount();
-    expect(filteredCount).toBeLessThanOrEqual(initialCount);
+    await test.step('Search for a product', async () => {
+      await catalogPage.search('iPhone');
+      await page.waitForLoadState('domcontentloaded');
+    });
+
+    await test.step('Verify filtered product count', async () => {
+      const filteredCount = await catalogPage.getProductCount();
+      expect(filteredCount).toBeLessThanOrEqual(initialCount!);
+    });
   });
 
   test('should show empty state for no-match search', async ({ page, catalogPage }) => {
-    await catalogPage.goto('/catalog');
-    await catalogPage.waitForPageLoad();
+    await test.step('Navigate to catalog page', async () => {
+      await catalogPage.goto('/catalog');
+      await catalogPage.waitForPageLoad();
+    });
 
-    await catalogPage.search('zzzznonexistentproduct12345');
+    await test.step('Search for nonexistent product', async () => {
+      await catalogPage.search('zzzznonexistentproduct12345');
+    });
 
-    // Wait for the search API response to settle
-    await page.waitForResponse(resp => resp.url().includes('/api/catalog') || resp.url().includes('/api/search'))
-      .catch(() => {});
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await test.step('Verify empty state is shown', async () => {
+      await expect(catalogPage.emptyState).toBeVisible({ timeout: TIMEOUTS.api });
+    });
+  });
 
-    const isEmpty = await catalogPage.isEmpty();
-    const count = await catalogPage.getProductCount();
-    expect(isEmpty || count === 0).toBe(true);
+  // ── Not yet implemented — UI components pending ───────────
+  // These features require category sidebar, sort dropdown,
+  // search facets, and pagination components that are not yet
+  // rendered on the catalog page. Uncomment when implemented.
+
+  test.skip('should filter products by category via sidebar', async ({ page, catalogPage }) => {
+    await test.step('Navigate to catalog page', async () => {
+      await catalogPage.goto('/catalog');
+      await catalogPage.waitForPageLoad();
+    });
+
+    await test.step('Verify category sidebar is visible', async () => {
+      await expect(catalogPage.sidebar.root).toBeVisible({ timeout: TIMEOUTS.element });
+    });
+
+    let initialCount: number;
+    await test.step('Record initial product count', async () => {
+      initialCount = await catalogPage.getProductCount();
+    });
+
+    await test.step('Filter by Electronics category', async () => {
+      await catalogPage.filterByCategory('Electronics');
+      await page.waitForLoadState('domcontentloaded');
+    });
+
+    await test.step('Verify filtered product count', async () => {
+      const filteredCount = await catalogPage.getProductCount();
+      expect(filteredCount).toBeLessThanOrEqual(initialCount!);
+    });
+  });
+
+  test.skip('should sort products by price', async ({ page, catalogPage }) => {
+    await test.step('Navigate to catalog page', async () => {
+      await catalogPage.goto('/catalog');
+      await catalogPage.waitForPageLoad();
+    });
+
+    await test.step('Verify sort dropdown is visible', async () => {
+      await expect(catalogPage.sortDropdown).toBeVisible({ timeout: TIMEOUTS.element });
+    });
+
+    await test.step('Sort by price low to high', async () => {
+      await catalogPage.sortBy('Price: Low to High');
+      await page.waitForLoadState('domcontentloaded');
+    });
+
+    await test.step('Verify products are still displayed', async () => {
+      const count = await catalogPage.getProductCount();
+      expect(count).toBeGreaterThan(0);
+    });
+  });
+
+  test.skip('should filter by price range', async ({ page, catalogPage }) => {
+    await test.step('Navigate to catalog page', async () => {
+      await catalogPage.goto('/catalog');
+      await catalogPage.waitForPageLoad();
+    });
+
+    await test.step('Verify search facets are visible', async () => {
+      await expect(catalogPage.searchFacets).toBeVisible({ timeout: TIMEOUTS.element });
+    });
+
+    await test.step('Set price range filter', async () => {
+      await catalogPage.setPriceRange(10, 100);
+      await page.waitForLoadState('domcontentloaded');
+    });
+
+    await test.step('Verify products are displayed', async () => {
+      const count = await catalogPage.getProductCount();
+      expect(count).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  test.skip('should paginate through product pages', async ({ page, catalogPage }) => {
+    await test.step('Navigate to catalog page', async () => {
+      await catalogPage.goto('/catalog');
+      await catalogPage.waitForPageLoad();
+    });
+
+    await test.step('Verify pagination is visible', async () => {
+      await expect(catalogPage.pagination.root).toBeVisible({ timeout: TIMEOUTS.element });
+    });
+
+    await test.step('Navigate to page 2', async () => {
+      await catalogPage.goToPage(2);
+      await page.waitForLoadState('domcontentloaded');
+    });
+
+    await test.step('Verify products are displayed on page 2', async () => {
+      const count = await catalogPage.getProductCount();
+      expect(count).toBeGreaterThan(0);
+    });
   });
 });

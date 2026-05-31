@@ -44,8 +44,8 @@ import { CartStore } from '../cart.store';
         } @else {
           <div class="bg-card rounded-3xl border border-border overflow-hidden">
             <ul class="divide-y divide-border">
-              @for (item of store.items(); track item.productId) {
-                <li [attr.data-testid]="'cart-item-' + item.productId" class="p-6 flex items-center gap-6">
+              @for (item of store.items(); track item.skuId) {
+                <li [attr.data-testid]="'cart-item-' + item.skuId" class="p-6 flex items-center gap-6">
                   <div class="w-20 h-20 bg-muted/20 rounded-xl flex items-center justify-center overflow-hidden">
                     @if (item.imageUrl) {
                       <img [src]="item.imageUrl" [alt]="item.title" class="w-full h-full object-cover" />
@@ -67,7 +67,7 @@ import { CartStore } from '../cart.store';
                   <div class="flex items-center gap-3">
                     <button
                       data-testid="cart-item-decrease"
-                      (click)="store.updateQuantity(item.productId, item.quantity - 1)" 
+                      (click)="store.updateQuantity(item.skuId, item.quantity - 1)" 
                       class="p-2 hover:bg-muted/20 rounded-lg transition-colors"
                       [disabled]="store.loading()"
                     >
@@ -76,7 +76,7 @@ import { CartStore } from '../cart.store';
                     <span data-testid="cart-item-quantity" class="w-8 text-center font-medium">{{ item.quantity }}</span>
                     <button
                       data-testid="cart-item-increase"
-                      (click)="store.updateQuantity(item.productId, item.quantity + 1)" 
+                      (click)="store.updateQuantity(item.skuId, item.quantity + 1)" 
                       class="p-2 hover:bg-muted/20 rounded-lg transition-colors"
                       [disabled]="store.loading()"
                     >
@@ -86,7 +86,7 @@ import { CartStore } from '../cart.store';
 
                   <button
                     data-testid="cart-item-remove"
-                    (click)="store.removeFromCart(item.productId)" 
+                    (click)="store.removeFromCart(item.skuId)" 
                     class="p-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors ml-4"
                     [disabled]="store.loading()"
                   >

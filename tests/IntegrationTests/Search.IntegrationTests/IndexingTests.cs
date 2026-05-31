@@ -23,9 +23,10 @@ public class IndexingTests
             Id = productId,
             Name = "Test Widget",
             Description = "A useful widget",
-            Price = 19.99m,
+            MinPrice = 19.99m,
+            MaxPrice = 19.99m,
             Currency = "USD",
-            Sku = "WIDGET-001",
+            SkuCount = 1,
             CategoryId = Guid.NewGuid(),
             CategoryName = "Gadgets",
             Tags = ["widget", "tool"],
@@ -48,8 +49,9 @@ public class IndexingTests
         var retrieved = response.Source;
         retrieved.Should().NotBeNull();
         retrieved!.Name.Should().Be("Test Widget");
-        retrieved.Price.Should().Be(19.99m);
-        retrieved.Sku.Should().Be("WIDGET-001");
+        retrieved.MinPrice.Should().Be(19.99m);
+        retrieved.MaxPrice.Should().Be(19.99m);
+        retrieved.SkuCount.Should().Be(1);
     }
 
     [Fact]
@@ -62,9 +64,10 @@ public class IndexingTests
             Id = productId,
             Name = "Original Name",
             Description = "Original desc",
-            Price = 10m,
+            MinPrice = 10m,
+            MaxPrice = 10m,
             Currency = "USD",
-            Sku = "UPD-001",
+            SkuCount = 1,
             CategoryId = Guid.NewGuid(),
             CategoryName = "Original Cat",
             Tags = ["old"],
@@ -77,25 +80,22 @@ public class IndexingTests
         await _fixture.SearchService.IndexProductAsync(document);
         await _fixture.Client.Indices.RefreshAsync("marketplace-products");
 
-        // Act - update the document
-        var updated = new ProductSearchDocument
-        {
-            Id = productId,
-            Name = "Updated Name",
-            Description = "Updated desc",
-            Price = 25m,
-            Currency = "EUR",
-            Sku = "UPD-001",
-            CategoryId = Guid.NewGuid(),
-            CategoryName = "Updated Cat",
-            Tags = ["new"],
-            StoreId = Guid.NewGuid(),
-            IsActive = true,
-            CreatedAt = document.CreatedAt,
-            UpdatedAt = DateTime.UtcNow
-        };
+        // Act - update metadata via the new request type
+        var request = new UpdateProductMetadataRequest(
+            ProductId: productId,
+            Name: "Updated Name",
+            Description: "Updated desc",
+            CategoryId: Guid.NewGuid(),
+            CategoryName: "Updated Cat",
+            Tags: ["new"],
+            ImageUrl: null,
+            StoreId: Guid.NewGuid(),
+            IsActive: true,
+            UpdatedAt: DateTime.UtcNow,
+            Brand: null,
+            Attributes: null);
 
-        await _fixture.SearchService.UpdateProductAsync(updated);
+        await _fixture.SearchService.UpdateProductMetadataAsync(request);
         await _fixture.Client.Indices.RefreshAsync("marketplace-products");
 
         // Assert
@@ -105,7 +105,6 @@ public class IndexingTests
         response.Found.Should().BeTrue();
         var retrieved = response.Source!;
         retrieved.Name.Should().Be("Updated Name");
-        retrieved.Price.Should().Be(25m);
-        retrieved.Currency.Should().Be("EUR");
+        retrieved.Currency.Should().Be("USD"); // Currency is not changed by metadata update
     }
 }

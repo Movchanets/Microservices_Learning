@@ -508,8 +508,9 @@ tests/
     ├── tests/
     └── pages/           # Page Object Models
 ```
-
+E2E tests start app host themself
 ---
+
 
 ## 9. Git Conventions
 

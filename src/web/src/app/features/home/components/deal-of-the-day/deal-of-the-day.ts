@@ -21,15 +21,17 @@ import { ProductListItem } from '../../../catalog/catalog.models';
             </div>
             <h3 class="text-xl font-bold text-foreground font-lexend mb-2">{{ p.name }}</h3>
             <div class="flex items-center gap-3 justify-center md:justify-start mb-4">
-              <span class="text-2xl font-bold text-foreground">
-                {{ p.price | currency: p.currency : 'symbol' : '1.2-2' }}
-              </span>
-              <span class="text-lg text-muted-foreground line-through">
-                {{ originalPrice() | currency: p.currency : 'symbol' : '1.2-2' }}
-              </span>
-              <span class="px-2 py-0.5 bg-red-500/20 text-red-400 text-sm font-bold rounded">
-                -{{ discountPercent() }}%
-              </span>
+              @if (p.minPrice !== null) {
+                <span class="text-2xl font-bold text-foreground">
+                  {{ p.minPrice! | currency: (p.currency ?? 'USD') : 'symbol' : '1.2-2' }}
+                </span>
+                <span class="text-lg text-muted-foreground line-through">
+                  {{ originalPrice() | currency: (p.currency ?? 'USD') : 'symbol' : '1.2-2' }}
+                </span>
+                <span class="px-2 py-0.5 bg-red-500/20 text-red-400 text-sm font-bold rounded">
+                  -{{ discountPercent() }}%
+                </span>
+              }
             </div>
 
             <!-- Countdown -->
@@ -100,13 +102,13 @@ export class DealOfTheDayComponent implements OnInit, OnDestroy {
 
   originalPrice = computed(() => {
     const p = this.product();
-    return p ? p.price * 1.3 : 0; // 30% markup for "original" price
+    return p?.minPrice ? p.minPrice * 1.3 : 0; // 30% markup for "original" price
   });
 
   discountPercent = computed(() => {
     const p = this.product();
-    if (!p) return 0;
-    return Math.round(((this.originalPrice() - p.price) / this.originalPrice()) * 100);
+    if (!p?.minPrice) return 0;
+    return Math.round(((this.originalPrice() - p.minPrice) / this.originalPrice()) * 100);
   });
 
   claimedPercent = signal(67); // Mock percentage

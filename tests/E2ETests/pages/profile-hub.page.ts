@@ -1,24 +1,29 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
+import { TIMEOUTS } from '../utils/constants';
 
+/**
+ * Page object for `/profile` — profile hub with tabs (overview, orders, settings).
+ */
 export class ProfileHubPage extends BasePage {
+  // ── Navigation ──────────────────────────────────────────
   readonly pageHeading: Locator;
   readonly sidebar: Locator;
   readonly ordersTab: Locator;
   readonly settingsTab: Locator;
   readonly activeTab: Locator;
 
-  // Profile info
+  // ── Profile Info ────────────────────────────────────────
   readonly userName: Locator;
   readonly userEmail: Locator;
   readonly editProfileBtn: Locator;
 
-  // Orders tab
+  // ── Orders Tab ──────────────────────────────────────────
   readonly ordersList: Locator;
   readonly orderItems: Locator;
   readonly emptyOrdersMessage: Locator;
 
-  // Settings tab
+  // ── Settings Tab ────────────────────────────────────────
   readonly firstNameInput: Locator;
   readonly lastNameInput: Locator;
   readonly emailInput: Locator;
@@ -29,30 +34,35 @@ export class ProfileHubPage extends BasePage {
   readonly confirmPasswordInput: Locator;
   readonly updatePasswordBtn: Locator;
 
-  // Feedback
+  // ── Feedback ────────────────────────────────────────────
   readonly successMessage: Locator;
   readonly errorMessage: Locator;
   readonly validationErrors: Locator;
 
   constructor(page: Page) {
     super(page);
+
+    // Navigation
     this.pageHeading = page.getByRole('heading', { name: /my account|profile|my orders/i });
     this.sidebar = page.locator('aside, nav').filter({ hasText: /orders|settings|messages/i });
-    this.ordersTab = page.getByRole('link', { name: /orders/i }).or(page.getByRole('button', { name: /orders/i }));
-    this.settingsTab = page.getByRole('link', { name: /settings/i }).or(page.getByRole('button', { name: /settings/i }));
+    this.ordersTab = page.getByRole('link', { name: /orders/i });
+    this.settingsTab = page.getByRole('link', { name: /settings/i });
     this.activeTab = page.locator('[aria-current="page"], .active, .bg-primary');
 
+    // Profile Info
     this.userName = page.locator('h1, h2').filter({ hasText: /\w+/ }).first();
     this.userEmail = page.locator('p, span').filter({ hasText: /@/ }).first();
     this.editProfileBtn = page.getByRole('button', { name: /edit profile/i });
 
+    // Orders Tab
     this.ordersList = page.locator('ul, table').first();
     this.orderItems = this.ordersList.locator('li, tr').filter({ has: page.locator('a') });
     this.emptyOrdersMessage = page.getByText(/no orders|no recent orders/i);
 
+    // Settings Tab
     this.firstNameInput = page.locator('input[formcontrolname="firstName"]');
     this.lastNameInput = page.locator('input[formcontrolname="lastName"]');
-    this.emailInput = page.getByLabel(/email/i).or(page.getByPlaceholder(/email/i));
+    this.emailInput = page.getByLabel(/email/i);
     this.saveProfileBtn = page.getByRole('button', { name: /save|update profile/i });
     this.changePasswordBtn = page.getByRole('button', { name: /change password/i });
     this.currentPasswordInput = page.locator('input[formcontrolname="currentPassword"]');
@@ -60,11 +70,13 @@ export class ProfileHubPage extends BasePage {
     this.confirmPasswordInput = page.locator('input[formcontrolname="confirmPassword"]');
     this.updatePasswordBtn = page.getByRole('button', { name: /update password/i });
 
-    // Feedback messages
-    this.successMessage = page.getByText(/success|updated|saved/i).or(page.locator('.text-green'));
-    this.errorMessage = page.getByText(/error|failed|incorrect/i).or(page.locator('[role="alert"], .text-red'));
+    // Feedback
+    this.successMessage = page.getByText(/success|updated|saved/i);
+    this.errorMessage = page.locator('[role="alert"]');
     this.validationErrors = page.locator('.text-red-500, [aria-live="polite"]');
   }
+
+  // ── Navigation ──────────────────────────────────────────
 
   async goto() {
     await this.page.goto('/profile');
@@ -79,6 +91,8 @@ export class ProfileHubPage extends BasePage {
     await this.settingsTab.click();
   }
 
+  // ── Queries ─────────────────────────────────────────────
+
   async getOrderCount(): Promise<number> {
     return this.orderItems.count();
   }
@@ -86,6 +100,8 @@ export class ProfileHubPage extends BasePage {
   async viewOrder(index: number) {
     await this.orderItems.nth(index).locator('a').first().click();
   }
+
+  // ── Actions ─────────────────────────────────────────────
 
   async updateProfile(firstName: string, lastName: string) {
     await this.firstNameInput.fill(firstName);
@@ -101,23 +117,25 @@ export class ProfileHubPage extends BasePage {
     await this.updatePasswordBtn.click();
   }
 
-  async expectProfileUpdateSuccess(timeout = 10000) {
-    await expect(this.successMessage).toBeVisible({ timeout });
+  // ── Waits ───────────────────────────────────────────────
+
+  async waitForProfileUpdateSuccess(timeout = TIMEOUTS.api) {
+    await this.successMessage.waitFor({ state: 'visible', timeout });
   }
 
-  async expectPasswordChangeSuccess(timeout = 10000) {
-    await expect(this.successMessage).toBeVisible({ timeout });
+  async waitForPasswordChangeSuccess(timeout = TIMEOUTS.api) {
+    await this.successMessage.waitFor({ state: 'visible', timeout });
   }
 
-  async expectValidationError(message: string, timeout = 5000) {
-    await expect(this.validationErrors.filter({ hasText: message })).toBeVisible({ timeout });
+  async waitForValidationError(message: string, timeout = TIMEOUTS.element) {
+    await this.validationErrors.filter({ hasText: message }).waitFor({ state: 'visible', timeout });
   }
 
-  async expectError(message?: string, timeout = 10000) {
+  async waitForError(message?: string, timeout = TIMEOUTS.api) {
     if (message) {
-      await expect(this.errorMessage.filter({ hasText: message })).toBeVisible({ timeout });
+      await this.errorMessage.filter({ hasText: message }).waitFor({ state: 'visible', timeout });
     } else {
-      await expect(this.errorMessage).toBeVisible({ timeout });
+      await this.errorMessage.waitFor({ state: 'visible', timeout });
     }
   }
 }

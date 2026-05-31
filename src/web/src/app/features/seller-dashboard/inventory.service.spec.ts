@@ -2,7 +2,8 @@
 // Tests HTTP calls for inventory operations: getInventoryBySkus and addStock.
 
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { SellerInventoryService } from './inventory.service';
 
 describe('SellerInventoryService', () => {
@@ -11,8 +12,7 @@ describe('SellerInventoryService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [SellerInventoryService],
+      providers: [SellerInventoryService, provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(SellerInventoryService);
     httpMock = TestBed.inject(HttpTestingController);

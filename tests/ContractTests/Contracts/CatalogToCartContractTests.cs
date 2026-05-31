@@ -33,67 +33,63 @@ public class CatalogToCartContractTests
         => new ProductPriceRepository(dbContext);
 
     [Fact]
-    public async Task ProductCreatedEvent_Contract_ShouldCreateProductPriceInCart()
+    public async Task SkuCreatedIntegrationEvent_Contract_ShouldCreateProductPriceInCart()
     {
-        // Arrange - Catalog publishes this event shape
+        // Arrange - Catalog publishes SkuCreatedIntegrationEvent
         var productId = Guid.NewGuid();
-        var @event = new ProductCreatedEvent(
+        var skuId = Guid.NewGuid();
+        var @event = new SkuCreatedIntegrationEvent(
             ProductId: productId,
-            Name: "Test Product",
-            Description: "A test product",
+            SkuId: skuId,
+            SkuCode: "SKU-001",
+            ProductName: "Test Product",
+            StoreId: Guid.NewGuid(),
             Price: 29.99m,
             Currency: "USD",
-            Sku: "SKU-001",
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Electronics",
-            Tags: ["test", "electronics"],
-            ImageUrl: "https://example.com/image.jpg",
-            StoreId: Guid.NewGuid(),
-            CreatedAt: DateTime.UtcNow,
-            Brand: "TestBrand",
-            Attributes: new Dictionary<string, string> { ["color"] = "blue" });
+            TypedAttributes: new Dictionary<string, string>(),
+            FlexibleAttributes: new Dictionary<string, string>(),
+            Timestamp: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductCreatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuCreatedIntegrationEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
         await using var dbContext = CreateDbContext();
         var repository = CreateRepository(dbContext);
-        var consumer = new ProductCreatedConsumer(repository, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var consumer = new SkuCreatedConsumer(repository, Mock.Of<ILogger<SkuCreatedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert - Cart should have a ProductPrice record
         var productPrice = await dbContext.ProductPrices
-            .FirstOrDefaultAsync(p => p.Id == productId);
+            .FirstOrDefaultAsync(p => p.SkuId == skuId);
 
         productPrice.Should().NotBeNull();
-        productPrice!.Sku.Should().Be("SKU-001");
+        productPrice!.SkuCode.Should().Be("SKU-001");
         productPrice.Name.Should().Be("Test Product");
         productPrice.Price.Should().Be(29.99m);
         productPrice.Currency.Should().Be("USD");
     }
 
     [Fact]
-    public async Task ProductCreatedEvent_Contract_ShouldBeIdempotent()
+    public async Task SkuCreatedIntegrationEvent_Contract_ShouldBeIdempotent()
     {
-        // Arrange - same product sent twice (Catalog may replay)
+        // Arrange - same SKU event sent twice (Catalog may replay)
         var productId = Guid.NewGuid();
-        var @event = new ProductCreatedEvent(
+        var skuId = Guid.NewGuid();
+        var @event = new SkuCreatedIntegrationEvent(
             ProductId: productId,
-            Name: "Idempotent Product",
-            Description: "Desc",
+            SkuId: skuId,
+            SkuCode: "SKU-IDEM-001",
+            ProductName: "Idempotent Product",
+            StoreId: Guid.NewGuid(),
             Price: 15.00m,
             Currency: "USD",
-            Sku: "SKU-IDEM-001",
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Test",
-            Tags: [],
-            ImageUrl: null,
-            StoreId: Guid.NewGuid(),
-            CreatedAt: DateTime.UtcNow);
+            TypedAttributes: new Dictionary<string, string>(),
+            FlexibleAttributes: new Dictionary<string, string>(),
+            Timestamp: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductCreatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuCreatedIntegrationEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -101,93 +97,76 @@ public class CatalogToCartContractTests
         await using var dbContext = CreateDbContext();
         var repository = CreateRepository(dbContext);
 
-        var consumer1 = new ProductCreatedConsumer(repository, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var consumer1 = new SkuCreatedConsumer(repository, Mock.Of<ILogger<SkuCreatedConsumer>>());
         await consumer1.Consume(consumeContext.Object);
 
-        var consumer2 = new ProductCreatedConsumer(repository, Mock.Of<ILogger<ProductCreatedConsumer>>());
+        var consumer2 = new SkuCreatedConsumer(repository, Mock.Of<ILogger<SkuCreatedConsumer>>());
         await consumer2.Consume(consumeContext.Object);
 
         // Assert - only one record
-        var count = await dbContext.ProductPrices.CountAsync(p => p.Id == productId);
+        var count = await dbContext.ProductPrices.CountAsync(p => p.SkuId == skuId);
         count.Should().Be(1);
     }
 
     [Fact]
-    public async Task ProductUpdatedEvent_Contract_ShouldUpdateProductPriceInCart()
+    public async Task SkuPriceChangedEvent_Contract_ShouldUpdateProductPriceInCart()
     {
         // Arrange - pre-create the product in Cart
         var productId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
         await using var dbContext = CreateDbContext();
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "SKU-UPD-001", "Old Name", 10.00m, "USD", Guid.Parse("33333333-3333-3333-3333-333333333333")));
+            ProductPrice.Create(productId, skuId, "SKU-UPD-001", "Old Name", 10.00m, "USD", Guid.Parse("33333333-3333-3333-3333-333333333333")));
         await dbContext.SaveChangesAsync();
 
-        var @event = new ProductUpdatedEvent(
+        var @event = new SkuPriceChangedEvent(
             ProductId: productId,
-            Name: "Updated Product",
-            Description: "Updated desc",
-            Price: 19.99m,
+            SkuId: skuId,
+            SkuCode: "SKU-UPD-001",
+            OldPrice: 10.00m,
+            NewPrice: 19.99m,
             Currency: "USD",
-            Sku: "SKU-UPD-001",
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Updated Category",
-            Tags: ["updated"],
-            ImageUrl: null,
-            StoreId: Guid.NewGuid(),
-            IsActive: true,
-            UpdatedAt: DateTime.UtcNow);
+            ChangedAt: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductUpdatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuPriceChangedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
-        var repository = CreateRepository(dbContext);
-        var consumer = new ProductUpdatedConsumer(repository, Mock.Of<ILogger<ProductUpdatedConsumer>>());
+        var consumer = new SkuPriceChangedConsumer(dbContext, Mock.Of<ILogger<SkuPriceChangedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert
-        var productPrice = await dbContext.ProductPrices.FindAsync(productId);
+        var productPrice = await dbContext.ProductPrices.FirstOrDefaultAsync(p => p.SkuId == skuId);
         productPrice.Should().NotBeNull();
         productPrice!.Price.Should().Be(19.99m);
-        productPrice.Name.Should().Be("Updated Product");
     }
 
     [Fact]
-    public async Task ProductUpdatedEvent_Contract_ShouldCreateIfNotExists()
+    public async Task SkuPriceChangedEvent_Contract_ShouldIgnoreUnknownSku()
     {
-        // Arrange - product doesn't exist in Cart yet (event ordering issue)
-        var productId = Guid.NewGuid();
-        var @event = new ProductUpdatedEvent(
-            ProductId: productId,
-            Name: "New From Update",
-            Description: "Desc",
-            Price: 5.00m,
+        // Arrange - SKU doesn't exist in Cart yet
+        var @event = new SkuPriceChangedEvent(
+            ProductId: Guid.NewGuid(),
+            SkuId: Guid.NewGuid(),
+            SkuCode: "SKU-UNKNOWN",
+            OldPrice: 5.00m,
+            NewPrice: 10.00m,
             Currency: "USD",
-            Sku: "SKU-NEWUPD-001",
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Cat",
-            Tags: [],
-            ImageUrl: null,
-            StoreId: Guid.NewGuid(),
-            IsActive: true,
-            UpdatedAt: DateTime.UtcNow);
+            ChangedAt: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductUpdatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuPriceChangedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        // Act
+        // Act - should not throw
         await using var dbContext = CreateDbContext();
-        var repository = CreateRepository(dbContext);
-        var consumer = new ProductUpdatedConsumer(repository, Mock.Of<ILogger<ProductUpdatedConsumer>>());
+        var consumer = new SkuPriceChangedConsumer(dbContext, Mock.Of<ILogger<SkuPriceChangedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
-        // Assert - should be created as fallback
-        var productPrice = await dbContext.ProductPrices
-            .FirstOrDefaultAsync(p => p.Sku == "SKU-NEWUPD-001");
-        productPrice.Should().NotBeNull();
-        productPrice!.Name.Should().Be("New From Update");
+        // Assert - no record created
+        var count = await dbContext.ProductPrices.CountAsync();
+        count.Should().Be(0, "unknown SKU should be logged and skipped");
     }
 
     [Fact]
@@ -197,7 +176,7 @@ public class CatalogToCartContractTests
         var productId = Guid.NewGuid();
         await using var dbContext = CreateDbContext();
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "SKU-DEL-001", "To Delete", 25.00m, "USD", Guid.Parse("33333333-3333-3333-3333-333333333333")));
+            ProductPrice.Create(productId, Guid.NewGuid(), "SKU-DEL-001", "To Delete", 25.00m, "USD", Guid.Parse("33333333-3333-3333-3333-333333333333")));
         await dbContext.SaveChangesAsync();
 
         var @event = new ProductDeletedEvent(productId, DateTime.UtcNow);
@@ -232,54 +211,59 @@ public class CatalogToCartContractTests
     }
 
     [Fact]
-    public async Task ProductPriceChangedEvent_Contract_ShouldUpdatePriceInCart()
+    public async Task SkuPriceChangedEvent_Contract_ShouldUpdatePriceForExistingSku()
     {
         // Arrange
         var productId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
         await using var dbContext = CreateDbContext();
         dbContext.ProductPrices.Add(
-            ProductPrice.Create(productId, "SKU-PRICE-001", "Product", 10.00m, "USD", Guid.Parse("33333333-3333-3333-3333-333333333333")));
+            ProductPrice.Create(productId, skuId, "SKU-PRICE-001", "Product", 10.00m, "USD", Guid.Parse("33333333-3333-3333-3333-333333333333")));
         await dbContext.SaveChangesAsync();
 
-        var @event = new ProductPriceChangedEvent(
+        var @event = new SkuPriceChangedEvent(
             ProductId: productId,
+            SkuId: skuId,
+            SkuCode: "SKU-PRICE-001",
             OldPrice: 10.00m,
             NewPrice: 15.99m,
             Currency: "USD",
             ChangedAt: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductPriceChangedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuPriceChangedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act
-        var consumer = new ProductPriceChangedConsumer(dbContext, Mock.Of<ILogger<ProductPriceChangedConsumer>>());
+        var consumer = new SkuPriceChangedConsumer(dbContext, Mock.Of<ILogger<SkuPriceChangedConsumer>>());
         await consumer.Consume(consumeContext.Object);
 
         // Assert
-        var productPrice = await dbContext.ProductPrices.FindAsync(productId);
+        var productPrice = await dbContext.ProductPrices.FirstOrDefaultAsync(p => p.SkuId == skuId);
         productPrice.Should().NotBeNull();
         productPrice!.Price.Should().Be(15.99m);
     }
 
     [Fact]
-    public async Task ProductPriceChangedEvent_Contract_ShouldIgnoreUnknownProduct()
+    public async Task SkuPriceChangedEvent_Contract_ShouldIgnoreNonExistentSku()
     {
         // Arrange
-        var @event = new ProductPriceChangedEvent(
+        var @event = new SkuPriceChangedEvent(
             ProductId: Guid.NewGuid(),
+            SkuId: Guid.NewGuid(),
+            SkuCode: "SKU-NONEXISTENT",
             OldPrice: 10.00m,
             NewPrice: 15.99m,
             Currency: "USD",
             ChangedAt: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductPriceChangedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuPriceChangedEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
         // Act & Assert - should not throw
         await using var dbContext = CreateDbContext();
-        var consumer = new ProductPriceChangedConsumer(dbContext, Mock.Of<ILogger<ProductPriceChangedConsumer>>());
+        var consumer = new SkuPriceChangedConsumer(dbContext, Mock.Of<ILogger<SkuPriceChangedConsumer>>());
         await consumer.Consume(consumeContext.Object);
     }
 }

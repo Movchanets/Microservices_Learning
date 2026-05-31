@@ -1,9 +1,11 @@
 using BuildingBlocks.SharedContracts.Abstractions;
 using Catalog.Application.Commands.ChangePrice;
 using Catalog.Domain.Aggregates;
+using Catalog.Domain.ValueObjects;
 using FluentAssertions;
 using Moq;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -27,18 +29,21 @@ public class UpdateProductPriceCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ValidCommand_UpdatesPriceAndReturnsSuccess()
+    public async Task Handle_ValidCommand_UpdatesSkuPriceAndReturnsSuccess()
     {
         // Arrange
         var productId = Guid.NewGuid();
         var newPrice = 20m;
         var currency = "USD";
-        var command = new ChangePriceCommand(productId, newPrice, currency);
 
-        var product = Product.Create("Test Product", "Test Description", 10m, "USD", "SKU-1", Guid.NewGuid(), Guid.NewGuid());
+        var product = Product.Create("Test Product", "Test Description", Guid.NewGuid(), Guid.NewGuid());
+        var sku = product.AddSku("SKU-001", Money.Create(10m, "USD"), new Dictionary<string, string>());
+        var skuId = sku.Id;
+
+        var command = new ChangePriceCommand(productId, skuId, newPrice, currency);
 
         _productRepositoryMock
-            .Setup(repo => repo.GetByIdAsync(productId, It.IsAny<CancellationToken>()))
+            .Setup(repo => repo.GetWithSkusAsync(productId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product);
 
         _productRepositoryMock.Setup(repo => repo.Update(It.IsAny<Product>()));
@@ -52,8 +57,9 @@ public class UpdateProductPriceCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().BeTrue();
 
-        product.Price.Amount.Should().Be(newPrice);
-        product.Price.Currency.Should().Be(currency);
+        var updatedSku = product.GetSku(skuId);
+        updatedSku.Price.Amount.Should().Be(newPrice);
+        updatedSku.Price.Currency.Should().Be(currency);
 
         _productRepositoryMock.Verify(repo => repo.Update(It.IsAny<Product>()), Times.Once);
         _unitOfWorkMock.Verify(uow => uow.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -63,10 +69,10 @@ public class UpdateProductPriceCommandHandlerTests
     public async Task Handle_ProductNotFound_ReturnsFailure()
     {
         // Arrange
-        var command = new ChangePriceCommand(Guid.NewGuid(), 20m, "USD");
+        var command = new ChangePriceCommand(Guid.NewGuid(), Guid.NewGuid(), 20m, "USD");
 
         _productRepositoryMock
-            .Setup(repo => repo.GetByIdAsync(command.ProductId, It.IsAny<CancellationToken>()))
+            .Setup(repo => repo.GetWithSkusAsync(command.ProductId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Product?)null);
 
         // Act

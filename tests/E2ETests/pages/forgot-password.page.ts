@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/auth/forgot-password` — password reset request.
+ */
 export class ForgotPasswordPage extends BasePage {
   readonly emailInput: Locator;
   readonly forgotSubmitBtn: Locator;
@@ -14,7 +17,7 @@ export class ForgotPasswordPage extends BasePage {
   async goto() {
     await this.page.goto('/auth/forgot-password');
     // Wait for Angular hydration to complete — the form is inside @else block
-    await this.forgotSubmitBtn.waitFor({ state: 'visible', timeout: 15000 });
+    await this.forgotSubmitBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.api });
   }
 
   async resetPassword(email: string) {

@@ -72,6 +72,11 @@ describe('App', () => {
       ],
     }).compileComponents();
   });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
   it('should render header', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();

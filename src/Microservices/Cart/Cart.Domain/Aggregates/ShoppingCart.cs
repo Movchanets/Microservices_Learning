@@ -27,10 +27,13 @@ public sealed class ShoppingCart : AggregateRoot
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void AddItem(Guid productId, int quantity, Guid storeId, decimal price = 0m)
+    public void AddItem(Guid productId, Guid skuId, string skuCode, int quantity, Guid storeId, decimal price = 0m)
     {
         if (productId == Guid.Empty)
             throw new ArgumentException("ProductId is required", nameof(productId));
+        if (skuId == Guid.Empty)
+            throw new ArgumentException("SkuId is required", nameof(skuId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(skuCode);
         if (quantity <= 0)
             throw new ArgumentException("Quantity must be greater than zero", nameof(quantity));
         if (price < 0)
@@ -38,7 +41,7 @@ public sealed class ShoppingCart : AggregateRoot
         if (storeId == Guid.Empty)
             throw new ArgumentException("StoreId is required", nameof(storeId));
 
-        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId));
+        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId, skuId));
         if (existingItem != null)
         {
             existingItem.AddQuantity(quantity);
@@ -48,15 +51,15 @@ public sealed class ShoppingCart : AggregateRoot
             if (_items.Count >= MaxItems)
                 throw new InvalidOperationException($"Cart cannot exceed {MaxItems} items");
 
-            _items.Add(new CartItem(Id, productId, quantity, price, storeId));
+            _items.Add(new CartItem(Id, productId, skuId, skuCode, quantity, price, storeId));
         }
 
         Touch();
     }
 
-    public void UpdateQuantity(Guid productId, int quantity)
+    public void UpdateQuantity(Guid productId, Guid skuId, int quantity)
     {
-        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId));
+        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId, skuId));
         if (existingItem != null)
         {
             if (quantity <= 0)
@@ -72,9 +75,9 @@ public sealed class ShoppingCart : AggregateRoot
         }
     }
 
-    public void RemoveItem(Guid productId)
+    public void RemoveItem(Guid productId, Guid skuId)
     {
-        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId));
+        var existingItem = _items.FirstOrDefault(i => i.MatchesProduct(productId, skuId));
         if (existingItem != null)
         {
             _items.Remove(existingItem);

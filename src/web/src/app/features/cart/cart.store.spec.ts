@@ -7,17 +7,19 @@ describe('CartStore', () => {
   let store: any;
 
   const PRODUCT_ID = 'PROD-1';
+  const TEST_SKU_ID = 'test-sku-id';
+  const TEST_SKU_CODE = 'TEST-SKU-CODE';
 
   beforeEach(() => {
     mockCartService = {
       getCart: vi.fn().mockResolvedValue({ buyerId: 'test-user', cartId: 'cart-1', items: [] }),
       deleteCart: vi.fn().mockResolvedValue(undefined),
       checkout: vi.fn().mockResolvedValue({ correlationId: 'test-correlation-id' }),
-      addItem: vi.fn().mockImplementation((productId: string, quantity: number) =>
-        Promise.resolve({ buyerId: 'test-user', cartId: 'cart-1', items: [{ productId, storeId: 'store-1', quantity, price: 0, lineTotal: 0 }] })
+      addItem: vi.fn().mockImplementation((productId: string, skuId: string, skuCode: string, quantity: number) =>
+        Promise.resolve({ buyerId: 'test-user', cartId: 'cart-1', items: [{ productId, skuId, skuCode, storeId: 'store-1', quantity, price: 0, lineTotal: 0 }] })
       ),
-      updateItem: vi.fn().mockImplementation((productId, quantity) =>
-        Promise.resolve({ buyerId: 'test-user', cartId: 'cart-1', items: [{ productId, storeId: 'store-1', quantity, price: 0, lineTotal: 0 }] })
+      updateItem: vi.fn().mockImplementation((skuId: string, quantity: number) =>
+        Promise.resolve({ buyerId: 'test-user', cartId: 'cart-1', items: [{ productId: PRODUCT_ID, skuId, skuCode: TEST_SKU_CODE, storeId: 'store-1', quantity, price: 0, lineTotal: 0 }] })
       ),
       removeItem: vi.fn().mockResolvedValue({ buyerId: 'test-user', cartId: 'cart-1', items: [] }),
       setCartId: vi.fn(),
@@ -45,16 +47,16 @@ describe('CartStore', () => {
     it('should add a new item', async () => {
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user', cartId: 'cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 'store-1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 'store-1', quantity: 1, price: 10, lineTotal: 10 }]
       });
       // addToCart calls loadCart() internally to re-fetch enriched cart from BFF
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: 'test-user', cartId: 'cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 'store-1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 'store-1', quantity: 1, price: 10, lineTotal: 10 }]
       });
-      await store.addToCart(PRODUCT_ID, 1);
-      expect(store.items()).toEqual([{ productId: PRODUCT_ID, storeId: 'store-1', quantity: 1, price: 10, lineTotal: 10 }]);
-      expect(mockCartService.addItem).toHaveBeenCalledWith(PRODUCT_ID, 1);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
+      expect(store.items()).toEqual([{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 'store-1', quantity: 1, price: 10, lineTotal: 10 }]);
+      expect(mockCartService.addItem).toHaveBeenCalledWith(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
     });
   });
 
@@ -62,27 +64,27 @@ describe('CartStore', () => {
     it('should update quantity', async () => {
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user', cartId: 'cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
-      await store.addToCart(PRODUCT_ID, 1);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
 
       mockCartService.updateItem.mockResolvedValueOnce({
         buyerId: 'test-user', cartId: 'cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 5, price: 10, lineTotal: 50 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 5, price: 10, lineTotal: 50 }]
       });
-      await store.updateQuantity(PRODUCT_ID, 5);
-      expect(mockCartService.updateItem).toHaveBeenCalledWith(PRODUCT_ID, 5);
+      await store.updateQuantity(TEST_SKU_ID, 5);
+      expect(mockCartService.updateItem).toHaveBeenCalledWith(TEST_SKU_ID, 5);
     });
 
     it('should remove if quantity is 0', async () => {
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user', cartId: 'cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
-      await store.addToCart(PRODUCT_ID, 1);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
 
       mockCartService.removeItem.mockResolvedValueOnce({ buyerId: 'test-user', cartId: 'cart-1', items: [] });
-      await store.updateQuantity(PRODUCT_ID, 0);
+      await store.updateQuantity(TEST_SKU_ID, 0);
       expect(store.items()).toEqual([]);
     });
   });
@@ -91,13 +93,13 @@ describe('CartStore', () => {
     it('should remove item', async () => {
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user', cartId: 'cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
-      await store.addToCart(PRODUCT_ID, 1);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
 
       mockCartService.removeItem.mockResolvedValueOnce({ buyerId: 'test-user', cartId: 'cart-1', items: [] });
-      await store.removeFromCart(PRODUCT_ID);
-      expect(mockCartService.removeItem).toHaveBeenCalledWith(PRODUCT_ID);
+      await store.removeFromCart(TEST_SKU_ID);
+      expect(mockCartService.removeItem).toHaveBeenCalledWith(TEST_SKU_ID);
     });
   });
 
@@ -105,9 +107,9 @@ describe('CartStore', () => {
     it('should checkout and clear cart', async () => {
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: 'test-user', cartId: 'cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
-      await store.addToCart(PRODUCT_ID, 1);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
       await store.checkout();
       expect(store.items()).toEqual([]);
       expect(store.checkoutCorrelationId()).toBe('test-correlation-id');
@@ -116,9 +118,9 @@ describe('CartStore', () => {
     it('should clear anonymous cartId on checkout', async () => {
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
-      await store.addToCart(PRODUCT_ID, 1);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
 
       await store.checkout();
       expect(mockCartService.clearCartId).toHaveBeenCalled();
@@ -132,7 +134,7 @@ describe('CartStore', () => {
     it('should persist cartId from anonymous getCart response', async () => {
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-cart-999',
-        items: [{ productId: 'p1', storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: 'p1', skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
 
       await store.loadCart();
@@ -143,7 +145,7 @@ describe('CartStore', () => {
     it('should NOT persist cartId from authenticated getCart response', async () => {
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: 'user-123', cartId: 'cart-auth',
-        items: [{ productId: 'p1', storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: 'p1', skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
 
       await store.loadCart();
@@ -155,7 +157,7 @@ describe('CartStore', () => {
       // Simulate: user was anonymous, then logs in, loadCart returns authenticated cart
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: 'user-123', cartId: 'cart-auth',
-        items: [{ productId: 'p1', storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: 'p1', skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
 
       await store.loadCart();
@@ -166,28 +168,28 @@ describe('CartStore', () => {
     it('should persist cartId from anonymous addItem response', async () => {
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-cart-new',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-cart-new',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
 
-      await store.addToCart(PRODUCT_ID, 1);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
       expect(mockCartService.setCartId).toHaveBeenCalledWith('anon-cart-new');
     });
 
     it('should add item to anonymous cart and track cartId', async () => {
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 2, price: 15, lineTotal: 30 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 2, price: 15, lineTotal: 30 }]
       });
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-cart-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 2, price: 15, lineTotal: 30 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 2, price: 15, lineTotal: 30 }]
       });
 
-      await store.addToCart(PRODUCT_ID, 2);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 2);
       expect(store.items().length).toBe(1);
       expect(store.items()[0].quantity).toBe(2);
     });
@@ -214,38 +216,38 @@ describe('CartStore', () => {
       // First add
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
-      await store.addToCart(PRODUCT_ID, 1);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
 
       // Update quantity
       mockCartService.updateItem.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 3, price: 10, lineTotal: 30 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 3, price: 10, lineTotal: 30 }]
       });
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 3, price: 10, lineTotal: 30 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 3, price: 10, lineTotal: 30 }]
       });
-      await store.updateQuantity(PRODUCT_ID, 3);
-      expect(mockCartService.updateItem).toHaveBeenCalledWith(PRODUCT_ID, 3);
+      await store.updateQuantity(TEST_SKU_ID, 3);
+      expect(mockCartService.updateItem).toHaveBeenCalledWith(TEST_SKU_ID, 3);
     });
 
     it('should remove item from anonymous cart', async () => {
       // First add
       mockCartService.addItem.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-1',
-        items: [{ productId: PRODUCT_ID, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
+        items: [{ productId: PRODUCT_ID, skuId: TEST_SKU_ID, skuCode: TEST_SKU_CODE, storeId: 's1', quantity: 1, price: 10, lineTotal: 10 }]
       });
-      await store.addToCart(PRODUCT_ID, 1);
+      await store.addToCart(PRODUCT_ID, TEST_SKU_ID, TEST_SKU_CODE, 1);
 
       // Remove
       mockCartService.removeItem.mockResolvedValueOnce({
@@ -254,7 +256,7 @@ describe('CartStore', () => {
       mockCartService.getCart.mockResolvedValueOnce({
         buyerId: null, cartId: 'anon-1', items: []
       });
-      await store.removeFromCart(PRODUCT_ID);
+      await store.removeFromCart(TEST_SKU_ID);
       expect(store.isEmpty()).toBe(true);
     });
   });

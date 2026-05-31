@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/orders` — order history list.
+ */
 export class OrdersPage extends BasePage {
   readonly pageHeading: Locator;
   readonly startShoppingBtn: Locator;

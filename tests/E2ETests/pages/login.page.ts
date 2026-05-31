@@ -1,6 +1,10 @@
-import { Locator, expect, Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
+import { TIMEOUTS } from '../utils/constants';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/auth/login` — email/password login form.
+ */
 export class LoginPage extends BasePage {
   readonly emailInput: Locator;
   readonly passwordInput: Locator;
@@ -15,6 +19,7 @@ export class LoginPage extends BasePage {
     this.errorMessage = page.locator('role=alert');
   }
 
+  /** Fill email + password and submit the form. */
   async login(email: string, password: string) {
     await this.submitWithRetry(this.loginSubmitBtn, [
       { input: this.emailInput, value: email },
@@ -22,7 +27,8 @@ export class LoginPage extends BasePage {
     ]);
   }
 
-  async expectErrorMessage(message: string) {
-    await expect(this.errorMessage).toContainText(message);
+  /** Wait for an error alert containing `message` to appear. */
+  async waitForErrorMessage(message: string, timeout = TIMEOUTS.element) {
+    await this.errorMessage.filter({ hasText: message }).waitFor({ state: 'visible', timeout });
   }
 }

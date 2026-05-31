@@ -15,6 +15,8 @@ public sealed record CreateOrderCommand(
 
 public sealed record CreateOrderItemDto(
     Guid ProductId,
+    Guid SkuId,
+    string SkuCode,
     string ProductName,
     decimal UnitPrice,
     int Quantity,

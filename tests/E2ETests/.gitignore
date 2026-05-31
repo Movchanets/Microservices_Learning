@@ -1,0 +1,6 @@
+
+# Allure reporting
+allure-results/
+allure-report/
+playwright-report/
+test-results/

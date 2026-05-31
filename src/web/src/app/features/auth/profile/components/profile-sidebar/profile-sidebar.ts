@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { AuthStore } from '../../../../../core/auth/auth.store';
 import { LucideAngularModule, User, ShoppingBag, Settings, LogOut, Store } from 'lucide-angular';
@@ -41,7 +41,7 @@ import { LucideAngularModule, User, ShoppingBag, Settings, LogOut, Store } from 
           <span>Settings</span>
         </a>
 
-        @if (user()?.role === 'Seller' || user()?.role === 'Admin') {
+        @if (isSellerOrAdmin()) {
           <a 
             routerLink="/seller" 
             routerLinkActive="bg-primary text-primary-foreground font-medium"
@@ -69,6 +69,13 @@ import { LucideAngularModule, User, ShoppingBag, Settings, LogOut, Store } from 
 export class ProfileSidebarComponent {
   private authStore = inject(AuthStore);
   user = this.authStore.user;
+
+  isSellerOrAdmin = computed(() => {
+    const r = this.user()?.role;
+    if (!r) return false;
+    const roles = r.split(',').map(x => x.trim());
+    return roles.includes('Seller') || roles.includes('Admin');
+  });
 
   readonly UserIcon = User;
   readonly ShoppingBagIcon = ShoppingBag;

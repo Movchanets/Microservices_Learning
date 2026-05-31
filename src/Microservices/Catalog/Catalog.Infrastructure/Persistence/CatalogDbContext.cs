@@ -11,7 +11,9 @@ public sealed class CatalogDbContext(
     : DomainEventsDbContext(options)
 {
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<Sku> Skus => Set<Sku>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<AttributeDefinition> AttributeDefinitions => Set<AttributeDefinition>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<ReviewVote> ReviewVotes => Set<ReviewVote>();
 
@@ -24,5 +26,12 @@ public sealed class CatalogDbContext(
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();
         modelBuilder.AddOutboxStateEntity();
+        // Disable RowVersion concurrency token on OutboxState to prevent
+        // DbUpdateConcurrencyException when domain event handlers call
+        // IPublishEndpoint.Publish() inside SaveChanges (OutboxState.RowVersion
+        // gets mutated multiple times in the same transaction).
+        modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxState")
+            .Property<byte[]>("RowVersion")
+            .IsConcurrencyToken(false);
     }
 }

@@ -9,6 +9,7 @@ public class InventoryItemTests
 {
     private static readonly Guid TestStoreId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     private static readonly Guid TestProductId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly Guid TestSkuId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [Fact]
     public void Create_WithValidData_InitializesCorrectly()
@@ -18,10 +19,10 @@ public class InventoryItemTests
         var initialQuantity = 10;
 
         // Act
-        var item = InventoryItem.Create(sku, initialQuantity, TestStoreId, TestProductId);
+        var item = InventoryItem.Create(TestSkuId, TestProductId, sku, initialQuantity, TestStoreId);
 
         // Assert
-        item.Sku.Should().Be("TEST-SKU");
+        item.SkuCode.Should().Be("TEST-SKU");
         item.AvailableQuantity.Should().Be(10);
         item.StoreId.Should().Be(TestStoreId);
         item.ProductId.Should().Be(TestProductId);
@@ -31,7 +32,7 @@ public class InventoryItemTests
     public void Reserve_WithAvailableStock_DeductsQuantityAndGeneratesEvent()
     {
         // Arrange
-        var item = InventoryItem.Create("TEST-SKU", 10, TestStoreId, TestProductId);
+        var item = InventoryItem.Create(TestSkuId, TestProductId, "TEST-SKU", 10, TestStoreId);
         item.ClearDomainEvents();
 
         // Act
@@ -50,7 +51,7 @@ public class InventoryItemTests
     public void Reserve_WhenQuantityExceedsAvailable_ThrowsOutOfStockException()
     {
         // Arrange
-        var item = InventoryItem.Create("TEST-SKU", 5, TestStoreId, TestProductId);
+        var item = InventoryItem.Create(TestSkuId, TestProductId, "TEST-SKU", 5, TestStoreId);
         item.ClearDomainEvents();
 
         // Act
@@ -66,14 +67,15 @@ public class InventoryItemTests
     public void Release_AddsQuantityBackAndGeneratesEvent()
     {
         // Arrange
-        var item = InventoryItem.Create("TEST-SKU", 5, TestStoreId, TestProductId);
+        var item = InventoryItem.Create(TestSkuId, TestProductId, "TEST-SKU", 5, TestStoreId);
+        item.Reserve(3);  // Available=2, Reserved=3
         item.ClearDomainEvents();
 
         // Act
         item.Release(3);
 
         // Assert
-        item.AvailableQuantity.Should().Be(8);
+        item.AvailableQuantity.Should().Be(5);
 
         var domainEvents = item.DomainEvents;
         domainEvents.Should().ContainSingle()

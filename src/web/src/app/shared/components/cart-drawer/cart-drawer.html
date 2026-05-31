@@ -28,7 +28,7 @@
 
     @if (!cartStore.isEmpty()) {
     <div class="cart-items">
-      @for (item of cartStore.items(); track item.productId) {
+      @for (item of cartStore.items(); track item.skuId) {
       <div class="cart-item">
         <div class="item-thumbnail">
           @if (item.imageUrl) {
@@ -43,15 +43,15 @@
         </div>
         <div class="item-controls">
           <div class="quantity-control">
-            <button (click)="updateQuantity(item.productId, item.quantity - 1)" [disabled]="cartStore.loading()">
+            <button (click)="updateQuantity(item.skuId, item.quantity - 1)" [disabled]="cartStore.loading()">
               <lucide-icon [img]="MinusIcon" size="16"></lucide-icon>
             </button>
             <span>{{ item.quantity }}</span>
-            <button (click)="updateQuantity(item.productId, item.quantity + 1)" [disabled]="cartStore.loading()">
+            <button (click)="updateQuantity(item.skuId, item.quantity + 1)" [disabled]="cartStore.loading()">
               <lucide-icon [img]="PlusIcon" size="16"></lucide-icon>
             </button>
           </div>
-          <button class="remove-btn" (click)="removeItem(item.productId)" [disabled]="cartStore.loading()">
+          <button class="remove-btn" (click)="removeItem(item.skuId)" [disabled]="cartStore.loading()">
             <lucide-icon [img]="TrashIcon" size="18"></lucide-icon>
           </button>
         </div>

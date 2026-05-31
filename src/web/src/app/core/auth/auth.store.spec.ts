@@ -10,7 +10,7 @@ describe('AuthStore', () => {
   let routerMock: any;
   let notificationServiceMock: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     authServiceMock = {
       login: vi.fn().mockResolvedValue(undefined),
       register: vi.fn().mockResolvedValue(undefined),
@@ -28,7 +28,7 @@ describe('AuthStore', () => {
       stop: vi.fn(),
     };
 
-    TestBed.configureTestingModule({
+    await TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: authServiceMock },
         { provide: Router, useValue: routerMock },
@@ -39,6 +39,7 @@ describe('AuthStore', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    TestBed.resetTestingModule();
   });
 
   it('should have initial state user=null, loading=false, error=null', () => {

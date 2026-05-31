@@ -1,32 +1,33 @@
 using BuildingBlocks.SharedContracts.Abstractions;
+using BuildingBlocks.SharedContracts.Dtos;
 using BuildingBlocks.Infrastructure.Models;
 using Inventory.Domain.Aggregates;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Inventory.Application.Commands;
 
 public sealed class ReleaseStockCommandHandler(
     IInventoryItemRepository repository,
-    IUnitOfWork uow) : IRequestHandler<ReleaseStockCommand, Result<bool>>
+    IUnitOfWork uow,
+    ILogger<ReleaseStockCommandHandler> logger) : IRequestHandler<ReleaseStockCommand, Result<bool>>
 {
     public async Task<Result<bool>> Handle(ReleaseStockCommand request, CancellationToken cancellationToken)
     {
-        var productIds = request.Items.Select(i => i.ProductId).ToList();
-        var items = new List<InventoryItem>();
-        foreach (var pid in productIds)
-        {
-            var item = await repository.GetByProductIdAsync(pid, cancellationToken);
-            if (item is not null) items.Add(item);
-        }
+        var resolved = await InventoryItemResolver.ResolveAsync(request.Items, repository, cancellationToken);
 
-        foreach (var requestedItem in request.Items)
+        foreach (var (requestedItem, inventoryItem) in resolved)
         {
-            var inventoryItem = items.FirstOrDefault(i => i.ProductId == requestedItem.ProductId);
-            if (inventoryItem != null)
+            if (inventoryItem is null)
             {
-                inventoryItem.Release(requestedItem.Quantity);
-                repository.Update(inventoryItem);
+                logger.LogWarning(
+                    "Inventory item not found for SKU {SkuCode} (SkuId={SkuId}) — reserved stock may be leaked",
+                    requestedItem.SkuCode, requestedItem.SkuId);
+                continue;
             }
+
+            inventoryItem.Release(requestedItem.Quantity);
+            repository.Update(inventoryItem);
         }
 
         await uow.SaveChangesAsync(cancellationToken);

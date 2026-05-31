@@ -14,6 +14,8 @@ public sealed record OrderDto(
 public sealed record OrderItemDto(
     Guid Id,
     Guid ProductId,
+    Guid SkuId,
+    string SkuCode,
     string ProductName,
     decimal UnitPrice,
     int Quantity,

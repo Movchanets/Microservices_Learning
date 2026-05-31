@@ -21,7 +21,7 @@ public sealed class CreateOrderHandler(
 
         foreach (var item in request.Items)
         {
-            order.AddItem(item.ProductId, item.ProductName, item.UnitPrice, item.Quantity, item.StoreId);
+            order.AddItem(item.ProductId, item.SkuId, item.SkuCode, item.ProductName, item.UnitPrice, item.Quantity, item.StoreId);
         }
 
         repository.Add(order);

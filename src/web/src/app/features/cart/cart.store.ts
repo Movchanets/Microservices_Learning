@@ -69,10 +69,10 @@ export const CartStore = signalStore(
       }
     },
 
-    async addToCart(productId: string, quantity: number = 1): Promise<void> {
+    async addToCart(productId: string, skuId: string, skuCode: string, quantity: number = 1): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        const response = await cartService.addItem(productId, quantity);
+        const response = await cartService.addItem(productId, skuId, skuCode, quantity);
         // Persist cartId for anonymous users
         if (!response.buyerId && response.cartId) {
           cartService.setCartId(response.cartId);
@@ -85,15 +85,15 @@ export const CartStore = signalStore(
       }
     },
 
-    async updateQuantity(productId: string, quantity: number): Promise<void> {
+    async updateQuantity(skuId: string, quantity: number): Promise<void> {
       if (quantity <= 0) {
-        await this.removeFromCart(productId);
+        await this.removeFromCart(skuId);
         return;
       }
 
       patchState(store, { loading: true, error: null });
       try {
-        await cartService.updateItem(productId, quantity);
+        await cartService.updateItem(skuId, quantity);
         // Re-fetch enriched cart from BFF
         await this.loadCart();
       } catch (err: unknown) {
@@ -101,10 +101,10 @@ export const CartStore = signalStore(
       }
     },
 
-    async removeFromCart(productId: string): Promise<void> {
+    async removeFromCart(skuId: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        await cartService.removeItem(productId);
+        await cartService.removeItem(skuId);
         // Re-fetch enriched cart from BFF
         await this.loadCart();
       } catch (err: unknown) {

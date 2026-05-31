@@ -1,6 +1,9 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/orders/:id` — enhanced order detail with timeline.
+ */
 export class OrderDetailEnhancedPage extends BasePage {
   readonly pageHeading: Locator;
   readonly backToOrdersLink: Locator;
@@ -60,7 +63,7 @@ export class OrderDetailEnhancedPage extends BasePage {
   }
 
   async waitForLoaded() {
-    await expect(this.loadingSpinner).toBeHidden({ timeout: 10000 });
+    await this.loadingSpinner.waitFor({ state: 'hidden', timeout: TIMEOUTS.element });
   }
 
   async getOrderId(): Promise<string> {

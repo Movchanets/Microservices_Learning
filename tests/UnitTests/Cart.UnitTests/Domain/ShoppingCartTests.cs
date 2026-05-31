@@ -13,7 +13,7 @@ public class ShoppingCartTests
     public void AddItem_WhenNewProduct_ShouldAddNewItem()
     {
         var cart = new ShoppingCart(Guid.NewGuid());
-        cart.AddItem(ProductId1, 2, StoreId, 10m);
+        cart.AddItem(ProductId1, Guid.NewGuid(), "TEST-SKU", 2, StoreId, 10m);
 
         cart.Items.Should().ContainSingle();
         cart.Items.First().ProductId.Should().Be(ProductId1);
@@ -25,8 +25,9 @@ public class ShoppingCartTests
     public void AddItem_WhenExistingProduct_ShouldIncrementQuantity()
     {
         var cart = new ShoppingCart(Guid.NewGuid());
-        cart.AddItem(ProductId1, 2, StoreId, 10m);
-        cart.AddItem(ProductId1, 3, StoreId, 10m);
+        var skuId = Guid.NewGuid();
+        cart.AddItem(ProductId1, skuId, "TEST-SKU", 2, StoreId, 10m);
+        cart.AddItem(ProductId1, skuId, "TEST-SKU", 3, StoreId, 10m);
 
         cart.Items.Should().ContainSingle();
         cart.Items.First().Quantity.Should().Be(5);
@@ -36,9 +37,10 @@ public class ShoppingCartTests
     public void UpdateQuantity_WhenGreaterThanZero_ShouldUpdateQuantity()
     {
         var cart = new ShoppingCart(Guid.NewGuid());
-        cart.AddItem(ProductId1, 2, StoreId, 10m);
+        var skuId = Guid.NewGuid();
+        cart.AddItem(ProductId1, skuId, "TEST-SKU", 2, StoreId, 10m);
 
-        cart.UpdateQuantity(ProductId1, 5);
+        cart.UpdateQuantity(ProductId1, skuId, 5);
 
         cart.Items.Should().ContainSingle();
         cart.Items.First().Quantity.Should().Be(5);
@@ -48,11 +50,13 @@ public class ShoppingCartTests
     public void UpdateQuantity_WhenZeroOrLess_ShouldRemoveItem()
     {
         var cart = new ShoppingCart(Guid.NewGuid());
-        cart.AddItem(ProductId1, 2, StoreId, 10m);
-        cart.AddItem(ProductId2, 1, StoreId, 20m);
+        var skuId1 = Guid.NewGuid();
+        var skuId2 = Guid.NewGuid();
+        cart.AddItem(ProductId1, skuId1, "TEST-SKU", 2, StoreId, 10m);
+        cart.AddItem(ProductId2, skuId2, "TEST-SKU", 1, StoreId, 20m);
 
-        cart.UpdateQuantity(ProductId1, 0);
-        cart.UpdateQuantity(ProductId2, -1);
+        cart.UpdateQuantity(ProductId1, skuId1, 0);
+        cart.UpdateQuantity(ProductId2, skuId2, -1);
 
         cart.Items.Should().BeEmpty();
     }
@@ -61,10 +65,12 @@ public class ShoppingCartTests
     public void RemoveItem_ShouldRemoveTheItem()
     {
         var cart = new ShoppingCart(Guid.NewGuid());
-        cart.AddItem(ProductId1, 2, StoreId, 10m);
-        cart.AddItem(ProductId2, 1, StoreId, 20m);
+        var skuId1 = Guid.NewGuid();
+        var skuId2 = Guid.NewGuid();
+        cart.AddItem(ProductId1, skuId1, "TEST-SKU", 2, StoreId, 10m);
+        cart.AddItem(ProductId2, skuId2, "TEST-SKU", 1, StoreId, 20m);
 
-        cart.RemoveItem(ProductId1);
+        cart.RemoveItem(ProductId1, skuId1);
 
         cart.Items.Should().ContainSingle();
         cart.Items.First().ProductId.Should().Be(ProductId2);
@@ -74,8 +80,8 @@ public class ShoppingCartTests
     public void Clear_ShouldRemoveAllItems()
     {
         var cart = new ShoppingCart(Guid.NewGuid());
-        cart.AddItem(ProductId1, 2, StoreId, 10m);
-        cart.AddItem(ProductId2, 1, StoreId, 20m);
+        cart.AddItem(ProductId1, Guid.NewGuid(), "TEST-SKU", 2, StoreId, 10m);
+        cart.AddItem(ProductId2, Guid.NewGuid(), "TEST-SKU", 1, StoreId, 20m);
 
         cart.Clear();
 

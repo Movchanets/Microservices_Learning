@@ -1,0 +1,138 @@
+using BuildingBlocks.SharedContracts.Events.Media;
+using Catalog.Domain.Aggregates;
+using Catalog.Domain.Entities;
+using Catalog.Domain.ValueObjects;
+using Catalog.Infrastructure.Messaging.Consumers;
+using Catalog.Infrastructure.Persistence;
+using FluentAssertions;
+using MassTransit;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
+
+namespace Catalog.UnitTests.Infrastructure;
+
+public sealed class MediaUploadedConsumerTests : IDisposable
+{
+    private readonly SqliteConnection _connection;
+    private readonly CatalogDbContext _context;
+    private readonly MediaUploadedConsumer _consumer;
+    private readonly Guid _categoryId;
+
+    public MediaUploadedConsumerTests()
+    {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
+        var options = new DbContextOptionsBuilder<CatalogDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        _context = new CatalogDbContext(options);
+        _context.Database.EnsureCreated();
+
+        // Seed a category so Product FK is satisfied
+        var category = Category.Create("Test Category");
+        _categoryId = category.Id;
+        _context.Categories.Add(category);
+        _context.SaveChanges();
+
+        var logger = Mock.Of<ILogger<MediaUploadedConsumer>>();
+        _consumer = new MediaUploadedConsumer(_context, logger);
+    }
+
+    [Fact]
+    public async Task Consume_PrimaryImageForProduct_UpdatesProductImageUrl()
+    {
+        // Arrange
+        var product = Product.Create("Test Product", "Description", _categoryId, Guid.NewGuid());
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        var evt = new MediaUploadedIntegrationEvent(
+            MediaItemId: Guid.NewGuid(),
+            TargetId: product.Id,
+            TargetType: "Product",
+            Url: "https://cdn.example.com/new-image.jpg",
+            ThumbnailUrl: "https://cdn.example.com/thumb.jpg",
+            IsPrimary: true,
+            Timestamp: DateTime.UtcNow);
+
+        var consumeContext = new Mock<ConsumeContext<MediaUploadedIntegrationEvent>>();
+        consumeContext.Setup(x => x.Message).Returns(evt);
+        consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        // Act
+        await _consumer.Consume(consumeContext.Object);
+
+        // Assert
+        var updated = await _context.Products.FindAsync(product.Id);
+        updated!.ImageUrl.Should().Be("https://cdn.example.com/new-image.jpg");
+    }
+
+    [Fact]
+    public async Task Consume_PrimaryImageForSku_UpdatesSkuImageUrl()
+    {
+        // Arrange
+        var product = Product.Create("Test Product", "Description", _categoryId, Guid.NewGuid());
+        var sku = product.AddSku("SKU-001", Money.Create(10m, "USD"), new Dictionary<string, string> { { "Color", "Red" } });
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        var evt = new MediaUploadedIntegrationEvent(
+            MediaItemId: Guid.NewGuid(),
+            TargetId: sku.Id,
+            TargetType: "SKU",
+            Url: "https://cdn.example.com/sku-image.jpg",
+            ThumbnailUrl: null,
+            IsPrimary: true,
+            Timestamp: DateTime.UtcNow);
+
+        var consumeContext = new Mock<ConsumeContext<MediaUploadedIntegrationEvent>>();
+        consumeContext.Setup(x => x.Message).Returns(evt);
+        consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        // Act
+        await _consumer.Consume(consumeContext.Object);
+
+        // Assert
+        var updatedSku = await _context.Skus.FindAsync(sku.Id);
+        updatedSku!.ImageUrl.Should().Be("https://cdn.example.com/sku-image.jpg");
+    }
+
+    [Fact]
+    public async Task Consume_NotPrimary_DoesNothing()
+    {
+        // Arrange
+        var product = Product.Create("Test Product", "Description", _categoryId, Guid.NewGuid());
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        var evt = new MediaUploadedIntegrationEvent(
+            MediaItemId: Guid.NewGuid(),
+            TargetId: product.Id,
+            TargetType: "Product",
+            Url: "https://cdn.example.com/secondary-image.jpg",
+            ThumbnailUrl: null,
+            IsPrimary: false,
+            Timestamp: DateTime.UtcNow);
+
+        var consumeContext = new Mock<ConsumeContext<MediaUploadedIntegrationEvent>>();
+        consumeContext.Setup(x => x.Message).Returns(evt);
+        consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        // Act
+        await _consumer.Consume(consumeContext.Object);
+
+        // Assert
+        var unchanged = await _context.Products.FindAsync(product.Id);
+        unchanged!.ImageUrl.Should().BeNull();
+    }
+
+    public void Dispose()
+    {
+        _context.Dispose();
+        _connection.Dispose();
+    }
+}

@@ -1,155 +1,160 @@
-using Azure.Storage.Blobs;
-using Media.API.Models;
-using Media.API.Services;
+using System.Security.Claims;
+using Media.API.Application.Commands.DeleteMedia;
+using Media.API.Application.Commands.SetPrimaryMedia;
+using Media.API.Application.Commands.UpdateGalleryOrder;
+using Media.API.Application.Commands.UploadMedia;
+using Media.API.Application.DTOs;
+using Media.API.Application.Interfaces;
+using Media.API.Application.Queries.GetGallery;
+using Media.API.Domain;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Media.API.Endpoints;
 
 public static class MediaEndpoints
 {
-    private static readonly HashSet<string> AllowedContentTypes =
-    [
-        "image/jpeg", "image/png", "image/gif", "image/webp",
-        "application/pdf"
-    ];
-
-    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
-
     public static void MapMediaEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/media")
             .WithTags("Media")
             .WithOpenApi();
 
-        // Upload file
+        // ── Upload ─────────────────────────────────────────
         group.MapPost("/upload", async (
             IFormFile file,
-            [FromServices] BlobServiceClient blobClient,
-            [FromServices] ImageProcessingService imageService,
+            [FromForm] Guid targetId,
+            [FromForm] string targetType,
+            [FromForm] bool isPrimary,
+            ClaimsPrincipal user,
+            ISender sender,
             CancellationToken ct) =>
         {
             if (file is null || file.Length == 0)
                 return Results.BadRequest("No file provided.");
 
-            if (file.Length > MaxFileSizeBytes)
-                return Results.BadRequest($"File size exceeds maximum of {MaxFileSizeBytes / 1024 / 1024}MB.");
-
-            if (!AllowedContentTypes.Contains(file.ContentType))
-                return Results.BadRequest($"Content type '{file.ContentType}' is not allowed.");
-
-            var containerClient = blobClient.GetBlobContainerClient("media");
-            await containerClient.CreateIfNotExistsAsync(cancellationToken: ct);
-
-            var blobName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-            var blob = containerClient.GetBlobClient(blobName);
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
             using var stream = file.OpenReadStream();
-            await blob.UploadAsync(stream, overwrite: true, cancellationToken: ct);
+            var command = new UploadMediaCommand(
+                stream,
+                file.FileName,
+                file.ContentType,
+                targetId,
+                targetType,
+                isPrimary,
+                userId);
 
-            // Generate thumbnail for images
-            if (file.ContentType.StartsWith("image/"))
-            {
-                stream.Position = 0;
-                var thumbnailName = $"thumb_{blobName}";
-                var thumbStream = await imageService.CreateThumbnailAsync(stream, ct);
-                var thumbBlob = containerClient.GetBlobClient(thumbnailName);
-                await thumbBlob.UploadAsync(thumbStream, overwrite: true, cancellationToken: ct);
-            }
-
-            return Results.Created(
-                $"/api/media/{blobName}",
-                new MediaUploadResponse(blobName, blob.Uri.ToString(), file.ContentType, file.Length));
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess
+                ? Results.Created($"/api/media/{result.Value!.Id}", result.Value)
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
         })
         .WithName("UploadMedia")
         .RequireAuthorization()
         .DisableAntiforgery()
-        .Produces<MediaUploadResponse>(StatusCodes.Status201Created)
+        .Produces<MediaItemDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
-        // Retrieve file
-        group.MapGet("/{blobName}", async (
-            string blobName,
-            [FromServices] BlobServiceClient blobClient,
+        // ── Get Gallery ────────────────────────────────────
+        group.MapGet("/gallery/{targetType}/{targetId:guid}", async (
+            string targetType,
+            Guid targetId,
+            ISender sender,
             CancellationToken ct) =>
         {
-            var containerClient = blobClient.GetBlobContainerClient("media");
-            var blob = containerClient.GetBlobClient(blobName);
-
-            if (!await blob.ExistsAsync(ct))
-                return Results.NotFound();
-
-            var download = await blob.DownloadStreamingAsync(cancellationToken: ct);
-            var contentType = download.Value.Details.ContentType ?? "application/octet-stream";
-            return Results.File(download.Value.Content, contentType);
+            var result = await sender.Send(new GetGalleryQuery(targetId, targetType), ct);
+            return Results.Ok(result.Value);
         })
-        .WithName("GetMedia")
+        .WithName("GetGallery")
+        .Produces<List<MediaItemDto>>();
+
+        // ── Get File ───────────────────────────────────────
+        group.MapGet("/{mediaId:guid}", async (
+            Guid mediaId,
+            IMediaRepository mediaRepository,
+            IMediaStorageService storageService,
+            CancellationToken ct) =>
+        {
+            var media = await mediaRepository.GetByIdAsync(mediaId, ct);
+            if (media is null) return Results.NotFound();
+
+            var stream = await storageService.DownloadAsync(media.BlobName, ct);
+            return Results.File(stream, media.ContentType);
+        })
+        .WithName("GetMediaFile")
         .Produces(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status404NotFound);
 
-        // Retrieve thumbnail
-        group.MapGet("/{blobName}/thumbnail", async (
-            string blobName,
-            [FromServices] BlobServiceClient blobClient,
+        // ── Get Thumbnail ──────────────────────────────────
+        group.MapGet("/{mediaId:guid}/thumbnail", async (
+            Guid mediaId,
+            IMediaRepository mediaRepository,
+            IMediaStorageService storageService,
             CancellationToken ct) =>
         {
-            var containerClient = blobClient.GetBlobContainerClient("media");
-            var thumbBlob = containerClient.GetBlobClient($"thumb_{blobName}");
+            var media = await mediaRepository.GetByIdAsync(mediaId, ct);
+            if (media?.ThumbnailBlobName is null) return Results.NotFound();
 
-            if (!await thumbBlob.ExistsAsync(ct))
-                return Results.NotFound();
-
-            var download = await thumbBlob.DownloadStreamingAsync(cancellationToken: ct);
-            return Results.File(download.Value.Content, "image/jpeg");
+            var stream = await storageService.DownloadAsync(media.ThumbnailBlobName, ct);
+            return Results.File(stream, "image/jpeg");
         })
         .WithName("GetMediaThumbnail")
         .Produces(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status404NotFound);
 
-        // List files
-        group.MapGet("/", async (
-            [FromServices] BlobServiceClient blobClient,
+        // ── Delete ─────────────────────────────────────────
+        group.MapDelete("/{mediaId:guid}", async (
+            Guid mediaId,
+            ISender sender,
             CancellationToken ct) =>
         {
-            var containerClient = blobClient.GetBlobContainerClient("media");
-            var items = new List<object>();
-            await foreach (var blobItem in containerClient.GetBlobsAsync(cancellationToken: ct))
-            {
-                if (!blobItem.Name.StartsWith("thumb_"))
-                {
-                    items.Add(new
-                    {
-                        blobItem.Name,
-                        Size = blobItem.Properties.ContentLength ?? 0,
-                        ContentType = blobItem.Properties.ContentType,
-                        LastModified = blobItem.Properties.LastModified
-                    });
-                }
-            }
-            return Results.Ok(items);
-        })
-        .WithName("ListMedia")
-        .RequireAuthorization()
-        .Produces(StatusCodes.Status200OK);
-
-        // Delete file
-        group.MapDelete("/{blobName}", async (
-            string blobName,
-            [FromServices] BlobServiceClient blobClient,
-            CancellationToken ct) =>
-        {
-            var containerClient = blobClient.GetBlobContainerClient("media");
-            var blob = containerClient.GetBlobClient(blobName);
-
-            await blob.DeleteIfExistsAsync(cancellationToken: ct);
-
-            // Also delete thumbnail if exists
-            var thumbBlob = containerClient.GetBlobClient($"thumb_{blobName}");
-            await thumbBlob.DeleteIfExistsAsync(cancellationToken: ct);
-
-            return Results.NoContent();
+            var result = await sender.Send(new DeleteMediaCommand(mediaId), ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.NotFound(new { result.Error, result.ErrorCode });
         })
         .WithName("DeleteMedia")
         .RequireAuthorization()
-        .Produces(StatusCodes.Status204NoContent);
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // ── Reorder Gallery ────────────────────────────────
+        group.MapPut("/gallery/{targetType}/{targetId:guid}/reorder", async (
+            string targetType,
+            Guid targetId,
+            List<GalleryOrderItem> items,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(
+                new UpdateGalleryOrderCommand(targetId, targetType, items), ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("ReorderGallery")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // ── Set Primary ────────────────────────────────────
+        group.MapPut("/gallery/{targetType}/{targetId:guid}/primary/{mediaItemId:guid}", async (
+            string targetType,
+            Guid targetId,
+            Guid mediaItemId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(
+                new SetPrimaryMediaCommand(targetId, targetType, mediaItemId), ct);
+            return result.IsSuccess
+                ? Results.NoContent()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("SetPrimaryMedia")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
     }
 }

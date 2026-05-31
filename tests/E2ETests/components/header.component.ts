@@ -1,53 +1,76 @@
 import { Locator, Page } from '@playwright/test';
+import { BaseComponent } from './base.component';
 
-export class HeaderComponent {
-  readonly page: Page;
+/**
+ * Component object for the site header.
+ *
+ * Scoped to `<header>` — all locators use `this.root`, not `this.page`.
+ * Covers: logo, nav links, user menu, mega menu, search, cart.
+ */
+export class HeaderComponent extends BaseComponent {
+  // ── Branding ────────────────────────────────────────────
   readonly logo: Locator;
+
+  // ── Navigation Links ────────────────────────────────────
   readonly catalogLink: Locator;
-  readonly sellLink: Locator;
   readonly loginLink: Locator;
   readonly registerLink: Locator;
+
+  // ── User Menu (authenticated) ───────────────────────────
   readonly userMenuTrigger: Locator;
   readonly userDropdown: Locator;
   readonly profileLink: Locator;
   readonly logoutLink: Locator;
+  readonly ordersLink: Locator;
+  readonly sellerLink: Locator;
   readonly adminLink: Locator;
 
-  // Mega menu
+  // ── Mega Menu ───────────────────────────────────────────
   readonly megaMenu: Locator;
   readonly megaMenuToggle: Locator;
 
-  // Search
+  // ── Search ──────────────────────────────────────────────
   readonly searchInput: Locator;
 
-  // Cart
+  // ── Cart ────────────────────────────────────────────────
   readonly cartBtn: Locator;
   readonly cartBadge: Locator;
 
   constructor(page: Page) {
-    this.page = page;
-    this.logo = page.getByTestId('header-logo');
-    this.catalogLink = page.getByTestId('nav-catalog');
-    this.sellLink = page.getByTestId('nav-sell');
-    this.loginLink = page.getByTestId('nav-login');
-    this.registerLink = page.getByTestId('nav-register');
-    this.userMenuTrigger = page.getByTestId('user-menu-trigger');
-    this.userDropdown = page.getByTestId('user-dropdown');
-    this.profileLink = page.getByTestId('nav-profile');
-    this.logoutLink = page.getByTestId('nav-logout');
-    this.adminLink = page.getByTestId('nav-admin');
+    const root = page.locator('header');
+    super(page, root);
 
-    // Mega menu — target the visible panel div, not the host element (which has 0 dimensions)
-    this.megaMenu = page.getByTestId('mega-menu-panel');
-    this.megaMenuToggle = page.getByRole('button', { name: /catalog/i }).first();
+    // Branding
+    this.logo = this.root.getByTestId('header-logo');
+
+    // Navigation
+    this.catalogLink = this.root.getByRole('button', { name: /catalog/i }).first();
+    this.loginLink = this.root.getByTestId('nav-login');
+    this.registerLink = this.root.getByTestId('nav-register');
+
+    // User Menu
+    this.userMenuTrigger = this.root.getByTestId('user-menu-trigger');
+    this.userDropdown = this.root.getByTestId('user-dropdown');
+    this.profileLink = this.root.getByTestId('nav-profile');
+    this.logoutLink = this.root.getByTestId('nav-logout');
+    this.ordersLink = this.root.getByTestId('nav-orders');
+    this.sellerLink = this.root.getByTestId('nav-seller');
+    this.adminLink = this.root.getByTestId('nav-admin');
+
+    // Mega Menu — target the visible panel div, not the host element (which has 0 dimensions)
+    // NOTE: Uses this.page because the mega menu panel renders outside <header> in the DOM
+    this.megaMenu = this.page.getByTestId('mega-menu-panel'); // eslint-disable-line @typescript-eslint/no-this-alias -- panel is outside header scope
+    this.megaMenuToggle = this.root.getByRole('button', { name: /catalog/i }).first();
 
     // Search — scope to header to avoid matching standalone search bar on catalog page
-    this.searchInput = page.locator('header').getByPlaceholder('Search products...');
+    this.searchInput = this.root.getByPlaceholder('Search products...');
 
     // Cart — scope to header only to avoid matching product card buttons
-    this.cartBtn = page.getByTestId('cart-button');
-    this.cartBadge = page.getByTestId('cart-badge');
+    this.cartBtn = this.root.getByTestId('cart-button');
+    this.cartBadge = this.root.getByTestId('cart-badge');
   }
+
+  // ── Navigation Actions ──────────────────────────────────
 
   async clickLogo() {
     await this.logo.click();
@@ -55,10 +78,6 @@ export class HeaderComponent {
 
   async clickCatalog() {
     await this.catalogLink.click();
-  }
-
-  async clickSell() {
-    await this.sellLink.click();
   }
 
   async clickLogin() {
@@ -69,26 +88,45 @@ export class HeaderComponent {
     await this.registerLink.click();
   }
 
+  // ── User Menu Actions ───────────────────────────────────
+
+  /** Open the user dropdown menu. */
   async openUserMenu() {
     await this.userMenuTrigger.click();
   }
 
+  /** Open user menu, then click "Profile". */
   async clickProfile() {
     await this.openUserMenu();
     await this.profileLink.click();
   }
 
+  /** Open user menu, then click "Logout". */
   async logout() {
     await this.openUserMenu();
     await this.logoutLink.click();
   }
 
+  /** Open user menu, then click "Admin". */
   async clickAdmin() {
     await this.openUserMenu();
     await this.adminLink.click();
   }
 
-  // Mega menu
+  /** Open user menu, then click "Seller Dashboard". */
+  async clickSellerDashboard() {
+    await this.openUserMenu();
+    await this.sellerLink.click();
+  }
+
+  /** Open user menu, then click "Orders". */
+  async clickOrders() {
+    await this.openUserMenu();
+    await this.ordersLink.click();
+  }
+
+  // ── Mega Menu ───────────────────────────────────────────
+
   async toggleMegaMenu() {
     await this.megaMenuToggle.click();
   }
@@ -97,26 +135,32 @@ export class HeaderComponent {
     return this.megaMenu.isVisible();
   }
 
+  /** Click the page body to dismiss the mega menu. */
   async closeMegaMenu() {
-    // Click elsewhere to close
     await this.page.locator('body').click({ position: { x: 0, y: 0 } });
   }
 
-  // Search
+  // ── Search ──────────────────────────────────────────────
+
+  /** Type a query and press Enter. */
   async search(query: string) {
     await this.searchInput.fill(query);
     await this.searchInput.press('Enter');
   }
 
+  /** Type a query without submitting (for autocomplete testing). */
   async typeSearch(query: string) {
     await this.searchInput.fill(query);
   }
 
-  // Cart
+  // ── Cart ────────────────────────────────────────────────
+
+  /** Click the cart icon to open the drawer. */
   async openCart() {
     await this.cartBtn.click();
   }
 
+  /** Return the badge count text, or null if badge is hidden. */
   async getCartBadgeCount(): Promise<string | null> {
     if (await this.cartBadge.isVisible()) {
       return this.cartBadge.innerText();
@@ -128,18 +172,22 @@ export class HeaderComponent {
     return this.cartBadge.isVisible();
   }
 
-  // User state checks
+  // ── State Checks ────────────────────────────────────────
+
+  /** True if the user menu trigger is visible (authenticated). */
   async isLoggedIn(): Promise<boolean> {
     return this.userMenuTrigger.isVisible();
   }
 
+  /** True if the login link is visible (anonymous). */
   async isLoggedOut(): Promise<boolean> {
     return this.loginLink.isVisible();
   }
 
+  /** Open user menu and extract the email text. */
   async getUserEmail(): Promise<string> {
     await this.openUserMenu();
-    const email = this.page.locator('[class*="text-xs"][class*="text-muted"]').filter({ hasText: /@/ });
+    const email = this.root.locator('[class*="text-xs"][class*="text-muted"]').filter({ hasText: /@/ });
     return email.innerText();
   }
 }

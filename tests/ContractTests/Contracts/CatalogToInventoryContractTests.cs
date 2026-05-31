@@ -18,45 +18,45 @@ public class CatalogToInventoryContractTests
 {
     private readonly Mock<IInventoryItemRepository> _repositoryMock;
     private readonly Mock<IUnitOfWork> _uowMock;
-    private readonly ILogger<Inventory.Infrastructure.Messaging.Consumers.ProductCreatedConsumer> _logger;
+    private readonly ILogger<Inventory.Infrastructure.Messaging.Consumers.SkuCreatedConsumer> _logger;
 
     public CatalogToInventoryContractTests()
     {
         _repositoryMock = new Mock<IInventoryItemRepository>();
         _uowMock = new Mock<IUnitOfWork>();
-        _logger = Mock.Of<ILogger<Inventory.Infrastructure.Messaging.Consumers.ProductCreatedConsumer>>();
+        _logger = Mock.Of<ILogger<Inventory.Infrastructure.Messaging.Consumers.SkuCreatedConsumer>>();
     }
 
     [Fact]
-    public async Task ProductCreatedEvent_Contract_ShouldCreateInventoryItemWithZeroStock()
+    public async Task SkuCreatedIntegrationEvent_Contract_ShouldCreateInventoryItemWithZeroStock()
     {
         // Arrange
         var sku = $"SKU-INV-{Guid.NewGuid():N}";
-        var @event = new ProductCreatedEvent(
-            ProductId: Guid.NewGuid(),
-            Name: "Inventory Test Product",
-            Description: "Desc",
+        var productId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
+        var @event = new SkuCreatedIntegrationEvent(
+            ProductId: productId,
+            SkuId: skuId,
+            SkuCode: sku,
+            ProductName: "Inventory Test Product",
+            StoreId: Guid.NewGuid(),
             Price: 49.99m,
             Currency: "USD",
-            Sku: sku,
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Test",
-            Tags: [],
-            ImageUrl: null,
-            StoreId: Guid.NewGuid(),
-            CreatedAt: DateTime.UtcNow);
+            TypedAttributes: new Dictionary<string, string>(),
+            FlexibleAttributes: new Dictionary<string, string>(),
+            Timestamp: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductCreatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuCreatedIntegrationEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        // SKU does not exist yet
+        // SKU does not exist yet (consumer uses GetBySkuIdAsync)
         _repositoryMock
-            .Setup(r => r.GetBySkuAsync(sku, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetBySkuIdAsync(skuId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((InventoryItem?)null);
 
         // Act
-        var consumer = new Inventory.Infrastructure.Messaging.Consumers.ProductCreatedConsumer(
+        var consumer = new Inventory.Infrastructure.Messaging.Consumers.SkuCreatedConsumer(
             _repositoryMock.Object, _uowMock.Object, _logger);
         await consumer.Consume(consumeContext.Object);
 
@@ -73,38 +73,37 @@ public class CatalogToInventoryContractTests
     }
 
     [Fact]
-    public async Task ProductCreatedEvent_Contract_ShouldBeIdempotentForDuplicateSku()
+    public async Task SkuCreatedIntegrationEvent_Contract_ShouldBeIdempotentForDuplicateSku()
     {
         // Arrange
         var sku = $"SKU-IDEM-{Guid.NewGuid():N}";
         var productId = Guid.NewGuid();
-        var existingItem = InventoryItem.Create(sku, 50, Guid.Parse("33333333-3333-3333-3333-333333333333"), productId);
+        var skuId = Guid.NewGuid();
+        var existingItem = InventoryItem.Create(skuId, productId, sku, 50, Guid.Parse("33333333-3333-3333-3333-333333333333"));
 
-        var @event = new ProductCreatedEvent(
+        var @event = new SkuCreatedIntegrationEvent(
             ProductId: productId,
-            Name: "Duplicate Product",
-            Description: "Desc",
+            SkuId: skuId,
+            SkuCode: sku,
+            ProductName: "Duplicate Product",
+            StoreId: Guid.NewGuid(),
             Price: 10m,
             Currency: "USD",
-            Sku: sku,
-            CategoryId: Guid.NewGuid(),
-            CategoryName: "Cat",
-            Tags: [],
-            ImageUrl: null,
-            StoreId: Guid.NewGuid(),
-            CreatedAt: DateTime.UtcNow);
+            TypedAttributes: new Dictionary<string, string>(),
+            FlexibleAttributes: new Dictionary<string, string>(),
+            Timestamp: DateTime.UtcNow);
 
-        var consumeContext = new Mock<ConsumeContext<ProductCreatedEvent>>();
+        var consumeContext = new Mock<ConsumeContext<SkuCreatedIntegrationEvent>>();
         consumeContext.Setup(x => x.Message).Returns(@event);
         consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
 
-        // SKU already exists with the same ProductId
+        // SKU already exists (consumer uses GetBySkuIdAsync)
         _repositoryMock
-            .Setup(r => r.GetBySkuAsync(sku, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetBySkuIdAsync(skuId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingItem);
 
         // Act
-        var consumer = new Inventory.Infrastructure.Messaging.Consumers.ProductCreatedConsumer(
+        var consumer = new Inventory.Infrastructure.Messaging.Consumers.SkuCreatedConsumer(
             _repositoryMock.Object, _uowMock.Object, _logger);
         await consumer.Consume(consumeContext.Object);
 
@@ -116,6 +115,6 @@ public class CatalogToInventoryContractTests
         _uowMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Never,
-            "SaveChangesAsync should not be called when SKU and ProductId already match");
+            "SaveChangesAsync should not be called when SkuId already matches");
     }
 }

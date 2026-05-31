@@ -7,6 +7,8 @@ namespace BuildingBlocks.Infrastructure.Database;
 /// Base DbContext that implements IUnitOfWork with explicit transaction management.
 /// Domain events are dispatched by <see cref="Interceptors.DomainEventDispatcherInterceptor"/>
 /// which runs BEFORE SaveChanges, allowing MassTransit Outbox to write into the same transaction.
+/// The OutboxState.RowVersion concurrency token is disabled in each service's DbContext
+/// to prevent DbUpdateConcurrencyException.
 /// </summary>
 public abstract class DomainEventsDbContext(DbContextOptions options)
     : DbContext(options), IUnitOfWork

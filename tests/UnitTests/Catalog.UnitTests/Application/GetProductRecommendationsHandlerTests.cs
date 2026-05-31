@@ -49,21 +49,64 @@ public class GetProductRecommendationsHandlerTests
         var query = new GetProductRecommendationsQuery(productId);
 
         var product = new ProductDto(
-            productId, "Test Product", "Description", 10m, "USD", "SKU-1",
-            categoryId, "Electronics", "Active", null, System.Guid.NewGuid(),
-            [], System.DateTime.UtcNow, null);
+            Id: productId,
+            Name: "Test Product",
+            Description: "Description",
+            CategoryId: categoryId,
+            CategoryName: "Electronics",
+            Status: "Active",
+            ImageUrl: null,
+            Brand: null,
+            StoreId: System.Guid.NewGuid(),
+            Tags: [],
+            Skus: [],
+            CreatedAt: System.DateTime.UtcNow,
+            UpdatedAt: null);
 
         var relatedProduct1 = new ProductListDto(
-            System.Guid.NewGuid(), "Related 1", 20m, "USD", "SKU-2",
-            "Electronics", "Active", null, System.Guid.NewGuid(), System.DateTime.UtcNow);
+            Id: System.Guid.NewGuid(),
+            Name: "Related 1",
+            MinPrice: 20m,
+            MaxPrice: 20m,
+            Currency: "USD",
+            SkuCount: 1,
+            DefaultSkuId: System.Guid.NewGuid(),
+            DefaultSkuCode: "TEST-SKU",
+            CategoryName: "Electronics",
+            Status: "Active",
+            ImageUrl: null,
+            StoreId: System.Guid.NewGuid(),
+            CreatedAt: System.DateTime.UtcNow);
 
         var relatedProduct2 = new ProductListDto(
-            System.Guid.NewGuid(), "Related 2", 30m, "USD", "SKU-3",
-            "Electronics", "Active", null, System.Guid.NewGuid(), System.DateTime.UtcNow);
+            Id: System.Guid.NewGuid(),
+            Name: "Related 2",
+            MinPrice: 30m,
+            MaxPrice: 30m,
+            Currency: "USD",
+            SkuCount: 1,
+            DefaultSkuId: System.Guid.NewGuid(),
+            DefaultSkuCode: "TEST-SKU",
+            CategoryName: "Electronics",
+            Status: "Active",
+            ImageUrl: null,
+            StoreId: System.Guid.NewGuid(),
+            CreatedAt: System.DateTime.UtcNow);
 
         var currentProductDup = new ProductListDto(
-            productId, "Test Product", 10m, "USD", "SKU-1",
-            "Electronics", "Active", null, System.Guid.NewGuid(), System.DateTime.UtcNow);
+            Id: productId,
+            Name: "Test Product",
+            MinPrice: 10m,
+            MaxPrice: 10m,
+            Currency: "USD",
+            SkuCount: 1,
+            DefaultSkuId: System.Guid.NewGuid(),
+            DefaultSkuCode: "TEST-SKU",
+            CategoryName: "Electronics",
+            Status: "Active",
+            ImageUrl: null,
+            StoreId: System.Guid.NewGuid(),
+            CreatedAt: System.DateTime.UtcNow);
 
         var pagedResult = new PagedResult<ProductListDto>(
             [relatedProduct1, relatedProduct2, currentProductDup],
@@ -74,7 +117,7 @@ public class GetProductRecommendationsHandlerTests
             .ReturnsAsync(product);
 
         _readRepositoryMock
-            .Setup(repo => repo.ListAsync(1, 4, categoryId, null, null, It.IsAny<CancellationToken>()))
+            .Setup(repo => repo.ListAsync(1, 4, categoryId, null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedResult);
 
         // Act
@@ -96,16 +139,37 @@ public class GetProductRecommendationsHandlerTests
         var query = new GetProductRecommendationsQuery(productId);
 
         var product = new ProductDto(
-            productId, "Test", "Desc", 10m, "USD", "SKU-1",
-            categoryId, "Cat", "Active", null, System.Guid.NewGuid(),
-            [], System.DateTime.UtcNow, null);
+            Id: productId,
+            Name: "Test",
+            Description: "Desc",
+            CategoryId: categoryId,
+            CategoryName: "Cat",
+            Status: "Active",
+            ImageUrl: null,
+            Brand: null,
+            StoreId: System.Guid.NewGuid(),
+            Tags: [],
+            Skus: [],
+            CreatedAt: System.DateTime.UtcNow,
+            UpdatedAt: null);
 
         var items = new List<ProductListDto>();
         for (int i = 0; i < 5; i++)
         {
             items.Add(new ProductListDto(
-                System.Guid.NewGuid(), $"Related {i}", 10m, "USD", $"SKU-R{i}",
-                "Cat", "Active", null, System.Guid.NewGuid(), System.DateTime.UtcNow));
+                Id: System.Guid.NewGuid(),
+                Name: $"Related {i}",
+                MinPrice: 10m,
+                MaxPrice: 10m,
+                Currency: "USD",
+                SkuCount: 1,
+                DefaultSkuId: System.Guid.NewGuid(),
+                DefaultSkuCode: "TEST-SKU",
+                CategoryName: "Cat",
+                Status: "Active",
+                ImageUrl: null,
+                StoreId: System.Guid.NewGuid(),
+                CreatedAt: System.DateTime.UtcNow));
         }
 
         var pagedResult = new PagedResult<ProductListDto>(items, 5, 1, 4);
@@ -115,7 +179,7 @@ public class GetProductRecommendationsHandlerTests
             .ReturnsAsync(product);
 
         _readRepositoryMock
-            .Setup(repo => repo.ListAsync(1, 4, categoryId, null, null, It.IsAny<CancellationToken>()))
+            .Setup(repo => repo.ListAsync(1, 4, categoryId, null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedResult);
 
         // Act

@@ -1,4 +1,4 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export class ProductDetailEnhancedPage extends BasePage {
@@ -8,6 +8,10 @@ export class ProductDetailEnhancedPage extends BasePage {
   readonly productSku: Locator;
   readonly productImage: Locator;
   readonly backToCatalogLink: Locator;
+
+  // SKU selector (for products with multiple SKUs)
+  readonly skuSelector: Locator;
+  readonly skuOptions: Locator;
 
   // Buy box
   readonly buyBox: Locator;
@@ -37,6 +41,10 @@ export class ProductDetailEnhancedPage extends BasePage {
     this.productImage = page.getByTestId('product-image');
     this.backToCatalogLink = page.getByRole('link', { name: /back to catalog/i });
 
+    // SKU selector for multi-SKU products
+    this.skuSelector = page.locator('[data-testid="sku-selector"], [class*="sku-selector"], [class*="variant"]');
+    this.skuOptions = this.skuSelector.locator('button, [role="option"], label');
+
     // Buy box
     this.buyBox = page.locator('app-buy-box');
     this.quantityInput = page.getByTestId('quantity-input').or(this.buyBox.locator('input[type="number"]'));
@@ -59,6 +67,32 @@ export class ProductDetailEnhancedPage extends BasePage {
 
   async goto(productId: string) {
     await this.page.goto(`/catalog/${productId}`);
+  }
+
+  /**
+   * Select a specific SKU variant by its visible text/label.
+   */
+  async selectSku(skuLabel: string) {
+    await this.skuOptions.filter({ hasText: skuLabel }).click();
+  }
+
+  /**
+   * Returns true if a SKU selector is visible (multi-SKU product).
+   */
+  async hasSkuSelector(): Promise<boolean> {
+    return this.skuSelector.isVisible().catch(() => false);
+  }
+
+  /**
+   * Returns all available SKU option labels.
+   */
+  async getSkuOptionLabels(): Promise<string[]> {
+    const count = await this.skuOptions.count();
+    const labels: string[] = [];
+    for (let i = 0; i < count; i++) {
+      labels.push(await this.skuOptions.nth(i).innerText());
+    }
+    return labels;
   }
 
   async addToCart() {

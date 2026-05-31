@@ -47,15 +47,8 @@ export class NotificationService {
 
     // Handle OrderUpdate messages from the hub
     this.hubConnection.on('OrderUpdate', (message: OrderUpdate) => {
-      console.log('[SignalR] OrderUpdate received', {
-        orderId: message.orderId,
-        status: message.status,
-        reason: message.reason,
-        timestamp: message.timestamp,
-      });
       this.ngZone.run(() => {
         this.orderUpdates.set(message);
-        console.log('[SignalR] orderUpdates signal set');
       });
     });
 
@@ -74,7 +67,6 @@ export class NotificationService {
 
     try {
       await this.hubConnection.start();
-      console.log('[SignalR] Connected successfully');
       this.connected.set(true);
     } catch (err) {
       console.error('[SignalR] Failed to connect:', err);

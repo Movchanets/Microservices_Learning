@@ -6,6 +6,7 @@ import { HeroBannerComponent } from '../components/hero-banner/hero-banner';
 import { CategoryTilesComponent } from '../components/category-tiles/category-tiles';
 import { ProductCarouselComponent } from '../components/product-carousel/product-carousel';
 import { DealOfTheDayComponent } from '../components/deal-of-the-day/deal-of-the-day';
+import { ProductListItem } from '../../catalog/catalog.models';
 
 @Component({
   selector: 'app-home-page',
@@ -85,11 +86,9 @@ export class HomePageComponent implements OnInit {
     this.homeStore.loadAll();
   }
 
-  onAddToCart(productId: string): void {
-    const allProducts = [...this.homeStore.featuredProducts(), ...this.homeStore.newArrivals()];
-    const product = allProducts.find((p) => p.id === productId);
-    if (product) {
-      this.cartStore.addToCart(product.id, 1);
+  onAddToCart(product: ProductListItem): void {
+    if (product.defaultSkuId && product.defaultSkuCode) {
+      this.cartStore.addToCart(product.id, product.defaultSkuId, product.defaultSkuCode, 1);
     }
   }
 }

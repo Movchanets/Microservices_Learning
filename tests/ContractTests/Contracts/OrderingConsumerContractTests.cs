@@ -27,12 +27,14 @@ public class OrderingConsumerContractTests
         var buyerId = "buyer-order-001";
         var productAId = Guid.NewGuid();
         var productBId = Guid.NewGuid();
+        var skuId1 = Guid.NewGuid();
+        var skuId2 = Guid.NewGuid();
         var storeId1 = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var storeId2 = Guid.Parse("44444444-4444-4444-4444-444444444444");
         var items = new List<OrderItemContract>
         {
-            new(productAId, 3, 15.99m, storeId1),
-            new(productBId, 1, 29.99m, storeId2)
+            new(productAId, skuId1, "SKU-A", "Product A", 3, 15.99m, storeId1),
+            new(productBId, skuId2, "SKU-B", "Product B", 1, 29.99m, storeId2)
         };
 
         var @event = new OrderSubmittedEvent(
@@ -94,7 +96,7 @@ public class OrderingConsumerContractTests
         var @event = new OrderSubmittedEvent(
             CorrelationId: correlationId,
             BuyerId: "buyer-idempotent",
-            Items: [new OrderItemContract(Guid.NewGuid(), 1, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            Items: [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 1, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             Timestamp: DateTime.UtcNow);
 
         var existingOrder = Order.Create("buyer-idempotent",
@@ -130,7 +132,7 @@ public class OrderingConsumerContractTests
         var @event = new OrderSubmittedEvent(
             CorrelationId: correlationId,
             BuyerId: "buyer-minimal",
-            Items: [new OrderItemContract(Guid.NewGuid(), 1, 5m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            Items: [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 1, 5m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             Timestamp: DateTime.UtcNow,
             ShippingAddressLine1: "789 Elm St",
             ShippingAddressLine2: null,

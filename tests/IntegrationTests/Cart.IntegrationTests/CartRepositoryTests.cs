@@ -30,9 +30,11 @@ public class CartRepositoryTests
         // Seed directly to DB
         var prod1Id = Guid.NewGuid();
         var prod2Id = Guid.NewGuid();
+        var sku1Id = Guid.NewGuid();
+        var sku2Id = Guid.NewGuid();
         var cart = new ShoppingCart(buyerId);
-        cart.AddItem(prod1Id, 2, StoreId);
-        cart.AddItem(prod2Id, 3, StoreId);
+        cart.AddItem(prod1Id, sku1Id, "SKU-001", 2, StoreId);
+        cart.AddItem(prod2Id, sku2Id, "SKU-002", 3, StoreId);
         context.ShoppingCarts.Add(cart);
         await context.SaveChangesAsync();
 
@@ -80,13 +82,14 @@ public class CartRepositoryTests
         // Arrange — exact replica of AddCartItemCommandHandler flow
         Guid? buyerId = Guid.NewGuid();
         var prodId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
 
         using var scope = _fixture.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
 
         // Act — this is exactly what the handler does
         var cart = await repo.GetOrCreateTrackedCartAsync(buyerId);
-        cart.AddItem(prodId, 2, StoreId, 29.99m);
+        cart.AddItem(prodId, skuId, "SKU-TEST-001", 2, StoreId, 29.99m);
         await repo.SaveCartAsync(cart);
 
         // Assert — verify in DB directly
@@ -100,6 +103,8 @@ public class CartRepositoryTests
         dbCart.Should().NotBeNull();
         dbCart!.Items.Should().ContainSingle();
         dbCart.Items.First().ProductId.Should().Be(prodId);
+        dbCart.Items.First().SkuId.Should().Be(skuId);
+        dbCart.Items.First().SkuCode.Should().Be("SKU-TEST-001");
         dbCart.Items.First().Quantity.Should().Be(2);
         dbCart.Items.First().Price.Should().Be(29.99m);
         dbCart.Items.First().StoreId.Should().Be(StoreId);
@@ -119,20 +124,21 @@ public class CartRepositoryTests
         // Arrange — mimics user adding same product twice
         Guid? buyerId = Guid.NewGuid();
         var prodId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
 
         using var scope = _fixture.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
 
         // Act — first add
         var cart = await repo.GetOrCreateTrackedCartAsync(buyerId);
-        cart.AddItem(prodId, 1, StoreId, 10m);
+        cart.AddItem(prodId, skuId, "SKU-SAME-001", 1, StoreId, 10m);
         await repo.SaveCartAsync(cart);
 
         // Act — second add (new scope to simulate separate HTTP request)
         using var scope2 = _fixture.CreateScope();
         var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
         var cart2 = await repo2.GetOrCreateTrackedCartAsync(buyerId);
-        cart2.AddItem(prodId, 3, StoreId, 10m);
+        cart2.AddItem(prodId, skuId, "SKU-SAME-001", 3, StoreId, 10m);
         await repo2.SaveCartAsync(cart2);
 
         // Assert — quantity should be 1 + 3 = 4
@@ -155,20 +161,22 @@ public class CartRepositoryTests
         Guid? buyerId = Guid.NewGuid();
         var prodAId = Guid.NewGuid();
         var prodBId = Guid.NewGuid();
+        var skuAId = Guid.NewGuid();
+        var skuBId = Guid.NewGuid();
 
         using var scope = _fixture.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
 
         // Act — add first product
         var cart = await repo.GetOrCreateTrackedCartAsync(buyerId);
-        cart.AddItem(prodAId, 1, StoreId, 10m);
+        cart.AddItem(prodAId, skuAId, "SKU-A-001", 1, StoreId, 10m);
         await repo.SaveCartAsync(cart);
 
         // Act — add second product (new scope)
         using var scope2 = _fixture.CreateScope();
         var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
         var cart2 = await repo2.GetOrCreateTrackedCartAsync(buyerId);
-        cart2.AddItem(prodBId, 2, StoreId, 20m);
+        cart2.AddItem(prodBId, skuBId, "SKU-B-001", 2, StoreId, 20m);
         await repo2.SaveCartAsync(cart2);
 
         // Assert — both items present
@@ -194,7 +202,7 @@ public class CartRepositoryTests
         var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
 
         var cart = await repo.GetOrCreateTrackedCartAsync(buyerId);
-        cart.AddItem(Guid.NewGuid(), 1, StoreId);
+        cart.AddItem(Guid.NewGuid(), Guid.NewGuid(), "SKU-DEL-001", 1, StoreId);
         await repo.SaveCartAsync(cart);
 
         // Act
@@ -227,7 +235,7 @@ public class CartRepositoryTests
         {
             var repo = setupScope.ServiceProvider.GetRequiredService<CartRepository>();
             var cart = await repo.GetOrCreateTrackedCartAsync(buyerId);
-            cart.AddItem(prodInitId, 1, StoreId, 10m);
+            cart.AddItem(prodInitId, Guid.NewGuid(), "SKU-INIT-001", 1, StoreId, 10m);
             await repo.SaveCartAsync(cart);
         }
 
@@ -242,11 +250,11 @@ public class CartRepositoryTests
         var cart2 = await repo2.GetOrCreateTrackedCartAsync(buyerId);
 
         // Scope 1 updates and saves successfully
-        cart1.AddItem(prodAId, 1, StoreId, 20m);
+        cart1.AddItem(prodAId, Guid.NewGuid(), "SKU-A-001", 1, StoreId, 20m);
         await repo1.SaveCartAsync(cart1);
 
         // Scope 2 updates and tries to save (should throw DbUpdateConcurrencyException)
-        cart2.AddItem(prodBId, 1, StoreId, 30m);
+        cart2.AddItem(prodBId, Guid.NewGuid(), "SKU-B-001", 1, StoreId, 30m);
 
         Func<Task> act = async () => await repo2.SaveCartAsync(cart2);
 
@@ -274,7 +282,7 @@ public class CartRepositoryTests
         // Act — create anonymous cart
         var cart = await repo.GetOrCreateTrackedCartAsync(null);
         var prodId = Guid.NewGuid();
-        cart.AddItem(prodId, 1, StoreId, 15m);
+        cart.AddItem(prodId, Guid.NewGuid(), "SKU-ANON-001", 1, StoreId, 15m);
         await repo.SaveCartAsync(cart);
 
         // Assert — BuyerId is null, cart has items
@@ -304,9 +312,9 @@ public class CartRepositoryTests
         var prod1Id = Guid.NewGuid();
         var prod2Id = Guid.NewGuid();
         var prod3Id = Guid.NewGuid();
-        cart.AddItem(prod1Id, 1, StoreId, 10m);
-        cart.AddItem(prod2Id, 2, StoreId, 20m);
-        cart.AddItem(prod3Id, 3, StoreId, 30m);
+        cart.AddItem(prod1Id, Guid.NewGuid(), "SKU-M1-001", 1, StoreId, 10m);
+        cart.AddItem(prod2Id, Guid.NewGuid(), "SKU-M2-001", 2, StoreId, 20m);
+        cart.AddItem(prod3Id, Guid.NewGuid(), "SKU-M3-001", 3, StoreId, 30m);
         await repo.SaveCartAsync(cart);
 
         // Assert — retrieve by cartId
@@ -328,7 +336,7 @@ public class CartRepositoryTests
         var repo = scope.ServiceProvider.GetRequiredService<CartRepository>();
 
         var cart = await repo.GetOrCreateTrackedCartAsync(null);
-        cart.AddItem(Guid.NewGuid(), 1, StoreId, 10m);
+        cart.AddItem(Guid.NewGuid(), Guid.NewGuid(), "SKU-DEL2-001", 1, StoreId, 10m);
         await repo.SaveCartAsync(cart);
         var cartId = cart.Id;
 
@@ -358,14 +366,14 @@ public class CartRepositoryTests
         // Act — create two anonymous carts
         var cart1 = await repo.GetOrCreateTrackedCartAsync(null);
         var prod1Id = Guid.NewGuid();
-        cart1.AddItem(prod1Id, 1, StoreId, 10m);
+        cart1.AddItem(prod1Id, Guid.NewGuid(), "SKU-CO1-001", 1, StoreId, 10m);
         await repo.SaveCartAsync(cart1);
 
         using var scope2 = _fixture.CreateScope();
         var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
         var cart2 = await repo2.GetOrCreateTrackedCartAsync(null);
         var prod2Id = Guid.NewGuid();
-        cart2.AddItem(prod2Id, 2, StoreId, 20m);
+        cart2.AddItem(prod2Id, Guid.NewGuid(), "SKU-CO2-001", 2, StoreId, 20m);
         await repo2.SaveCartAsync(cart2);
 
         // Assert — both carts exist independently
@@ -394,14 +402,15 @@ public class CartRepositoryTests
 
         var cart = await repo.GetOrCreateTrackedCartAsync(null);
         var prodId = Guid.NewGuid();
-        cart.AddItem(prodId, 1, StoreId, 10m);
+        var skuId = Guid.NewGuid();
+        cart.AddItem(prodId, skuId, "SKU-UQ-001", 1, StoreId, 10m);
         await repo.SaveCartAsync(cart);
 
         // Act — update quantity in new scope
         using var scope2 = _fixture.CreateScope();
         var repo2 = scope2.ServiceProvider.GetRequiredService<CartRepository>();
         var cart2 = await repo2.GetOrCreateTrackedCartAsync(null, cart.Id);
-        cart2.UpdateQuantity(prodId, 5);
+        cart2.UpdateQuantity(prodId, skuId, 5);
         await repo2.SaveCartAsync(cart2);
 
         // Assert

@@ -1,5 +1,6 @@
 using Catalog.Domain.Aggregates;
 using Catalog.Domain.Entities;
+using Catalog.Domain.ValueObjects;
 using Catalog.Infrastructure.Repositories;
 using Catalog.IntegrationTests.Fixtures;
 using FluentAssertions;
@@ -36,13 +37,17 @@ public class ProductRepositoryTests
         var product = Product.Create(
             "Test Product",
             "Test Description",
-            99.99m,
-            "USD",
-            "SKU-12345",
             category.Id,
             storeId,
+            null,
             new List<string> { "tag1", "tag2" },
             "http://test.com/image.jpg"
+        );
+
+        product.AddSku(
+            "SKU-12345",
+            Money.Create(99.99m, "USD"),
+            new Dictionary<string, string>()
         );
 
         // Act
@@ -56,9 +61,10 @@ public class ProductRepositoryTests
         retrievedProduct.Should().NotBeNull();
         retrievedProduct!.Name.Should().Be("Test Product");
         retrievedProduct.Description.Should().Be("Test Description");
-        retrievedProduct.Price.Amount.Should().Be(99.99m);
-        retrievedProduct.Price.Currency.Should().Be("USD");
-        retrievedProduct.Sku.Value.Should().Be("SKU-12345");
+        var sku = retrievedProduct.Skus.Single();
+        sku.SkuCode.Should().Be("SKU-12345");
+        sku.Price.Amount.Should().Be(99.99m);
+        sku.Price.Currency.Should().Be("USD");
         retrievedProduct.CategoryId.Should().Be(category.Id);
         retrievedProduct.StoreId.Should().Be(storeId);
         retrievedProduct.Tags.Should().BeEquivalentTo("tag1", "tag2");
@@ -82,11 +88,14 @@ public class ProductRepositoryTests
             var product = Product.Create(
                 $"Filtered Product {i}",
                 "Test Description",
-                10.00m + i,
-                "USD",
-                $"SKU-F-{i}-{Guid.NewGuid().ToString().Substring(0, 5)}", // Unique sku
                 category.Id,
                 storeId
+            );
+
+            product.AddSku(
+                $"SKU-F-{i}-{Guid.NewGuid().ToString().Substring(0, 5)}",
+                Money.Create(10.00m + i, "USD"),
+                new Dictionary<string, string>()
             );
             context.Products.Add(product);
         }

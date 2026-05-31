@@ -1,7 +1,16 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
+import { TIMEOUTS } from '../utils/constants';
 
+/**
+ * Abstract base for all page objects.
+ *
+ * Provides:
+ * - Shared header / footer components
+ * - `goto()` + `waitForPageLoad()` navigation helpers
+ * - `submitWithRetry()` — form submit with Angular zoneless compatibility
+ */
 export abstract class BasePage {
   readonly page: Page;
   readonly header: HeaderComponent;
@@ -13,57 +22,48 @@ export abstract class BasePage {
     this.footer = new FooterComponent(page);
   }
 
+  // ── Navigation ──────────────────────────────────────────
+
+  /** Navigate to a route (relative to BASE_URL). */
   async goto(path: string) {
     await this.page.goto(path);
   }
 
+  /** Wait for DOMContentLoaded. Prefer `expect(header.logo).toBeVisible()` for Angular SSR pages. */
   async waitForPageLoad() {
     await this.page.waitForLoadState('domcontentloaded');
   }
 
-  /**
-   * Fills an input and verifies the value took effect.
-   * Retries up to 3 times to handle reactive form interference.
-   * Uses expect() polling instead of waitForTimeout for reliability.
-   */
-  protected async fillStable(input: Locator, value: string): Promise<void> {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await input.fill(value);
-
-      try {
-        await expect(input).toHaveValue(value, { timeout: 2000 });
-        return;
-      } catch {
-        // Retry on next attempt
-      }
-    }
-
-    // Final attempt — let the assertion throw if it still fails
-    await input.fill(value);
-    await expect(input).toHaveValue(value, { timeout: 3000 });
-  }
+  // ── Form Helpers ────────────────────────────────────────
 
   /**
-   * Clicks a submit button with retry logic for reactive forms.
-   * Fills all provided inputs via fillStable, then waits for the button
-   * to become enabled before clicking. Retries up to 3 times.
+   * Fills form fields and submits. Handles Angular 21 zoneless reactive forms
+   * where `fill()` alone doesn't trigger formControlName validity updates.
+   *
+   * Strategy:
+   * 1. `fill()` — sets the native input value atomically
+   * 2. `evaluate` dispatches real bubbling `input` + `change` events
+   * 3. `press('Tab')` — blur triggers onTouched → change detection
+   * 4. Brief wait for Angular zoneless scheduler to process
    */
   protected async submitWithRetry(
     submitBtn: Locator,
     fields: Array<{ input: Locator; value: string }>
   ): Promise<void> {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      for (const { input, value } of fields) {
-        await this.fillStable(input, value);
-      }
-
-      if (await submitBtn.isEnabled()) {
-        await submitBtn.click();
-        return;
-      }
+    for (const { input, value } of fields) {
+      await input.click();
+      // Use fill() + explicit JS event dispatch for Angular zoneless compatibility
+      await input.fill(value);
+      await input.evaluate((el) => {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
+      });
     }
 
-    await expect(submitBtn).toBeEnabled({ timeout: 3000 });
+    // Give Angular zoneless scheduler time to run form validity check
+    await this.page.waitForTimeout(200);
+    await expect(submitBtn).toBeEnabled({ timeout: TIMEOUTS.element });
     await submitBtn.click();
   }
 }

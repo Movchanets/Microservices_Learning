@@ -1,8 +1,8 @@
 using BuildingBlocks.Infrastructure.Models;
 using Catalog.Application.DTOs;
 using Catalog.Application.Interfaces;
+using Catalog.Domain.Aggregates;
 using Catalog.Domain.Enums;
-using Catalog.Domain.ValueObjects;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,48 +15,65 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         return await context.Products
             .AsNoTracking()
             .Include(p => p.Category)
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
             .Where(p => p.Id == id && p.Status != ProductStatus.Deleted)
             .Select(p => new ProductDto(
                 p.Id,
                 p.Name,
                 p.Description,
-                p.Price.Amount,
-                p.Price.Currency,
-                p.Sku.Value,
                 p.CategoryId,
                 p.Category != null ? p.Category.Name : "",
                 p.Status.ToString(),
                 p.ImageUrl,
+                p.Brand,
                 p.StoreId,
                 p.Tags,
+                p.Skus
+                    .Where(s => s.Status != SkuStatus.Deleted)
+                    .Select(s => new SkuDto(
+                        s.Id,
+                        s.SkuCode,
+                        s.Price.Amount,
+                        s.Price.Currency,
+                        s.Status.ToString(),
+                        s.ImageUrl,
+                        s.TypedAttributes,
+                        s.FlexibleAttributes,
+                        s.CreatedAt))
+                    .ToList(),
                 p.CreatedAt,
                 p.UpdatedAt))
             .FirstOrDefaultAsync(ct);
     }
 
+    public async Task<SkuDto?> GetSkuByIdAsync(Guid skuId, CancellationToken ct = default)
+    {
+        return await context.Skus
+            .AsNoTracking()
+            .Where(s => s.Id == skuId && s.Status != SkuStatus.Deleted)
+            .Select(s => new SkuDto(
+                s.Id,
+                s.SkuCode,
+                s.Price.Amount,
+                s.Price.Currency,
+                s.Status.ToString(),
+                s.ImageUrl,
+                s.TypedAttributes,
+                s.FlexibleAttributes,
+                s.CreatedAt))
+            .FirstOrDefaultAsync(ct);
+    }
+
     public async Task<ProductDto?> GetBySkuAsync(string sku, CancellationToken ct = default)
     {
-        var skuVo = Sku.Create(sku);
-        return await context.Products
+        var normalized = sku.Trim().ToUpperInvariant();
+        return await context.Skus
             .AsNoTracking()
-            .Include(p => p.Category)
-            .Where(p => p.Sku == skuVo && p.Status != ProductStatus.Deleted)
-            .Select(p => new ProductDto(
-                p.Id,
-                p.Name,
-                p.Description,
-                p.Price.Amount,
-                p.Price.Currency,
-                p.Sku.Value,
-                p.CategoryId,
-                p.Category != null ? p.Category.Name : "",
-                p.Status.ToString(),
-                p.ImageUrl,
-                p.StoreId,
-                p.Tags,
-                p.CreatedAt,
-                p.UpdatedAt))
-            .FirstOrDefaultAsync(ct);
+            .Where(s => s.SkuCode == normalized && s.Status != SkuStatus.Deleted)
+            .Select(s => s.ProductId)
+            .FirstOrDefaultAsync(ct) is Guid productId
+            ? await GetByIdAsync(productId, ct)
+            : null;
     }
 
     public async Task<List<ProductListDto>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
@@ -65,13 +82,17 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         return await context.Products
             .AsNoTracking()
             .Include(p => p.Category)
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
             .Where(p => idSet.Contains(p.Id) && p.Status != ProductStatus.Deleted)
             .Select(p => new ProductListDto(
                 p.Id,
                 p.Name,
-                p.Price.Amount,
-                p.Price.Currency,
-                p.Sku.Value,
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Min(s => (decimal?)s.Price.Amount),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Max(s => (decimal?)s.Price.Amount),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.Price.Currency).FirstOrDefault(),
+                p.Skus.Count(s => s.Status == SkuStatus.Active),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => (Guid?)s.Id).FirstOrDefault(),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.SkuCode).FirstOrDefault(),
                 p.Category != null ? p.Category.Name : "",
                 p.Status.ToString(),
                 p.ImageUrl,
@@ -85,12 +106,27 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         Guid? categoryId = null,
         Guid? storeId = null,
         string? search = null,
+        string? status = null,
         CancellationToken ct = default)
     {
-        var query = context.Products
+        IQueryable<Product> query = context.Products
             .AsNoTracking()
             .Include(p => p.Category)
-            .Where(p => p.Status == ProductStatus.Active);
+            .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted));
+
+        // Status filter: null/empty/"Active" → Active only; "All" → all non-deleted; specific status → filter by it
+        if (string.IsNullOrWhiteSpace(status) || status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(p => p.Status == ProductStatus.Active);
+        }
+        else if (status.Equals("All", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(p => p.Status != ProductStatus.Deleted);
+        }
+        else if (Enum.TryParse<ProductStatus>(status, true, out var parsed))
+        {
+            query = query.Where(p => p.Status == parsed);
+        }
 
         if (categoryId.HasValue)
             query = query.Where(p => p.CategoryId == categoryId.Value);
@@ -112,9 +148,12 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
             .Select(p => new ProductListDto(
                 p.Id,
                 p.Name,
-                p.Price.Amount,
-                p.Price.Currency,
-                p.Sku.Value,
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Min(s => (decimal?)s.Price.Amount),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Max(s => (decimal?)s.Price.Amount),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.Price.Currency).FirstOrDefault(),
+                p.Skus.Count(s => s.Status == SkuStatus.Active),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => (Guid?)s.Id).FirstOrDefault(),
+                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.SkuCode).FirstOrDefault(),
                 p.Category != null ? p.Category.Name : "",
                 p.Status.ToString(),
                 p.ImageUrl,

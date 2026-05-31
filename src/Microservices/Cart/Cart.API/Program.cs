@@ -50,10 +50,10 @@ builder.Services.AddMassTransit(x =>
 {
     x.SetKebabCaseEndpointNameFormatter();
 
-    // Product price sync consumers from Catalog events
-    x.AddConsumer<ProductCreatedConsumer>();
-    x.AddConsumer<ProductUpdatedConsumer>();
-    x.AddConsumer<ProductPriceChangedConsumer>();
+    // SKU-level price sync consumers from Catalog events
+    x.AddConsumer<SkuCreatedConsumer>();
+    x.AddConsumer<SkuDeletedConsumer>();
+    x.AddConsumer<SkuPriceChangedConsumer>();
     x.AddConsumer<ProductDeletedConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>

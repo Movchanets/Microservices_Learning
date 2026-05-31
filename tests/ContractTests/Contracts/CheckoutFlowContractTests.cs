@@ -60,8 +60,8 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
         var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var items = new List<OrderItemContract>
         {
-            new(product1Id, 2, 29.99m, storeId),
-            new(product2Id, 1, 49.99m, storeId)
+            new(product1Id, Guid.NewGuid(), "SKU-1", "Product 1", 2, 29.99m, storeId),
+            new(product2Id, Guid.NewGuid(), "SKU-2", "Product 2", 1, 49.99m, storeId)
         };
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
@@ -89,9 +89,9 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
         var correlationId = Guid.NewGuid();
         var items = new List<OrderItemContract>
         {
-            new(Guid.NewGuid(), 3, 10.00m, Guid.Parse("33333333-3333-3333-3333-333333333333")),   // 30.00
-            new(Guid.NewGuid(), 2, 25.50m, Guid.Parse("33333333-3333-3333-3333-333333333333")),   // 51.00
-            new(Guid.NewGuid(), 1, 19.99m, Guid.Parse("33333333-3333-3333-3333-333333333333"))    // 19.99
+            new(Guid.NewGuid(), Guid.NewGuid(), "SKU-A", "Prod A", 3, 10.00m, Guid.Parse("33333333-3333-3333-3333-333333333333")),   // 30.00
+            new(Guid.NewGuid(), Guid.NewGuid(), "SKU-B", "Prod B", 2, 25.50m, Guid.Parse("33333333-3333-3333-3333-333333333333")),   // 51.00
+            new(Guid.NewGuid(), Guid.NewGuid(), "SKU-C", "Prod C", 1, 19.99m, Guid.Parse("33333333-3333-3333-3333-333333333333"))    // 19.99
         };
         // Total: 100.99
 
@@ -110,10 +110,11 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
         var correlationId = Guid.NewGuid();
 
         var productId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
         var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-j",
-            [new OrderItemContract(productId, 5, 9.99m, storeId)],
+            [new OrderItemContract(productId, skuId, "SKU-5", "Product", 5, 9.99m, storeId)],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -122,7 +123,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         var deserialized = System.Text.Json.JsonSerializer.Deserialize<List<OrderItemContract>>(saga!.ItemsJson);
         deserialized.Should().ContainSingle()
-            .Which.Should().BeEquivalentTo(new OrderItemContract(productId, 5, 9.99m, storeId));
+            .Which.Should().BeEquivalentTo(new OrderItemContract(productId, skuId, "SKU-5", "Product", 5, 9.99m, storeId));
     }
 
     [Fact]
@@ -132,7 +133,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-addr",
-            [new OrderItemContract(Guid.NewGuid(), 1, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 1, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow,
             "123 Main St", "Apt 4B", "Springfield", "IL", "62701", "US"));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
@@ -151,7 +152,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-123",
-            [new OrderItemContract(Guid.NewGuid(), 2, 29.99m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 2, 29.99m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -172,7 +173,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-free",
-            [new OrderItemContract(Guid.NewGuid(), 1, 0m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-0", "Free Product", 1, 0m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -196,7 +197,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-1",
-            [new OrderItemContract(Guid.NewGuid(), 1, 100m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 1, 100m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -224,8 +225,8 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
         // Step 1: OrderSubmitted → ReservingInventory
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-x",
-            [new OrderItemContract(Guid.NewGuid(), 3, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333")),
-             new OrderItemContract(Guid.NewGuid(), 1, 5m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-A", "Prod A", 3, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333")),
+             new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-B", "Prod B", 1, 5m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow, "1 Main", null, "Town", "ST", "00000", "US"));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -261,7 +262,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-1",
-            [new OrderItemContract(Guid.NewGuid(), 5, 20m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 5, 20m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -283,7 +284,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-1",
-            [new OrderItemContract(Guid.NewGuid(), 1, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 1, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -304,8 +305,8 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-fail",
-            [new OrderItemContract(Guid.NewGuid(), 2, 50m, Guid.Parse("33333333-3333-3333-3333-333333333333")),
-             new OrderItemContract(Guid.NewGuid(), 1, 30m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-A", "Prod A", 2, 50m, Guid.Parse("33333333-3333-3333-3333-333333333333")),
+             new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-B", "Prod B", 1, 30m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -331,10 +332,11 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
         var correlationId = Guid.NewGuid();
 
         var productId2 = Guid.NewGuid();
+        var skuId2 = Guid.NewGuid();
         var storeId2 = Guid.Parse("33333333-3333-3333-3333-333333333333");
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-json",
-            [new OrderItemContract(productId2, 7, 12.50m, storeId2)],
+            [new OrderItemContract(productId2, skuId2, "SKU-7", "Product", 7, 12.50m, storeId2)],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -352,7 +354,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         var deserialized = System.Text.Json.JsonSerializer.Deserialize<List<OrderItemContract>>(saga!.ItemsJson);
         deserialized.Should().ContainSingle()
-            .Which.Should().BeEquivalentTo(new OrderItemContract(productId2, 7, 12.50m, storeId2));
+            .Which.Should().BeEquivalentTo(new OrderItemContract(productId2, skuId2, "SKU-7", "Product", 7, 12.50m, storeId2));
     }
 
     // ─── Buyer Cancel During ReservingInventory ──────────────────────────
@@ -364,7 +366,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-cancel-1",
-            [new OrderItemContract(Guid.NewGuid(), 1, 50m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 1, 50m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -384,7 +386,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-cancel-2",
-            [new OrderItemContract(Guid.NewGuid(), 2, 30m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 2, 30m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -411,7 +413,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-cancel-3",
-            [new OrderItemContract(Guid.NewGuid(), 1, 100m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 1, 100m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -434,7 +436,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-cancel-4",
-            [new OrderItemContract(Guid.NewGuid(), 3, 25m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 3, 25m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -460,8 +462,8 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-cancel-5",
-            [new OrderItemContract(Guid.NewGuid(), 2, 50m, Guid.Parse("33333333-3333-3333-3333-333333333333")),
-             new OrderItemContract(Guid.NewGuid(), 1, 30m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-A", "Prod A", 2, 50m, Guid.Parse("33333333-3333-3333-3333-333333333333")),
+             new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-B", "Prod B", 1, 30m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 
@@ -492,7 +494,7 @@ public sealed class CheckoutFlowContractTests : IAsyncLifetime
 
         await _harness.Bus.Publish(new OrderSubmittedEvent(
             correlationId, "buyer-cancel-6",
-            [new OrderItemContract(Guid.NewGuid(), 1, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
+            [new OrderItemContract(Guid.NewGuid(), Guid.NewGuid(), "SKU-1", "Product", 1, 10m, Guid.Parse("33333333-3333-3333-3333-333333333333"))],
             DateTime.UtcNow));
         (await _sagaHarness.Consumed.Any<OrderSubmittedEvent>()).Should().BeTrue();
 

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Catalog.Infrastructure.EventPublishing;
 
 /// <summary>
-/// Handles domain events and publishes corresponding integration events via MassTransit.
+/// Handles ProductCreatedDomainEvent and publishes ProductCreatedEvent via MassTransit.
 /// The Outbox pattern ensures these are published atomically with the DB transaction.
 /// </summary>
 public sealed class ProductCreatedDomainEventHandler(
@@ -24,18 +24,16 @@ public sealed class ProductCreatedDomainEventHandler(
         var category = await categoryRepository.GetByIdAsync(notification.CategoryId, cancellationToken);
 
         await publishEndpoint.Publish(new ProductCreatedEvent(
-            notification.ProductId,
-            notification.Name,
-            notification.Description,
-            notification.Price,
-            notification.Currency,
-            notification.Sku,
-            notification.CategoryId,
-            category?.Name ?? "",
-            notification.Tags,
-            notification.ImageUrl,
-            notification.StoreId,
-            notification.CreatedAt), cancellationToken);
+            ProductId: notification.ProductId,
+            Name: notification.Name,
+            Description: notification.Description,
+            CategoryId: notification.CategoryId,
+            CategoryName: category?.Name ?? "",
+            Tags: notification.Tags,
+            ImageUrl: notification.ImageUrl,
+            StoreId: notification.StoreId,
+            CreatedAt: notification.CreatedAt,
+            Brand: notification.Brand), cancellationToken);
 
         logger.LogInformation("Published ProductCreatedEvent for {ProductId}", notification.ProductId);
     }

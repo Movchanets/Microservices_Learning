@@ -48,7 +48,7 @@ public class OrderTests
     public void AddItem_InSubmittedStatus_AddsItem()
     {
         var order = Order.Create("buyer-1");
-        order.AddItem(Guid.NewGuid(), "Product 1", 10.50m, 2, TestStoreId);
+        order.AddItem(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Product 1", 10.50m, 2, TestStoreId);
 
         order.Items.Should().HaveCount(1);
         order.Items[0].ProductId.Should().NotBe(Guid.Empty);
@@ -61,7 +61,7 @@ public class OrderTests
     public void AddItem_WithStoreId_PropagatesStoreId()
     {
         var order = Order.Create("buyer-1");
-        order.AddItem(Guid.NewGuid(), "Product 1", 10.50m, 2, TestStoreId);
+        order.AddItem(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Product 1", 10.50m, 2, TestStoreId);
 
         order.Items.Should().HaveCount(1);
         order.Items[0].StoreId.Should().Be(TestStoreId);
@@ -71,9 +71,10 @@ public class OrderTests
     public void AddItem_WithDuplicateProduct_ReplacesExistingItem()
     {
         var productId = Guid.NewGuid();
+        var skuId = Guid.NewGuid();
         var order = Order.Create("buyer-1");
-        order.AddItem(productId, "Product 1", 10m, 2, TestStoreId);
-        order.AddItem(productId, "Product 1 Updated", 15m, 3, TestStoreId);
+        order.AddItem(productId, skuId, "TEST-SKU", "Product 1", 10m, 2, TestStoreId);
+        order.AddItem(productId, skuId, "TEST-SKU", "Product 1 Updated", 15m, 3, TestStoreId);
 
         order.Items.Should().HaveCount(1);
         order.Items[0].UnitPrice.Should().Be(15m);
@@ -86,7 +87,7 @@ public class OrderTests
         var order = Order.Create("buyer-1");
         order.MarkInventoryReserved();
 
-        var act = () => order.AddItem(Guid.NewGuid(), "Product 1", 10m, 1, TestStoreId);
+        var act = () => order.AddItem(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Product 1", 10m, 1, TestStoreId);
 
         act.Should().Throw<DomainException>()
             .WithMessage("*Submitted*");
@@ -310,7 +311,7 @@ public class OrderTests
     public void FullLifecycle_SubmittedToCompleted()
     {
         var order = Order.Create("buyer-1");
-        order.AddItem(Guid.NewGuid(), "Widget", 25m, 2, TestStoreId);
+        order.AddItem(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Widget", 25m, 2, TestStoreId);
 
         order.MarkInventoryReserved();
         order.MarkPaymentProcessing();
@@ -325,7 +326,7 @@ public class OrderTests
     public void FullLifecycle_PaymentFailedCompensation()
     {
         var order = Order.Create("buyer-1");
-        order.AddItem(Guid.NewGuid(), "Widget", 25m, 2, TestStoreId);
+        order.AddItem(Guid.NewGuid(), Guid.NewGuid(), "TEST-SKU", "Widget", 25m, 2, TestStoreId);
 
         order.MarkInventoryReserved();
         order.MarkPaymentProcessing();

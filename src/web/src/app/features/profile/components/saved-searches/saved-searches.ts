@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -16,7 +16,7 @@ interface SavedSearch {
 @Component({
   selector: 'app-saved-searches',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, LucideAngularModule],
+  imports: [DatePipe, LucideAngularModule],
   template: `
     <div class="space-y-4">
       <h2 class="text-xl font-bold text-foreground font-lexend flex items-center gap-2">

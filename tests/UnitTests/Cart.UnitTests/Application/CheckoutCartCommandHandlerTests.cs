@@ -1,6 +1,7 @@
 using BuildingBlocks.SharedContracts.Events.Cart;
 using Cart.Application.Commands;
 using Cart.Domain.Aggregates;
+using Cart.Domain.Repositories;
 using FluentAssertions;
 using MassTransit;
 using Moq;
@@ -15,14 +16,16 @@ public class CheckoutCartCommandHandlerTests
     private static readonly Guid TestProductId2 = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
     private readonly Mock<ICartRepository> _repositoryMock;
+    private readonly Mock<IProductPriceRepository> _productPriceRepositoryMock;
     private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly CheckoutCartCommandHandler _handler;
 
     public CheckoutCartCommandHandlerTests()
     {
         _repositoryMock = new Mock<ICartRepository>();
+        _productPriceRepositoryMock = new Mock<IProductPriceRepository>();
         _publishEndpointMock = new Mock<IPublishEndpoint>();
-        _handler = new CheckoutCartCommandHandler(_repositoryMock.Object, _publishEndpointMock.Object);
+        _handler = new CheckoutCartCommandHandler(_repositoryMock.Object, _productPriceRepositoryMock.Object, _publishEndpointMock.Object);
     }
 
     [Fact]
@@ -45,10 +48,14 @@ public class CheckoutCartCommandHandlerTests
     {
         var buyerId = Guid.NewGuid();
         var cart = new ShoppingCart(buyerId);
-        cart.AddItem(TestProductId1, 2, TestStoreId1, 10m);
-        cart.AddItem(TestProductId2, 3, TestStoreId2, 20m);
+        cart.AddItem(TestProductId1, Guid.NewGuid(), "TEST-SKU", 2, TestStoreId1, 10m);
+        cart.AddItem(TestProductId2, Guid.NewGuid(), "TEST-SKU", 3, TestStoreId2, 20m);
         _repositoryMock.Setup(r => r.GetCartAsync(buyerId, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cart);
+
+        _productPriceRepositoryMock.Setup(r => r.GetBySkuIdsAsync(
+                It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Cart.Domain.Entities.ProductPrice>());
 
         var command = new CheckoutCartCommand(buyerId);
         var result = await _handler.Handle(command, CancellationToken.None);

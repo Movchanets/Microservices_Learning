@@ -1,7 +1,11 @@
 using Catalog.Domain.Aggregates;
+using Catalog.Domain.Entities;
+using Catalog.Domain.Enums;
 using Catalog.Domain.Events;
+using Catalog.Domain.ValueObjects;
 using FluentAssertions;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -15,14 +19,11 @@ public class ProductTests
         // Arrange
         var name = "Test Product";
         var description = "Test Description";
-        var price = 10m;
-        var currency = "USD";
-        var sku = "TEST-SKU-1";
         var categoryId = Guid.NewGuid();
         var storeId = Guid.NewGuid();
 
         // Act
-        var product = Product.Create(name, description, price, currency, sku, categoryId, storeId);
+        var product = Product.Create(name, description, categoryId, storeId);
 
         // Assert
         product.Should().NotBeNull();
@@ -33,44 +34,103 @@ public class ProductTests
         var productCreatedEvent = (ProductCreatedDomainEvent)domainEvent;
         productCreatedEvent.ProductId.Should().Be(product.Id);
         productCreatedEvent.Name.Should().Be(name);
-        productCreatedEvent.Sku.Should().Be(sku);
+        productCreatedEvent.Description.Should().Be(description);
+        productCreatedEvent.CategoryId.Should().Be(categoryId);
+        productCreatedEvent.StoreId.Should().Be(storeId);
     }
 
     [Fact]
-    public void ChangePrice_NegativeAmount_ThrowsArgumentException()
+    public void AddSku_ValidInputs_GeneratesSkuCreatedDomainEvent()
     {
         // Arrange
-        var product = Product.Create("Test", "Test", 10m, "USD", "SKU1", Guid.NewGuid(), Guid.NewGuid());
+        var product = Product.Create("Test Product", "Test Description", Guid.NewGuid(), Guid.NewGuid());
         product.ClearDomainEvents();
+        var price = Money.Create(29.99m, "USD");
 
         // Act
-        Action action = () => product.ChangePrice(-5m, "USD");
+        var sku = product.AddSku("SKU-001", price, new Dictionary<string, string> { { "color", "red" } });
 
         // Assert
-        action.Should().Throw<ArgumentException>().WithMessage("*Amount cannot be negative*");
+        sku.Should().NotBeNull();
+        sku.SkuCode.Should().Be("SKU-001");
+        sku.Price.Amount.Should().Be(29.99m);
+        sku.Price.Currency.Should().Be("USD");
+        product.Skus.Should().ContainSingle();
+        product.DomainEvents.Should().ContainSingle();
+        product.DomainEvents.First().Should().BeOfType<SkuCreatedDomainEvent>();
     }
 
     [Fact]
-    public void ChangePrice_ValidAmount_GeneratesProductPriceChangedDomainEvent()
+    public void AddSku_DuplicateCode_ThrowsInvalidOperationException()
     {
         // Arrange
-        var product = Product.Create("Test", "Test", 10m, "USD", "SKU1", Guid.NewGuid(), Guid.NewGuid());
-        product.ClearDomainEvents();
-        var newPrice = 15m;
-        var currency = "USD";
+        var product = Product.Create("Test Product", "Test Description", Guid.NewGuid(), Guid.NewGuid());
+        var price = Money.Create(29.99m, "USD");
+        product.AddSku("SKU-001", price, new Dictionary<string, string>());
 
         // Act
-        product.ChangePrice(newPrice, currency);
+        Action action = () => product.AddSku("SKU-001", price, new Dictionary<string, string>());
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>().WithMessage("*already exists*");
+    }
+
+    [Fact]
+    public void RemoveSku_ValidSkuId_MarksSkuAsDeletedAndGeneratesEvent()
+    {
+        // Arrange
+        var product = Product.Create("Test Product", "Test Description", Guid.NewGuid(), Guid.NewGuid());
+        var price = Money.Create(10m, "USD");
+        var sku = product.AddSku("SKU-001", price, new Dictionary<string, string>());
+        product.ClearDomainEvents();
+
+        // Act
+        product.RemoveSku(sku.Id);
 
         // Assert
         product.DomainEvents.Should().ContainSingle();
-        var domainEvent = product.DomainEvents.First();
-        domainEvent.Should().BeOfType<ProductPriceChangedDomainEvent>();
+        product.DomainEvents.First().Should().BeOfType<SkuDeletedDomainEvent>();
+        sku.Status.Should().Be(SkuStatus.Deleted);
+    }
 
-        var priceChangedEvent = (ProductPriceChangedDomainEvent)domainEvent;
-        priceChangedEvent.ProductId.Should().Be(product.Id);
-        priceChangedEvent.OldPrice.Should().Be(10m);
-        priceChangedEvent.NewPrice.Should().Be(newPrice);
-        priceChangedEvent.Currency.Should().Be(currency);
+    [Fact]
+    public void RemoveSku_NonExistentSkuId_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var product = Product.Create("Test Product", "Test Description", Guid.NewGuid(), Guid.NewGuid());
+
+        // Act
+        Action action = () => product.RemoveSku(Guid.NewGuid());
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>().WithMessage("*not found*");
+    }
+
+    [Fact]
+    public void GetSku_ValidSkuId_ReturnsSku()
+    {
+        // Arrange
+        var product = Product.Create("Test Product", "Test Description", Guid.NewGuid(), Guid.NewGuid());
+        var price = Money.Create(10m, "USD");
+        var sku = product.AddSku("SKU-001", price, new Dictionary<string, string>());
+
+        // Act
+        var result = product.GetSku(sku.Id);
+
+        // Assert
+        result.Should().Be(sku);
+    }
+
+    [Fact]
+    public void GetSku_NonExistentSkuId_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var product = Product.Create("Test Product", "Test Description", Guid.NewGuid(), Guid.NewGuid());
+
+        // Act
+        Action action = () => product.GetSku(Guid.NewGuid());
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>().WithMessage("*not found*");
     }
 }

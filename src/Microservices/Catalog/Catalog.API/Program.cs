@@ -2,6 +2,7 @@ using BuildingBlocks.Infrastructure.Behaviors;
 using BuildingBlocks.Infrastructure.Middleware;
 using Catalog.API.Endpoints;
 using Catalog.Infrastructure;
+using Catalog.Infrastructure.Messaging.Consumers;
 using Catalog.Infrastructure.Persistence;
 using FluentValidation;
 using MassTransit;
@@ -35,6 +36,10 @@ builder.Services.AddValidatorsFromAssemblyContaining<Catalog.Application.Command
 builder.Services.AddMassTransit(x =>
 {
     x.SetKebabCaseEndpointNameFormatter();
+
+    x.AddConsumer<MediaUploadedConsumer>();
+    x.AddConsumer<GalleryUpdatedConsumer>();
+    x.AddConsumer<MediaDeletedConsumer>();
 
     x.AddEntityFrameworkOutbox<CatalogDbContext>(o =>
     {

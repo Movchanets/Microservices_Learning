@@ -12,6 +12,16 @@ builder.Services.AddHttpClient("ApiGateway", client =>
     client.BaseAddress = new Uri(baseUrl);
 });
 
+// Direct client for media uploads (bypasses YARP gateway to avoid multipart form forwarding issues)
+builder.Services.AddHttpClient("MediaApi", client =>
+{
+    var mediaUrl = builder.Configuration["services:media-api:http:0"] ?? "http://localhost:5210";
+    client.BaseAddress = new Uri(mediaUrl);
+});
+
+// Named client for downloading images from external URLs (Rozetka, etc.)
+builder.Services.AddHttpClient("download");
+
 // Configure default JSON options for extension methods
 builder.Services.ConfigureHttpJsonOptions(options =>
 {

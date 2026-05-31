@@ -2,8 +2,9 @@
  * Store Management API helpers.
  */
 
-import { APIRequestContext } from '@playwright/test';
+import { APIRequestContext, Page, expect } from '@playwright/test';
 import type { StoreResult } from './types';
+import { TIMEOUTS } from './constants';
 
 export async function createStore(
   api: APIRequestContext,
@@ -35,7 +36,8 @@ export async function verifyStore(
   const response = await api.post(`/api/stores/${storeId}/verify`, {
     data: { isApproved, reason },
   });
-  if (!response.ok()) {
+  // 409 = already verified — idempotent, ignore
+  if (!response.ok() && response.status() !== 409) {
     throw new Error(`Verify store failed: ${response.status()} ${await response.text()}`);
   }
 }
@@ -100,4 +102,45 @@ export async function ensureStoreExists(
   }
 
   return store;
+}
+
+/**
+ * Ensure the seller has a store via the UI (Create Your Store form).
+ *
+ * Navigates to /seller, checks if the "Create Your Store" form is visible,
+ * and fills it out if needed. Use this in tests that require a store to exist
+ * but can't rely on API-only creation (e.g., UI flow tests).
+ */
+export async function ensureSellerStoreViaUi(
+  page: Page,
+  storeName: string,
+  storeDescription: string
+): Promise<void> {
+  await page.goto('/seller');
+  await page.waitForLoadState('domcontentloaded');
+
+  const createStoreHeading = page.getByRole('heading', { name: 'Create Your Store' });
+  const hasCreateForm = await createStoreHeading
+    .isVisible({ timeout: TIMEOUTS.quick })
+    .catch(() => false);
+
+  if (!hasCreateForm) return; // Store already exists
+
+  const storeNameInput = page.getByTestId('store-name-input');
+  const storeDescInput = page.getByPlaceholder('Tell customers what your store is about...');
+  const createStoreBtn = page.getByRole('button', { name: 'Create Store' });
+
+  await expect(storeNameInput).toBeVisible({ timeout: TIMEOUTS.quick });
+
+  await storeNameInput.click({ clickCount: 3 });
+  await storeNameInput.pressSequentially(storeName, { delay: 20 });
+  await storeDescInput.click({ clickCount: 3 });
+  await storeDescInput.pressSequentially(storeDescription, { delay: 20 });
+
+  // Wait for Angular form reactivity — button becomes enabled when form is valid
+  await expect(createStoreBtn).toBeEnabled({ timeout: TIMEOUTS.element });
+  await createStoreBtn.click();
+
+  // Wait for store creation to complete — heading disappears when store exists
+  await createStoreHeading.waitFor({ state: 'hidden', timeout: TIMEOUTS.api });
 }

@@ -6,11 +6,17 @@
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed"
+    "test:headed": "playwright test --headed",
+    "test:allure": "playwright test --reporter=list,allure-playwright",
+    "allure:generate": "allure generate allure-results --clean -o allure-report",
+    "allure:open": "allure open allure-report",
+    "allure:serve": "allure serve allure-results"
   },
   "devDependencies": {
     "@playwright/test": "^1.43.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.4.0"
+    "allure-commandline": "^2.42.0",
+    "allure-playwright": "^3.9.0",
+    "typescript": "^6.0.3"
   }
 }

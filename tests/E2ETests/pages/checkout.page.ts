@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/checkout` — order checkout flow.
+ */
 export class CheckoutPage extends BasePage {
   readonly pageHeading: Locator;
   readonly confirmOrderBtn: Locator;

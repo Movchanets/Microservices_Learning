@@ -1,19 +1,34 @@
 /**
+ * Mirrors backend Catalog.Application.DTOs.SkuDto
+ */
+export interface Sku {
+  id: string;
+  skuCode: string;
+  price: number;
+  currency: string;
+  status: string;
+  imageUrl: string | null;
+  typedAttributes: Record<string, string>;
+  flexibleAttributes: Record<string, string>;
+  createdAt: string;
+}
+
+/**
  * Mirrors backend Catalog.Application.DTOs.ProductDto
  */
 export interface Product {
   id: string;
   name: string;
   description: string;
-  price: number;
-  currency: string;
-  sku: string;
+  brand: string | null;
   categoryId: string;
   categoryName: string;
   status: ProductStatus;
   imageUrl: string | null;
   storeId: string;
   tags: string[];
+  skus: Sku[];
+  gallery: GalleryItem[];
   createdAt: string;
   updatedAt: string | null;
 }
@@ -25,9 +40,12 @@ export interface Product {
 export interface ProductListItem {
   id: string;
   name: string;
-  price: number;
-  currency: string;
-  sku: string;
+  minPrice: number | null;
+  maxPrice: number | null;
+  currency: string | null;
+  skuCount: number;
+  defaultSkuId: string | null;
+  defaultSkuCode: string | null;
   categoryName: string;
   status: string;
   imageUrl: string | null;
@@ -62,6 +80,22 @@ export interface Category {
 }
 
 export type ProductStatus = 'Draft' | 'Active' | 'Inactive' | 'Deleted';
+
+/**
+ * Gallery item from Media.API
+ */
+export interface GalleryItem {
+  id: string;
+  fileName: string;
+  contentType: string;
+  url: string;
+  thumbnailUrl: string | null;
+  sizeBytes: number;
+  type: 'Image' | 'Video';
+  sortOrder: number;
+  isPrimary: boolean;
+  createdAt: string;
+}
 
 /**
  * Mirrors backend Search.API.Models.SearchResult<T>
@@ -132,7 +166,7 @@ export interface Review {
 export interface ReviewSummary {
   averageRating: number;
   totalReviews: number;
-  ratingDistribution: Record<number, number>;
+  ratingDistribution: Partial<Record<number, number>>;
 }
 
 /**

@@ -18,13 +18,48 @@ export interface StoreResult {
   verificationStatus: string;
 }
 
+/** SKU detail returned as part of a product. */
+export interface SkuResult {
+  id: string;
+  skuCode: string;
+  price: number;
+  currency: string;
+  status: string;
+  typedAttributes?: Record<string, unknown>;
+  flexibleAttributes?: Record<string, unknown>;
+  createdAt?: string;
+}
+
+/** Full product detail (single product response). */
 export interface ProductResult {
   id: string;
   name: string;
-  sku: string;
-  price: number;
-  storeId: string;
+  description?: string;
+  categoryId?: string;
+  categoryName?: string;
   status: string;
+  imageUrl?: string;
+  brand?: string;
+  storeId: string;
+  tags?: string[];
+  skus: SkuResult[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Product summary in list/search results. */
+export interface ProductListResult {
+  id: string;
+  name: string;
+  minPrice: number;
+  maxPrice: number;
+  currency: string;
+  skuCount: number;
+  categoryName?: string;
+  status: string;
+  imageUrl?: string;
+  storeId: string;
+  createdAt?: string;
 }
 
 export interface CategoryResult {
@@ -48,13 +83,24 @@ export interface OrderItemResult {
   id: string;
   productId: string;
   productName: string;
-  sku: string;
+  skuCode: string;
   unitPrice: number;
   quantity: number;
   totalPrice: number;
 }
 
+/** A single image in a product or SKU gallery. */
+export interface GalleryEntry {
+  id: string;
+  url: string;
+  thumbnailUrl?: string;
+  isPrimary: boolean;
+  fileName: string;
+}
+
 export interface InventoryResult {
-  sku: string;
+  skuId: string;
+  skuCode: string;
   availableQuantity: number;
+  reservedQuantity: number;
 }

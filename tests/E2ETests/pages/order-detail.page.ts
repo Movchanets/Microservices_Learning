@@ -1,6 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/**
+ * Page object for `/orders/:id` — single order detail view.
+ */
 export class OrderDetailPage extends BasePage {
   readonly pageHeading: Locator;
   readonly backToOrdersLink: Locator;

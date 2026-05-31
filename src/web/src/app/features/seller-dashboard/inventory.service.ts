@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 
 export interface InventoryItemResponse {
   id: string;
-  sku: string;
+  skuCode: string;
   availableQuantity: number;
 }
 

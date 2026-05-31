@@ -34,7 +34,7 @@ public class DeleteProductCommandHandlerTests
         var productId = Guid.NewGuid();
         var command = new DeleteProductCommand(productId);
 
-        var product = Product.Create("Test Product", "Test Description", 10m, "USD", "SKU-1", Guid.NewGuid(), Guid.NewGuid());
+        var product = Product.Create("Test Product", "Test Description", Guid.NewGuid(), Guid.NewGuid());
 
         _productRepositoryMock
             .Setup(repo => repo.GetByIdAsync(productId, It.IsAny<CancellationToken>()))

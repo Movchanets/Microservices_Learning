@@ -17,49 +17,40 @@ public sealed class CreateProductHandler(
         CreateProductCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Verify SKU uniqueness
-        if (await productRepository.ExistsBySkuAsync(request.Sku, cancellationToken))
-        {
-            return Result<ProductDto>.Failure($"SKU '{request.Sku}' already exists.", "SKU_DUPLICATE");
-        }
-
-        // 2. Verify Category exists
+        // 1. Verify Category exists
         var category = await categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken);
         if (category is null)
         {
             return Result<ProductDto>.Failure("Category not found.", "NOT_FOUND");
         }
 
-        // 3. Create aggregate
+        // 2. Create aggregate (SKUs are added separately via AddSku)
         var product = Product.Create(
             request.Name,
             request.Description,
-            request.Price,
-            request.Currency,
-            request.Sku,
             request.CategoryId,
             request.StoreId,
+            request.Brand,
             request.Tags,
             request.ImageUrl);
 
-        // 4. Save
+        // 3. Save
         productRepository.Add(product);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // 5. Return DTO
+        // 4. Return DTO (product has no SKUs yet)
         return Result<ProductDto>.Success(new ProductDto(
             product.Id,
             product.Name,
             product.Description,
-            product.Price.Amount,
-            product.Price.Currency,
-            product.Sku.Value,
             product.CategoryId,
             category.Name,
             product.Status.ToString(),
             product.ImageUrl,
+            product.Brand,
             product.StoreId,
             product.Tags,
+            [],  // No SKUs yet
             product.CreatedAt,
             product.UpdatedAt));
     }

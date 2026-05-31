@@ -1,5 +1,6 @@
 using Catalog.Domain.Aggregates;
 using Catalog.Domain.Entities;
+using Catalog.Domain.ValueObjects;
 using Catalog.Infrastructure.Repositories;
 using Catalog.IntegrationTests.Fixtures;
 using FluentAssertions;
@@ -37,11 +38,14 @@ public class OutboxIntegrationTests
         var product = Product.Create(
             "Outbox Product",
             "Outbox Description",
-            15.99m,
-            "USD",
-            $"SKU-OUTBOX-{Guid.NewGuid().ToString().Substring(0, 5)}",
             category.Id,
             storeId
+        );
+
+        product.AddSku(
+            $"SKU-OUTBOX-{Guid.NewGuid().ToString().Substring(0, 5)}",
+            Money.Create(15.99m, "USD"),
+            new Dictionary<string, string>()
         );
 
         repository.Add(product);

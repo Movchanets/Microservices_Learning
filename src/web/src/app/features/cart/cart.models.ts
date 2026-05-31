@@ -1,5 +1,7 @@
 export interface CartItemDetails {
   productId: string;
+  skuId: string;
+  skuCode: string;
   title: string;
   imageUrl: string | null;
   quantity: number;

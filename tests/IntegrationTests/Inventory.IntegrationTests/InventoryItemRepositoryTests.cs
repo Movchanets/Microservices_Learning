@@ -18,7 +18,7 @@ public class InventoryItemRepositoryTests
     }
 
     [Fact]
-    public async Task Add_ThenGetBySku_ReturnsPersistedItem()
+    public async Task Add_ThenGetBySkuCode_ReturnsPersistedItem()
     {
         // Arrange
         using var scope = _fixture.CreateScope();
@@ -27,21 +27,22 @@ public class InventoryItemRepositoryTests
 
         var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var productId = Guid.NewGuid();
-        var item = InventoryItem.Create("SKU-REPO-1", 100, storeId, productId);
+        var skuId = Guid.NewGuid();
+        var item = InventoryItem.Create(skuId, productId, "SKU-REPO-1", 100, storeId);
 
         // Act
         repository.Add(item);
         await context.SaveChangesAsync();
 
         // Assert
-        var retrieved = await repository.GetBySkuAsync("SKU-REPO-1");
+        var retrieved = await repository.GetBySkuCodeAsync("SKU-REPO-1");
         retrieved.Should().NotBeNull();
-        retrieved!.Sku.Should().Be("SKU-REPO-1");
+        retrieved!.SkuCode.Should().Be("SKU-REPO-1");
         retrieved.AvailableQuantity.Should().Be(100);
     }
 
     [Fact]
-    public async Task GetBySkusAsync_ReturnsMatchingItems()
+    public async Task GetBySkuIdsAsync_ReturnsMatchingItems()
     {
         // Arrange
         using var scope = _fixture.CreateScope();
@@ -49,18 +50,21 @@ public class InventoryItemRepositoryTests
         var repository = new InventoryItemRepository(context);
 
         var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-        repository.Add(InventoryItem.Create("SKU-MULTI-1", 10, storeId, Guid.NewGuid()));
-        repository.Add(InventoryItem.Create("SKU-MULTI-2", 20, storeId, Guid.NewGuid()));
-        repository.Add(InventoryItem.Create("SKU-MULTI-3", 30, storeId, Guid.NewGuid()));
+        var skuId1 = Guid.NewGuid();
+        var skuId2 = Guid.NewGuid();
+        var skuId3 = Guid.NewGuid();
+        repository.Add(InventoryItem.Create(skuId1, Guid.NewGuid(), "SKU-MULTI-1", 10, storeId));
+        repository.Add(InventoryItem.Create(skuId2, Guid.NewGuid(), "SKU-MULTI-2", 20, storeId));
+        repository.Add(InventoryItem.Create(skuId3, Guid.NewGuid(), "SKU-MULTI-3", 30, storeId));
         await context.SaveChangesAsync();
 
         // Act
-        var items = await repository.GetBySkusAsync(["SKU-MULTI-1", "SKU-MULTI-3"]);
+        var items = await repository.GetBySkuIdsAsync([skuId1, skuId3]);
 
         // Assert
         items.Should().HaveCount(2);
-        items.Should().Contain(i => i.Sku == "SKU-MULTI-1");
-        items.Should().Contain(i => i.Sku == "SKU-MULTI-3");
+        items.Should().Contain(i => i.SkuCode == "SKU-MULTI-1");
+        items.Should().Contain(i => i.SkuCode == "SKU-MULTI-3");
     }
 
     [Fact]
@@ -68,8 +72,9 @@ public class InventoryItemRepositoryTests
     {
         // Note: True xmin-based DbUpdateConcurrencyException requires EF Migrations
         // (not EnsureCreatedAsync). This test verifies concurrent read/write behavior.
-        var sku = $"SKU-CONC-{Guid.NewGuid():N}";
-        var normalizedSku = sku.Trim().ToUpperInvariant();
+        var skuCode = $"SKU-CONC-{Guid.NewGuid():N}";
+        var normalizedSkuCode = skuCode.Trim().ToUpperInvariant();
+        var skuId = Guid.NewGuid();
 
         // Setup: create item in first scope
         using (var setupScope = _fixture.CreateScope())
@@ -77,7 +82,7 @@ public class InventoryItemRepositoryTests
             var setupContext = setupScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
             var setupRepo = new InventoryItemRepository(setupContext);
             var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-            var item = InventoryItem.Create(sku, 50, storeId, Guid.NewGuid());
+            var item = InventoryItem.Create(skuId, Guid.NewGuid(), skuCode, 50, storeId);
             setupRepo.Add(item);
             await setupContext.SaveChangesAsync();
         }
@@ -91,8 +96,8 @@ public class InventoryItemRepositoryTests
         var context3 = scope3.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var repo3 = new InventoryItemRepository(context3);
 
-        var item2 = await repo2.GetBySkuAsync(normalizedSku);
-        var item3 = await repo3.GetBySkuAsync(normalizedSku);
+        var item2 = await repo2.GetBySkuCodeAsync(normalizedSkuCode);
+        var item3 = await repo3.GetBySkuCodeAsync(normalizedSkuCode);
 
         item2.Should().NotBeNull();
         item3.Should().NotBeNull();
@@ -109,7 +114,7 @@ public class InventoryItemRepositoryTests
         using var assertScope = _fixture.CreateScope();
         var assertContext = assertScope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var assertRepo = new InventoryItemRepository(assertContext);
-        var finalItem = await assertRepo.GetBySkuAsync(normalizedSku);
+        var finalItem = await assertRepo.GetBySkuCodeAsync(normalizedSkuCode);
         finalItem.Should().NotBeNull();
         finalItem!.AvailableQuantity.Should().Be(70); // 50 + 20 (last write wins)
     }
@@ -123,7 +128,8 @@ public class InventoryItemRepositoryTests
         var repository = new InventoryItemRepository(context);
 
         var storeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-        var item = InventoryItem.Create("SKU-UPD", 100, storeId, Guid.NewGuid());
+        var skuId = Guid.NewGuid();
+        var item = InventoryItem.Create(skuId, Guid.NewGuid(), "SKU-UPD", 100, storeId);
         repository.Add(item);
         await context.SaveChangesAsync();
 
@@ -135,7 +141,7 @@ public class InventoryItemRepositoryTests
         context.ChangeTracker.Clear();
 
         // Assert
-        var updated = await repository.GetBySkuAsync("SKU-UPD");
+        var updated = await repository.GetBySkuCodeAsync("SKU-UPD");
         updated.Should().NotBeNull();
         updated!.AvailableQuantity.Should().Be(150);
     }

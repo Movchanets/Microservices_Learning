@@ -1,0 +1,23 @@
+{
+  "name": "rozetka-scraper",
+  "version": "2.0.0",
+  "description": "Rozetka.com.ua product scraper for Marketplace Seeder.App",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape": "tsx scripts/rozetka-scraper.ts",
+    "scrape:laptops": "tsx scripts/rozetka-scraper.ts --category laptops",
+    "scrape:phones": "tsx scripts/rozetka-scraper.ts --category phones",
+    "scrape:categories": "tsx scripts/scrape-categories.ts",
+    "inspect": "node inspect.cjs"
+  },
+  "dependencies": {
+    "playwright": "^1.43.0",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "tsx": "^4.7.0"
+  }
+}
