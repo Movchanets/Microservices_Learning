@@ -40,6 +40,8 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
     await test.step('Wait for search results to load', async () => {
       // Wait for loading skeleton to disappear (API response received)
       await catalogPage.loadingSkeleton.waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {});
+      // Give Angular time to render the empty state after API response
+      await page.waitForTimeout(1000);
     });
 
     await test.step('Verify empty state is shown', async () => {

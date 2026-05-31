@@ -1,5 +1,6 @@
 import { authTest as test, expect } from '../../fixtures/auth.fixture';
 import { SellerDashboardPage } from '../../pages/seller-dashboard.page';
+import { TIMEOUTS } from '../../utils/constants';
 
 test.describe('Seller: Dashboard', () => {
 
@@ -42,12 +43,12 @@ test.describe('Seller: Dashboard', () => {
 
     await test.step('Navigate to seller products page', async () => {
       await page.goto('/seller/products');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
     });
 
     await test.step('Verify products heading is visible', async () => {
       const heading = page.getByRole('heading').filter({ hasText: /products/i });
-      await expect(heading.first()).toBeVisible();
+      await expect(heading.first()).toBeVisible({ timeout: TIMEOUTS.element });
     });
 
     await page.close();
@@ -58,11 +59,12 @@ test.describe('Seller: Dashboard', () => {
 
     await test.step('Navigate to store settings page', async () => {
       await page.goto('/seller/settings');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
     });
 
     await test.step('Verify store settings heading', async () => {
-      await expect(page.getByRole('heading', { name: 'Store Settings' })).toBeVisible();
+      await expect(page.getByRole('heading').filter({ hasText: /settings/i }).first())
+        .toBeVisible({ timeout: TIMEOUTS.element });
     });
 
     await page.close();

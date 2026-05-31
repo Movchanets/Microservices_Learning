@@ -63,9 +63,10 @@ test.describe('Shared Layout: Header', () => {
   test('should open cart drawer when clicking cart button', async ({ page, header, cartDrawer }) => {
     await test.step('Navigate to home page', async () => {
       await page.goto('/home');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
       // Wait for Angular hydration — header must be interactive
       await expect(header.logo).toBeVisible({ timeout: TIMEOUTS.element });
+      await expect(header.cartBtn).toBeEnabled({ timeout: TIMEOUTS.element });
     });
 
     await test.step('Open cart drawer', async () => {
@@ -81,9 +82,10 @@ test.describe('Shared Layout: Header', () => {
   test('should close cart drawer', async ({ page, header, cartDrawer }) => {
     await test.step('Navigate to home page', async () => {
       await page.goto('/home');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
       // Wait for Angular hydration — header must be interactive
       await expect(header.logo).toBeVisible({ timeout: TIMEOUTS.element });
+      await expect(header.cartBtn).toBeEnabled({ timeout: TIMEOUTS.element });
     });
 
     await test.step('Open and close cart drawer', async () => {
