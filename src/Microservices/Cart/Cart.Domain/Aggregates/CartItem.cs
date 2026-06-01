@@ -16,12 +16,6 @@ public sealed class CartItem : Entity
 
     internal CartItem(Guid cartId, Guid productId, Guid skuId, string skuCode, int quantity, decimal price, Guid storeId)
     {
-        if (cartId == Guid.Empty)
-            throw new ArgumentException("CartId cannot be empty", nameof(cartId));
-        if (productId == Guid.Empty)
-            throw new ArgumentException("ProductId cannot be empty", nameof(productId));
-        if (skuId == Guid.Empty)
-            throw new ArgumentException("SkuId cannot be empty", nameof(skuId));
         ArgumentException.ThrowIfNullOrWhiteSpace(skuCode);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(quantity);
         if (storeId == Guid.Empty)

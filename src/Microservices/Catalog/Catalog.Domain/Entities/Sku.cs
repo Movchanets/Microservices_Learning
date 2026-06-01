@@ -44,8 +44,8 @@ public sealed class Sku : Entity
         string? imageUrl = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(skuCode);
-        if (productId == Guid.Empty)
-            throw new InvalidOperationException("ProductId is required for SKU creation");
+        ArgumentNullException.ThrowIfNull(price);
+        ArgumentNullException.ThrowIfNull(typedAttributes);
 
         return new Sku
         {

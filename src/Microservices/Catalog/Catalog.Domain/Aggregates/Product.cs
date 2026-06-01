@@ -110,18 +110,24 @@ public sealed class Product : AggregateRoot
 
     /// <summary>
     /// Adds a new SKU (sellable variant) to this product.
+    /// When variantAxisKeys are provided, validates that no existing SKU has the same combination.
     /// </summary>
     public Sku AddSku(
         string skuCode,
         Money price,
         Dictionary<string, string> typedAttributes,
-        Dictionary<string, string>? flexibleAttributes = null)
+        Dictionary<string, string>? flexibleAttributes = null,
+        IEnumerable<string>? variantAxisKeys = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(skuCode);
 
         var normalizedCode = skuCode.Trim().ToUpperInvariant();
         if (_skus.Any(s => s.SkuCode == normalizedCode && s.Status != SkuStatus.Deleted))
             throw new InvalidOperationException($"SKU '{normalizedCode}' already exists on this product");
+
+        // Validate variant-axis uniqueness before adding
+        if (variantAxisKeys is not null)
+            ValidateSkuVariantUniqueness(typedAttributes ?? [], variantAxisKeys);
 
         var sku = Sku.Create(Id, normalizedCode, price, typedAttributes, flexibleAttributes);
         _skus.Add(sku);
@@ -148,6 +154,46 @@ public sealed class Product : AggregateRoot
         sku.MarkDeleted();
 
         AddDomainEvent(new SkuDeletedDomainEvent(Id, sku.Id, sku.SkuCode));
+    }
+
+    /// <summary>
+    /// Validates that no existing active SKU has the same combination of variant-axis attributes.
+    /// Prevents duplicate variants like (Color:Black, Storage:128GB) on the same product.
+    /// </summary>
+    internal void ValidateSkuVariantUniqueness(
+        Dictionary<string, string> typedAttributes,
+        IEnumerable<string> variantAxisKeys)
+    {
+        var activeSkus = _skus.Where(s => s.Status != SkuStatus.Deleted).ToList();
+        if (activeSkus.Count == 0) return;
+
+        var axisKeys = variantAxisKeys.ToList();
+        if (axisKeys.Count == 0) return;
+
+        // Build the new SKU's variant signature
+        var newSignature = BuildVariantSignature(typedAttributes, axisKeys);
+
+        // Check against all existing active SKUs
+        foreach (var existingSku in activeSkus)
+        {
+            var existingSignature = BuildVariantSignature(existingSku.TypedAttributes, axisKeys);
+            if (newSignature == existingSignature)
+            {
+                var combo = string.Join(", ", axisKeys.Select(k =>
+                    $"{k}: {typedAttributes.GetValueOrDefault(k, "?")}"));
+                throw new InvalidOperationException(
+                    $"SKU with variant combination [{combo}] already exists on product '{Name}'");
+            }
+        }
+    }
+
+    private static string BuildVariantSignature(
+        Dictionary<string, string> attributes,
+        List<string> axisKeys)
+    {
+        return string.Join("|", axisKeys
+            .OrderBy(k => k)
+            .Select(k => $"{k}={attributes.GetValueOrDefault(k, "").ToUpperInvariant()}"));
     }
 
     /// <summary>

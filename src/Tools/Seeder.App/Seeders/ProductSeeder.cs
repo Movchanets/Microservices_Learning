@@ -80,7 +80,7 @@ public class ProductSeeder
 
         // ── Create primary SKU ───────────────────────────────────
         var primarySkuId = await CreateSkuAsync(
-            dto!.Id, product.Sku, product.Price, product.Currency, ct);
+            dto!.Id, product.Sku, product.Price, product.Currency, null, ct);
         if (primarySkuId != null)
             skuIds2[product.Sku] = primarySkuId.Value;
 
@@ -93,12 +93,16 @@ public class ProductSeeder
                 if (skuIds2.ContainsKey(variantSkuCode)) continue;
 
                 var variantSkuId = await CreateSkuAsync(
-                    dto.Id, variantSkuCode, variant.Price, product.Currency, ct);
+                    dto.Id, variantSkuCode, variant.Price, product.Currency,
+                    variant.Attributes, ct);
                 if (variantSkuId != null)
                 {
                     skuIds2[variantSkuCode] = variantSkuId.Value;
-                    _logger.LogInformation("  + Variant SKU {SkuCode} ({Name})",
-                        variantSkuCode, variant.Name);
+                    _logger.LogInformation("  + Variant SKU {SkuCode} ({Name}) attrs={Attrs}",
+                        variantSkuCode, variant.Name,
+                        variant.Attributes != null
+                            ? string.Join(", ", variant.Attributes.Select(a => $"{a.Key}={a.Value}"))
+                            : "none");
                 }
             }
         }
@@ -117,14 +121,15 @@ public class ProductSeeder
     /// Returns the SKU ID or null on failure.
     /// </summary>
     private async Task<Guid?> CreateSkuAsync(
-        Guid productId, string skuCode, decimal price, string currency, CancellationToken ct)
+        Guid productId, string skuCode, decimal price, string currency,
+        Dictionary<string, string>? typedAttributes, CancellationToken ct)
     {
         var skuRequest = new
         {
             SkuCode = skuCode,
             Price = price,
             Currency = currency,
-            TypedAttributes = new Dictionary<string, string>(),
+            TypedAttributes = typedAttributes ?? new Dictionary<string, string>(),
             FlexibleAttributes = (Dictionary<string, string>?)null
         };
 

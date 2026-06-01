@@ -16,7 +16,7 @@ import { DecimalPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { SellerProductStore } from '../seller-product.store';
 import { StoreSettingsStore } from '../store-settings.store';
-import { CategoryService, CategoryOption } from '../../../core/services/category.service';
+import { CategoryService, CategoryOption, AttributeDefinition } from '../../../core/services/category.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { MediaService } from '../../../core/services/media.service';
 import { GalleryItem } from '../../catalog/catalog.models';
@@ -31,6 +31,7 @@ interface SkuFormEntry {
   currency: string;
   images: GalleryItem[];
   pendingUploads: PendingImage[];
+  typedAttributes: Record<string, string>;
 }
 
 interface ExistingSku {
@@ -85,10 +86,14 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   productImages = signal<GalleryItem[]>([]);
   productPendingUploads = signal<PendingImage[]>([]);
 
-  // ── SKU form entries ─────────────────────────────────────
+  // ── SKU form entries ─────────────────────────────
   skus = signal<SkuFormEntry[]>([this.createEmptySku()]);
   activeSkuTab = signal(0);
   existingSkus = signal<ExistingSku[]>([]);
+
+  // ── Category variant axes ───────────────────────
+  variantAxes = signal<AttributeDefinition[]>([]);
+  variantAxesLoading = signal(false);
 
   // ── Upload state ─────────────────────────────────────────
   uploading = signal(false);
@@ -147,6 +152,14 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     this.skus.update(rows => rows.map((r, i) =>
       i === index ? { ...r, [field]: value } : r
     ));
+  }
+
+  /** Update a typed attribute on a SKU entry. */
+  updateSkuAttribute(skuIndex: number, key: string, value: string): void {
+    this.skus.update(rows => rows.map((r, i) => {
+      if (i !== skuIndex) return r;
+      return { ...r, typedAttributes: { ...r.typedAttributes, [key]: value } };
+    }));
   }
 
   updateSkuCode(index: number, value: string): void {
@@ -261,7 +274,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   // ── Private helpers ──────────────────────────────────────
 
   private createEmptySku(): SkuFormEntry {
-    return { id: nextSkuId(), skuCode: '', price: 0, currency: 'USD', images: [], pendingUploads: [] };
+    return { id: nextSkuId(), skuCode: '', price: 0, currency: 'USD', images: [], pendingUploads: [], typedAttributes: {} };
   }
 
   private populateFormFromProduct(product: { name: string; description: string; brand?: string | null; categoryId: string; imageUrl?: string | null; tags?: string[] | null; skus?: Array<{ skuCode: string; price: number; currency: string }> | null }): void {
@@ -275,6 +288,8 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       product.skus?.map(s => ({ skuCode: s.skuCode, price: s.price, currency: s.currency, images: [] })) ?? []
     );
     this.formPopulated.set(true);
+    // Load variant axes for the product's category
+    this.loadVariantAxes(product.categoryId);
   }
 
   private async loadCategories(): Promise<void> {
@@ -282,6 +297,23 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       const cats = await this.categoryService.getCategories();
       this.categories.set(cats.filter(c => c.isActive));
     } catch { /* non-critical */ }
+  }
+
+  /** Loads variant-axis attribute definitions for the selected category. */
+  async loadVariantAxes(categoryId: string): Promise<void> {
+    if (!categoryId) {
+      this.variantAxes.set([]);
+      return;
+    }
+    this.variantAxesLoading.set(true);
+    try {
+      const attrs = await this.categoryService.getAttributeDefinitions(categoryId, true);
+      this.variantAxes.set(attrs.filter(a => a.isVariantAxis && a.target === 'Sku'));
+    } catch {
+      this.variantAxes.set([]);
+    } finally {
+      this.variantAxesLoading.set(false);
+    }
   }
 
   private static sanitizeSku(input: string): string {
@@ -376,6 +408,9 @@ export class ProductFormComponent implements OnInit, OnDestroy {
         skuCode: entry.skuCode,
         price: entry.price,
         currency: entry.currency,
+        typedAttributes: Object.keys(entry.typedAttributes).length > 0
+          ? entry.typedAttributes
+          : undefined,
       });
 
       if (sku) {

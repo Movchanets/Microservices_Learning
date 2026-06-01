@@ -44,6 +44,13 @@ public sealed class AttributeDefinition : Entity
     /// </summary>
     public bool IsRequired { get; private set; }
 
+    /// <summary>
+    /// If true, this attribute defines a variant axis (e.g., color, storage).
+    /// Cartesian product of all variant-axis attributes generates SKU combinations.
+    /// Only meaningful for Target=Sku with ValueType=Select.
+    /// </summary>
+    public bool IsVariantAxis { get; private set; }
+
     public int SortOrder { get; private set; }
 
     /// <summary>
@@ -64,12 +71,14 @@ public sealed class AttributeDefinition : Entity
         bool isFilterable,
         bool isRequired,
         int sortOrder = 0,
-        List<string>? allowedValues = null)
+        List<string>? allowedValues = null,
+        bool isVariantAxis = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
-        if (categoryId == Guid.Empty)
-            throw new InvalidOperationException("CategoryId is required for AttributeDefinition");
+
+        if (isVariantAxis && valueType != AttributeType.Select)
+            throw new InvalidOperationException("Only Select-type attributes can be variant axes");
 
         return new AttributeDefinition
         {
@@ -81,7 +90,8 @@ public sealed class AttributeDefinition : Entity
             IsFilterable = isFilterable,
             IsRequired = isRequired,
             SortOrder = sortOrder,
-            AllowedValues = allowedValues ?? []
+            AllowedValues = allowedValues ?? [],
+            IsVariantAxis = isVariantAxis
         };
     }
 
@@ -90,13 +100,19 @@ public sealed class AttributeDefinition : Entity
         bool isFilterable,
         bool isRequired,
         int sortOrder,
-        List<string>? allowedValues = null)
+        List<string>? allowedValues = null,
+        bool isVariantAxis = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+
+        if (isVariantAxis && ValueType != AttributeType.Select)
+            throw new InvalidOperationException("Only Select-type attributes can be variant axes");
+
         DisplayName = displayName.Trim();
         IsFilterable = isFilterable;
         IsRequired = isRequired;
         SortOrder = sortOrder;
         AllowedValues = allowedValues ?? AllowedValues;
+        IsVariantAxis = isVariantAxis;
     }
 }

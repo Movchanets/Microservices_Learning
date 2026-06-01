@@ -68,10 +68,6 @@ public sealed class GalleryEntry : Entity
         int sortOrder,
         bool isPrimary)
     {
-        if (mediaItemId == Guid.Empty)
-            throw new ArgumentException("MediaItemId is required", nameof(mediaItemId));
-        if (targetId == Guid.Empty)
-            throw new ArgumentException("TargetId is required", nameof(targetId));
         ArgumentException.ThrowIfNullOrWhiteSpace(targetType);
 
         return new GalleryEntry

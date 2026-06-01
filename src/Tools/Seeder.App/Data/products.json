@@ -270,32 +270,28 @@
   },
   {
     "StoreName": "Tech Store",
-    "CategoryName": "Мобільні телефони > Мобільні телефони Apple > Мобільні телефони Apple iPhone 17 Pro Max",
-    "Name": "Apple iPhone 17 Pro Max 512GB Cosmic Orange (MFYT4AF/A)",
-    "Description": "Екран (6.9\", OLED (Super Retina XDR), 2868x1320) / Apple A19 Pro / основна потрійна камера: 48 Мп + 48 Мп + 48 Мп, фронтальна камера: 18 Мп / 512 ГБ вбудованої пам'яті / 3G / LTE / 5G / GPS / підтримка 2х СІМ-карт (Nano-SIM, eSIM) / iOS 26",
-    "Price": 62999,
+    "CategoryName": "Мобільні телефони > Мобільні телефони Apple",
+    "Name": "Apple iPhone 17 Pro",
+    "Description": "Екран (6.3\", OLED (Super Retina XDR), 2622x1206) / Apple A19 Pro / основна потрійна камера: 48 Мп + 48 Мп + 48 Мп, фронтальна камера: 18 Мп / 3G / LTE / 5G / GPS / підтримка 2х СІМ-карт (Nano-SIM, eSIM) / iOS 26",
+    "Price": 54999,
     "Currency": "UAH",
-    "Sku": "ROZ-543553245",
-    "RozetkaCode": "543553245",
+    "Sku": "ROZ-IPHONE17PRO",
+    "RozetkaCode": "543545660",
     "Tags": [
       "smartphone",
       "phone",
       "mobile",
       "apple",
-      "iphone"
+      "iphone",
+      "iphone-17-pro"
     ],
-    "ImageUrl": "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image0.jpg",
+    "ImageUrl": "Images/iphone-17-pro/image0.jpg",
     "Gallery": [
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image0.jpg",
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image1.jpg",
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image2.jpg",
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image3.jpg",
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image4.jpg",
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image5.jpg",
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image6.jpg",
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image7.jpg",
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image8.jpg",
-      "Images/69-oled-super-retina-xdr-2868x1320-apple-a19-pro-48-48-48-18/image9.jpg"
+      "Images/iphone-17-pro/image0.jpg",
+      "Images/iphone-17-pro/image1.jpg",
+      "Images/iphone-17-pro/image2.jpg",
+      "Images/iphone-17-pro/image3.jpg",
+      "Images/iphone-17-pro/image4.jpg"
     ],
     "Breadcrumbs": [
       {
@@ -317,95 +313,77 @@
         "name": "Мобільні телефони Apple",
         "url": "https://rozetka.com.ua/ua/mobile-phones/c80003/producer=apple/",
         "position": 4
-      },
-      {
-        "name": "Мобільні телефони Apple iPhone 17 Pro Max",
-        "url": "https://rozetka.com.ua/ua/mobile-phones/c80003/producer=apple;series=iphone-17-pro-max/",
-        "position": 5
-      },
-      {
-        "name": "Мобільний телефон Apple iPhone 17 Pro Max 512GB Cosmic Orange (MFYT4AF/A)",
-        "position": 6
       }
     ],
-    "CategoryPath": "Смартфони, ТВ і електроніка > Мобільні телефони > Мобільні телефони Apple > Мобільні телефони Apple iPhone 17 Pro Max > Мобільний телефон Apple iPhone 17 Pro Max 512GB Cosmic Orange (MFYT4AF/A)",
+    "CategoryPath": "Смартфони, ТВ і електроніка > Мобільні телефони > Мобільні телефони Apple",
     "InitialStock": 25,
+    "VariantAxes": {
+      "color": ["Natural Titanium", "White Titanium", "Cosmic Orange"],
+      "storage": ["256 GB", "512 GB", "1 TB"]
+    },
     "Variants": [
       {
-        "RozetkaCode": "543550585",
-        "Name": "256 ГБ",
-        "Type": "storage",
-        "Price": 64989,
-        "ImageUrl": "Images/256/image0.jpg",
-        "Gallery": [
-          "Images/256/image0.jpg",
-          "Images/256/image1.jpg",
-          "Images/256/image2.jpg",
-          "Images/256/image3.jpg",
-          "Images/256/image4.jpg",
-          "Images/256/image5.jpg",
-          "Images/256/image6.jpg",
-          "Images/256/image7.jpg",
-          "Images/256/image8.jpg",
-          "Images/256/image9.jpg"
-        ]
+        "RozetkaCode": "543545661",
+        "Name": "Natural Titanium / 256 GB",
+        "Type": "variant",
+        "Price": 54999,
+        "Attributes": { "color": "Natural Titanium", "storage": "256 GB" }
       },
       {
-        "RozetkaCode": "543553255",
-        "Name": "1 ТБ",
-        "Type": "storage",
-        "Price": 47899,
-        "ImageUrl": "Images/1/image0.jpg",
-        "Gallery": [
-          "Images/1/image0.jpg",
-          "Images/1/image1.jpg",
-          "Images/1/image2.jpg",
-          "Images/1/image3.jpg",
-          "Images/1/image4.jpg",
-          "Images/1/image5.jpg",
-          "Images/1/image6.jpg",
-          "Images/1/image7.jpg",
-          "Images/1/image8.jpg",
-          "Images/1/image9.jpg"
-        ]
+        "RozetkaCode": "543545662",
+        "Name": "Natural Titanium / 512 GB",
+        "Type": "variant",
+        "Price": 62999,
+        "Attributes": { "color": "Natural Titanium", "storage": "512 GB" }
       },
       {
-        "RozetkaCode": "543553260",
-        "Name": "2 ТБ",
-        "Type": "storage",
-        "Price": 72999,
-        "ImageUrl": "Images/2/image0.jpg",
-        "Gallery": [
-          "Images/2/image0.jpg",
-          "Images/2/image1.jpg",
-          "Images/2/image2.jpg",
-          "Images/2/image3.jpg",
-          "Images/2/image4.jpg",
-          "Images/2/image5.jpg",
-          "Images/2/image6.jpg",
-          "Images/2/image7.jpg",
-          "Images/2/image8.jpg",
-          "Images/2/image9.jpg"
-        ]
+        "RozetkaCode": "543545663",
+        "Name": "Natural Titanium / 1 TB",
+        "Type": "variant",
+        "Price": 70999,
+        "Attributes": { "color": "Natural Titanium", "storage": "1 TB" }
       },
       {
-        "RozetkaCode": "543545660",
-        "Name": "iPhone 17 Pro",
-        "Type": "model",
-        "Price": 70299,
-        "ImageUrl": "Images/iphone-17-pro/image0.jpg",
-        "Gallery": [
-          "Images/iphone-17-pro/image0.jpg",
-          "Images/iphone-17-pro/image1.jpg",
-          "Images/iphone-17-pro/image2.jpg",
-          "Images/iphone-17-pro/image3.jpg",
-          "Images/iphone-17-pro/image4.jpg",
-          "Images/iphone-17-pro/image5.jpg",
-          "Images/iphone-17-pro/image6.jpg",
-          "Images/iphone-17-pro/image7.jpg",
-          "Images/iphone-17-pro/image8.jpg",
-          "Images/iphone-17-pro/image9.jpg"
-        ]
+        "RozetkaCode": "543545664",
+        "Name": "White Titanium / 256 GB",
+        "Type": "variant",
+        "Price": 54999,
+        "Attributes": { "color": "White Titanium", "storage": "256 GB" }
+      },
+      {
+        "RozetkaCode": "543545665",
+        "Name": "White Titanium / 512 GB",
+        "Type": "variant",
+        "Price": 62999,
+        "Attributes": { "color": "White Titanium", "storage": "512 GB" }
+      },
+      {
+        "RozetkaCode": "543545666",
+        "Name": "White Titanium / 1 TB",
+        "Type": "variant",
+        "Price": 70999,
+        "Attributes": { "color": "White Titanium", "storage": "1 TB" }
+      },
+      {
+        "RozetkaCode": "543545667",
+        "Name": "Cosmic Orange / 256 GB",
+        "Type": "variant",
+        "Price": 54999,
+        "Attributes": { "color": "Cosmic Orange", "storage": "256 GB" }
+      },
+      {
+        "RozetkaCode": "543545668",
+        "Name": "Cosmic Orange / 512 GB",
+        "Type": "variant",
+        "Price": 62999,
+        "Attributes": { "color": "Cosmic Orange", "storage": "512 GB" }
+      },
+      {
+        "RozetkaCode": "543545669",
+        "Name": "Cosmic Orange / 1 TB",
+        "Type": "variant",
+        "Price": 70999,
+        "Attributes": { "color": "Cosmic Orange", "storage": "1 TB" }
       }
     ]
   }

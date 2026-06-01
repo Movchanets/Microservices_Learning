@@ -34,9 +34,9 @@ public sealed class MediaUploadedConsumerTests : IDisposable
 
         // Seed a category so Product FK is satisfied
         var category = Category.Create("Test Category");
-        _categoryId = category.Id;
         _context.Categories.Add(category);
         _context.SaveChanges();
+        _categoryId = category.Id;
 
         var logger = Mock.Of<ILogger<MediaUploadedConsumer>>();
         _consumer = new MediaUploadedConsumer(_context, logger);

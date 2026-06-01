@@ -31,13 +31,19 @@ public sealed class Order : AggregateRoot
 
     public static Order Create(string buyerId, Address? shippingAddress = null, Guid? orderId = null)
     {
-        return new Order
+        var order = new Order
         {
-            Id = orderId ?? Guid.NewGuid(),
             BuyerId = buyerId,
             ShippingAddress = shippingAddress,
             CreatedAt = DateTime.UtcNow
         };
+
+        // Only set Id when explicitly provided (e.g., saga correlation ID).
+        // Otherwise EF Core generates Guid v7 on insert.
+        if (orderId.HasValue)
+            order.Id = orderId.Value;
+
+        return order;
     }
 
     public void AddItem(Guid productId, Guid skuId, string skuCode, string productName, decimal unitPrice, int quantity, Guid storeId)

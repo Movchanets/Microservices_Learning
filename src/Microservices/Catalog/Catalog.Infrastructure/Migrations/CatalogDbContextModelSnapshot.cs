@@ -186,6 +186,11 @@ namespace Catalog.Infrastructure.Migrations
                     b.Property<bool>("IsRequired")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsVariantAxis")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(64)

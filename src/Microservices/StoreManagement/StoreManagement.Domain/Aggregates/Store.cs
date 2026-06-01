@@ -19,7 +19,7 @@ public sealed class Store : AggregateRoot
     // EF Core constructor
     private Store() { }
 
-    public static Store Create(string sellerId, string name, string description, Guid? id = null)
+    public static Store Create(string sellerId, string name, string description)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sellerId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -27,7 +27,6 @@ public sealed class Store : AggregateRoot
 
         var store = new Store
         {
-            Id = id ?? Guid.NewGuid(),
             SellerId = sellerId.Trim(),
             Name = name.Trim(),
             Description = description.Trim(),

@@ -114,8 +114,11 @@ public static class CategoryEndpoints
                     request.IsFilterable,
                     request.IsRequired,
                     request.SortOrder,
-                    request.AllowedValues);
+                    request.AllowedValues,
+                    request.IsVariantAxis);
 
+                // EF Core detects the new entity as Added because Id is Guid.Empty
+                // (Guid v7 is generated on insert by GuidV7ValueGenerator).
                 categoryRepo.Update(category);
                 await unitOfWork.SaveChangesAsync(ct);
 
@@ -128,7 +131,8 @@ public static class CategoryEndpoints
                     attr.IsFilterable,
                     attr.IsRequired,
                     attr.SortOrder,
-                    attr.AllowedValues);
+                    attr.AllowedValues,
+                    attr.IsVariantAxis);
 
                 return Results.Created($"/api/catalog/categories/{id}/attributes/{attr.Id}", dto);
             }
@@ -146,25 +150,58 @@ public static class CategoryEndpoints
         // Public: get attribute definitions for a category
         group.MapGet("/{id:guid}/attributes", async (
             Guid id,
+            bool? includeInherited,
             ICategoryRepository categoryRepo,
             CancellationToken ct) =>
         {
             var category = await categoryRepo.GetWithAttributeDefinitionsAsync(id, ct);
             if (category is null) return Results.NotFound(new { error = "Category not found" });
 
-            var dtos = category.AttributeDefinitions
-                .OrderBy(a => a.SortOrder)
-                .Select(attr => new AttributeDefinitionDto(
-                    attr.Id,
-                    attr.Key,
-                    attr.DisplayName,
-                    attr.Target.ToString(),
-                    attr.ValueType.ToString(),
-                    attr.IsFilterable,
-                    attr.IsRequired,
-                    attr.SortOrder,
-                    attr.AllowedValues))
-                .ToList();
+            var dtos = new List<AttributeDefinitionDto>();
+
+            // Own definitions (always included, never marked as inherited)
+            foreach (var attr in category.AttributeDefinitions.OrderBy(a => a.SortOrder))
+            {
+                dtos.Add(new AttributeDefinitionDto(
+                    attr.Id, attr.Key, attr.DisplayName,
+                    attr.Target.ToString(), attr.ValueType.ToString(),
+                    attr.IsFilterable, attr.IsRequired, attr.SortOrder,
+                    attr.AllowedValues, attr.IsVariantAxis, IsInherited: false));
+            }
+
+            // Inherited definitions from parent chain
+            if (includeInherited == true)
+            {
+                var ownKeys = new HashSet<string>(
+                    category.AttributeDefinitions.Select(d => d.Key),
+                    StringComparer.OrdinalIgnoreCase);
+
+                var visited = new HashSet<Guid> { category.Id };
+                var parentId = category.ParentCategoryId;
+
+                while (parentId.HasValue && !visited.Contains(parentId.Value))
+                {
+                    var parent = await categoryRepo.GetWithAttributeDefinitionsAsync(
+                        parentId.Value, ct);
+                    if (parent is null) break;
+
+                    visited.Add(parent.Id);
+
+                    foreach (var attr in parent.AttributeDefinitions
+                        .Where(d => !ownKeys.Contains(d.Key))
+                        .OrderBy(a => a.SortOrder))
+                    {
+                        dtos.Add(new AttributeDefinitionDto(
+                            attr.Id, attr.Key, attr.DisplayName,
+                            attr.Target.ToString(), attr.ValueType.ToString(),
+                            attr.IsFilterable, attr.IsRequired, attr.SortOrder,
+                            attr.AllowedValues, attr.IsVariantAxis, IsInherited: true));
+                        ownKeys.Add(attr.Key); // prevent duplicates from grandparent
+                    }
+
+                    parentId = parent.ParentCategoryId;
+                }
+            }
 
             return Results.Ok(dtos);
         })
@@ -182,6 +219,10 @@ public static class CategoryEndpoints
         {
             var category = await categoryRepo.GetWithAttributeDefinitionsAsync(id, ct);
             if (category is null) return Results.NotFound(new { error = "Category not found" });
+
+            // Verify attribute exists before attempting removal
+            var exists = category.AttributeDefinitions.Any(a => a.Id == attrId);
+            if (!exists) return Results.NotFound(new { error = "Attribute definition not found" });
 
             try
             {
@@ -211,4 +252,5 @@ public sealed record AddAttributeDefinitionRequest(
     bool IsFilterable,
     bool IsRequired,
     int SortOrder = 0,
-    List<string>? AllowedValues = null);
+    List<string>? AllowedValues = null,
+    bool IsVariantAxis = false);

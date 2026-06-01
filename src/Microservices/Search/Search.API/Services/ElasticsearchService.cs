@@ -86,6 +86,42 @@ public sealed class ElasticsearchService(
                 productId, response.DebugInformation);
     }
 
+    public async Task AddVariantAxisValueAsync(
+        Guid productId, string axisKey, string axisValue,
+        CancellationToken ct = default)
+    {
+        // Use script parameters to prevent injection. Values are passed as params, not interpolated.
+        var script = @"
+            if (ctx._source.variantAxes == null) {
+                ctx._source.variantAxes = [:];
+            }
+            if (!ctx._source.variantAxes.containsKey(params.axisKey)) {
+                ctx._source.variantAxes[params.axisKey] = [];
+            }
+            if (!ctx._source.variantAxes[params.axisKey].contains(params.axisValue)) {
+                ctx._source.variantAxes[params.axisKey].add(params.axisValue);
+            }";
+
+        var parameters = new Dictionary<string, object>
+        {
+            ["axisKey"] = axisKey,
+            ["axisValue"] = axisValue
+        };
+
+        var response = await client.UpdateAsync<ProductSearchDocument, object>(
+            IndexName,
+            productId.ToString(),
+            u => u
+                .RetryOnConflict(5)
+                .Script(s => s.Source(script).Params(parameters)),
+            ct);
+
+        if (!response.IsValidResponse)
+            logger.LogWarning(
+                "Failed to add variant axis value for product {ProductId} ({Key}={Value}): {Error}",
+                productId, axisKey, axisValue, response.DebugInformation);
+    }
+
     public async Task DeleteProductAsync(Guid productId, CancellationToken ct = default)
     {
         var response = await client.DeleteAsync<ProductSearchDocument>(

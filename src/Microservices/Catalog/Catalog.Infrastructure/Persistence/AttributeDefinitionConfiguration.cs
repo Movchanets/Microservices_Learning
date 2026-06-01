@@ -15,17 +15,18 @@ public sealed class AttributeDefinitionConfiguration : IEntityTypeConfiguration<
         builder.Property(a => a.DisplayName).IsRequired().HasMaxLength(128);
         builder.Property(a => a.Target).IsRequired();
         builder.Property(a => a.ValueType).IsRequired();
+        builder.Property(a => a.IsRequired);
+
+        builder.Property(a => a.IsVariantAxis)
+            .IsRequired()
+            .HasDefaultValue(false);
 
         // List<string> works natively with Npgsql jsonb — no ValueConverter needed.
         // (Dictionary<string, string> in SkuConfiguration does require one.)
         builder.Property(a => a.AllowedValues)
             .HasColumnType("jsonb");
 
-        // Relationship: AttributeDefinition belongs to Category
-        builder.HasOne<Category>()
-            .WithMany(c => c.AttributeDefinitions)
-            .HasForeignKey(a => a.CategoryId)
-            .OnDelete(DeleteBehavior.Cascade);
+        // Relationship configured in CategoryConfiguration (with backing field)
 
         // Indexes
         builder.HasIndex(a => new { a.CategoryId, a.Key }).IsUnique();

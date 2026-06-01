@@ -12,6 +12,7 @@ import { ReviewSummaryComponent } from '../components/review-summary/review-summ
 import { ReviewListComponent } from '../components/review-list/review-list';
 import { WriteReviewComponent } from '../components/write-review/write-review';
 import { ImageGalleryComponent } from '../components/image-gallery/image-gallery';
+import { VariantPickerComponent } from '../components/variant-picker/variant-picker';
 
 @Component({
   selector: 'app-product-detail',
@@ -26,6 +27,7 @@ import { ImageGalleryComponent } from '../components/image-gallery/image-gallery
     ReviewListComponent,
     WriteReviewComponent,
     ImageGalleryComponent,
+    VariantPickerComponent,
   ],
   providers: [ProductDetailStore, ReviewStore],
   templateUrl: './product-detail.html',
@@ -40,13 +42,31 @@ export class ProductDetailComponent implements OnInit {
 
   private currentProductId = '';
 
-  selectedSkuIndex = signal(0);
+  /**
+   * Tracks the selected SKU ID for legacy (non-variant-matrix) products.
+   * Set when user clicks a SKU button in the flat list.
+   */
+  private selectedSkuId = signal<string | null>(null);
 
+  /**
+   * The currently selected SKU.
+   * Uses store's selectedVariantSku for variant-matrix products,
+   * falls back to selectedSkuId / first SKU for legacy products.
+   */
   protected selectedSku = computed<Sku | null>(() => {
+    // Variant picker active — delegate to store
+    if (this.store.hasVariantPicker()) {
+      return this.store.selectedVariantSku();
+    }
+
+    // Legacy: use selectedSkuId or first SKU
     const product = this.store.product();
     if (!product?.skus?.length) return null;
-    const idx = this.selectedSkuIndex();
-    return product.skus[idx] ?? product.skus[0] ?? null;
+    const selectedId = this.selectedSkuId();
+    if (selectedId) {
+      return product.skus.find(s => s.id === selectedId) ?? product.skus[0] ?? null;
+    }
+    return product.skus[0] ?? null;
   });
 
   protected hasMultipleSkus = computed(() => {
@@ -56,7 +76,7 @@ export class ProductDetailComponent implements OnInit {
 
   /**
    * Gallery images for the current view.
-   * Uses product-level gallery. SKU-specific gallery can be added later.
+   * Prefers the selected SKU's image, falls back to product gallery.
    */
   protected galleryImages = computed<GalleryItem[]>(() => {
     const product = this.store.product();
@@ -74,20 +94,27 @@ export class ProductDetailComponent implements OnInit {
     if (id) {
       this.currentProductId = id;
       this.store.loadProduct(id);
+      this.store.loadVariantMatrix(id);
       this.loadReviews(id);
-    } else {
-      // Store has no setError method, but loading will stop
-      // and the template handles the null product case
     }
   }
 
-  onSelectSku(index: number): void {
-    this.selectedSkuIndex.set(index);
-    // Reload stock for the selected SKU
-    const sku = this.store.product()?.skus?.[index];
-    if (sku) {
-      this.store.loadStock(sku.skuCode);
+  /**
+   * Called when the user selects a value in the variant picker.
+   * Also handles legacy SKU selector (axisKey='_sku', value=skuId).
+   */
+  onVariantSelected(event: { axisKey: string; value: string }): void {
+    if (event.axisKey === '_sku') {
+      // Legacy SKU selector — track selected SKU and reload stock
+      this.selectedSkuId.set(event.value);
+      const product = this.store.product();
+      const sku = product?.skus?.find(s => s.id === event.value);
+      if (sku) {
+        this.store.loadStock(sku.skuCode);
+      }
+      return;
     }
+    this.store.selectVariant(event.axisKey, event.value);
   }
 
   private loadReviews(productId: string): void {
@@ -115,5 +142,15 @@ export class ProductDetailComponent implements OnInit {
 
   async onSubmitReview(data: CreateReviewRequest): Promise<void> {
     await this.reviewStore.createReview(this.currentProductId, data);
+  }
+
+  /**
+   * Converts selected variants record to an iterable array for the template.
+   * Skips internal keys like '_sku'.
+   */
+  protected getVariantEntries(selected: Record<string, string>): Array<{ key: string; value: string }> {
+    return Object.entries(selected)
+      .filter(([key]) => !key.startsWith('_'))
+      .map(([key, value]) => ({ key, value }));
   }
 }

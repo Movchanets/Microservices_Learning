@@ -73,7 +73,6 @@ public sealed class User : AggregateRoot
 
         var user = new User
         {
-            Id = userId ?? Guid.NewGuid(),
             Email = Email.Create(email),
             PasswordHash = PasswordHash.Create(passwordHash),
             FirstName = firstName.Trim(),

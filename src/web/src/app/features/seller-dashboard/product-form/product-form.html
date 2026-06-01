@@ -56,7 +56,8 @@
           </div>
           <div>
             <label class="block text-sm font-medium mb-1.5">Category</label>
-            <select #categorySelect [value]="categoryId()" (change)="categoryId.set(categorySelect.value)"
+            <select #categorySelect [value]="categoryId()"
+                    (change)="categoryId.set(categorySelect.value); loadVariantAxes(categorySelect.value)"
                     class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     required>
               <option value="" disabled>Select a category</option>
@@ -193,6 +194,49 @@
                   </button>
                 }
               </div>
+
+              <!-- Variant Attributes — only shown when category has variant axes -->
+              @if (variantAxes().length > 0) {
+                <div>
+                  <label class="block text-sm font-medium mb-2">Variant Attributes</label>
+                  <p class="text-xs text-muted mb-3">Define what makes this variant unique (e.g. color, storage size).</p>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    @for (axis of variantAxes(); track axis.key) {
+                      <div>
+                        <label class="block text-xs text-muted mb-1">
+                          {{ axis.displayName }}
+                          @if (axis.isRequired) {
+                            <span class="text-red-500">*</span>
+                          }
+                        </label>
+                        @if (axis.valueType === 'Select') {
+                          <select
+                            #attrSelect
+                            [value]="skus()[activeSkuTab()].typedAttributes[axis.key] || ''"
+                            (change)="updateSkuAttribute(activeSkuTab(), axis.key, attrSelect.value)"
+                            class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
+                            [attr.data-testid]="'attr-' + axis.key">
+                            <option value="">Select {{ axis.displayName }}...</option>
+                            @for (val of axis.allowedValues; track val) {
+                              <option [value]="val">{{ val }}</option>
+                            }
+                          </select>
+                        } @else {
+                          <input
+                            #attrInput
+                            [value]="skus()[activeSkuTab()].typedAttributes[axis.key] || ''"
+                            (input)="updateSkuAttribute(activeSkuTab(), axis.key, attrInput.value)"
+                            [placeholder]="'Enter ' + axis.displayName"
+                            class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
+                            [attr.data-testid]="'attr-' + axis.key" />
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              } @else if (variantAxesLoading()) {
+                <div class="h-12 bg-muted/10 rounded-lg animate-pulse"></div>
+              }
 
               <!-- Per-SKU images — bound to active SKU directly -->
               <div>

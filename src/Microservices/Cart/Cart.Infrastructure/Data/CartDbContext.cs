@@ -17,7 +17,6 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
         builder.Entity<ShoppingCart>(b =>
         {
             b.HasKey(x => x.Id);
-            b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.BuyerId);
             b.HasIndex(x => x.BuyerId)
              .IsUnique()
@@ -29,12 +28,13 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
              .WithOne()
              .HasForeignKey(i => i.CartId)
              .OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(x => x.Items)
+             .UsePropertyAccessMode(PropertyAccessMode.Field);
         });
 
         builder.Entity<CartItem>(b =>
         {
             b.HasKey(x => x.Id);
-            b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.CartId).IsRequired();
             b.Property(x => x.ProductId).IsRequired();
             b.Property(x => x.Price).HasPrecision(18, 2);

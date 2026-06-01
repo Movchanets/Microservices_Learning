@@ -15,7 +15,15 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(c => c.Description).HasMaxLength(500);
         builder.Property(c => c.Slug).IsRequired().HasMaxLength(128);
 
-        // AttributeDefinitions are configured via AttributeDefinitionConfiguration
+        // Relationship: AttributeDefinition belongs to Category
+        builder.HasMany(c => c.AttributeDefinitions)
+            .WithOne()
+            .HasForeignKey(a => a.CategoryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Ensure EF Core uses the backing field for change tracking
+        builder.Navigation(c => c.AttributeDefinitions)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasIndex(c => c.Slug).IsUnique();
         builder.HasIndex(c => c.ParentCategoryId);

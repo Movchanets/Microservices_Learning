@@ -82,6 +82,42 @@ export interface Category {
 export type ProductStatus = 'Draft' | 'Active' | 'Inactive' | 'Deleted';
 
 /**
+ * Mirrors backend Catalog.Application.DTOs.VariantAxisDto
+ * A single variant axis (e.g., "Color" with values ["Black","White","Blue"]).
+ */
+export interface VariantAxis {
+  key: string;
+  displayName: string;
+  values: string[];
+}
+
+/**
+ * Mirrors backend Catalog.Application.DTOs.VariantOptionDto
+ * A single combination of variant values and its availability.
+ */
+export interface VariantOption {
+  combination: Record<string, string>;
+  skuId: string | null;
+  skuCode: string | null;
+  price: number | null;
+  currency: string | null;
+  imageUrl: string | null;
+  isAvailable: boolean;
+}
+
+/**
+ * Mirrors backend Catalog.Application.DTOs.VariantMatrixDto
+ * Variant matrix for a product — all possible SKU combinations
+ * based on variant-axis attribute definitions.
+ */
+export interface VariantMatrix {
+  productId: string;
+  productName: string;
+  axes: VariantAxis[];
+  options: VariantOption[];
+}
+
+/**
  * Gallery item from Media.API
  */
 export interface GalleryItem {

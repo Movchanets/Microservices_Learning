@@ -50,6 +50,8 @@ public class UpdateGalleryOrderHandlerTests
             MediaItem.Create("img1.jpg", "image/jpeg", "blob1", "https://url1", 100, MediaType.Image, null, null),
             MediaItem.Create("img2.jpg", "image/jpeg", "blob2", "https://url2", 200, MediaType.Image, null, null)
         };
+        mediaItems[0].Id = mediaId1;
+        mediaItems[1].Id = mediaId2;
 
         _galleryRepo.Setup(r => r.GetByTargetAsync(targetId, "Product", It.IsAny<CancellationToken>()))
             .ReturnsAsync(entries);

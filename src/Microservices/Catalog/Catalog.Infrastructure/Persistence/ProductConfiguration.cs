@@ -28,6 +28,9 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .OnDelete(DeleteBehavior.Restrict);
 
         // Skus are configured via SkuConfiguration (HasOne<Product>.WithMany(p => p.Skus))
+        // Ensure EF Core uses the backing field for change tracking
+        builder.Navigation(p => p.Skus)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         // Indexes
         builder.HasIndex(p => p.CategoryId);

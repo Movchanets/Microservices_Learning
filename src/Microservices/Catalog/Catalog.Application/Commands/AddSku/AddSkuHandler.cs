@@ -7,7 +7,6 @@ using Catalog.Domain.Entities;
 using Catalog.Domain.ValueObjects;
 using MassTransit;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Catalog.Application.Commands.AddSku;
 
@@ -31,6 +30,8 @@ public sealed class AddSkuHandler(
         var category = await categoryRepository.GetWithAttributeDefinitionsAsync(
             product.CategoryId, cancellationToken);
 
+        List<string> variantAxisKeys = [];
+
         if (category is not null)
         {
             try
@@ -44,28 +45,55 @@ public sealed class AddSkuHandler(
             {
                 return Result<SkuDto>.Failure(ex.Message, "VALIDATION_ERROR");
             }
+
+            // Validate Select-type attribute values against AllowedValues
+            var selectDefs = category.AttributeDefinitions
+                .Where(a => a.Target == Domain.Enums.AttributeTarget.Sku
+                    && a.ValueType == Domain.Enums.AttributeType.Select
+                    && a.AllowedValues.Count > 0)
+                .ToList();
+
+            foreach (var def in selectDefs)
+            {
+                if (request.TypedAttributes?.TryGetValue(def.Key, out var value) == true
+                    && !string.IsNullOrWhiteSpace(value))
+                {
+                    if (!def.AllowedValues.Contains(value, StringComparer.OrdinalIgnoreCase))
+                    {
+                        return Result<SkuDto>.Failure(
+                            $"Attribute '{def.DisplayName}' value '{value}' is not allowed. " +
+                            $"Allowed values: {string.Join(", ", def.AllowedValues)}",
+                            "VALIDATION_ERROR");
+                    }
+                }
+            }
+
+            // Collect variant-axis keys for uniqueness validation in AddSku
+            variantAxisKeys = category.AttributeDefinitions
+                .Where(a => a.Target == Domain.Enums.AttributeTarget.Sku && a.IsVariantAxis)
+                .Select(a => a.Key)
+                .ToList();
         }
 
-        // 3. Create SKU
+        // 3. Create SKU (with variant uniqueness check)
         var price = Money.Create(request.Price, request.Currency);
         Sku sku;
         try
         {
-            sku = product.AddSku(request.SkuCode, price, request.TypedAttributes ?? [], request.FlexibleAttributes);
+            sku = product.AddSku(
+                request.SkuCode, price,
+                request.TypedAttributes ?? [], request.FlexibleAttributes,
+                variantAxisKeys.Count > 0 ? variantAxisKeys : null);
         }
         catch (InvalidOperationException ex)
         {
-            return Result<SkuDto>.Failure(ex.Message, "DUPLICATE_SKU");
+            return Result<SkuDto>.Failure(ex.Message, "DUPLICATE_VARIANT");
         }
 
-        // 4. Save — the product is already tracked, but EF Core doesn't auto-detect
-        // new items added to a backing-field collection. Use context.Add() to explicitly
-        // mark the Sku (and its owned Price) as Added.
-        // Don't call productRepository.Update() — it marks the entire aggregate as Modified,
-        // causing EF Core to generate UPDATE instead of INSERT for the new Sku.
+        // 4. Save — Guid v7 generates IDs on insert, EF Core detects new Skus
+        // as Added via the Product.Skus backing field.
         product.ClearDomainEvents();
-        var context = (DbContext)unitOfWork;
-        context.Add(sku);
+        productRepository.Update(product);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // 5. Publish integration event directly (bypassing domain event + interceptor)

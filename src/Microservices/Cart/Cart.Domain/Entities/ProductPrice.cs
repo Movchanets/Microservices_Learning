@@ -19,7 +19,6 @@ public sealed class ProductPrice : Entity
     {
         return new ProductPrice
         {
-            Id = Guid.NewGuid(),
             ProductId = productId,
             SkuId = skuId,
             SkuCode = skuCode,

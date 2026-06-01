@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BuildingBlocks.Infrastructure.Models;
 using Catalog.Application.Commands.ActivateProduct;
 using Catalog.Application.Commands.AddSku;
+using Catalog.Application.Commands.BulkAddSku;
 using Catalog.Application.Commands.ChangePrice;
 using Catalog.Application.Commands.CreateProduct;
 using Catalog.Application.Commands.CreateReview;
@@ -189,6 +190,19 @@ public static class ProductEndpoints
         })
         .WithName("GetProductRecommendations")
         .Produces<List<ProductListDto>>();
+
+        // ── Public: Variant Matrix (for variant picker) ─────────
+        group.MapGet("/{id:guid}/variant-matrix", async (
+            Guid id,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetVariantMatrixQuery(id), ct);
+            return result is not null ? Results.Ok(result) : Results.NotFound();
+        })
+        .WithName("GetVariantMatrix")
+        .Produces<VariantMatrixDto>()
+        .ProducesProblem(StatusCodes.Status404NotFound);
 
         // ── Authorized: Activate Product ─────────────────────────
         group.MapPut("/{id:guid}/activate", async (
@@ -392,6 +406,24 @@ public static class ProductEndpoints
         .WithName("AddSku")
         .RequireAuthorization()
         .Produces<SkuDto>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        // ── Authorized: Bulk Add SKUs (Variant Combinations) ───
+        group.MapPost("/{id:guid}/skus/bulk", async (
+            Guid id,
+            BulkAddSkuCommand command,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var cmd = command with { ProductId = id };
+            var result = await sender.Send(cmd, ct);
+            return result.IsSuccess
+                ? Results.Created($"/api/catalog/products/{id}/skus", result.Value)
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("BulkAddSkus")
+        .RequireAuthorization()
+        .Produces<BulkAddSkuResultDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest);
 
         // ── Authorized: Remove SKU from Product ──────────────────

@@ -34,9 +34,9 @@ public sealed class GalleryUpdatedConsumerTests : IDisposable
 
         // Seed a category so Product FK is satisfied
         var category = Category.Create("Test Category");
-        _categoryId = category.Id;
         _context.Categories.Add(category);
         _context.SaveChanges();
+        _categoryId = category.Id;
 
         var logger = Mock.Of<ILogger<GalleryUpdatedConsumer>>();
         _consumer = new GalleryUpdatedConsumer(_context, logger);

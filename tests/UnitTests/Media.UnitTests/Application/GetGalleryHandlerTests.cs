@@ -31,6 +31,9 @@ public class GetGalleryHandlerTests
             MediaItem.Create("primary.jpg", "image/jpeg", "blob1", "https://url1", 100, MediaType.Image, "thumb_blob1", null),
             MediaItem.Create("secondary.jpg", "image/png", "blob2", "https://url2", 200, MediaType.Image, null, null)
         };
+        // Assign unique IDs (Guid v7 generates on insert, not in-memory)
+        mediaItems[0].Id = Guid.NewGuid();
+        mediaItems[1].Id = Guid.NewGuid();
         var mediaId1 = mediaItems[0].Id;
         var mediaId2 = mediaItems[1].Id;
 
@@ -83,6 +86,7 @@ public class GetGalleryHandlerTests
         var targetId = Guid.NewGuid();
 
         var existingMedia = MediaItem.Create("existing.jpg", "image/jpeg", "blob1", "https://url1", 100, MediaType.Image, null, null);
+        existingMedia.Id = Guid.NewGuid();
         var mediaId1 = existingMedia.Id;
         var mediaId2 = Guid.NewGuid(); // Deleted media — not in DB
 

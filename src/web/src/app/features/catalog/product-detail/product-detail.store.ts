@@ -1,7 +1,8 @@
 import { inject } from '@angular/core';
-import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
+import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { computed } from '@angular/core';
 import { CatalogService } from '../catalog.service';
-import { Product, ProductListItem } from '../catalog.models';
+import { Product, ProductListItem, Sku, VariantMatrix } from '../catalog.models';
 import { InventoryService } from '../../../core/services/inventory.service';
 import { RecentlyViewedService } from '../../../core/services/recently-viewed.service';
 import { StoreService } from '../../seller-dashboard/store.service';
@@ -19,6 +20,11 @@ interface ProductDetailState {
 
   recommendations: ProductListItem[];
   recommendationsLoading: boolean;
+
+  // Variant matrix
+  variantMatrix: VariantMatrix | null;
+  variantMatrixLoading: boolean;
+  selectedVariants: Record<string, string>;
 }
 
 const initialState: ProductDetailState = {
@@ -32,11 +38,50 @@ const initialState: ProductDetailState = {
 
   recommendations: [],
   recommendationsLoading: false,
+
+  variantMatrix: null,
+  variantMatrixLoading: false,
+  selectedVariants: {},
 };
 
 export const ProductDetailStore = signalStore(
   // Feature-scoped — provided in the component
   withState(initialState),
+  withComputed((store) => ({
+    /**
+     * Whether the product has variant-axis attributes (shows variant picker vs flat SKU list).
+     */
+    hasVariantPicker: computed(() => {
+      const matrix = store.variantMatrix();
+      return matrix !== null && matrix.axes.length > 0;
+    }),
+
+    /**
+     * The currently selected SKU.
+     * If variant picker is active, resolves from variant selections.
+     * If no variant picker, returns null (component handles legacy fallback).
+     */
+    selectedVariantSku: computed((): Sku | null => {
+      const matrix = store.variantMatrix();
+      const product = store.product();
+      if (!matrix || !product?.skus?.length) return null;
+
+      const selected = store.selectedVariants();
+      const allAxesSelected = matrix.axes.every(
+        axis => selected[axis.key] !== undefined
+      );
+      if (!allAxesSelected) return null;
+
+      const match = matrix.options.find(option =>
+        matrix.axes.every(axis =>
+          option.combination[axis.key]?.toLowerCase() === selected[axis.key]?.toLowerCase()
+        )
+      );
+
+      if (!match?.skuId) return null;
+      return product.skus.find(s => s.id === match.skuId) ?? null;
+    }),
+  })),
   withMethods((
     store,
     catalogService = inject(CatalogService),
@@ -98,6 +143,35 @@ export const ProductDetailStore = signalStore(
         patchState(store, { storeInfo: info });
       } catch {
         patchState(store, { storeInfo: null });
+      }
+    },
+
+    async loadVariantMatrix(productId: string): Promise<void> {
+      patchState(store, { variantMatrixLoading: true });
+      try {
+        const matrix = await catalogService.getVariantMatrix(productId);
+        patchState(store, { variantMatrix: matrix });
+      } catch {
+        patchState(store, { variantMatrix: null });
+      } finally {
+        patchState(store, { variantMatrixLoading: false });
+      }
+    },
+
+    /**
+     * Selects a value for a specific variant axis.
+     * Updates state, then loads stock for the matched SKU if all axes are selected.
+     */
+    selectVariant(axisKey: string, value: string): void {
+      const current = store.selectedVariants();
+      const updated = { ...current, [axisKey]: value };
+      patchState(store, { selectedVariants: updated });
+
+      // After state update, the selectedVariantSku computed re-evaluates.
+      // Load stock for the matched SKU if available.
+      const sku = store.selectedVariantSku();
+      if (sku) {
+        this.loadStock(sku.skuCode);
       }
     },
   })),

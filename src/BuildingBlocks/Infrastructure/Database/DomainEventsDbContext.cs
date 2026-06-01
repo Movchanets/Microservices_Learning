@@ -7,8 +7,6 @@ namespace BuildingBlocks.Infrastructure.Database;
 /// Base DbContext that implements IUnitOfWork with explicit transaction management.
 /// Domain events are dispatched by <see cref="Interceptors.DomainEventDispatcherInterceptor"/>
 /// which runs BEFORE SaveChanges, allowing MassTransit Outbox to write into the same transaction.
-/// The OutboxState.RowVersion concurrency token is disabled in each service's DbContext
-/// to prevent DbUpdateConcurrencyException.
 /// </summary>
 public abstract class DomainEventsDbContext(DbContextOptions options)
     : DbContext(options), IUnitOfWork
@@ -29,5 +27,23 @@ public abstract class DomainEventsDbContext(DbContextOptions options)
             await transaction.CommitAsync(cancellationToken);
             return result;
         });
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // Configure Guid v7 value generation for all Entity.Id properties.
+        // This ensures new entities get time-ordered IDs on insert, and EF Core
+        // correctly detects them as Added (Id is Guid.Empty until insert).
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(Entity).IsAssignableFrom(entityType.ClrType))
+            {
+                modelBuilder.Entity(entityType.ClrType)
+                    .Property(nameof(Entity.Id))
+                    .HasValueGenerator<GuidV7ValueGenerator>();
+            }
+        }
     }
 }

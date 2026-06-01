@@ -73,6 +73,10 @@ public class Worker : BackgroundService
             // ── Step 4: Category Mapping ─────────────────────────
             var categoryMapping = await LoadCategoryMappingAsync();
 
+            // ── Step 4.5: Attribute Definitions ──────────────────
+            await SeedAttributeDefinitionsAsync(
+                categorySeeder, adminToken, products, resultCategories, stoppingToken);
+
             // ── Step 5: Products + SKUs ──────────────────────────
             var productIds = await SeedProductsAsync(
                 productSeeder, products, resultCategories, categoryMapping,
@@ -391,6 +395,133 @@ public class Worker : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Order flow seeder failed (non-fatal).");
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // ATTRIBUTE DEFINITIONS
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Creates attribute definitions on categories based on product VariantAxes.
+    /// For each product with VariantAxes, finds the category and creates
+    /// IsVariantAxis=true Select-type attribute definitions.
+    /// </summary>
+    private async Task SeedAttributeDefinitionsAsync(
+        CategorySeeder categorySeeder,
+        string adminToken,
+        List<ProductModel> products,
+        List<CategoryDto> categories,
+        CancellationToken ct)
+    {
+        // Collect unique (categoryName, axisKey, axisValues) from all products
+        var axesToCreate = new Dictionary<string, Dictionary<string, List<string>>>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var product in products)
+        {
+            _logger.LogDebug("Product '{Name}': VariantAxes={HasAxes}, CategoryName='{Cat}'",
+                product.Name,
+                product.VariantAxes != null ? product.VariantAxes.Count : 0,
+                product.CategoryName);
+
+            if (product.VariantAxes == null || product.VariantAxes.Count == 0)
+                continue;
+
+            if (!axesToCreate.ContainsKey(product.CategoryName))
+                axesToCreate[product.CategoryName] = new Dictionary<string, List<string>>(
+                    StringComparer.OrdinalIgnoreCase);
+
+            foreach (var (key, values) in product.VariantAxes)
+            {
+                if (!axesToCreate[product.CategoryName].ContainsKey(key))
+                    axesToCreate[product.CategoryName][key] = new List<string>();
+
+                foreach (var value in values)
+                {
+                    if (!axesToCreate[product.CategoryName][key]
+                            .Contains(value, StringComparer.OrdinalIgnoreCase))
+                        axesToCreate[product.CategoryName][key].Add(value);
+                }
+            }
+        }
+
+        if (axesToCreate.Count == 0)
+        {
+            _logger.LogInformation("No variant axes found in product data — skipping attribute definitions.");
+            return;
+        }
+
+        _logger.LogInformation("Found {Count} categories with variant axes: {Categories}",
+            axesToCreate.Count, string.Join(", ", axesToCreate.Keys));
+
+        // Create attribute definitions on each category
+        foreach (var (categoryName, axes) in axesToCreate)
+        {
+            _logger.LogInformation(
+                "Looking up category for '{CategoryName}' among {CatCount} existing categories...",
+                categoryName, categories.Count);
+
+            var categoryId = FindBestCategory(categoryName, categories);
+            if (categoryId == null)
+            {
+                // Fallback: try to find by any breadcrumb segment
+                if (categoryName.Contains('>'))
+                {
+                    foreach (var segment in categoryName.Split('>').Select(s => s.Trim()))
+                    {
+                        var segMatch = categories.FirstOrDefault(c =>
+                            c.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
+                        if (segMatch != null)
+                        {
+                            _logger.LogInformation(
+                                "Found category via segment fallback: '{Segment}' → {Id}",
+                                segment, segMatch.Id);
+                            categoryId = segMatch.Id;
+                            break;
+                        }
+                    }
+                }
+
+                if (categoryId == null)
+                {
+                    _logger.LogWarning(
+                        "Could not find category '{CategoryName}' for attribute definitions. " +
+                        "Available categories: {Categories}",
+                        categoryName,
+                        string.Join(", ", categories.Select(c => c.Name).Take(20)));
+                    continue;
+                }
+            }
+
+            _logger.LogInformation("Found category '{CategoryName}' → {CategoryId}", categoryName, categoryId);
+
+            var sortOrder = 1;
+            foreach (var (key, values) in axes)
+            {
+                var displayName = key.Substring(0, 1).ToUpperInvariant() + key.Substring(1);
+                var attr = new AttributeDefinitionModel(
+                    Key: key,
+                    DisplayName: displayName,
+                    Target: 1,         // Sku
+                    ValueType: 2,      // Select
+                    IsFilterable: true,
+                    IsRequired: true,
+                    SortOrder: sortOrder++,
+                    AllowedValues: values,
+                    IsVariantAxis: true);
+
+                _logger.LogInformation(
+                    "Creating attribute definition: Key='{Key}', AllowedValues=[{Values}], IsVariantAxis=true",
+                    key, string.Join(", ", values));
+
+                await categorySeeder.EnsureAttributeDefinitionAsync(
+                    categoryId.Value, attr, adminToken, ct);
+            }
+
+            _logger.LogInformation(
+                "Seeded {Count} variant-axis attribute definitions on category '{CategoryName}'",
+                axes.Count, categoryName);
         }
     }
 
