@@ -14,8 +14,6 @@ public sealed class CatalogDbContext(
     public DbSet<Sku> Skus => Set<Sku>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<AttributeDefinition> AttributeDefinitions => Set<AttributeDefinition>();
-    public DbSet<Review> Reviews => Set<Review>();
-    public DbSet<ReviewVote> ReviewVotes => Set<ReviewVote>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

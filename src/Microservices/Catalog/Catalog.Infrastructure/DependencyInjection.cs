@@ -34,7 +34,6 @@ public static class DependencyInjection
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IProductReadRepository, ProductReadRepository>();
-        services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CatalogDbContext>());
 
         // Ordering API client for inter-service communication

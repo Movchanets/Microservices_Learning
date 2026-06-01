@@ -2,7 +2,7 @@ import { inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { computed } from '@angular/core';
 import { CatalogService } from '../catalog.service';
-import { Product, ProductListItem, Sku, VariantMatrix } from '../catalog.models';
+import { Product, Sku, VariantMatrix } from '../catalog.models';
 import { InventoryService } from '../../../core/services/inventory.service';
 import { RecentlyViewedService } from '../../../core/services/recently-viewed.service';
 import { StoreService } from '../../seller-dashboard/store.service';
@@ -18,9 +18,6 @@ interface ProductDetailState {
   stockQuantity: number | null;
   stockLoading: boolean;
 
-  recommendations: ProductListItem[];
-  recommendationsLoading: boolean;
-
   // Variant matrix
   variantMatrix: VariantMatrix | null;
   variantMatrixLoading: boolean;
@@ -35,9 +32,6 @@ const initialState: ProductDetailState = {
 
   stockQuantity: null,
   stockLoading: false,
-
-  recommendations: [],
-  recommendationsLoading: false,
 
   variantMatrix: null,
   variantMatrixLoading: false,
@@ -102,7 +96,6 @@ export const ProductDetailStore = signalStore(
         if (firstSkuCode) {
           this.loadStock(firstSkuCode);
         }
-        this.loadRecommendations(product.id);
         this.loadStoreInfo(product.storeId);
       } catch (err: unknown) {
         patchState(store, {
@@ -122,18 +115,6 @@ export const ProductDetailStore = signalStore(
         patchState(store, { stockQuantity: null });
       } finally {
         patchState(store, { stockLoading: false });
-      }
-    },
-
-    async loadRecommendations(productId: string): Promise<void> {
-      patchState(store, { recommendationsLoading: true });
-      try {
-        const items = await catalogService.getRecommendations(productId);
-        patchState(store, { recommendations: items });
-      } catch {
-        patchState(store, { recommendations: [] });
-      } finally {
-        patchState(store, { recommendationsLoading: false });
       }
     },
 

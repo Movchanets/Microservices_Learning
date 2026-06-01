@@ -1,16 +1,11 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import { CreateReviewRequest, GalleryItem, Sku } from '../catalog.models';
+import { GalleryItem, Sku } from '../catalog.models';
 import { AuthStore } from '../../../core/auth/auth.store';
-import { ReviewStore } from '../review.store';
 import { ProductDetailStore } from './product-detail.store';
 import { BuyBoxComponent } from '../components/buy-box/buy-box';
-import { FrequentlyBoughtTogetherComponent } from '../components/frequently-bought-together/frequently-bought-together';
 import { StockIndicatorComponent } from '../../../shared/components/stock-indicator/stock-indicator';
-import { ReviewSummaryComponent } from '../components/review-summary/review-summary';
-import { ReviewListComponent } from '../components/review-list/review-list';
-import { WriteReviewComponent } from '../components/write-review/write-review';
 import { ImageGalleryComponent } from '../components/image-gallery/image-gallery';
 import { VariantPickerComponent } from '../components/variant-picker/variant-picker';
 
@@ -21,15 +16,11 @@ import { VariantPickerComponent } from '../components/variant-picker/variant-pic
     RouterLink,
     LucideAngularModule,
     BuyBoxComponent,
-    FrequentlyBoughtTogetherComponent,
     StockIndicatorComponent,
-    ReviewSummaryComponent,
-    ReviewListComponent,
-    WriteReviewComponent,
     ImageGalleryComponent,
     VariantPickerComponent,
   ],
-  providers: [ProductDetailStore, ReviewStore],
+  providers: [ProductDetailStore],
   templateUrl: './product-detail.html',
 })
 export class ProductDetailComponent implements OnInit {
@@ -38,7 +29,6 @@ export class ProductDetailComponent implements OnInit {
 
   protected store = inject(ProductDetailStore);
   protected authStore = inject(AuthStore);
-  protected reviewStore = inject(ReviewStore);
 
   private currentProductId = '';
 
@@ -95,7 +85,6 @@ export class ProductDetailComponent implements OnInit {
       this.currentProductId = id;
       this.store.loadProduct(id);
       this.store.loadVariantMatrix(id);
-      this.loadReviews(id);
     }
   }
 
@@ -117,31 +106,8 @@ export class ProductDetailComponent implements OnInit {
     this.store.selectVariant(event.axisKey, event.value);
   }
 
-  private loadReviews(productId: string): void {
-    this.reviewStore.loadSummary(productId);
-    this.reviewStore.loadReviews(productId);
-  }
-
   onBuyNow(): void {
     this.router.navigate(['/checkout']);
-  }
-
-  onSortChange(event: Event): void {
-    const sort = (event.target as HTMLSelectElement).value;
-    this.reviewStore.setSort(this.currentProductId, sort);
-  }
-
-  onFilterByRating(rating: number): void {
-    const current = this.reviewStore.ratingFilter();
-    this.reviewStore.setRatingFilter(this.currentProductId, current === rating ? null : rating);
-  }
-
-  onVote(event: { reviewId: string; isHelpful: boolean }): void {
-    this.reviewStore.voteReview(this.currentProductId, event.reviewId, event.isHelpful);
-  }
-
-  async onSubmitReview(data: CreateReviewRequest): Promise<void> {
-    await this.reviewStore.createReview(this.currentProductId, data);
   }
 
   /**

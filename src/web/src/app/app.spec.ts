@@ -25,21 +25,6 @@ import {
   Package,
 } from 'lucide-angular';
 
-// Mock window.matchMedia which is used by ThemeService
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  }),
-});
-
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({

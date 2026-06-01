@@ -44,12 +44,6 @@ export class CatalogService {
     return firstValueFrom(this.http.get<Product>(`/bff/catalog/products/${id}`));
   }
 
-  getRecommendations(productId: string): Promise<ProductListItem[]> {
-    return firstValueFrom(
-      this.http.get<ProductListItem[]>(`/api/catalog/products/${productId}/recommendations`),
-    );
-  }
-
   /**
    * Fetches the variant matrix for a product.
    * Returns all possible SKU combinations based on variant-axis attribute definitions.

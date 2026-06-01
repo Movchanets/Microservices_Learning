@@ -22,20 +22,34 @@ public sealed class GetVariantMatrixHandler(
         if (product is null)
             return null;
 
-        // 2. Load category with attribute definitions
-        var category = await categoryRepository.GetWithAttributeDefinitionsAsync(
-            product.CategoryId, cancellationToken);
+        // 2. Walk up category tree to collect variant-axis definitions
+        //    (own definitions first, then inherited from parent chain)
+        var variantDefs = new List<AttributeDefinition>();
+        var visited = new HashSet<Guid>();
+        var currentCategoryId = (Guid?)product.CategoryId;
 
-        if (category is null)
-            return null;
+        while (currentCategoryId.HasValue && !visited.Contains(currentCategoryId.Value))
+        {
+            var category = await categoryRepository.GetWithAttributeDefinitionsAsync(
+                currentCategoryId.Value, cancellationToken);
 
-        // 3. Get variant-axis definitions (IsVariantAxis=true, Target=Sku, ValueType=Select)
-        var variantDefs = category.AttributeDefinitions
-            .Where(a => a.Target == AttributeTarget.Sku
-                && a.IsVariantAxis
-                && a.ValueType == AttributeType.Select)
-            .OrderBy(a => a.SortOrder)
-            .ToList();
+            if (category is null) break;
+            visited.Add(category.Id);
+
+            foreach (var attr in category.AttributeDefinitions
+                .Where(a => a.Target == AttributeTarget.Sku
+                    && a.IsVariantAxis
+                    && a.ValueType == AttributeType.Select)
+                .OrderBy(a => a.SortOrder))
+            {
+                // Skip duplicates (child overrides parent with same key)
+                if (variantDefs.Any(d => d.Key.Equals(attr.Key, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+                variantDefs.Add(attr);
+            }
+
+            currentCategoryId = category.ParentCategoryId;
+        }
 
         if (variantDefs.Count == 0)
             return new VariantMatrixDto(product.Id, product.Name, [], []);

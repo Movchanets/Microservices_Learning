@@ -89,6 +89,5 @@ app.MapOpenApi();
 // ── Endpoints ───────────────────────────────────────────
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
-app.MapSavedSearchEndpoints();
 
 app.Run();

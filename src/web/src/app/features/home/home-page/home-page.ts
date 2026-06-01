@@ -2,27 +2,28 @@ import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/cor
 import { HomeStore } from '../home.store';
 import { CartStore } from '../../cart/cart.store';
 import { RecentlyViewedService } from '../../../core/services/recently-viewed.service';
-import { HeroBannerComponent } from '../components/hero-banner/hero-banner';
 import { CategoryTilesComponent } from '../components/category-tiles/category-tiles';
 import { ProductCarouselComponent } from '../components/product-carousel/product-carousel';
-import { DealOfTheDayComponent } from '../components/deal-of-the-day/deal-of-the-day';
 import { ProductListItem } from '../../catalog/catalog.models';
 
 @Component({
   selector: 'app-home-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    HeroBannerComponent,
     CategoryTilesComponent,
     ProductCarouselComponent,
-    DealOfTheDayComponent,
   ],
   template: `
     <div class="min-h-screen bg-background">
       <div class="container mx-auto px-4 py-8 flex flex-col gap-12">
-        <!-- Hero Banner -->
-        <section>
-          <app-hero-banner />
+        <!-- Hero Section -->
+        <section class="text-center py-16">
+          <h1 class="text-4xl md:text-5xl font-bold text-foreground font-lexend mb-4">
+            Welcome to Marketplace
+          </h1>
+          <p class="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Discover the best products from trusted sellers. Secure, fast, and transparent.
+          </p>
         </section>
 
         <!-- Category Tiles -->
@@ -30,13 +31,6 @@ import { ProductListItem } from '../../catalog/catalog.models';
           <section>
             <h2 class="text-2xl font-bold text-foreground font-lexend mb-6">Shop by Category</h2>
             <app-category-tiles [categories]="homeStore.categories()" />
-          </section>
-        }
-
-        <!-- Deal of the Day -->
-        @if (homeStore.featuredProducts().length > 0) {
-          <section>
-            <app-deal-of-the-day [product]="homeStore.featuredProducts()[0]" />
           </section>
         }
 
