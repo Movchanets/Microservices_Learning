@@ -29,6 +29,9 @@ public sealed class Sku : Entity
     /// </summary>
     public Dictionary<string, string> FlexibleAttributes { get; private set; } = [];
 
+    private readonly List<SkuAttributeValue> _attributeValues = [];
+    public IReadOnlyCollection<SkuAttributeValue> AttributeValues => _attributeValues.AsReadOnly();
+
     public DateTime CreatedAt { get; private init; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -100,6 +103,30 @@ public sealed class Sku : Entity
     {
         Status = SkuStatus.Active;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void AddOrUpdateAttributeValue(Guid attributeDefinitionId, string value)
+    {
+        var existing = _attributeValues.FirstOrDefault(a => a.AttributeDefinitionId == attributeDefinitionId);
+        if (existing is not null)
+        {
+            existing.UpdateValue(value);
+        }
+        else
+        {
+            _attributeValues.Add(SkuAttributeValue.Create(Id, attributeDefinitionId, value));
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RemoveAttributeValue(Guid attributeDefinitionId)
+    {
+        var existing = _attributeValues.FirstOrDefault(a => a.AttributeDefinitionId == attributeDefinitionId);
+        if (existing is not null)
+        {
+            _attributeValues.Remove(existing);
+            UpdatedAt = DateTime.UtcNow;
+        }
     }
 
     public bool IsActive => Status == SkuStatus.Active;

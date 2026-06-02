@@ -78,36 +78,48 @@ public class ProductSeeder
         var dto = await response.Content.ReadFromJsonAsync<ProductDto>(cancellationToken: ct);
         var skuIds2 = new Dictionary<string, Guid>();
 
-        // ── Create primary SKU ───────────────────────────────────
-        var primaryAttrs = product.Attributes?
-            .Where(a => a.Type != "boolean" || a.Value.Equals("Так", StringComparison.OrdinalIgnoreCase))
-            .ToDictionary(a => a.Key, a => a.Normalized ?? a.Value);
-        var primarySkuId = await CreateSkuAsync(
-            dto!.Id, product.Sku, product.Price, product.Currency, primaryAttrs, ct);
-        if (primarySkuId != null)
-            skuIds2[product.Sku] = primarySkuId.Value;
+        // Combine common attributes with variant attributes when creating SKUs,
+        // since Catalog API currently expects all attributes at the SKU level via AddSkuCommand.
+        var commonAttrs = product.CommonAttributes ?? new Dictionary<string, string>();
 
         // ── Create variant SKUs ──────────────────────────────────
-        if (product.Variants != null)
+        if (product.Variants != null && product.Variants.Count > 0)
         {
             foreach (var variant in product.Variants)
             {
-                var variantSkuCode = $"ROZ-{variant.RozetkaCode}";
+                var variantSkuCode = variant.Sku.StartsWith("ROZ-") ? variant.Sku : $"ROZ-{variant.Sku}";
                 if (skuIds2.ContainsKey(variantSkuCode)) continue;
 
+                var variantAttrs = new Dictionary<string, string>(commonAttrs);
+                if (variant.Attributes != null)
+                {
+                    foreach (var kvp in variant.Attributes)
+                    {
+                        variantAttrs[kvp.Key] = kvp.Value;
+                    }
+                }
+
                 var variantSkuId = await CreateSkuAsync(
-                    dto.Id, variantSkuCode, variant.Price, product.Currency,
-                    variant.Attributes, ct);
+                    dto!.Id, variantSkuCode, variant.Price, product.Currency,
+                    variantAttrs, ct);
                 if (variantSkuId != null)
                 {
                     skuIds2[variantSkuCode] = variantSkuId.Value;
-                    _logger.LogInformation("  + Variant SKU {SkuCode} ({Name}) attrs={Attrs}",
-                        variantSkuCode, variant.Name,
-                        variant.Attributes != null
-                            ? string.Join(", ", variant.Attributes.Select(a => $"{a.Key}={a.Value}"))
+                    _logger.LogInformation("  + Variant SKU {SkuCode} attrs={Attrs}",
+                        variantSkuCode, 
+                        variantAttrs.Count > 0 
+                            ? string.Join(", ", variantAttrs.Select(a => $"{a.Key}={a.Value}")) 
                             : "none");
                 }
             }
+        }
+        else
+        {
+            // Create a default primary SKU if no variants exist
+            var primarySkuId = await CreateSkuAsync(
+                dto!.Id, product.Sku, product.Price, product.Currency, commonAttrs, ct);
+            if (primarySkuId != null)
+                skuIds2[product.Sku] = primarySkuId.Value;
         }
 
         // ── Activate product (only if at least one SKU exists) ───

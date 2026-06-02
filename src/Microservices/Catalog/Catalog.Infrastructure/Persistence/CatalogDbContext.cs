@@ -20,6 +20,8 @@ public sealed class CatalogDbContext(
     public DbSet<Sku> Skus => Set<Sku>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<AttributeDefinition> AttributeDefinitions => Set<AttributeDefinition>();
+    public DbSet<ProductAttributeValue> ProductAttributeValues => Set<ProductAttributeValue>();
+    public DbSet<SkuAttributeValue> SkuAttributeValues => Set<SkuAttributeValue>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

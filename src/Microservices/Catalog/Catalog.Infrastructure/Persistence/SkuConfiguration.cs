@@ -50,6 +50,9 @@ public sealed class SkuConfiguration : IEntityTypeConfiguration<Sku>
             .HasForeignKey(s => s.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.Navigation(s => s.AttributeValues)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         // Indexes
         builder.HasIndex(s => s.SkuCode).IsUnique();
         builder.HasIndex(s => s.ProductId);

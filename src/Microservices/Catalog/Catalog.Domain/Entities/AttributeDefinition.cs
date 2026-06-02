@@ -13,6 +13,11 @@ public sealed class AttributeDefinition : Entity
     public Guid CategoryId { get; private set; }
 
     /// <summary>
+    /// The category this attribute definition belongs to.
+    /// </summary>
+    public Category? Category { get; private set; }
+
+    /// <summary>
     /// Machine-readable key (e.g., "color", "size", "material").
     /// Unique per category.
     /// </summary>

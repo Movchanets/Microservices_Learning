@@ -30,6 +30,9 @@ public sealed class Product : AggregateRoot
     private readonly List<Sku> _skus = [];
     public IReadOnlyCollection<Sku> Skus => _skus.AsReadOnly();
 
+    private readonly List<ProductAttributeValue> _attributeValues = [];
+    public IReadOnlyCollection<ProductAttributeValue> AttributeValues => _attributeValues.AsReadOnly();
+
     public DateTime CreatedAt { get; private init; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -264,5 +267,29 @@ public sealed class Product : AggregateRoot
     {
         ImageUrl = imageUrl?.Trim();
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void AddOrUpdateAttributeValue(Guid attributeDefinitionId, string value)
+    {
+        var existing = _attributeValues.FirstOrDefault(a => a.AttributeDefinitionId == attributeDefinitionId);
+        if (existing is not null)
+        {
+            existing.UpdateValue(value);
+        }
+        else
+        {
+            _attributeValues.Add(ProductAttributeValue.Create(Id, attributeDefinitionId, value));
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RemoveAttributeValue(Guid attributeDefinitionId)
+    {
+        var existing = _attributeValues.FirstOrDefault(a => a.AttributeDefinitionId == attributeDefinitionId);
+        if (existing is not null)
+        {
+            _attributeValues.Remove(existing);
+            UpdatedAt = DateTime.UtcNow;
+        }
     }
 }

@@ -100,20 +100,21 @@ public class AttributeStep
 
         foreach (var product in products)
         {
-            if (product.VariantAxes == null || product.VariantAxes.Count == 0)
+            if (product.Variants == null || product.Variants.Count == 0)
                 continue;
 
             if (!axesToCreate.ContainsKey(product.CategoryName))
                 axesToCreate[product.CategoryName] = new Dictionary<string, List<string>>(
                     StringComparer.OrdinalIgnoreCase);
 
-            foreach (var (key, values) in product.VariantAxes)
+            foreach (var variant in product.Variants)
             {
-                if (!axesToCreate[product.CategoryName].ContainsKey(key))
-                    axesToCreate[product.CategoryName][key] = new List<string>();
-
-                foreach (var value in values)
+                if (variant.Attributes == null) continue;
+                foreach (var (key, value) in variant.Attributes)
                 {
+                    if (!axesToCreate[product.CategoryName].ContainsKey(key))
+                        axesToCreate[product.CategoryName][key] = new List<string>();
+
                     if (!axesToCreate[product.CategoryName][key]
                             .Contains(value, StringComparer.OrdinalIgnoreCase))
                         axesToCreate[product.CategoryName][key].Add(value);

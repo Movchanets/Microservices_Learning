@@ -94,46 +94,42 @@ public class MediaSeeder
         string token,
         CancellationToken ct = default)
     {
-        // ── Upload main product gallery ──────────────────────────
-        _logger.LogInformation(
-            "Gallery check for {Name}: Gallery={GalleryCount}, ImageUrl={ImageUrl}",
-            product.Name, product.Gallery?.Count ?? 0, product.ImageUrl ?? "(null)");
-
-        if (product.Gallery?.Count > 0)
-        {
-            _logger.LogInformation(
-                "Uploading {Count} images for product {Name} (targetId={ProductId})",
-                product.Gallery.Count, product.Name, productId);
-            await UploadProductGalleryAsync(productId, product.Gallery, token, "Product", ct);
-        }
-        else if (!string.IsNullOrEmpty(product.ImageUrl))
-        {
-            // Single image fallback — no gallery array, just the main ImageUrl
-            _logger.LogInformation(
-                "Uploading single image for product {Name} (targetId={ProductId})",
-                product.Name, productId);
-            await UploadProductGalleryAsync(productId, [product.ImageUrl], token, "Product", ct);
-        }
-
         // ── Upload variant SKU galleries ─────────────────────────
-        if (product.Variants == null) return;
-
-        foreach (var variant in product.Variants)
+        if (product.Variants != null && product.Variants.Count > 0)
         {
-            var variantSku = $"ROZ-{variant.RozetkaCode}";
-            if (!skuIds.TryGetValue(variantSku, out var skuId))
-                continue;
+            foreach (var variant in product.Variants)
+            {
+                var variantSku = variant.Sku.StartsWith("ROZ-") ? variant.Sku : $"ROZ-{variant.Sku}";
+                if (!skuIds.TryGetValue(variantSku, out var skuId))
+                    continue;
 
-            var variantImages = variant.Gallery ?? [];
-            if (variantImages.Count == 0 && !string.IsNullOrEmpty(variant.ImageUrl))
-                variantImages = [variant.ImageUrl];
-
-            if (variantImages.Count > 0)
+                var variantImages = variant.GalleryUrls ?? [];
+                
+                if (variantImages.Count > 0)
+                {
+                    _logger.LogInformation(
+                        "  Uploading {Count} images for variant SKU {Sku}",
+                        variantImages.Count, variantSku);
+                    // Pass TargetType = "SKU" to hit the Media API upload endpoint.
+                    // Media.API uses TargetId for SkuId when TargetType is "SKU"
+                    await UploadProductGalleryAsync(skuId, variantImages, token, "SKU", ct);
+                }
+            }
+        }
+        else
+        {
+            // Fallback for single product with no explicit variants
+            var images = new List<string>();
+            if (!string.IsNullOrEmpty(product.ImageUrl))
+            {
+                images.Add(product.ImageUrl);
+            }
+            if (images.Count > 0)
             {
                 _logger.LogInformation(
-                    "  Uploading {Count} images for variant {Name}",
-                    variantImages.Count, variant.Name);
-                await UploadProductGalleryAsync(skuId, variantImages, token, "SKU", ct);
+                    "Uploading {Count} images for base product {Name} (targetId={ProductId})",
+                    images.Count, product.Name, productId);
+                await UploadProductGalleryAsync(productId, images, token, "Product", ct);
             }
         }
     }

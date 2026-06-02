@@ -7,6 +7,7 @@ import { RozetkaProductPage } from '../pages/rozetka-product.page';
 import { ImageDownloader } from '../utils/image-downloader';
 import { toSeederProduct, generateSku, slugify, type SeederProduct, type CategoryConfig } from '../utils/rozetka-transformer';
 import { createScraperContext } from '../fixtures/scraper.fixture';
+import { classifyAttributes, type VariantDetail } from '../utils/attribute-classifier';
 
 // ── Category Configs ───────────────────────────────────────────
 
@@ -22,8 +23,7 @@ const CATEGORIES: Record<string, { name: string; url: string } & CategoryConfig>
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '../../../..');
 const DATA_DIR = path.join(PROJECT_ROOT, 'src/Tools/Seeder.App/Data');
 const IMAGES_DIR = path.join(DATA_DIR, 'Images');
-const PRODUCTS_JSON = path.join(DATA_DIR, 'products.json');
-
+const PRODUCTS_JSON = path.join(DATA_DIR, 'products-v2.json');
 
 // ── Logging ────────────────────────────────────────────────────
 
@@ -36,19 +36,12 @@ function delay(min = 2000, max = 4000) {
   return new Promise(r => setTimeout(r, Math.floor(Math.random() * (max - min + 1)) + min));
 }
 
-// ── Variant Detail ─────────────────────────────────────────────
-
-interface VariantDetail {
-  price: number;
-  images: string[];
-}
-
 // ── Scraper Class ──────────────────────────────────────────────
 
 class RozetkaScraper {
   private browser: Browser | null = null;
   private imgDownloader: ImageDownloader;
-  private existing: SeederProduct[] = [];
+  private existing: any[] = [];
   private existingSkus = new Set<string>();
 
   constructor() {
@@ -61,7 +54,7 @@ class RozetkaScraper {
     await fs.mkdir(IMAGES_DIR, { recursive: true });
     try {
       this.existing = JSON.parse(await fs.readFile(PRODUCTS_JSON, 'utf-8'));
-      this.existingSkus = new Set(this.existing.map(p => p.Sku));
+      this.existingSkus = new Set(this.existing.flatMap(p => p.variants?.map((v: any) => v.sku) || []));
       log(`Loaded ${this.existing.length} existing products`);
     } catch {
       this.existing = [];
@@ -80,7 +73,7 @@ class RozetkaScraper {
 
   // ── Phase 1: Collect product URLs from category listing ──────
 
-  private async collectUrls(limit: number, catUrl: string, categoryKey: string): Promise<ProductTile[]> {
+  private async collectUrls(limit: number, catUrl: string, categoryKey: string): Promise<{ tiles: ProductTile[], categoryFilters: string[] }> {
     log('Phase 1: Collecting URLs...');
     const ctx = await this.newCtx();
     const page = await ctx.newPage();
@@ -88,6 +81,10 @@ class RozetkaScraper {
     try {
       await catPage.goto(catUrl, categoryKey);
       await delay(1500, 2500);
+      
+      const categoryFilters = await catPage.extractSidebarFilters();
+      log(`  Extracted ${categoryFilters.length} category filters.`);
+
       const tiles: ProductTile[] = [];
       let pg = 1;
       while (tiles.length < limit && pg <= 5) {
@@ -99,7 +96,7 @@ class RozetkaScraper {
         if (tiles.length >= limit || !(await catPage.nextPage())) break;
         pg++;
       }
-      return tiles.slice(0, limit);
+      return { tiles: tiles.slice(0, limit), categoryFilters };
     } finally {
       await page.close();
       await ctx.close();
@@ -108,31 +105,35 @@ class RozetkaScraper {
 
   // ── Scrape variant for price + images ────────────────────────
 
-  /**
-   * Scrape a single variant page to get its own price and images.
-   * Previously we only scraped images — now we also extract the variant's price.
-   */
+  // ── Scrape variant for price + images + specs ────────────────
   private async scrapeVariantDetails(variantUrl: string, variantSlug: string): Promise<VariantDetail> {
     const ctx = await this.newCtx();
     const page = await ctx.newPage();
     const pom = new RozetkaProductPage(page);
     try {
       await pom.goto(variantUrl);
-      const [price, gallery] = await Promise.all([
+      const [price, gallery, specs, name, sku] = await Promise.all([
         pom.extractPrice(),
         pom.extractGallery(),
+        pom.extractSpecifications(),
+        pom.extractName(),
+        pom.extractSku()
       ]);
       const imgs = gallery.images.length > 0 ? gallery.images : [];
       const local = imgs.length > 0
         ? await this.imgDownloader.downloadMultiple(imgs, variantSlug, 10)
         : [];
       return {
+        pid: sku,
+        skuCode: generateSku(sku),
+        name,
         price: price.value,
         images: local,
+        specifications: specs
       };
     } catch (e) {
       log(`    Variant scrape fail: ${e}`, 'warn');
-      return { price: 0, images: [] };
+      return { pid: '', skuCode: '', name: '', price: 0, images: [], specifications: [] };
     } finally {
       await page.close();
       await ctx.close();
@@ -141,7 +142,7 @@ class RozetkaScraper {
 
   // ── Phase 2: Scrape full product ─────────────────────────────
 
-  private async scrapeProduct(tile: ProductTile, cat: CategoryConfig): Promise<SeederProduct | null> {
+  private async scrapeProduct(tile: ProductTile, cat: { name: string; url: string } & CategoryConfig, categoryFilters: string[]): Promise<any | null> {
     const code = tile.articleId.replace('p', '');
     if (this.existingSkus.has(generateSku(code))) return null;
     log(`  ${tile.title.substring(0, 50)}...`);
@@ -157,39 +158,60 @@ class RozetkaScraper {
 
       // Log rich data we extracted
       log(`  📝 ${details.name.substring(0, 60)}`);
-      if (details.brand) log(`  🏷️ Brand: ${details.brand}`);
-      if (details.subtitle) log(`  📄 Subtitle: ${details.subtitle.substring(0, 60)}...`);
-      if (details.specifications.length) log(`  📊 ${details.specifications.length} specs`);
-      if (details.availability) log(`  📦 Status: ${details.availability}`);
-
-      // Download main product images
+      
       const imgs = details.images.length > 0 ? details.images : (tile.imgSrc ? [tile.imgSrc] : []);
       const slug = slugify(tile.title).substring(0, 60);
       const local = await this.imgDownloader.downloadMultiple(imgs, slug, 10);
-      if (local.length) log(`  📸 ${local.length} imgs: ${local[0]}`);
 
-      // Scrape variant details (price + images)
-      const variantDetails = new Map<string, VariantDetail>();
+      const scrapedVariants: VariantDetail[] = [];
+      
+      // Include the base product itself as one of the variants
+      scrapedVariants.push({
+        pid: finalCode,
+        skuCode: generateSku(finalCode),
+        name: details.name,
+        price: details.price,
+        images: local,
+        specifications: details.specifications
+      });
+
       if (details.variants.length > 0) {
         log(`  🔀 ${details.variants.length} variants found, scraping details...`);
         for (const variant of details.variants) {
           const variantSlug = slugify(variant.name || variant.pid).substring(0, 60);
           const vDetail = await this.scrapeVariantDetails(variant.url, variantSlug);
-          variantDetails.set(variant.pid, vDetail);
-
-          if (vDetail.price > 0) {
-            log(`    💰 ${variant.name}: ${vDetail.price}₴ (${vDetail.images.length} imgs)`);
-          } else {
-            log(`    ⚠️ ${variant.name}: no price (${vDetail.images.length} imgs)`);
+          
+          if (vDetail.pid) {
+             scrapedVariants.push(vDetail);
+             if (vDetail.price > 0) {
+                log(`    💰 ${vDetail.name}: ${vDetail.price}₴ (${vDetail.images.length} imgs)`);
+             }
           }
           await delay(2000, 4000);
         }
       }
 
-      // Build product with variant details
-      const product = toSeederProduct(tile, details, local, cat, variantDetails);
+      // Classify attributes
+      const { commonAttributes, variantAttributes } = classifyAttributes(scrapedVariants);
 
-      return product;
+      // Build expected Output JSON Schema
+      const productOutput = {
+        productName: details.name || tile.title,
+        categoryName: cat.name,
+        categoryFilters,
+        commonAttributes: {
+          Brand: details.brand,
+          ...commonAttributes
+        },
+        variants: scrapedVariants.map(v => ({
+          sku: v.skuCode,
+          price: v.price,
+          attributes: variantAttributes[v.pid] || {},
+          galleryUrls: v.images
+        }))
+      };
+
+      return productOutput;
     } finally {
       await page.close();
       await ctx.close();
@@ -203,17 +225,17 @@ class RozetkaScraper {
     if (!cat) throw new Error(`Unknown category: ${category}`);
     log(`Scraping ${cat.name} (limit: ${limit})`);
 
-    const urls = await this.collectUrls(limit, cat.url, category);
+    const { tiles: urls, categoryFilters } = await this.collectUrls(limit, cat.url, category);
     log(`Phase 2: Scraping ${urls.length} products...`);
 
-    const added: SeederProduct[] = [];
+    const added: any[] = [];
     for (let i = 0; i < urls.length; i++) {
       log(`\n[${i + 1}/${urls.length}] ${urls[i].title.substring(0, 50)}`);
-      const p = await this.scrapeProduct(urls[i], cat);
+      const p = await this.scrapeProduct(urls[i], cat, categoryFilters);
       if (p) {
         added.push(p);
         this.existing.push(p);
-        this.existingSkus.add(p.Sku);
+        p.variants.forEach((v: any) => this.existingSkus.add(v.sku));
       }
       await delay(3000, 6000);
     }
@@ -221,12 +243,6 @@ class RozetkaScraper {
     if (added.length) {
       await fs.writeFile(PRODUCTS_JSON, JSON.stringify(this.existing, null, 2));
       log(`\n✅ ${added.length} new products added (total: ${this.existing.length})`);
-      // Print summary
-      for (const p of added) {
-        const specCount = p.Variants?.length || 0;
-        const brand = p.Brand ? ` [${p.Brand}]` : '';
-        log(`  📦 ${p.Name.substring(0, 60)}${brand} — ${p.Variants?.length || 0} variants`);
-      }
     } else {
       log('No new products found');
     }

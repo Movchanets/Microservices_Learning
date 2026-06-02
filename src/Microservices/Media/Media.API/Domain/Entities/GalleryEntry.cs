@@ -30,6 +30,12 @@ public sealed class GalleryEntry : Entity
     /// </summary>
     public string TargetType { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// The variant (SKU) this media belongs to. If null, the image belongs to the generic product gallery.
+    /// If it has a value, it belongs specifically to that variant's gallery.
+    /// </summary>
+    public Guid? SkuId { get; private set; }
+
     // ── Gallery Ordering ─────────────────────────────────────────
 
     /// <summary>Display order within the gallery (0-based). Lower = first.</summary>
@@ -61,12 +67,14 @@ public sealed class GalleryEntry : Entity
     /// <param name="targetType">Target type ("Product", "SKU") — normalized to UPPERCASE.</param>
     /// <param name="sortOrder">Display order (0-based).</param>
     /// <param name="isPrimary">Whether this is the primary/thumbnail image.</param>
+    /// <param name="skuId">The SKU variant (null for base product image).</param>
     public static GalleryEntry Create(
         Guid mediaItemId,
         Guid targetId,
         string targetType,
         int sortOrder,
-        bool isPrimary)
+        bool isPrimary,
+        Guid? skuId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetType);
 
@@ -77,6 +85,7 @@ public sealed class GalleryEntry : Entity
             TargetType = targetType.Trim().ToUpperInvariant(),
             SortOrder = sortOrder,
             IsPrimary = isPrimary,
+            SkuId = skuId,
             CreatedAt = DateTime.UtcNow
         };
     }

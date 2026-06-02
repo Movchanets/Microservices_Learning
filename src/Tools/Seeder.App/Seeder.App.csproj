@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Aspire\Marketplace.ServiceDefaults\Marketplace.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\Microservices\Catalog\Catalog.Domain\Catalog.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="Data\*.json">

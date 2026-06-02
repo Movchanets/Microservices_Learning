@@ -17,7 +17,7 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
         // Relationship: AttributeDefinition belongs to Category
         builder.HasMany(c => c.AttributeDefinitions)
-            .WithOne()
+            .WithOne(a => a.Category)
             .HasForeignKey(a => a.CategoryId)
             .OnDelete(DeleteBehavior.Cascade);
 

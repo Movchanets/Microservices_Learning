@@ -122,7 +122,8 @@ public sealed class UploadMediaHandler(
             request.TargetId,
             request.TargetType,
             existingEntries.Count,  // sort order = append to end
-            request.IsPrimary);
+            request.IsPrimary,
+            request.TargetType.Equals("SKU", StringComparison.OrdinalIgnoreCase) ? request.TargetId : null);
 
         mediaRepository.Add(mediaItem);
         galleryRepository.Add(galleryEntry);

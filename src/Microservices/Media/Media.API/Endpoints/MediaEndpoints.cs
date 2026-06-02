@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Media.API.Application.Commands.BulkLinkMedia;
 using Media.API.Application.Commands.DeleteMedia;
 using Media.API.Application.Commands.SetPrimaryMedia;
 using Media.API.Application.Commands.UpdateGalleryOrder;
@@ -156,5 +157,25 @@ public static class MediaEndpoints
         .RequireAuthorization()
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest);
+        // ── Bulk Link Media ──────────────────────────────────
+        group.MapPost("/{mediaId:guid}/bulk-link-skus", async (
+            Guid mediaId,
+            [FromBody] BulkLinkSkusRequest req,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var command = new BulkLinkMediaCommand(mediaId, req.SkuIds, req.IsPrimary);
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess
+                ? Results.Ok()
+                : Results.BadRequest(new { result.Error, result.ErrorCode });
+        })
+        .WithName("BulkLinkMediaToSkus")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
+
     }
 }
+
+public record BulkLinkSkusRequest(List<Guid> SkuIds, bool IsPrimary);

@@ -44,7 +44,7 @@ public class InventoryStep
 
             foreach (var variant in product.Variants)
             {
-                var variantSku = $"ROZ-{variant.RozetkaCode}";
+                var variantSku = variant.Sku.StartsWith("ROZ-") ? variant.Sku : $"ROZ-{variant.Sku}";
                 if (productIds.TryGetValue(variantSku, out var variantIds))
                 {
                     await inventorySeeder.EnsureInventoryStockedAsync(

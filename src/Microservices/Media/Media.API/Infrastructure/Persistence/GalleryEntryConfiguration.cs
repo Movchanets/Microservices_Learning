@@ -22,6 +22,8 @@ public sealed class GalleryEntryConfiguration : IEntityTypeConfiguration<Gallery
             .IsRequired()
             .HasMaxLength(100);
 
+        builder.Property(x => x.SkuId);
+
         builder.Property(x => x.SortOrder)
             .IsRequired();
 

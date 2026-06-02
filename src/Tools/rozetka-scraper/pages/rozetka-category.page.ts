@@ -228,6 +228,21 @@ export class RozetkaCategoryPage {
     return true;
   }
 
+  /**
+   * Scrape the category page's sidebar filters.
+   */
+  async extractSidebarFilters(): Promise<string[]> {
+    return this.page.evaluate(() => {
+      const filters: string[] = [];
+      const filterBlocks = document.querySelectorAll('[data-filter-name], .sidebar-block__toggle-title, [class*="sidebar"] [class*="title"]');
+      filterBlocks.forEach(el => {
+        const text = el.textContent?.trim();
+        if (text) filters.push(text);
+      });
+      return Array.from(new Set(filters));
+    });
+  }
+
   private randomDelay(min = 1000, max = 2500): Promise<void> {
     const delay = Math.floor(Math.random() * (max - min + 1)) + min;
     return new Promise(resolve => setTimeout(resolve, delay));
