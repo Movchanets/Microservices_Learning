@@ -99,7 +99,7 @@ public class MediaSeeder
         {
             foreach (var variant in product.Variants)
             {
-                var variantSku = variant.Sku.StartsWith("ROZ-") ? variant.Sku : $"ROZ-{variant.Sku}";
+                var variantSku = ProductSeedData.NormalizeSku(variant.Sku);
                 if (!skuIds.TryGetValue(variantSku, out var skuId))
                     continue;
 

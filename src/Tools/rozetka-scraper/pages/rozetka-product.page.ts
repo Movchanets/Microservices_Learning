@@ -421,26 +421,31 @@ export class RozetkaProductPage {
         options: Array<{ name: string; url: string; pid: string }>;
       }> = [];
 
-      // Find selector sections — they contain a label paragraph + list of links
-      const sections = document.querySelectorAll('[class*="product"] [class*="variations"], [class*="configurator"], [class*="variant"]');
+      // Method 1: Check structured Angular components dynamically (universal for all categories)
+      const configurators = document.querySelectorAll('rz-var-parameter-option, [class*="var-option"]');
       
-      // Fallback: find all <p> that look like axis labels, then get their sibling <ul> (or container with <ul>)
-      const allParas = document.querySelectorAll('p');
-      for (const p of allParas) {
-        const text = p.textContent?.trim() || '';
-        // Match axis labels: "Колір: ...", "Вбудована пам'ять: ...", "Серія: ..."
-        const labelMatch = text.match(/^(Колір|Вбудована пам.?ять|Обсяг пам.?яті|Оперативна пам.?ять|Серія|Модель|Розмір|Color|Storage|RAM|Series|Model|Size):\s*/i);
-        if (!labelMatch) continue;
-        
-        const label = labelMatch[1];
-        let list = p.nextElementSibling;
-        if (!list) continue;
-        
-        // Support nested <ul> inside <div> wrapper
-        if (list.tagName !== 'UL') {
-          list = list.querySelector('ul');
+      configurators.forEach(el => {
+        // Find label
+        const labelEl = el.querySelector('.color-black-60, [class*="color-black"]');
+        let labelVal = '';
+        if (labelEl) {
+          labelVal = labelEl.textContent?.trim().replace(/:\s*$/, '') || '';
+        } else {
+          const p = el.querySelector('p');
+          const match = p?.textContent?.trim().match(/^([^:]+):/);
+          labelVal = match ? match[1].trim() : '';
         }
-        if (!list || list.tagName !== 'UL') continue;
+        if (!labelVal) return;
+
+        // Find list
+        let list = el.querySelector('ul');
+        if (!list) {
+          const sibling = el.nextElementSibling;
+          if (sibling) {
+            list = sibling.tagName === 'UL' ? sibling as HTMLUListElement : sibling.querySelector('ul');
+          }
+        }
+        if (!list) return;
 
         const options: Array<{ name: string; url: string; pid: string }> = [];
         list.querySelectorAll('a[href]').forEach(a => {
@@ -474,17 +479,80 @@ export class RozetkaProductPage {
           options.push({ name: name || pid, url: fullUrl, pid });
         });
 
-        if (options.length === 0) continue;
+        if (options.length === 0) return;
 
         // Classify axis type from label
         let type: 'color' | 'storage' | 'ram' | 'model' | 'other' = 'other';
-        const labelLower = label.toLowerCase();
+        const labelLower = labelVal.toLowerCase();
         if (labelLower.includes('колір') || labelLower.includes('color')) type = 'color';
-        else if (labelLower.includes('пам\'ять') && !labelLower.includes('оперативна')) type = 'storage';
+        else if ((labelLower.includes('пам\'ять') || labelLower.includes('ssd') || labelLower.includes('hdd') || labelLower.includes('накопичувач')) && !labelLower.includes('оперативна')) type = 'storage';
         else if (labelLower.includes('оперативна') || labelLower.includes('ram')) type = 'ram';
         else if (labelLower.includes('серія') || labelLower.includes('модель') || labelLower.includes('series') || labelLower.includes('model')) type = 'model';
 
-        axes.push({ label, type, options });
+        if (!axes.some(a => a.label === labelVal)) {
+          axes.push({ label: labelVal, type, options });
+        }
+      });
+
+      // Method 2: Fallback paragraph search if no axes found (legacy templates)
+      if (axes.length === 0) {
+        const allParas = document.querySelectorAll('p');
+        for (const p of allParas) {
+          const text = p.textContent?.trim() || '';
+          const labelMatch = text.match(/^(Колір|Вбудована пам.?ять|Обсяг пам.?яті|Оперативна пам.?ять|Обсяг SSD|Об'єм SSD|Серія|Модель|Розмір|Color|Storage|RAM|Series|Model|Size):\s*/i);
+          if (!labelMatch) continue;
+          
+          const labelVal = labelMatch[1];
+          let list = p.nextElementSibling;
+          if (!list) continue;
+          
+          if (list.tagName !== 'UL') {
+            list = list.querySelector('ul');
+          }
+          if (!list || list.tagName !== 'UL') continue;
+
+          const options: Array<{ name: string; url: string; pid: string }> = [];
+          list.querySelectorAll('a[href]').forEach(a => {
+            const href = a.getAttribute('href') || '';
+            const pid = href.match(/\/p(\d+)\//)?.[1];
+            if (!pid) return;
+            
+            let name = a.textContent?.trim() || a.querySelector('[class*="value"]')?.textContent?.trim() || '';
+            if (!name) {
+              const title = a.getAttribute('title') || a.querySelector('[rztooltip]')?.getAttribute('rztooltip') || '';
+              name = title.trim();
+            }
+            
+            if (!name) {
+              const hrefLower = href.toLowerCase();
+              const colors = [
+                'cosmic-orange', 'deep-blue', 'desert-titanium', 'natural-titanium', 'space-gray', 'space-grey', 'space-black',
+                'black', 'white', 'blue', 'red', 'green', 'gold', 'silver', 'purple', 'pink', 'orange', 'titanium',
+                'midnight', 'starlight', 'cosmic', 'deep', 'natural', 'slate', 'space', 'graphite', 'rose'
+              ];
+              const foundColor = colors.find(c => hrefLower.includes(c));
+              if (foundColor) {
+                name = foundColor.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+              }
+            }
+            
+            const fullUrl = href.startsWith('http') ? href : 'https://rozetka.com.ua' + href;
+            options.push({ name: name || pid, url: fullUrl, pid });
+          });
+
+          if (options.length === 0) continue;
+
+          let type: 'color' | 'storage' | 'ram' | 'model' | 'other' = 'other';
+          const labelLower = labelVal.toLowerCase();
+          if (labelLower.includes('колір') || labelLower.includes('color')) type = 'color';
+          else if ((labelLower.includes('пам\'ять') || labelLower.includes('ssd') || labelLower.includes('hdd') || labelLower.includes('накопичувач')) && !labelLower.includes('оперативна')) type = 'storage';
+          else if (labelLower.includes('оперативна') || labelLower.includes('ram')) type = 'ram';
+          else if (labelLower.includes('серія') || labelLower.includes('модель') || labelLower.includes('series') || labelLower.includes('model')) type = 'model';
+
+          if (!axes.some(a => a.label === labelVal)) {
+            axes.push({ label: labelVal, type, options });
+          }
+        }
       }
 
       return axes;

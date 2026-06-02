@@ -60,7 +60,7 @@ public class Worker : BackgroundService
 
             // ── Step 3: Categories ───────────────────────────────
             var products = await SeedDataLoader.LoadJsonAsync<List<ProductModel>>(
-                _dataDirectory, "products.json");
+                _dataDirectory, "products-v2.json");
 
             var categoryStep = new CategoryStep(httpClient, _logger, _dataDirectory);
             var categories = await categoryStep.ExecuteAsync(adminToken, products, ct);

@@ -33,13 +33,19 @@ public class ProductSeeder
         ProductModel product, string token, Guid categoryId, Guid storeId, CancellationToken ct)
     {
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var primarySku = ProductSeedData.ResolvePrimarySku(product);
+        if (string.IsNullOrWhiteSpace(primarySku))
+        {
+            _logger.LogWarning("Skipping product {Name} — no SKU found in product or variants.", product.Name);
+            return null;
+        }
 
         // ── Check if product already exists ──────────────────────
-        var getResponse = await _client.GetAsync($"/api/catalog/products/sku/{product.Sku}", ct);
+        var getResponse = await _client.GetAsync($"/api/catalog/products/sku/{primarySku}", ct);
         if (getResponse.IsSuccessStatusCode)
         {
             var existing = await getResponse.Content.ReadFromJsonAsync<ProductDto>(cancellationToken: ct);
-            _logger.LogInformation("Product already exists: {Sku}", product.Sku);
+            _logger.LogInformation("Product already exists: {Sku}", primarySku);
             var fullProduct = await _client.GetAsync($"/api/catalog/products/{existing!.Id}", ct);
             if (fullProduct.IsSuccessStatusCode)
             {
@@ -57,13 +63,10 @@ public class ProductSeeder
         {
             product.Name,
             product.Description,
-            product.Price,
-            product.Currency,
-            product.Sku,
             CategoryId = categoryId,
             StoreId = storeId,
             product.Tags,
-            product.ImageUrl
+            ImageUrl = ProductSeedData.ResolvePrimaryImage(product)
         };
 
         var response = await _client.PostAsJsonAsync("/api/catalog/products", request, ct);
@@ -76,6 +79,12 @@ public class ProductSeeder
         }
 
         var dto = await response.Content.ReadFromJsonAsync<ProductDto>(cancellationToken: ct);
+        if (dto is null)
+        {
+            _logger.LogWarning("Failed to parse created product response for {Name}", product.Name);
+            return null;
+        }
+
         var skuIds2 = new Dictionary<string, Guid>();
 
         // Combine common attributes with variant attributes when creating SKUs,
@@ -87,7 +96,7 @@ public class ProductSeeder
         {
             foreach (var variant in product.Variants)
             {
-                var variantSkuCode = variant.Sku.StartsWith("ROZ-") ? variant.Sku : $"ROZ-{variant.Sku}";
+                var variantSkuCode = ProductSeedData.NormalizeSku(variant.Sku);
                 if (skuIds2.ContainsKey(variantSkuCode)) continue;
 
                 var variantAttrs = new Dictionary<string, string>(commonAttrs);
@@ -100,7 +109,7 @@ public class ProductSeeder
                 }
 
                 var variantSkuId = await CreateSkuAsync(
-                    dto!.Id, variantSkuCode, variant.Price, product.Currency,
+                    dto.Id, variantSkuCode, variant.Price, product.Currency,
                     variantAttrs, ct);
                 if (variantSkuId != null)
                 {
@@ -117,9 +126,9 @@ public class ProductSeeder
         {
             // Create a default primary SKU if no variants exist
             var primarySkuId = await CreateSkuAsync(
-                dto!.Id, product.Sku, product.Price, product.Currency, commonAttrs, ct);
+                dto.Id, primarySku, product.Price, product.Currency, commonAttrs, ct);
             if (primarySkuId != null)
-                skuIds2[product.Sku] = primarySkuId.Value;
+                skuIds2[primarySku] = primarySkuId.Value;
         }
 
         // ── Activate product (only if at least one SKU exists) ───

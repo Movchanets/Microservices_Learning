@@ -58,6 +58,13 @@ const CATEGORIES: Record<
     categoryName: "Electronics",
     tags: ["headphones", "audio", "wireless"],
   },
+  books: {
+    name: "Books",
+    url: "https://rozetka.com.ua/ua/hudojestvennaya-literatura/c4326593/",
+    storeName: "Book Store",
+    categoryName: "Books",
+    tags: ["books", "fiction", "literature"],
+  },
 };
 
 // ── Constants ──────────────────────────────────────────────────
@@ -142,7 +149,7 @@ class RozetkaScraper {
     limit: number,
     catUrl: string,
     categoryKey: string,
-  ): Promise<{ tiles: ProductTile[]; categoryFilters: string[] }> {
+  ): Promise<{ tiles: ProductTile[]; categoryFilters: string[]; dynamicCategoryName: string }> {
     log("Phase 1: Collecting URLs...");
     const ctx = await this.newCtx();
     const page = await ctx.newPage();
@@ -153,6 +160,8 @@ class RozetkaScraper {
 
       const categoryFilters = await catPage.extractSidebarFilters();
       log(`  Extracted ${categoryFilters.length} category filters.`);
+
+      const dynamicCategoryName = await catPage.extractCategoryName();
 
       const tiles: ProductTile[] = [];
       let pg = 1;
@@ -168,7 +177,7 @@ class RozetkaScraper {
         if (tiles.length >= limit || !(await catPage.nextPage())) break;
         pg++;
       }
-      return { tiles: tiles.slice(0, limit), categoryFilters };
+      return { tiles: tiles.slice(0, limit), categoryFilters, dynamicCategoryName };
     } finally {
       await page.close();
       await ctx.close();
@@ -380,22 +389,50 @@ class RozetkaScraper {
 
   // ── Main scrape entry ────────────────────────────────────────
 
-  async scrape(category: string, limit: number) {
-    const cat = CATEGORIES[category];
-    if (!cat) throw new Error(`Unknown category: ${category}`);
-    log(`Scraping ${cat.name} (limit: ${limit})`);
+  async scrape(opts: { category?: string; url?: string; limit: number }) {
+    let targetUrl = opts.url || "";
+    let catConfig = {
+      name: "Custom Category",
+      url: targetUrl,
+      storeName: "Tech Store",
+      categoryName: "Electronics",
+      tags: ["electronics"],
+    };
 
-    const { tiles: urls, categoryFilters } = await this.collectUrls(
-      limit,
-      cat.url,
-      category,
+    if (opts.category) {
+      const predefined = CATEGORIES[opts.category];
+      if (predefined) {
+        catConfig = { ...predefined };
+        if (!targetUrl) targetUrl = predefined.url;
+      } else if (!targetUrl) {
+        throw new Error(`Unknown category: ${opts.category} and no URL provided.`);
+      }
+    } else if (!targetUrl) {
+      // Default to laptops if nothing is specified
+      const predefined = CATEGORIES["laptops"];
+      catConfig = { ...predefined };
+      targetUrl = predefined.url;
+    }
+
+    log(`Scraping category URL: ${targetUrl}`);
+
+    const { tiles: urls, categoryFilters, dynamicCategoryName } = await this.collectUrls(
+      opts.limit,
+      targetUrl,
+      opts.category || "",
     );
-    log(`Phase 2: Scraping ${urls.length} products...`);
+
+    if (dynamicCategoryName && (!opts.category || !CATEGORIES[opts.category])) {
+      catConfig.name = dynamicCategoryName;
+      catConfig.tags = [slugify(dynamicCategoryName).replace(/-/g, "")];
+    }
+
+    log(`Phase 2: Scraping ${urls.length} products under category: ${catConfig.name}...`);
 
     const added: any[] = [];
     for (let i = 0; i < urls.length; i++) {
       log(`\n[${i + 1}/${urls.length}] ${urls[i].title.substring(0, 50)}`);
-      const p = await this.scrapeProduct(urls[i], cat, categoryFilters);
+      const p = await this.scrapeProduct(urls[i], catConfig, categoryFilters);
       if (p) {
         added.push(p);
         this.existing.push(p);
@@ -425,18 +462,23 @@ class RozetkaScraper {
 
 program
   .name("rozetka-scraper")
-  .version("2.1")
+  .version("2.2")
   .option(
     "-c, --category <c>",
-    "Category: laptops|phones|tablets|headphones",
-    "laptops",
+    "Category key (optional): laptops|phones|tablets|headphones",
+    "",
   )
+  .option("-u, --url <url>", "Category URL to scrape directly", "")
   .option("-l, --limit <n>", "Max products to scrape", "10")
   .action(async (opts) => {
     const s = new RozetkaScraper();
     try {
       await s.init();
-      await s.scrape(opts.category, parseInt(opts.limit));
+      await s.scrape({
+        category: opts.category,
+        url: opts.url,
+        limit: parseInt(opts.limit),
+      });
     } catch (e) {
       log(`Fatal: ${e}`, "error");
       process.exit(1);

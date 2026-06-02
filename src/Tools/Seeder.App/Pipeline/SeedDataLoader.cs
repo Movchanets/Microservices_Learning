@@ -8,6 +8,11 @@ namespace Seeder.App.Pipeline;
 /// </summary>
 public static class SeedDataLoader
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     /// <summary>
     /// Loads and deserializes a JSON file from the Data directory.
     /// </summary>
@@ -17,7 +22,7 @@ public static class SeedDataLoader
         if (!File.Exists(path))
             throw new FileNotFoundException($"Seed data file not found: {path}");
         using var stream = File.OpenRead(path);
-        return await JsonSerializer.DeserializeAsync<T>(stream)
+        return await JsonSerializer.DeserializeAsync<T>(stream, JsonOptions)
             ?? throw new InvalidOperationException($"Failed to deserialize {fileName}");
     }
 
@@ -34,7 +39,7 @@ public static class SeedDataLoader
             if (File.Exists(mappingPath))
             {
                 var mappingJson = await File.ReadAllTextAsync(mappingPath);
-                var mapping = JsonSerializer.Deserialize<Dictionary<string, string>>(mappingJson)
+                var mapping = JsonSerializer.Deserialize<Dictionary<string, string>>(mappingJson, JsonOptions)
                     ?? new();
                 logger.LogInformation("Loaded {Count} category mappings", mapping.Count);
                 return mapping;

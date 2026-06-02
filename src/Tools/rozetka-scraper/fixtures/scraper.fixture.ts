@@ -52,8 +52,11 @@ export async function createScraperContext(
  * Launch browser and create a scraper context
  */
 export async function launchScraper(config: Partial<ScraperConfig> = {}) {
+  const isHeadless = process.env.SCRAPE_HEADLESS !== 'false';
+  console.log(`[scraper.fixture] Launching browser with headless: ${isHeadless}`);
+  
   const browser = await chromium.launch({
-    headless: true,
+    headless: isHeadless,
     args: ['--disable-blink-features=AutomationControlled'],
   });
 

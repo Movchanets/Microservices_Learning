@@ -204,6 +204,9 @@ namespace Media.API.Migrations
                     b.Property<Guid>("MediaItemId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SkuId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 

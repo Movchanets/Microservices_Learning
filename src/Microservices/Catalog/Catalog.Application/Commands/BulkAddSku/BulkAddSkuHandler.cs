@@ -154,7 +154,9 @@ public sealed class BulkAddSkuHandler(
 
             try
             {
-                var sku = product.AddSku(skuCode, price, typedAttributes, variantAxisKeys: variantAxisKeys);
+                // Create a unique Money instance for each SKU to avoid EF Core change tracking issues
+                var skuPrice = Money.Create(price.Amount, price.Currency);
+                var sku = product.AddSku(skuCode, skuPrice, typedAttributes, variantAxisKeys: variantAxisKeys);
                 product.ClearDomainEvents();
                 skusToPublish.Add((sku, product));
             }
@@ -274,14 +276,10 @@ public sealed class BulkAddSkuHandler(
 
     private static string AbbreviateValue(string value)
     {
-        var trimmed = value.Trim();
+        var trimmed = value.Trim().ToUpperInvariant();
 
-        // If it's already short (≤5 chars) or contains numbers, use as-is
-        if (trimmed.Length <= 5 || trimmed.Any(char.IsDigit))
-            return trimmed.ToUpperInvariant();
-
-        // Try common abbreviations
-        return trimmed.ToUpperInvariant() switch
+        // Try common abbreviations first
+        var abbr = trimmed switch
         {
             "BLACK" => "BLK",
             "WHITE" => "WHT",
@@ -302,11 +300,19 @@ public sealed class BulkAddSkuHandler(
             "SMALL" => "S",
             "MEDIUM" => "M",
             "LARGE" => "L",
-            // Default: first 3 chars
-            _ => trimmed.Length >= 3
-                ? trimmed[..3].ToUpperInvariant()
-                : trimmed.ToUpperInvariant()
+            _ => null
         };
+
+        if (abbr != null) return abbr;
+
+        // If no common abbreviation, and it's already short (≤5 chars) or contains numbers, use as-is
+        if (trimmed.Length <= 5 || trimmed.Any(char.IsDigit))
+            return trimmed;
+
+        // Default: first 3 chars
+        return trimmed.Length >= 3
+            ? trimmed[..3]
+            : trimmed;
     }
 
     private static string GeneratePrefix(string productName)

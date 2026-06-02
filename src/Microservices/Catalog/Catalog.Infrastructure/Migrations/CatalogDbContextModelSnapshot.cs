@@ -166,6 +166,33 @@ namespace Catalog.Infrastructure.Migrations
                     b.ToTable("Categories", (string)null);
                 });
 
+            modelBuilder.Entity("Catalog.Domain.Entities.ProductAttributeValue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AttributeDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttributeDefinitionId");
+
+                    b.HasIndex("ProductId", "AttributeDefinitionId")
+                        .IsUnique();
+
+                    b.ToTable("ProductAttributeValues", (string)null);
+                });
+
             modelBuilder.Entity("Catalog.Domain.Entities.Sku", b =>
                 {
                     b.Property<Guid>("Id")
@@ -209,6 +236,33 @@ namespace Catalog.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Skus", (string)null);
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Entities.SkuAttributeValue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AttributeDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SkuId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttributeDefinitionId");
+
+                    b.HasIndex("SkuId", "AttributeDefinitionId")
+                        .IsUnique();
+
+                    b.ToTable("SkuAttributeValues", (string)null);
                 });
 
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
@@ -391,11 +445,30 @@ namespace Catalog.Infrastructure.Migrations
 
             modelBuilder.Entity("Catalog.Domain.Entities.AttributeDefinition", b =>
                 {
-                    b.HasOne("Catalog.Domain.Entities.Category", null)
+                    b.HasOne("Catalog.Domain.Entities.Category", "Category")
                         .WithMany("AttributeDefinitions")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Entities.ProductAttributeValue", b =>
+                {
+                    b.HasOne("Catalog.Domain.Entities.AttributeDefinition", "AttributeDefinition")
+                        .WithMany()
+                        .HasForeignKey("AttributeDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Catalog.Domain.Aggregates.Product", null)
+                        .WithMany("AttributeValues")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AttributeDefinition");
                 });
 
             modelBuilder.Entity("Catalog.Domain.Entities.Sku", b =>
@@ -434,6 +507,23 @@ namespace Catalog.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Catalog.Domain.Entities.SkuAttributeValue", b =>
+                {
+                    b.HasOne("Catalog.Domain.Entities.AttributeDefinition", "AttributeDefinition")
+                        .WithMany()
+                        .HasForeignKey("AttributeDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Catalog.Domain.Entities.Sku", null)
+                        .WithMany("AttributeValues")
+                        .HasForeignKey("SkuId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AttributeDefinition");
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
                 {
                     b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
@@ -448,12 +538,19 @@ namespace Catalog.Infrastructure.Migrations
 
             modelBuilder.Entity("Catalog.Domain.Aggregates.Product", b =>
                 {
+                    b.Navigation("AttributeValues");
+
                     b.Navigation("Skus");
                 });
 
             modelBuilder.Entity("Catalog.Domain.Entities.Category", b =>
                 {
                     b.Navigation("AttributeDefinitions");
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Entities.Sku", b =>
+                {
+                    b.Navigation("AttributeValues");
                 });
 #pragma warning restore 612, 618
         }

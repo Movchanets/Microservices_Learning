@@ -33,10 +33,12 @@ public class InventoryStep
             if (sellerCtx == null) continue;
 
             // Stock primary SKU
-            if (productIds.TryGetValue(product.Sku, out var ids))
+            var primarySku = ProductSeedData.ResolvePrimarySku(product);
+            if (productIds.TryGetValue(primarySku, out var ids))
             {
                 await inventorySeeder.EnsureInventoryStockedAsync(
-                    product, sellerCtx.Token, ids.StoreId, ids.ProductId, ct);
+                    product with { Sku = primarySku },
+                    sellerCtx.Token, ids.StoreId, ids.ProductId, ct);
             }
 
             // Stock variant SKUs
@@ -44,7 +46,7 @@ public class InventoryStep
 
             foreach (var variant in product.Variants)
             {
-                var variantSku = variant.Sku.StartsWith("ROZ-") ? variant.Sku : $"ROZ-{variant.Sku}";
+                var variantSku = ProductSeedData.NormalizeSku(variant.Sku);
                 if (productIds.TryGetValue(variantSku, out var variantIds))
                 {
                     await inventorySeeder.EnsureInventoryStockedAsync(

@@ -49,7 +49,7 @@ public class AttributeStep
         CancellationToken ct)
     {
         var categoriesToSeed = await SeedDataLoader.LoadJsonAsync<List<CategoryModel>>(
-            _dataDirectory, "categories.json");
+            _dataDirectory, "rozetka-categories-flat.json");
         var totalCount = 0;
 
         foreach (var categoryModel in categoriesToSeed)

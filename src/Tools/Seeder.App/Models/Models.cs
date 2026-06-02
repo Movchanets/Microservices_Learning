@@ -17,7 +17,7 @@ public record StoreModel(string SellerEmail, string SellerPassword, string Name,
 /// </summary>
 public record CategoryModel(
     string Name,
-    string Description,
+    string Description = "",
     Guid? ParentCategoryId = null,
     [property: JsonPropertyName("ParentCategoryName")]
     string? ParentCategoryName = null,
@@ -101,3 +101,30 @@ public record ProductWithSkusDto { public Guid Id { get; set; } public List<SkuR
 
 /// <summary>Inventory item response from Inventory API.</summary>
 public record InventoryItemDto(string Sku, int AvailableQuantity);
+
+public static class ProductSeedData
+{
+    public static string ResolvePrimarySku(ProductModel product)
+    {
+        if (!string.IsNullOrWhiteSpace(product.Sku))
+            return NormalizeSku(product.Sku);
+
+        var firstVariantSku = product.Variants?
+            .Select(v => v.Sku)
+            .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
+
+        return firstVariantSku is null ? "" : NormalizeSku(firstVariantSku);
+    }
+
+    public static string NormalizeSku(string sku)
+        => sku.StartsWith("ROZ-", StringComparison.OrdinalIgnoreCase)
+            ? sku.ToUpperInvariant()
+            : $"ROZ-{sku}".ToUpperInvariant();
+
+    public static string? ResolvePrimaryImage(ProductModel product)
+        => !string.IsNullOrWhiteSpace(product.ImageUrl)
+            ? product.ImageUrl
+            : product.Variants?
+                .SelectMany(v => v.GalleryUrls ?? [])
+                .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+}

@@ -27,7 +27,7 @@ public class CategoryStep
     {
         var categorySeeder = new CategorySeeder(_client, _logger);
         var categoriesToSeed = await SeedDataLoader.LoadJsonAsync<List<CategoryModel>>(
-            _dataDirectory, "categories.json");
+            _dataDirectory, "rozetka-categories-flat.json");
         var existingCategories = await categorySeeder.GetExistingCategoriesAsync(ct);
         var resultCategories = new List<CategoryDto>(existingCategories);
 

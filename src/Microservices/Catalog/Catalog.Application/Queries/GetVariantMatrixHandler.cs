@@ -59,13 +59,18 @@ public sealed class GetVariantMatrixHandler(
         if (variantDefs.Count == 0)
             return new VariantMatrixDto(product.Id, product.Name, [], []);
 
-        // 4. Build axes — only values that appear in actual SKUs
-        //    (prevents showing 100+ colors when the product only uses 3)
+        // 4. Build axes
+        //    If AllowedValues are defined in the attribute, use them.
+        //    Otherwise, fall back to distinct values from existing SKUs.
         var axes = variantDefs
-            .Select(def => new VariantAxisDto(
-                def.Key,
-                def.DisplayName,
-                GetDistinctValuesFromSkus(product.Skus, def.Key)))
+            .Select(def =>
+            {
+                var values = def.AllowedValues.Count > 0
+                    ? def.AllowedValues
+                    : GetDistinctValuesFromSkus(product.Skus, def.Key);
+
+                return new VariantAxisDto(def.Key, def.DisplayName, values);
+            })
             .Where(axis => axis.Values.Count > 0)
             .ToList();
 

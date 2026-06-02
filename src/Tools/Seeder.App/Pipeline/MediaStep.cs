@@ -46,7 +46,8 @@ public class MediaStep
 
         foreach (var product in products)
         {
-            if (!productIds.TryGetValue(product.Sku, out var ids))
+            var primarySku = ProductSeedData.ResolvePrimarySku(product);
+            if (!productIds.TryGetValue(primarySku, out var ids))
                 continue;
 
             try

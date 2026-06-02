@@ -32,10 +32,10 @@ var messaging = builder.AddRabbitMQ("messaging")
 // ──────────────────────────────────────────────
 // Elasticsearch — used by Search.API
 // ──────────────────────────────────────────────
-// Elastic.Clients.Elasticsearch 9.4.0 requires ES server 9.x
+// Elastic.Clients.Elasticsearch 8.11.x+ requires ES server 8.x
 var elasticsearch = builder.AddElasticsearch("elasticsearch")
     .WithImage("elasticsearch")
-    .WithImageTag("9.0.1")
+    .WithImageTag("8.17.0")
     .WithEnvironment("ES_JAVA_OPTS", "-Xms512m -Xmx512m");
 
 // ──────────────────────────────────────────────

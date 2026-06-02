@@ -181,6 +181,16 @@ export class RozetkaCategoryPage {
     });
   }
 
+  /**
+   * Extract the category name from page heading
+   */
+  async extractCategoryName(): Promise<string> {
+    return this.page.evaluate(() => {
+      const h1 = document.querySelector('h1, .catalog-heading, [class*="heading"]');
+      return h1?.textContent?.trim() || 'Custom Category';
+    });
+  }
+
   private randomDelay(min = 1000, max = 2500): Promise<void> {
     const delay = Math.floor(Math.random() * (max - min + 1)) + min;
     return new Promise(resolve => setTimeout(resolve, delay));

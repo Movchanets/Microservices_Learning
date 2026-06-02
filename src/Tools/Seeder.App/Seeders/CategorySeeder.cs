@@ -46,7 +46,9 @@ public class CategorySeeder
         var request = new
         {
             category.Name,
-            category.Description,
+            Description = string.IsNullOrWhiteSpace(category.Description)
+                ? $"Rozetka: {category.Name}"
+                : category.Description,
             ParentCategoryId = category.ParentCategoryId
         };
 
