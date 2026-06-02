@@ -10,10 +10,11 @@ export { RozetkaCategoriesPage, type CategoryNode } from './pages/rozetka-catego
 // Utilities
 export { ImageDownloader } from './utils/image-downloader';
 export {
-  toSeederProduct, generateSku, slugify, parsePrice,
+  generateSku, slugify, parsePrice,
   normalizeColor, inferAttributeType, buildTypedAttributes, buildVariantAxes,
-  extractVariantAttributes,
-  type SeederProduct, type CategoryConfig, type TypedAttribute, type AttributeType,
+  extractVariantAttributes, mapFilterNameToKey, slugifyTransliterated,
+  normalizeNumber, normalizeList,
+  type CategoryConfig, type TypedAttribute, type AttributeType,
 } from './utils/rozetka-transformer';
 
 // Fixtures

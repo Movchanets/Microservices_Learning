@@ -11,8 +11,7 @@
  * - Variant selectors provide "selectable" attributes (storage, color, RAM)
  */
 
-import type { ProductTile } from '../pages/rozetka-category.page';
-import type { ProductDetails, Breadcrumb, ProductVariant, ProductSpecification } from '../pages/rozetka-product.page';
+import type { ProductSpecification } from '../pages/rozetka-product.page';
 
 // ============================================================================
 // Types
@@ -37,37 +36,7 @@ export interface TypedAttribute {
   normalized?: string; // Cleaned value (e.g., "256 GB", "Cosmic Orange")
 }
 
-export interface SeederProduct {
-  StoreName: string;
-  CategoryName: string;
-  Name: string;
-  Description: string;
-  Price: number;
-  Currency: string;
-  Sku: string;
-  RozetkaCode: string;
-  Tags: string[];
-  ImageUrl: string;
-  Gallery: string[];
-  Breadcrumbs: Breadcrumb[];
-  CategoryPath: string;
-  InitialStock: number;
-  Brand?: string;
-  Subtitle?: string;
-  Availability?: string;
-  Warranty?: string;
-  Attributes?: TypedAttribute[];
-  VariantAxes?: Record<string, string[]>;
-  Variants: Array<{
-    RozetkaCode: string;
-    Name: string;
-    Type: string;
-    Price: number;
-    ImageUrl: string;
-    Gallery: string[];
-    Attributes?: Record<string, string>;
-  }>;
-}
+
 
 export interface CategoryConfig {
   storeName: string;
@@ -97,6 +66,37 @@ export function parsePrice(priceStr: string): number {
   if (!prices || prices.length === 0) return 0;
   const lastPrice = prices[prices.length - 1];
   return parseInt(lastPrice.replace(/\s/g, ''), 10) || 0;
+}
+
+export function mapFilterNameToKey(fName: string): string {
+  const lower = fName.toLowerCase();
+  if (lower.includes('виробник') || lower.includes('бренд') || lower.includes('producer') || lower.includes('brand')) return 'brand';
+  if (lower.includes('колір') || lower.includes('color')) return 'color';
+  if (lower.includes('вбудована пам') || lower.includes('обсяг ssd') || lower.includes('об\'єм ssd') || lower.includes('накопичувач') || lower.includes('storage')) return 'storage';
+  if (lower.includes('оперативна пам') || lower.includes('ram') || lower.includes('озп')) return 'ram';
+  
+  return slugifyTransliterated(fName);
+}
+
+export function slugifyTransliterated(text: string): string {
+  const ukr = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g', 'д': 'd', 'е': 'e', 'є': 'ye',
+    'ж': 'zh', 'з': 'z', 'и': 'y', 'і': 'i', 'ї': 'yi', 'й': 'y', 'к': 'k', 'л': 'l',
+    'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ь': '',
+    'ю': 'yu', 'я': 'ya', '\'': '', '’': ''
+  };
+  
+  let res = '';
+  for (const char of text.toLowerCase()) {
+    res += ukr[char as keyof typeof ukr] !== undefined ? ukr[char as keyof typeof ukr] : char;
+  }
+  
+  return res
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 50);
 }
 
 // ============================================================================
@@ -280,7 +280,7 @@ export function buildTypedAttributes(specs: ProductSpecification[]): TypedAttrib
 /**
  * Normalize a number value: "120 Гц" → "120 Hz", "233 г" → "233 g"
  */
-function normalizeNumber(value: string): string {
+export function normalizeNumber(value: string): string {
   return value
     .replace(/Гц/gi, 'Hz')
     .replace(/г$/i, 'g')
@@ -298,7 +298,7 @@ function normalizeNumber(value: string): string {
 /**
  * Normalize a list value: "Bluetooth 6.0NFCWi-Fi" → "Bluetooth 6.0, NFC, Wi-Fi"
  */
-function normalizeList(value: string): string {
+export function normalizeList(value: string): string {
   // Split on camelCase boundaries and known separators
   return value
     .replace(/([a-zа-яіїєґ])([A-ZА-ЯІЇЄҐ])/g, '$1, $2')
@@ -369,112 +369,4 @@ export function buildVariantAxes(
 // Main Transform
 // ============================================================================
 
-/**
- * Convert scraped Rozetka data to Seeder format.
- */
-export function toSeederProduct(
-  tile: ProductTile,
-  details: ProductDetails,
-  localImages: string[],
-  config: CategoryConfig,
-  variantDetails?: Map<string, { price: number; images: string[] }>
-): SeederProduct {
-  // ── Category from breadcrumbs ──
-  const categoryPath = details.categoryPath || config.categoryName;
 
-  // ── Build typed attributes from ALL specs ──
-  const typedAttrs = buildTypedAttributes(details.specifications);
-
-  // ── Build variants with structured attributes ──
-  const variants = (details.variants || []).map(v => {
-    const vDetails = variantDetails?.get(v.pid);
-    const vPrice = vDetails?.price || details.price;
-    const vImages = vDetails?.images || [];
-
-    // Extract attributes from variant name
-    const nameAttrs = extractVariantAttributes(v.name);
-
-    // Use the variant type from the selector to set the correct attribute key
-    if (v.type === 'storage' && nameAttrs['storage']) {
-      // Already correct
-    } else if (v.type === 'ram' && nameAttrs['storage']) {
-      // Selector says RAM, but name parsing detected storage — reclassify
-      nameAttrs['ram'] = nameAttrs['storage'];
-      delete nameAttrs['storage'];
-    } else if (v.type === 'color' && !nameAttrs['color']) {
-      // Selector says color, use variant name as color
-      nameAttrs['color'] = normalizeColor(v.name);
-    }
-
-    const attrs = Object.keys(nameAttrs).length > 0 ? nameAttrs : undefined;
-
-    return {
-      RozetkaCode: v.pid,
-      Name: v.name,
-      Type: v.type,
-      Price: vPrice,
-      ImageUrl: vImages[0] || '',
-      Gallery: vImages,
-      Attributes: attrs,
-    };
-  });
-
-  // ── Build VariantAxes from variant attributes ──
-  const variantAxes = buildVariantAxes(variants);
-
-  // ── Build description ──
-  let description = details.description;
-  if (!description || description.length < 30) {
-    const parts: string[] = [];
-    if (details.subtitle) parts.push(details.subtitle);
-    if (details.brand) parts.push(`Brand: ${details.brand}`);
-    // Add first few non-long specs as description
-    const keySpecs = typedAttrs
-      .filter(a => a.type === 'text' || a.type === 'number')
-      .filter(a => a.value.length < 100)
-      .slice(0, 5);
-    if (keySpecs.length > 0) {
-      parts.push(keySpecs.map(a => `${a.key}: ${a.value}`).join(' / '));
-    }
-    description = parts.join('. ') || `${tile.title} — купити на Rozetka`;
-  }
-
-  // ── Build tags ──
-  const tags = [
-    ...config.tags,
-    details.brand?.toLowerCase() || tile.brand.toLowerCase(),
-    ...details.breadcrumbs
-      .filter(b => b.name && b.name.length > 2 && b.name.length < 30)
-      .filter(b => !b.name.toLowerCase().includes('rozetka'))
-      .map(b => b.name.toLowerCase()),
-  ].filter(Boolean);
-
-  // ── Build product ──
-  const product: SeederProduct = {
-    StoreName: config.storeName,
-    CategoryName: categoryPath,
-    Name: details.name || tile.title,
-    Description: description,
-    Price: details.price || parsePrice(tile.priceText),
-    Currency: 'UAH',
-    Sku: generateSku(details.sku),
-    RozetkaCode: details.sku,
-    Tags: [...new Set(tags)],
-    ImageUrl: localImages[0] || tile.imgSrc || '',
-    Gallery: localImages,
-    Breadcrumbs: details.breadcrumbs,
-    CategoryPath: details.categoryPath,
-    InitialStock: 10,
-    Variants: variants,
-  };
-
-  // ── Optional fields ──
-  if (Object.keys(variantAxes).length > 0) product.VariantAxes = variantAxes;
-  if (details.brand) product.Brand = details.brand;
-  if (details.subtitle) product.Subtitle = details.subtitle;
-  if (details.availability) product.Availability = details.availability;
-  if (details.warranty) product.Warranty = details.warranty;
-  if (typedAttrs.length > 0) product.Attributes = typedAttrs;
-
-  return product;
-}

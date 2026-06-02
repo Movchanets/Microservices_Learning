@@ -16,49 +16,6 @@ export interface ProductTile {
   brand: string;
 }
 
-/**
- * Known brand patterns for product validation.
- * Used to filter out sponsored ads that don't match the expected product type.
- */
-const BRAND_PATTERNS: Record<string, RegExp[]> = {
-  laptops: [
-    /^(Ноутбук|Notebook|Laptop)/i,
-    /\b(Acer|ASUS|Lenovo|Apple|HP|Dell|MSI|MacBook|ThinkPad|IdeaPad|TUF|ROG|Swift|Aspire|Nitro)\b/i,
-  ],
-  phones: [
-    /^(Мобільний телефон|Смартфон|Телефон)/i,
-    /\b(iPhone|Samsung Galaxy|Xiaomi|Redmi|POCO|Pixel|OnePlus|Huawei|Honor|Realme|Motorola|Nokia)\b/i,
-  ],
-  tablets: [
-    /^(Планшет|Tablet)/i,
-    /\b(iPad|Galaxy Tab|Redmi Pad|Lenovo Tab|Idea Tab|MediaPad|MatePad)\b/i,
-  ],
-  headphones: [
-    /^(Навушники|Headphones|Earbuds)/i,
-    /\b(AirPods|Galaxy Buds|Sony|Bose|Sennheiser|JBL|Beats|Hator|Logitech|HyperX|SteelSeries)\b/i,
-  ],
-};
-
-/**
- * Words that indicate sponsored/ad content (not real products in the category).
- */
-const AD_INDICATORS = [
-  'сумка', 'чохол', 'кабель', 'заряд', 'підставка', 'тримач',
-  'фотоплівка', 'картридж', 'фотопапір', 'рукав', 'серветка',
-  'bag', 'case', 'cable', 'charger', 'stand', 'holder', 'film',
-];
-
-/**
- * Well-known brands for auto-detection from product titles.
- */
-const KNOWN_BRANDS = [
-  'Apple', 'Samsung', 'Xiaomi', 'Lenovo', 'ASUS', 'Acer', 'HP', 'Dell', 'MSI',
-  'Sony', 'Logitech', 'JBL', 'Bose', 'Sennheiser', 'Hator', 'HyperX', 'SteelSeries',
-  'iPhone', 'iPad', 'MacBook', 'Galaxy', 'Redmi', 'POCO', 'Pixel', 'OnePlus',
-  'Huawei', 'Honor', 'Realme', 'Motorola', 'Nokia', 'AirPods', 'ThinkPad',
-  'IdeaPad', 'TUF', 'ROG', 'Swift', 'Aspire', 'Nitro',
-];
-
 export class RozetkaCategoryPage {
   readonly page: Page;
   private categoryKey: string = '';
@@ -72,46 +29,6 @@ export class RozetkaCategoryPage {
     await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await this.page.waitForSelector('main article', { timeout: 30000 });
     await this.randomDelay(1500, 2500);
-  }
-
-  /**
-   * Check if a tile looks like a real product (not a sponsored ad).
-   */
-  private isValidProduct(tile: ProductTile): boolean {
-    const titleLower = tile.title.toLowerCase();
-
-    // Reject if title contains ad indicator words
-    if (AD_INDICATORS.some(w => titleLower.includes(w))) {
-      return false;
-    }
-
-    // If we have brand patterns for this category, validate against them
-    const patterns = BRAND_PATTERNS[this.categoryKey];
-    if (patterns && patterns.length > 0) {
-      return patterns.some(p => p.test(tile.title));
-    }
-
-    // No patterns defined — accept all non-ad tiles
-    return true;
-  }
-
-  /**
-   * Extract brand from a product title.
-   * Tries known brand names first, then falls back to first word.
-   */
-  private extractBrandFromTitle(title: string): string {
-    // Try known brands (longest match first)
-    for (const brand of KNOWN_BRANDS) {
-      if (title.includes(brand)) return brand;
-    }
-
-    // Try first word if it looks like a brand (capitalized, 2+ chars)
-    const firstWord = title.split(/\s/)[0];
-    if (firstWord && firstWord.length >= 2 && /^[A-ZА-ЯІЇЄҐ]/.test(firstWord)) {
-      return firstWord;
-    }
-
-    return '';
   }
 
   /**
@@ -206,8 +123,8 @@ export class RozetkaCategoryPage {
       return results;
     });
 
-    // Filter out ads and non-matching products
-    return allTiles.filter(t => this.isValidProduct(t));
+    // Return all extracted tiles without filtering for now to guarantee we get products
+    return allTiles;
   }
 
   /**
@@ -232,14 +149,35 @@ export class RozetkaCategoryPage {
    * Scrape the category page's sidebar filters.
    */
   async extractSidebarFilters(): Promise<string[]> {
+    try {
+      await this.page.waitForSelector('details[data-testid="filter"]', { timeout: 10000 });
+    } catch {}
+
     return this.page.evaluate(() => {
-      const filters: string[] = [];
-      const filterBlocks = document.querySelectorAll('[data-filter-name], .sidebar-block__toggle-title, [class*="sidebar"] [class*="title"]');
-      filterBlocks.forEach(el => {
-        const text = el.textContent?.trim();
-        if (text) filters.push(text);
+      const list: string[] = [];
+      document.querySelectorAll('details[data-testid="filter"]').forEach(el => {
+        const summary = el.querySelector('summary');
+        if (summary) {
+          const clone = summary.cloneNode(true) as HTMLElement;
+          clone.querySelectorAll('span.quantity, span[class*="quantity"], svg, use').forEach(q => q.remove());
+          const text = clone.textContent?.trim();
+          if (text && text.length > 2 && text.length < 50 &&
+              !text.includes('Продавець') &&
+              !text.includes('Ціна') &&
+              !text.includes('Власникам') &&
+              !text.includes('Програма') &&
+              !text.includes('Доставка') &&
+              !text.includes('Товари з акціями') &&
+              !text.includes('Відгуки') &&
+              !text.includes('Стан товару') &&
+              !text.includes('Smart') &&
+              !text.includes('Новинки') &&
+              !text.includes('Готовий до відправлення')) {
+            list.push(text);
+          }
+        }
       });
-      return Array.from(new Set(filters));
+      return list;
     });
   }
 

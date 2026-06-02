@@ -32,6 +32,9 @@ async function main(depth: number) {
   const page = await context.newPage();
   const categoriesPage = new RozetkaCategoriesPage(page);
 
+  log('Navigating to Rozetka home...');
+  await categoriesPage.goto();
+
   log('Fetching top-level categories...');
   const tree = await categoriesPage.buildCategoryTree(depth);
 

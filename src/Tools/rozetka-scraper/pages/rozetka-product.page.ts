@@ -424,7 +424,7 @@ export class RozetkaProductPage {
       // Find selector sections — they contain a label paragraph + list of links
       const sections = document.querySelectorAll('[class*="product"] [class*="variations"], [class*="configurator"], [class*="variant"]');
       
-      // Fallback: find all <p> that look like axis labels, then get their sibling <ul>
+      // Fallback: find all <p> that look like axis labels, then get their sibling <ul> (or container with <ul>)
       const allParas = document.querySelectorAll('p');
       for (const p of allParas) {
         const text = p.textContent?.trim() || '';
@@ -433,7 +433,13 @@ export class RozetkaProductPage {
         if (!labelMatch) continue;
         
         const label = labelMatch[1];
-        const list = p.nextElementSibling;
+        let list = p.nextElementSibling;
+        if (!list) continue;
+        
+        // Support nested <ul> inside <div> wrapper
+        if (list.tagName !== 'UL') {
+          list = list.querySelector('ul');
+        }
         if (!list || list.tagName !== 'UL') continue;
 
         const options: Array<{ name: string; url: string; pid: string }> = [];
@@ -441,7 +447,29 @@ export class RozetkaProductPage {
           const href = a.getAttribute('href') || '';
           const pid = href.match(/\/p(\d+)\//)?.[1];
           if (!pid) return;
-          const name = a.textContent?.trim() || a.querySelector('[class*="value"]')?.textContent?.trim() || '';
+          
+          let name = a.textContent?.trim() || a.querySelector('[class*="value"]')?.textContent?.trim() || '';
+          
+          // Try to extract name from tooltip/title
+          if (!name) {
+            const title = a.getAttribute('title') || a.querySelector('[rztooltip]')?.getAttribute('rztooltip') || '';
+            name = title.trim();
+          }
+          
+          // Try to extract color term from URL slug if name is still empty
+          if (!name) {
+            const hrefLower = href.toLowerCase();
+            const colors = [
+              'cosmic-orange', 'deep-blue', 'desert-titanium', 'natural-titanium', 'space-gray', 'space-grey', 'space-black',
+              'black', 'white', 'blue', 'red', 'green', 'gold', 'silver', 'purple', 'pink', 'orange', 'titanium',
+              'midnight', 'starlight', 'cosmic', 'deep', 'natural', 'slate', 'space', 'graphite', 'rose'
+            ];
+            const foundColor = colors.find(c => hrefLower.includes(c));
+            if (foundColor) {
+              name = foundColor.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            }
+          }
+          
           const fullUrl = href.startsWith('http') ? href : 'https://rozetka.com.ua' + href;
           options.push({ name: name || pid, url: fullUrl, pid });
         });
@@ -516,9 +544,9 @@ export class RozetkaProductPage {
         if (accessoryWords.some(w => fullText.includes(w))) return;
 
         const currentSlug = window.location.pathname.toLowerCase();
-        const variantSlug = href.toLowerCase();
-        const slugParts = currentSlug.split('/').filter(s => s && !s.startsWith('p') && !s.startsWith('ua'));
-        const varSlugParts = variantSlug.split('/').filter(s => s && !s.startsWith('p') && !s.startsWith('ua'));
+        const variantSlug = (a as HTMLAnchorElement).pathname.toLowerCase();
+        const slugParts = currentSlug.split('/').filter((s: string) => s && !s.startsWith('p') && !s.startsWith('ua'));
+        const varSlugParts = variantSlug.split('/').filter((s: string) => s && !s.startsWith('p') && !s.startsWith('ua'));
         if (slugParts.length > 0 && varSlugParts.length > 0) {
           const currentFamily = slugParts[0]?.split('-').slice(0, 3).join('-');
           const varFamily = varSlugParts[0]?.split('-').slice(0, 3).join('-');
