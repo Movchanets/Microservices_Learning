@@ -8,6 +8,11 @@ using MediatR;
 
 namespace Ordering.Application.Commands.CancelOrder;
 
+/// <summary>
+/// Handles CancelOrderCommand: validates order exists and is in a cancellable state,
+/// publishes CancelOrderEvent for the saga to orchestrate compensation
+/// (inventory release + payment refund).
+/// </summary>
 public sealed class CancelOrderHandler(
     IOrderRepository repository,
     IPublishEndpoint publishEndpoint) : IRequestHandler<CancelOrderCommand, Result<bool>>

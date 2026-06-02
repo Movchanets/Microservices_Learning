@@ -2,6 +2,10 @@ using BuildingBlocks.SharedContracts.Abstractions;
 
 namespace Ordering.Domain.Aggregates.Entities;
 
+/// <summary>
+/// A line item within an Order. Captures the SKU, quantity, and unit price at time of purchase.
+/// Child entity of the Order aggregate — cannot exist independently.
+/// </summary>
 public sealed class OrderItem : Entity
 {
     public Guid ProductId { get; private set; }

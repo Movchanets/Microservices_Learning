@@ -7,6 +7,10 @@ using Notification.Worker.Models;
 
 namespace Notification.Worker.Consumers;
 
+/// <summary>
+/// Consumes OrderCancelledEvent and pushes cancellation notification to the buyer
+/// via SignalR. Includes cancellation reason for transparency.
+/// </summary>
 public sealed class OrderCancelledConsumer(
     IHubContext<NotificationHub> hubContext,
     ILogger<OrderCancelledConsumer> logger) : IConsumer<OrderCancelledEvent>

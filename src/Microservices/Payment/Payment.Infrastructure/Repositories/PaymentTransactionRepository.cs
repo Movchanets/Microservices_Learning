@@ -4,6 +4,10 @@ using Payment.Infrastructure.Persistence;
 
 namespace Payment.Infrastructure.Repositories;
 
+/// <summary>
+/// EF Core repository for PaymentTransaction aggregate roots.
+/// Supports lookup by ID and by OrderId for saga correlation.
+/// </summary>
 public sealed class PaymentTransactionRepository(PaymentDbContext dbContext) : IPaymentTransactionRepository
 {
     public async Task<PaymentTransaction?> GetByIdAsync(Guid id, CancellationToken ct = default)

@@ -7,6 +7,10 @@ using Notification.Worker.Models;
 
 namespace Notification.Worker.Consumers;
 
+/// <summary>
+/// Consumes OrderCompletedEvent and pushes completion notification to the buyer
+/// via SignalR. Confirms successful order fulfillment.
+/// </summary>
 public sealed class OrderCompletedConsumer(
     IHubContext<NotificationHub> hubContext,
     ILogger<OrderCompletedConsumer> logger) : IConsumer<OrderCompletedEvent>

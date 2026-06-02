@@ -79,8 +79,11 @@ public class ProductSeeder
         var skuIds2 = new Dictionary<string, Guid>();
 
         // ── Create primary SKU ───────────────────────────────────
+        var primaryAttrs = product.Attributes?
+            .Where(a => a.Type != "boolean" || a.Value.Equals("Так", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(a => a.Key, a => a.Normalized ?? a.Value);
         var primarySkuId = await CreateSkuAsync(
-            dto!.Id, product.Sku, product.Price, product.Currency, null, ct);
+            dto!.Id, product.Sku, product.Price, product.Currency, primaryAttrs, ct);
         if (primarySkuId != null)
             skuIds2[product.Sku] = primarySkuId.Value;
 
@@ -107,9 +110,22 @@ public class ProductSeeder
             }
         }
 
-        // ── Activate product ─────────────────────────────────────
-        try { await _client.PutAsync($"/api/catalog/products/{dto.Id}/activate", null, ct); }
-        catch { /* Ignore if endpoint doesn't exist */ }
+        // ── Activate product (only if at least one SKU exists) ───
+        if (skuIds2.Count > 0)
+        {
+            var activateResponse = await _client.PutAsync(
+                $"/api/catalog/products/{dto.Id}/activate", null, ct);
+            if (!activateResponse.IsSuccessStatusCode)
+            {
+                var activateError = await activateResponse.Content.ReadAsStringAsync(ct);
+                _logger.LogWarning("Failed to activate product {Name}: {StatusCode} - {Error}",
+                    product.Name, activateResponse.StatusCode, activateError);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("Skipping activation for {Name} — no SKUs created.", product.Name);
+        }
 
         _logger.LogInformation("Created product: {Name} with {Count} SKUs",
             product.Name, skuIds2.Count);

@@ -6,10 +6,7 @@
   "type": "module",
   "scripts": {
     "scrape": "tsx scripts/rozetka-scraper.ts",
-    "scrape:laptops": "tsx scripts/rozetka-scraper.ts --category laptops",
-    "scrape:phones": "tsx scripts/rozetka-scraper.ts --category phones",
-    "scrape:categories": "tsx scripts/scrape-categories.ts",
-    "inspect": "node inspect.cjs"
+    "scrape:categories": "tsx scripts/scrape-categories.ts"
   },
   "dependencies": {
     "playwright": "^1.43.0",

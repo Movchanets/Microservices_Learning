@@ -10,8 +10,19 @@ public record UserModel(string Email, string Password, string FirstName, string 
 /// <summary>Store seed data from stores.json.</summary>
 public record StoreModel(string SellerEmail, string SellerPassword, string Name, string Description);
 
-/// <summary>Category seed data from categories.json.</summary>
-public record CategoryModel(string Name, string Description, Guid? ParentCategoryId = null);
+/// <summary>
+/// Category seed data from categories.json.
+/// Includes optional attribute definitions to create on the category.
+/// ParentCategoryName links to a parent by name (resolved at runtime).
+/// </summary>
+public record CategoryModel(
+    string Name,
+    string Description,
+    Guid? ParentCategoryId = null,
+    [property: JsonPropertyName("ParentCategoryName")]
+    string? ParentCategoryName = null,
+    [property: JsonPropertyName("AttributeDefinitions")]
+    List<AttributeDefinitionModel>? AttributeDefinitions = null);
 
 /// <summary>
 /// Attribute definition seed data for a category.
@@ -49,7 +60,30 @@ public record ProductModel(
     [property: JsonPropertyName("Gallery")] List<string>? Gallery = null,
     [property: JsonPropertyName("Breadcrumbs")] List<BreadcrumbDto>? Breadcrumbs = null,
     [property: JsonPropertyName("Variants")] List<VariantModel>? Variants = null,
-    [property: JsonPropertyName("VariantAxes")] Dictionary<string, List<string>>? VariantAxes = null
+    [property: JsonPropertyName("VariantAxes")] Dictionary<string, List<string>>? VariantAxes = null,
+    [property: JsonPropertyName("Brand")] string? Brand = null,
+    [property: JsonPropertyName("Subtitle")] string? Subtitle = null,
+    [property: JsonPropertyName("Availability")] string? Availability = null,
+    [property: JsonPropertyName("Warranty")] string? Warranty = null,
+    [property: JsonPropertyName("Attributes")] List<TypedAttributeModel>? Attributes = null
+);
+
+/// <summary>
+/// Typed attribute from the scraper.
+/// Type determines how the value is handled:
+/// - "selectable": user can choose (from variant selectors)
+/// - "number": numeric with optional unit
+/// - "text": free text
+/// - "boolean": yes/no
+/// - "list": multiple values
+/// - "color": normalized color name
+/// - "resolution": dimensions
+/// </summary>
+public record TypedAttributeModel(
+    [property: JsonPropertyName("key")] string Key,
+    [property: JsonPropertyName("value")] string Value,
+    [property: JsonPropertyName("type")] string Type,
+    [property: JsonPropertyName("normalized")] string? Normalized = null
 );
 
 /// <summary>

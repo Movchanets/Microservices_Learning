@@ -6,6 +6,11 @@ using MediatR;
 
 namespace Catalog.Application.Queries;
 
+/// <summary>
+/// Handles GetVariantMatrixQuery: retrieves a product and its category's AttributeDefinitions,
+/// then builds a matrix showing which variant combinations (SKU × attribute values) exist
+/// and which are still available for bulk creation.
+/// </summary>
 public sealed class GetVariantMatrixHandler(
     IProductRepository productRepository,
     ICategoryRepository categoryRepository)
@@ -54,14 +59,14 @@ public sealed class GetVariantMatrixHandler(
         if (variantDefs.Count == 0)
             return new VariantMatrixDto(product.Id, product.Name, [], []);
 
-        // 4. Build axes with their allowed values
+        // 4. Build axes — only values that appear in actual SKUs
+        //    (prevents showing 100+ colors when the product only uses 3)
         var axes = variantDefs
             .Select(def => new VariantAxisDto(
                 def.Key,
                 def.DisplayName,
-                def.AllowedValues.Count > 0
-                    ? def.AllowedValues
-                    : GetDistinctValuesFromSkus(product.Skus, def.Key)))
+                GetDistinctValuesFromSkus(product.Skus, def.Key)))
+            .Where(axis => axis.Values.Count > 0)
             .ToList();
 
         // 5. Generate Cartesian product of all axis values

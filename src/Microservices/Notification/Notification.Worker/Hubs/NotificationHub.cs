@@ -5,6 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Notification.Worker.Hubs;
 
+/// <summary>
+/// SignalR hub for real-time notifications to buyers.
+/// Authenticates via JWT cookie from the Gateway. Clients join a group
+/// keyed by their BuyerId for targeted message delivery.
+/// </summary>
 [Authorize]
 public sealed class NotificationHub(ILogger<NotificationHub> logger) : Hub
 {

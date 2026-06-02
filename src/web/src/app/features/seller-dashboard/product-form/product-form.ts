@@ -3,16 +3,17 @@
  *
  * Handles both create and edit modes for seller products.
  * Supports per-SKU image galleries with primary image selection.
+ * Integrates VariantMatrixBuilder for bulk variant generation.
  *
  * Architecture:
  *   - Form state is managed via Angular signals (not Reactive Forms)
  *   - SKU rows are mutable signal arrays with per-entry image galleries
  *   - Image uploads happen after product/SKU creation (sequential, not parallel)
+ *   - Variant matrix builder generates Cartesian product of variant axes
  */
 
-import { Component, ChangeDetectionStrategy, effect, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, effect, inject, OnInit, OnDestroy, signal, computed, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { SellerProductStore } from '../seller-product.store';
 import { StoreSettingsStore } from '../store-settings.store';
@@ -21,24 +22,20 @@ import { ToastService } from '../../../core/services/toast.service';
 import { MediaService } from '../../../core/services/media.service';
 import { GalleryItem } from '../../catalog/catalog.models';
 import { ImageGalleryUploaderComponent, PendingImage } from '../../../shared/components/image-gallery-uploader/image-gallery-uploader';
+import { VariantMatrixBuilderComponent, VariantMatrixOutput } from '../variant-matrix-builder/variant-matrix-builder';
 
 // ── Types ──────────────────────────────────────────────────
 
 interface SkuFormEntry {
   id: string;
+  /** Real server-side SKU ID (null for new SKUs not yet created). */
+  serverSkuId: string | null;
   skuCode: string;
   price: number;
   currency: string;
   images: GalleryItem[];
   pendingUploads: PendingImage[];
   typedAttributes: Record<string, string>;
-}
-
-interface ExistingSku {
-  skuCode: string;
-  price: number;
-  currency: string;
-  images: GalleryItem[];
 }
 
 // ── SKU ID generator ───────────────────────────────────────
@@ -53,7 +50,10 @@ function nextSkuId(): string {
 @Component({
   selector: 'app-product-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideAngularModule, DecimalPipe, ImageGalleryUploaderComponent],
+  imports: [
+    RouterLink, LucideAngularModule,
+    ImageGalleryUploaderComponent, VariantMatrixBuilderComponent,
+  ],
   templateUrl: './product-form.html',
 })
 export class ProductFormComponent implements OnInit, OnDestroy {
@@ -65,6 +65,9 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   private readonly categoryService = inject(CategoryService);
   private readonly toast = inject(ToastService);
   private readonly mediaService = inject(MediaService);
+
+  // ── Child references ─────────────────────────────────────
+  variantMatrixBuilder = viewChild(VariantMatrixBuilderComponent);
 
   // ── Form state ───────────────────────────────────────────
   isEditing = signal(false);
@@ -86,21 +89,36 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   productImages = signal<GalleryItem[]>([]);
   productPendingUploads = signal<PendingImage[]>([]);
 
-  // ── SKU form entries ─────────────────────────────
+  // ── SKU form entries ─────────────────────────────────────
   skus = signal<SkuFormEntry[]>([this.createEmptySku()]);
   activeSkuTab = signal(0);
-  existingSkus = signal<ExistingSku[]>([]);
 
-  // ── Category variant axes ───────────────────────
+  // ── Category variant axes ────────────────────────────────
   variantAxes = signal<AttributeDefinition[]>([]);
   variantAxesLoading = signal(false);
+
+  // ── Bulk variant generation ──────────────────────────────
+  showVariantMatrix = signal(false);
+  bulkGenerating = signal(false);
 
   // ── Upload state ─────────────────────────────────────────
   uploading = signal(false);
   uploadError = signal<string | null>(null);
+  removingSku = signal(false);
 
   /** Whether the active SKU tab can be removed (min 1 required). */
   canRemoveSku = computed(() => this.skus().length > 1);
+
+  /** SKU code prefix for bulk generation (derived from product name). */
+  skuCodePrefix = computed(() => {
+    const words = this.name()
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 0)
+      .slice(0, 3)
+      .map(w => w.toUpperCase());
+    return words.join('-') || 'SKU';
+  });
 
   // ── Lifecycle ────────────────────────────────────────────
 
@@ -138,16 +156,28 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     this.activeSkuTab.set(this.skus().length - 1);
   }
 
-  removeSkuRow(index: number): void {
+  async removeSkuRow(index: number): Promise<void> {
     if (!this.canRemoveSku()) return;
+    const sku = this.skus()[index];
+
+    // If the SKU has a server ID, delete it via API first
+    if (sku.serverSkuId && this.productId()) {
+      this.removingSku.set(true);
+      try {
+        const success = await this.store.removeSku(this.productId()!, sku.serverSkuId);
+        if (!success) return; // Don't remove from UI if API failed
+      } finally {
+        this.removingSku.set(false);
+      }
+    }
+
     this.skus.update(rows => rows.filter((_, i) => i !== index));
-    // Clamp active tab to valid range
     if (this.activeSkuTab() >= this.skus().length) {
       this.activeSkuTab.set(this.skus().length - 1);
     }
   }
 
-  /** Generic SKU field updater — DRY replacement for updateSkuCode/Price/Currency. */
+  /** Generic SKU field updater. */
   updateSku<K extends keyof SkuFormEntry>(index: number, field: K, value: SkuFormEntry[K]): void {
     this.skus.update(rows => rows.map((r, i) =>
       i === index ? { ...r, [field]: value } : r
@@ -189,6 +219,64 @@ export class ProductFormComponent implements OnInit, OnDestroy {
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     this.updateSku(index, 'skuCode', `${words.join('-')}-${randomSuffix}`);
+  }
+
+  // ── Variant matrix ───────────────────────────────────────
+
+  toggleVariantMatrix(): void {
+    this.showVariantMatrix.update(v => !v);
+  }
+
+  /** Called when the variant matrix builder confirms selections. */
+  async onVariantMatrixConfirm(): Promise<void> {
+    const builder = this.variantMatrixBuilder();
+    if (!builder) return;
+
+    const selection = builder.getSelection();
+    if (selection.combinationCount === 0) {
+      this.toast.error('Select at least one variant combination');
+      return;
+    }
+
+    const productId = this.productId();
+
+    // If product exists, bulk-add SKUs directly
+    if (productId) {
+      await this.bulkAddSkusToProduct(productId, selection);
+      return;
+    }
+
+    // If creating, store the combinations and let the form submit handle it
+    // The combinations will be applied after product creation
+    this.pendingBulkSelection.set(selection);
+    this.toast.success(`${selection.combinationCount} variants will be created`);
+    this.showVariantMatrix.set(false);
+  }
+
+  /** Store pending bulk selection for use during create. */
+  pendingBulkSelection = signal<VariantMatrixOutput | null>(null);
+
+  private async bulkAddSkusToProduct(productId: string, selection: VariantMatrixOutput): Promise<void> {
+    this.bulkGenerating.set(true);
+    try {
+      const result = await this.store.bulkAddSku(productId, {
+        variantCombinations: selection.variantCombinations,
+        excludedCombinations: selection.excludedCombinations,
+        currency: 'USD',
+        skuCodePrefix: this.skuCodePrefix(),
+      });
+
+      if (result) {
+        this.toast.success(`${result.createdCount} variants created`);
+        // Reload product to get updated SKUs
+        await this.store.loadProductById(productId);
+        this.showVariantMatrix.set(false);
+      } else {
+        this.toast.error('Failed to generate variants');
+      }
+    } finally {
+      this.bulkGenerating.set(false);
+    }
   }
 
   // ── Product-level image handlers ─────────────────────────
@@ -274,22 +362,89 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   // ── Private helpers ──────────────────────────────────────
 
   private createEmptySku(): SkuFormEntry {
-    return { id: nextSkuId(), skuCode: '', price: 0, currency: 'USD', images: [], pendingUploads: [], typedAttributes: {} };
+    return {
+      id: nextSkuId(),
+      serverSkuId: null,
+      skuCode: '',
+      price: 0,
+      currency: 'USD',
+      images: [],
+      pendingUploads: [],
+      typedAttributes: {},
+    };
   }
 
-  private populateFormFromProduct(product: { name: string; description: string; brand?: string | null; categoryId: string; imageUrl?: string | null; tags?: string[] | null; skus?: Array<{ skuCode: string; price: number; currency: string }> | null }): void {
+  private populateFormFromProduct(product: {
+    name: string;
+    description: string;
+    brand?: string | null;
+    categoryId: string;
+    imageUrl?: string | null;
+    tags?: string[] | null;
+    skus?: Array<{
+      id: string;
+      skuCode: string;
+      price: number;
+      currency: string;
+      typedAttributes?: Record<string, string>;
+    }> | null;
+  }): void {
     this.name.set(product.name);
     this.description.set(product.description);
     this.brand.set(product.brand ?? '');
     this.categoryId.set(product.categoryId);
     this.imageUrl.set(product.imageUrl ?? '');
     this.tagsInput.set(product.tags?.join(', ') ?? '');
-    this.existingSkus.set(
-      product.skus?.map(s => ({ skuCode: s.skuCode, price: s.price, currency: s.currency, images: [] })) ?? []
-    );
+
+    // Populate SKU entries from existing SKUs
+    if (product.skus && product.skus.length > 0) {
+      this.skus.set(product.skus.map(s => ({
+        id: nextSkuId(),
+        serverSkuId: s.id,
+        skuCode: s.skuCode,
+        price: s.price,
+        currency: s.currency,
+        images: [],
+        pendingUploads: [],
+        typedAttributes: s.typedAttributes ?? {},
+      })));
+    }
+
     this.formPopulated.set(true);
+
     // Load variant axes for the product's category
     this.loadVariantAxes(product.categoryId);
+
+    // Load galleries (product-level + per-SKU)
+    this.loadGalleries(product);
+  }
+
+  /** Load product-level and per-SKU galleries from Media API. */
+  private async loadGalleries(product: {
+    id?: string;
+    skus?: Array<{ id: string }> | null;
+  }): Promise<void> {
+    const productId = product.id ?? this.productId();
+    if (!productId) return;
+
+    // Load product-level gallery
+    try {
+      const productGallery = await this.mediaService.getGallery(productId, 'Product');
+      this.productImages.set(productGallery);
+    } catch { /* non-critical */ }
+
+    // Load per-SKU galleries in parallel
+    if (product.skus && product.skus.length > 0) {
+      const galleries = await Promise.all(
+        product.skus.map(sku =>
+          this.mediaService.getGallery(sku.id, 'SKU').catch(() => [] as GalleryItem[])
+        )
+      );
+      this.skus.update(rows => rows.map((r, i) => ({
+        ...r,
+        images: galleries[i] ?? [],
+      })));
+    }
   }
 
   private async loadCategories(): Promise<void> {
@@ -331,26 +486,24 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     if (!this.name().trim()) errors.push('Product name is required.');
     if (!this.categoryId()) errors.push('Category is required.');
 
-    // SKU validation (create mode only)
-    if (!this.isEditing()) {
-      const skuEntries = this.skus();
-      if (skuEntries.length === 0) {
-        errors.push('At least one SKU is required.');
-      }
-
-      skuEntries.forEach((sku, i) => {
-        const label = `SKU #${i + 1}`;
-        if (!sku.skuCode.trim()) errors.push(`${label}: SKU code is required.`);
-        if (sku.skuCode.length > 0 && !/^[A-Z0-9][A-Z0-9-]*[A-Z0-9]$/i.test(sku.skuCode))
-          errors.push(`${label}: SKU must be alphanumeric with hyphens only.`);
-        if (sku.price <= 0) errors.push(`${label}: Price must be greater than zero.`);
-      });
-
-      // Duplicate check
-      const skuCodes = skuEntries.map(s => s.skuCode.trim().toUpperCase()).filter(Boolean);
-      const dupes = skuCodes.filter((c, i) => skuCodes.indexOf(c) !== i);
-      if (dupes.length > 0) errors.push(`Duplicate SKU codes: ${[...new Set(dupes)].join(', ')}`);
+    // SKU validation
+    const skuEntries = this.skus();
+    if (skuEntries.length === 0 && !this.pendingBulkSelection()) {
+      errors.push('At least one SKU is required.');
     }
+
+    skuEntries.forEach((sku, i) => {
+      const label = `SKU #${i + 1}`;
+      if (!sku.skuCode.trim()) errors.push(`${label}: SKU code is required.`);
+      if (sku.skuCode.length > 0 && !/^[A-Z0-9][A-Z0-9-]*[A-Z0-9]$/i.test(sku.skuCode))
+        errors.push(`${label}: SKU must be alphanumeric with hyphens only.`);
+      if (sku.price <= 0) errors.push(`${label}: Price must be greater than zero.`);
+    });
+
+    // Duplicate check
+    const skuCodes = skuEntries.map(s => s.skuCode.trim().toUpperCase()).filter(Boolean);
+    const dupes = skuCodes.filter((c, i) => skuCodes.indexOf(c) !== i);
+    if (dupes.length > 0) errors.push(`Duplicate SKU codes: ${[...new Set(dupes)].join(', ')}`);
 
     return errors;
   }
@@ -361,10 +514,42 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       name: this.name(),
       description: this.description(),
       categoryId: this.categoryId(),
+      brand: this.brand() || undefined,
+      tags: this.tagsInput()
+        ? this.tagsInput().split(',').map(t => t.trim()).filter(t => t.length > 0)
+        : undefined,
       imageUrl: this.imageUrl() || undefined,
     });
 
     if (success) {
+      // Upload any pending product images
+      await this.uploadPendingImages(this.productPendingUploads(), this.productId()!, 'Product');
+      this.productPendingUploads.set([]);
+
+      // Upload pending SKU images
+      for (let i = 0; i < this.skus().length; i++) {
+        const sku = this.skus()[i];
+        if (sku.pendingUploads.length > 0 && sku.serverSkuId) {
+          await this.uploadPendingImages(sku.pendingUploads, sku.serverSkuId, 'SKU');
+          this.skus.update(rows => rows.map((r, idx) =>
+            idx === i ? { ...r, pendingUploads: [] } : r
+          ));
+        }
+      }
+
+      // Check if we have a pending bulk variant selection
+      const bulkSelection = this.pendingBulkSelection();
+      if (bulkSelection) {
+        await this.bulkAddSkusToProduct(this.productId()!, bulkSelection);
+        this.pendingBulkSelection.set(null);
+      }
+
+      // Add any new SKUs (without serverSkuId)
+      const newSkus = this.skus().filter(s => !s.serverSkuId);
+      if (newSkus.length > 0) {
+        await this.createSkusForProduct(this.productId()!, newSkus);
+      }
+
       this.toast.success('Product updated');
       this.router.navigate(['/seller/products']);
     } else {
@@ -394,16 +579,23 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     await this.uploadPendingImages(this.productPendingUploads(), product.id, 'Product');
     this.productPendingUploads.set([]);
 
-    // Add SKUs and upload per-SKU images
-    await this.createSkusForProduct(product.id);
+    // Check if we have a pending bulk selection
+    const bulkSelection = this.pendingBulkSelection();
+    if (bulkSelection) {
+      await this.bulkAddSkusToProduct(product.id, bulkSelection);
+      this.pendingBulkSelection.set(null);
+    } else {
+      // Add individual SKUs
+      await this.createSkusForProduct(product.id, this.skus());
+    }
   }
 
   /** Add each SKU to the product and upload its images. */
-  private async createSkusForProduct(productId: string): Promise<void> {
+  private async createSkusForProduct(productId: string, skuEntries: SkuFormEntry[]): Promise<void> {
     const failedSkus: string[] = [];
 
-    for (let i = 0; i < this.skus().length; i++) {
-      const entry = this.skus()[i];
+    for (let i = 0; i < skuEntries.length; i++) {
+      const entry = skuEntries[i];
       const sku = await this.store.addSku(productId, {
         skuCode: entry.skuCode,
         price: entry.price,
@@ -415,9 +607,6 @@ export class ProductFormComponent implements OnInit, OnDestroy {
 
       if (sku) {
         await this.uploadPendingImages(entry.pendingUploads, sku.id, 'SKU');
-        this.skus.update(rows => rows.map((r, idx) =>
-          idx === i ? { ...r, pendingUploads: [] } : r
-        ));
       } else {
         failedSkus.push(entry.skuCode);
       }

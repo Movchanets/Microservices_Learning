@@ -5,6 +5,12 @@ using SearchRequest = Search.API.Models.SearchRequest;
 
 namespace Search.API.Services;
 
+/// <summary>
+/// Elasticsearch service implementing the ISearchService interface.
+/// Manages the "marketplace-products" index with support for faceted search,
+/// autocomplete suggestions, and category-aware filtering.
+/// Uses painless scripts for atomic partial updates (inventory, price changes).
+/// </summary>
 public sealed class ElasticsearchService(
     ElasticsearchClient client,
     ILogger<ElasticsearchService> logger)

@@ -2,6 +2,12 @@ using BuildingBlocks.SharedContracts.Abstractions;
 
 namespace Cart.Domain.Aggregates;
 
+/// <summary>
+/// The Shopping Cart aggregate root. Represents a buyer's active cart session.
+/// Uses Redis as the backing store (thin service — no EF Core for cart data).
+/// Cart items are managed as a collection within this aggregate.
+/// Optimistic concurrency via PostgreSQL xmin system column prevents lost updates.
+/// </summary>
 public sealed class ShoppingCart : AggregateRoot
 {
     public Guid? BuyerId { get; private set; }

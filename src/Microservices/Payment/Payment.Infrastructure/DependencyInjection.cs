@@ -7,6 +7,10 @@ using Payment.Infrastructure.Repositories;
 
 namespace Payment.Infrastructure;
 
+/// <summary>
+/// Registers Payment infrastructure services: repositories, payment gateway,
+/// and DbContext. Called from Payment.API Program.cs.
+/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddPaymentInfrastructure(this IServiceCollection services)

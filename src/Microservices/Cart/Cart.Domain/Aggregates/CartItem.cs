@@ -2,6 +2,11 @@ using BuildingBlocks.SharedContracts.Abstractions;
 
 namespace Cart.Domain.Aggregates;
 
+/// <summary>
+/// Represents a single line item in a buyer's shopping cart.
+/// Each item references a specific SKU from a product and tracks quantity and price at time of addition.
+/// Cart items are scoped to a buyer session and expire after a configurable TTL.
+/// </summary>
 public sealed class CartItem : Entity
 {
     public Guid CartId { get; private set; }

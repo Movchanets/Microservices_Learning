@@ -4,6 +4,11 @@ using StoreManagement.Domain.Events;
 
 namespace StoreManagement.Domain.Aggregates;
 
+/// <summary>
+/// The Store aggregate root. Represents a seller's storefront on the marketplace.
+/// Tracks verification status (Pending → Verified / Rejected) and holds store metadata
+/// (name, description, logo). Sellers must have a verified store before listing products.
+/// </summary>
 public sealed class Store : AggregateRoot
 {
     public string SellerId { get; private set; } = string.Empty;

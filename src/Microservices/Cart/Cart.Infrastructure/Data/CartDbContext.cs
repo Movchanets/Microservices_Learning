@@ -4,6 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cart.Infrastructure.Data;
 
+/// <summary>
+/// EF Core DbContext for the Cart bounded context.
+/// Manages ShoppingCart, CartItem, and ProductPrice entities.
+/// ProductPrice is a local cache of Catalog pricing data, synced via integration events.
+/// </summary>
 public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(options)
 {
     public DbSet<ShoppingCart> ShoppingCarts => Set<ShoppingCart>();

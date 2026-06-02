@@ -2,6 +2,11 @@ using BuildingBlocks.SharedContracts.Abstractions;
 
 namespace Cart.Domain.Entities;
 
+/// <summary>
+/// Cached product/SKU pricing data in the Cart bounded context.
+/// Synced from Catalog via SkuCreatedIntegrationEvent and SkuPriceChangedEvent.
+/// Avoids cross-service HTTP calls when calculating cart totals.
+/// </summary>
 public sealed class ProductPrice : Entity
 {
     public Guid ProductId { get; private set; }

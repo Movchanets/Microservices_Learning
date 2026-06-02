@@ -7,6 +7,11 @@ using MediatR;
 
 namespace Catalog.Application.Commands.UpdateProduct;
 
+/// <summary>
+/// Handles UpdateProductCommand: validates the category exists, updates mutable product
+/// fields (name, description, brand, tags, status), and persists via UnitOfWork.
+/// Does not modify SKUs — use AddSku/RemoveSku for variant management.
+/// </summary>
 public sealed class UpdateProductHandler(
     IProductRepository productRepository,
     ICategoryRepository categoryRepository,

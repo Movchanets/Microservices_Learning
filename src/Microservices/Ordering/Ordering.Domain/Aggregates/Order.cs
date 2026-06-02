@@ -7,6 +7,12 @@ using Ordering.Domain.ValueObjects;
 
 namespace Ordering.Domain.Aggregates;
 
+/// <summary>
+/// The Order aggregate root. Represents a buyer's purchase intent containing line items,
+/// shipping/billing addresses, and payment references. Orchestrates state transitions
+/// (Pending → Confirmed → Shipped → Completed / Cancelled) via domain events
+/// consumed by the Ordering saga for multi-service coordination.
+/// </summary>
 public sealed class Order : AggregateRoot
 {
     public string BuyerId

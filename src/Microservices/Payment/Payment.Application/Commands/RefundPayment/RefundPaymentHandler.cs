@@ -8,6 +8,10 @@ using Payment.Domain.Enumerations;
 
 namespace Payment.Application.Commands.RefundPayment;
 
+/// <summary>
+/// Handles RefundPaymentCommand: creates a Refund entity, marks the original
+/// PaymentTransaction as refunded, publishes PaymentRefundedEvent, and commits via Outbox.
+/// </summary>
 public sealed class RefundPaymentHandler(
     IPaymentTransactionRepository transactionRepo,
     IRefundRepository refundRepo,

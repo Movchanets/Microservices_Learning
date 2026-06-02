@@ -4,6 +4,9 @@ using Payment.Infrastructure.Persistence;
 
 namespace Payment.Infrastructure.Repositories;
 
+/// <summary>
+/// EF Core repository for Refund entities. Supports lookup by ID and by OrderId.
+/// </summary>
 public sealed class RefundRepository(PaymentDbContext dbContext) : IRefundRepository
 {
     public async Task<Refund?> GetByIdAsync(Guid id, CancellationToken ct = default)

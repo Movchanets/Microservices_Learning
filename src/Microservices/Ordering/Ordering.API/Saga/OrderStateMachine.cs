@@ -11,6 +11,13 @@ using Ordering.Infrastructure.Persistence;
 
 namespace Ordering.API.Saga;
 
+/// <summary>
+/// MassTransit state machine saga for order processing orchestration.
+/// Coordinates the multi-service flow: Order → Inventory Reservation → Payment → Completion.
+/// Handles compensation (rollback) when any step fails.
+///
+/// States: Submitted → InventoryReserved → PaymentProcessing → Completed / Cancelled
+/// </summary>
 public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
 {
     // ── States ─────────────────────────────────────────────
@@ -60,10 +67,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
         // ── ReservingInventory ─────────────────────────────
         During(ReservingInventory,
             When(InventoryReserved)
-                .Then(ctx =>
-                {
-                    ctx.Saga.UpdatedAt = DateTime.UtcNow;
-                })
+                .Then(UpdateTimestamp)
                 .Publish(ctx => new ProcessPaymentCommand(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
@@ -81,10 +85,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                 .TransitionTo(ProcessingPayment),
 
             When(InventoryFailed)
-                .Then(ctx =>
-                {
-                    ctx.Saga.UpdatedAt = DateTime.UtcNow;
-                })
+                .Then(UpdateTimestamp)
                 .Publish(ctx => new OrderCancelledEvent(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
@@ -95,14 +96,11 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
 
             // Buyer-initiated cancellation while inventory is being reserved
             When(CancelOrder)
-                .Then(ctx =>
-                {
-                    ctx.Saga.UpdatedAt = DateTime.UtcNow;
-                })
+                .Then(UpdateTimestamp)
                 .Publish(ctx => new CancelReservationCommand(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
-                    JsonSerializer.Deserialize<List<OrderItemContract>>(ctx.Saga.ItemsJson) ?? []))
+                    DeserializeItems(ctx.Saga.ItemsJson)))
                 .Publish(ctx => new OrderCancelledEvent(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
@@ -114,10 +112,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
         // ── ProcessingPayment ──────────────────────────────
         During(ProcessingPayment,
             When(PaymentCompleted)
-                .Then(ctx =>
-                {
-                    ctx.Saga.UpdatedAt = DateTime.UtcNow;
-                })
+                .Then(UpdateTimestamp)
                 .Publish(ctx => new OrderCompletedEvent(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
@@ -125,10 +120,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                 .TransitionTo(Completed),
 
             When(PaymentFailed)
-                .Then(ctx =>
-                {
-                    ctx.Saga.UpdatedAt = DateTime.UtcNow;
-                })
+                .Then(UpdateTimestamp)
                 // Compensation: release inventory and refund payment
                 .Publish(ctx => new RefundPaymentIntegrationCommand(
                     ctx.Saga.CorrelationId,
@@ -139,7 +131,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                 .Publish(ctx => new CancelReservationCommand(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
-                    JsonSerializer.Deserialize<List<OrderItemContract>>(ctx.Saga.ItemsJson) ?? []))
+                    DeserializeItems(ctx.Saga.ItemsJson)))
                 .Publish(ctx => new OrderCancelledEvent(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
@@ -150,10 +142,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
 
             // Buyer-initiated cancellation while payment is processing
             When(CancelOrder)
-                .Then(ctx =>
-                {
-                    ctx.Saga.UpdatedAt = DateTime.UtcNow;
-                })
+                .Then(UpdateTimestamp)
                 // Compensation: refund payment and release inventory
                 .Publish(ctx => new RefundPaymentIntegrationCommand(
                     ctx.Saga.CorrelationId,
@@ -164,7 +153,7 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                 .Publish(ctx => new CancelReservationCommand(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
-                    JsonSerializer.Deserialize<List<OrderItemContract>>(ctx.Saga.ItemsJson) ?? []))
+                    DeserializeItems(ctx.Saga.ItemsJson)))
                 .Publish(ctx => new OrderCancelledEvent(
                     ctx.Saga.CorrelationId,
                     ctx.Saga.OrderId,
@@ -172,5 +161,17 @@ public sealed class OrderStateMachine : MassTransitStateMachine<OrderState>
                     ctx.Message.Reason ?? "Cancelled by buyer",
                     DateTime.UtcNow))
                 .TransitionTo(Cancelled));
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    private static void UpdateTimestamp(BehaviorContext<OrderState> ctx)
+    {
+        ctx.Saga.UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static List<OrderItemContract> DeserializeItems(string itemsJson)
+    {
+        return JsonSerializer.Deserialize<List<OrderItemContract>>(itemsJson) ?? [];
     }
 }

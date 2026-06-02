@@ -8,6 +8,11 @@ using Payment.Infrastructure.External;
 
 namespace Payment.Infrastructure.Messaging;
 
+/// <summary>
+/// Consumes ProcessPaymentCommand from the Ordering saga.
+/// Delegates to the payment gateway (mock locally), creates a PaymentTransaction,
+/// and publishes PaymentCompletedEvent or PaymentFailedEvent.
+/// </summary>
 public sealed class ProcessPaymentConsumer(
     ISender sender,
     IPaymentGateway gateway,

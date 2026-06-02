@@ -48,6 +48,26 @@ export async function addSku(
   return response.json();
 }
 
+export async function bulkAddSku(
+  api: APIRequestContext,
+  productId: string,
+  request: {
+    variantCombinations: Record<string, string[]>;
+    basePrice?: number;
+    currency?: string;
+    excludedCombinations?: string[];
+    skuCodePrefix?: string;
+  }
+): Promise<{ createdCount: number; totalCombinations: number; createdSkus: SkuResult[]; errors?: string[] }> {
+  const response = await api.post(`/api/catalog/products/${productId}/skus/bulk`, {
+    data: request,
+  });
+  if (!response.ok()) {
+    throw new Error(`Bulk add SKU failed: ${response.status()} ${await response.text()}`);
+  }
+  return response.json();
+}
+
 export async function getProductById(
   api: APIRequestContext,
   productId: string
@@ -177,6 +197,49 @@ export async function ensureCategoryExists(
   if (match) return match;
 
   return createCategory(adminApi, name, description);
+}
+
+/**
+ * Creates an attribute definition on a category.
+ */
+export async function addAttributeDefinition(
+  api: APIRequestContext,
+  categoryId: string,
+  attr: {
+    key: string;
+    displayName: string;
+    target: number;       // 0=Product, 1=Sku
+    valueType: number;    // 0=Text, 1=Number, 2=Select
+    isFilterable: boolean;
+    isRequired: boolean;
+    sortOrder?: number;
+    allowedValues?: string[];
+    isVariantAxis?: boolean;
+  }
+): Promise<{ id: string; key: string; displayName: string }> {
+  const response = await api.post(`/api/catalog/categories/${categoryId}/attributes`, {
+    data: attr,
+  });
+  if (!response.ok()) {
+    throw new Error(`Add attribute definition failed: ${response.status()} ${await response.text()}`);
+  }
+  return response.json();
+}
+
+/**
+ * Gets attribute definitions for a category.
+ */
+export async function getAttributeDefinitions(
+  api: APIRequestContext,
+  categoryId: string,
+  includeInherited = false
+): Promise<Array<{ id: string; key: string; displayName: string; target: string; valueType: string; isVariantAxis: boolean; allowedValues: string[] }>> {
+  const params = includeInherited ? '?includeInherited=true' : '';
+  const response = await api.get(`/api/catalog/categories/${categoryId}/attributes${params}`);
+  if (!response.ok()) {
+    throw new Error(`Get attribute definitions failed: ${response.status()} ${await response.text()}`);
+  }
+  return response.json();
 }
 
 /**

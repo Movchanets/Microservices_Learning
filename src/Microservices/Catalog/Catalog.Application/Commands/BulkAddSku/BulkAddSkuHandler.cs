@@ -11,6 +11,12 @@ using MediatR;
 
 namespace Catalog.Application.Commands.BulkAddSku;
 
+/// <summary>
+/// Handles BulkAddSkuCommand: generates all SKU variants from the cartesian product of
+/// variant axes (e.g., Color × Size), validates attribute values against Category definitions,
+/// creates domain entities, publishes SkuCreatedIntegrationEvent for each new SKU,
+/// and commits via Outbox in a single transaction.
+/// </summary>
 public sealed class BulkAddSkuHandler(
     IProductRepository productRepository,
     ICategoryRepository categoryRepository,
@@ -22,31 +28,83 @@ public sealed class BulkAddSkuHandler(
         BulkAddSkuCommand request,
         CancellationToken cancellationToken)
     {
-        // 1. Load product with SKUs
-        var product = await productRepository.GetWithSkusAsync(request.ProductId, cancellationToken);
+        // ── Load & Validate ──────────────────────────────────────────
+        var (product, category, variantDefs, error) = await LoadAndValidateAsync(
+            request.ProductId, cancellationToken);
+
+        if (error is not null)
+            return error;
+
+        var validationError = ValidateVariantInputs(request, variantDefs!);
+        if (validationError is not null)
+            return validationError;
+
+        // ── Generate Combinations ────────────────────────────────────
+        var combinations = GenerateCartesianProduct(request.VariantCombinations);
+        var excludedSet = ParseExcludedCombinations(request.ExcludedCombinations);
+        var filteredCombinations = combinations
+            .Where(combo => !excludedSet.Contains(NormalizeCombinationSignature(combo)))
+            .ToList();
+
+        // ── Create SKUs ──────────────────────────────────────────────
+        var prefix = request.SkuCodePrefix ?? GeneratePrefix(product!.Name);
+        var variantAxisKeys = variantDefs!.Select(d => d.Key).ToList();
+        var price = request.BasePrice.HasValue
+            ? Money.Create(request.BasePrice.Value, request.Currency)
+            : Money.Create(0, request.Currency);
+
+        var (errors, skusToPublish) = CreateSkus(
+            product!, filteredCombinations, prefix, price, variantAxisKeys);
+
+        // ── Save & Publish ───────────────────────────────────────────
+        var createdSkus = new List<SkuDto>();
+
+        if (skusToPublish.Count > 0)
+        {
+            productRepository.Update(product!);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            createdSkus = await PublishEventsAsync(skusToPublish, cancellationToken);
+        }
+
+        return Result<BulkAddSkuResultDto>.Success(new BulkAddSkuResultDto(
+            createdSkus.Count,
+            filteredCombinations.Count,
+            createdSkus,
+            errors.Count > 0 ? errors : null));
+    }
+
+    // ── Load & Validate ──────────────────────────────────────────────
+
+    private async Task<(Product? Product, Category? Category, List<AttributeDefinition>? VariantDefs, Result<BulkAddSkuResultDto>? Error)>
+        LoadAndValidateAsync(Guid productId, CancellationToken ct)
+    {
+        var product = await productRepository.GetWithSkusAsync(productId, ct);
         if (product is null)
-            return Result<BulkAddSkuResultDto>.Failure("Product not found", "NOT_FOUND");
+            return (null, null, null, Result<BulkAddSkuResultDto>.Failure("Product not found", "NOT_FOUND"));
 
-        // 2. Load category with attribute definitions
-        var category = await categoryRepository.GetWithAttributeDefinitionsAsync(
-            product.CategoryId, cancellationToken);
-
+        var category = await categoryRepository.GetWithAttributeDefinitionsAsync(product.CategoryId, ct);
         if (category is null)
-            return Result<BulkAddSkuResultDto>.Failure("Category not found", "NOT_FOUND");
+            return (null, null, null, Result<BulkAddSkuResultDto>.Failure("Category not found", "NOT_FOUND"));
 
-        // 3. Get variant-axis definitions and validate inputs
         var variantDefs = category.AttributeDefinitions
             .Where(a => a.Target == AttributeTarget.Sku && a.IsVariantAxis)
             .ToList();
 
         if (variantDefs.Count == 0)
-            return Result<BulkAddSkuResultDto>.Failure(
-                "Category has no variant-axis attributes defined. " +
-                "Add AttributeDefinitions with IsVariantAxis=true first.",
-                "NO_VARIANT_AXES");
+            return (null, null, null, Result<BulkAddSkuResultDto>.Failure(
+                "Category has no variant-axis attributes defined. Add AttributeDefinitions with IsVariantAxis=true first.",
+                "NO_VARIANT_AXES"));
 
-        // Validate that all requested keys are valid variant axes
+        return (product, category, variantDefs, null);
+    }
+
+    private static Result<BulkAddSkuResultDto>? ValidateVariantInputs(
+        BulkAddSkuCommand request,
+        List<AttributeDefinition> variantDefs)
+    {
         var validKeys = variantDefs.Select(d => d.Key).ToHashSet();
+
         foreach (var key in request.VariantCombinations.Keys)
         {
             if (!validKeys.Contains(key))
@@ -55,7 +113,6 @@ public sealed class BulkAddSkuHandler(
                     "INVALID_AXIS");
         }
 
-        // Validate that all values are in AllowedValues for each axis
         foreach (var (key, values) in request.VariantCombinations)
         {
             var def = variantDefs.First(d => d.Key == key);
@@ -71,30 +128,23 @@ public sealed class BulkAddSkuHandler(
             }
         }
 
-        // 4. Generate Cartesian product
-        var combinations = GenerateCartesianProduct(request.VariantCombinations);
+        return null;
+    }
 
-        // 5. Filter excluded combinations
-        var excludedSet = ParseExcludedCombinations(request.ExcludedCombinations);
-        var filteredCombinations = combinations
-            .Where(combo => !IsExcluded(combo, excludedSet))
-            .ToList();
+    // ── SKU Creation ─────────────────────────────────────────────────
 
-        // 6. Determine SKU code prefix
-        var prefix = request.SkuCodePrefix
-            ?? GeneratePrefix(product.Name);
-
-        // 7. Generate SKU codes and create SKUs
-        var variantAxisKeys = variantDefs.Select(d => d.Key).ToList();
-        var price = request.BasePrice.HasValue
-            ? Money.Create(request.BasePrice.Value, request.Currency)
-            : Money.Create(0, request.Currency);
-
-        var createdSkus = new List<SkuDto>();
+    private static (List<string> Errors, List<(Sku, Product)> ToPublish)
+        CreateSkus(
+            Product product,
+            List<Dictionary<string, string>> combinations,
+            string prefix,
+            Money price,
+            List<string> variantAxisKeys)
+    {
         var errors = new List<string>();
         var skusToPublish = new List<(Sku Sku, Product Product)>();
 
-        foreach (var combo in filteredCombinations)
+        foreach (var combo in combinations)
         {
             var skuCode = GenerateSkuCode(prefix, combo);
             var typedAttributes = combo.ToDictionary(
@@ -104,10 +154,7 @@ public sealed class BulkAddSkuHandler(
 
             try
             {
-                var sku = product.AddSku(
-                    skuCode, price, typedAttributes,
-                    variantAxisKeys: variantAxisKeys);
-
+                var sku = product.AddSku(skuCode, price, typedAttributes, variantAxisKeys: variantAxisKeys);
                 product.ClearDomainEvents();
                 skusToPublish.Add((sku, product));
             }
@@ -117,50 +164,50 @@ public sealed class BulkAddSkuHandler(
             }
         }
 
-        // 8. Save all SKUs in a single transaction
-        if (skusToPublish.Count > 0)
-        {
-            productRepository.Update(product);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // 9. Publish all integration events after successful save
-            foreach (var (sku, prod) in skusToPublish)
-            {
-                await publishEndpoint.Publish(new SkuCreatedIntegrationEvent(
-                    ProductId: prod.Id,
-                    SkuId: sku.Id,
-                    SkuCode: sku.SkuCode,
-                    ProductName: prod.Name,
-                    StoreId: prod.StoreId,
-                    Price: sku.Price.Amount,
-                    Currency: sku.Price.Currency,
-                    TypedAttributes: sku.TypedAttributes,
-                    FlexibleAttributes: sku.FlexibleAttributes,
-                    Timestamp: DateTime.UtcNow), cancellationToken);
-
-                createdSkus.Add(new SkuDto(
-                    sku.Id,
-                    sku.SkuCode,
-                    sku.Price.Amount,
-                    sku.Price.Currency,
-                    sku.Status.ToString(),
-                    sku.ImageUrl,
-                    sku.TypedAttributes,
-                    sku.FlexibleAttributes,
-                    sku.CreatedAt));
-            }
-        }
-
-        return Result<BulkAddSkuResultDto>.Success(new BulkAddSkuResultDto(
-            createdSkus.Count,
-            filteredCombinations.Count,
-            createdSkus,
-            errors.Count > 0 ? errors : null));
+        return (errors, skusToPublish);
     }
 
     /// <summary>
-    /// Generates all combinations from variant axes via Cartesian product.
+    /// Publishes integration events for each created SKU and returns the DTOs.
+    /// Must run after SaveChanges so sku.Id is populated by EF Core.
     /// </summary>
+    private async Task<List<SkuDto>> PublishEventsAsync(
+        List<(Sku Sku, Product Product)> skusToPublish,
+        CancellationToken ct)
+    {
+        var createdSkus = new List<SkuDto>();
+
+        foreach (var (sku, product) in skusToPublish)
+        {
+            await publishEndpoint.Publish(new SkuCreatedIntegrationEvent(
+                ProductId: product.Id,
+                SkuId: sku.Id,
+                SkuCode: sku.SkuCode,
+                ProductName: product.Name,
+                StoreId: product.StoreId,
+                Price: sku.Price.Amount,
+                Currency: sku.Price.Currency,
+                TypedAttributes: sku.TypedAttributes,
+                FlexibleAttributes: sku.FlexibleAttributes,
+                Timestamp: DateTime.UtcNow), ct);
+
+            createdSkus.Add(new SkuDto(
+                sku.Id,
+                sku.SkuCode,
+                sku.Price.Amount,
+                sku.Price.Currency,
+                sku.Status.ToString(),
+                sku.ImageUrl,
+                sku.TypedAttributes,
+                sku.FlexibleAttributes,
+                sku.CreatedAt));
+        }
+
+        return createdSkus;
+    }
+
+    // ── Cartesian Product ────────────────────────────────────────────
+
     private static List<Dictionary<string, string>> GenerateCartesianProduct(
         Dictionary<string, List<string>> axes)
     {
@@ -188,10 +235,8 @@ public sealed class BulkAddSkuHandler(
         return result;
     }
 
-    /// <summary>
-    /// Parses excluded combinations from string format to a set for fast lookup.
-    /// Input: ["color:Blue,storage:512GB"] → Set of normalized signatures.
-    /// </summary>
+    // ── Exclusion Parsing ────────────────────────────────────────────
+
     private static HashSet<string> ParseExcludedCombinations(List<string>? excluded)
     {
         if (excluded is null || excluded.Count == 0)
@@ -210,13 +255,6 @@ public sealed class BulkAddSkuHandler(
             .ToHashSet();
     }
 
-    private static bool IsExcluded(
-        Dictionary<string, string> combo,
-        HashSet<string> excludedSet)
-    {
-        return excludedSet.Contains(NormalizeCombinationSignature(combo));
-    }
-
     private static string NormalizeCombinationSignature(Dictionary<string, string> combo)
     {
         return string.Join("|", combo
@@ -224,13 +262,9 @@ public sealed class BulkAddSkuHandler(
             .Select(kvp => $"{kvp.Key}={kvp.Value.ToUpperInvariant()}"));
     }
 
-    /// <summary>
-    /// Generates a SKU code from prefix + attribute values.
-    /// Example: prefix="IPH17", combo={color:Black, storage:128GB} → "IPH17-BLK-128GB"
-    /// </summary>
-    private static string GenerateSkuCode(
-        string prefix,
-        Dictionary<string, string> combo)
+    // ── SKU Code Generation ──────────────────────────────────────────
+
+    private static string GenerateSkuCode(string prefix, Dictionary<string, string> combo)
     {
         var parts = combo
             .OrderBy(kvp => kvp.Key)
@@ -238,10 +272,6 @@ public sealed class BulkAddSkuHandler(
         return $"{prefix}-{string.Join("-", parts)}".ToUpperInvariant();
     }
 
-    /// <summary>
-    /// Abbreviates a value for use in SKU codes.
-    /// "Black" → "BLK", "128GB" → "128GB", "Extra Large" → "XL"
-    /// </summary>
     private static string AbbreviateValue(string value)
     {
         var trimmed = value.Trim();

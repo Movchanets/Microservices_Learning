@@ -5,6 +5,11 @@ using MediatR;
 
 namespace Catalog.Application.Queries;
 
+/// <summary>
+/// Handles ListProductsQuery: delegates to the read-only repository for paginated
+/// product listing with optional filtering by store, category, and status.
+/// Uses AsNoTracking() projections for optimal read performance.
+/// </summary>
 public sealed class ListProductsHandler(
     IProductReadRepository readRepository)
     : IRequestHandler<ListProductsQuery, PagedResult<ProductListDto>>

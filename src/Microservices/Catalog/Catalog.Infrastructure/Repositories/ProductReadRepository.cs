@@ -2,14 +2,22 @@ using BuildingBlocks.Infrastructure.Models;
 using Catalog.Application.DTOs;
 using Catalog.Application.Interfaces;
 using Catalog.Domain.Aggregates;
+using Catalog.Domain.Entities;
 using Catalog.Domain.Enums;
 using Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Catalog.Infrastructure.Repositories;
 
+/// <summary>
+/// Read-only repository for product queries. Uses EF Core projections to DTOs
+/// with AsNoTracking() for optimal read performance. Supports filtering by
+/// store, category, status, and full-text search.
+/// </summary>
 public sealed class ProductReadRepository(CatalogDbContext context) : IProductReadRepository
 {
+    // ── Queries ──────────────────────────────────────────────────────
+
     public async Task<ProductDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await context.Products
@@ -30,16 +38,7 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
                 p.Tags,
                 p.Skus
                     .Where(s => s.Status != SkuStatus.Deleted)
-                    .Select(s => new SkuDto(
-                        s.Id,
-                        s.SkuCode,
-                        s.Price.Amount,
-                        s.Price.Currency,
-                        s.Status.ToString(),
-                        s.ImageUrl,
-                        s.TypedAttributes,
-                        s.FlexibleAttributes,
-                        s.CreatedAt))
+                    .Select(s => ToSkuDto(s))
                     .ToList(),
                 p.CreatedAt,
                 p.UpdatedAt))
@@ -51,16 +50,7 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         return await context.Skus
             .AsNoTracking()
             .Where(s => s.Id == skuId && s.Status != SkuStatus.Deleted)
-            .Select(s => new SkuDto(
-                s.Id,
-                s.SkuCode,
-                s.Price.Amount,
-                s.Price.Currency,
-                s.Status.ToString(),
-                s.ImageUrl,
-                s.TypedAttributes,
-                s.FlexibleAttributes,
-                s.CreatedAt))
+            .Select(s => ToSkuDto(s))
             .FirstOrDefaultAsync(ct);
     }
 
@@ -84,20 +74,7 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
             .Include(p => p.Category)
             .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
             .Where(p => idSet.Contains(p.Id) && p.Status != ProductStatus.Deleted)
-            .Select(p => new ProductListDto(
-                p.Id,
-                p.Name,
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Min(s => (decimal?)s.Price.Amount),
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Max(s => (decimal?)s.Price.Amount),
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.Price.Currency).FirstOrDefault(),
-                p.Skus.Count(s => s.Status == SkuStatus.Active),
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => (Guid?)s.Id).FirstOrDefault(),
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.SkuCode).FirstOrDefault(),
-                p.Category != null ? p.Category.Name : "",
-                p.Status.ToString(),
-                p.ImageUrl,
-                p.StoreId,
-                p.CreatedAt))
+            .Select(p => ToProductListDto(p))
             .ToListAsync(ct);
     }
 
@@ -114,19 +91,8 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
             .Include(p => p.Category)
             .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted));
 
-        // Status filter: null/empty/"Active" → Active only; "All" → all non-deleted; specific status → filter by it
-        if (string.IsNullOrWhiteSpace(status) || status.Equals("Active", StringComparison.OrdinalIgnoreCase))
-        {
-            query = query.Where(p => p.Status == ProductStatus.Active);
-        }
-        else if (status.Equals("All", StringComparison.OrdinalIgnoreCase))
-        {
-            query = query.Where(p => p.Status != ProductStatus.Deleted);
-        }
-        else if (Enum.TryParse<ProductStatus>(status, true, out var parsed))
-        {
-            query = query.Where(p => p.Status == parsed);
-        }
+        // ── Filters ─────────────────────────────────────────────────
+        query = ApplyStatusFilter(query, status);
 
         if (categoryId.HasValue)
             query = query.Where(p => p.CategoryId == categoryId.Value);
@@ -139,28 +105,70 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
                 p.Name.Contains(search) ||
                 p.Description.Contains(search));
 
+        // ── Pagination ──────────────────────────────────────────────
         var totalCount = await query.CountAsync(ct);
 
         var items = await query
             .OrderByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(p => new ProductListDto(
-                p.Id,
-                p.Name,
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Min(s => (decimal?)s.Price.Amount),
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Max(s => (decimal?)s.Price.Amount),
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.Price.Currency).FirstOrDefault(),
-                p.Skus.Count(s => s.Status == SkuStatus.Active),
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => (Guid?)s.Id).FirstOrDefault(),
-                p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.SkuCode).FirstOrDefault(),
-                p.Category != null ? p.Category.Name : "",
-                p.Status.ToString(),
-                p.ImageUrl,
-                p.StoreId,
-                p.CreatedAt))
+            .Select(p => ToProductListDto(p))
             .ToListAsync(ct);
 
         return new PagedResult<ProductListDto>(items, totalCount, page, pageSize);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Projects a SKU entity to SkuDto. Must be a static method (not Func delegate)
+    /// so EF Core can translate it as an expression tree inside IQueryable.Select().
+    /// </summary>
+    private static SkuDto ToSkuDto(Sku s) => new(
+        s.Id,
+        s.SkuCode,
+        s.Price.Amount,
+        s.Price.Currency,
+        s.Status.ToString(),
+        s.ImageUrl,
+        s.TypedAttributes,
+        s.FlexibleAttributes,
+        s.CreatedAt);
+
+    /// <summary>
+    /// Projects a Product entity to ProductListDto with aggregated SKU data.
+    /// Must be a static method (not Func delegate) for EF Core translation.
+    /// </summary>
+    private static ProductListDto ToProductListDto(Product p) => new(
+        p.Id,
+        p.Name,
+        p.Skus.Where(s => s.Status == SkuStatus.Active).Min(s => (decimal?)s.Price.Amount),
+        p.Skus.Where(s => s.Status == SkuStatus.Active).Max(s => (decimal?)s.Price.Amount),
+        p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.Price.Currency).FirstOrDefault(),
+        p.Skus.Count(s => s.Status == SkuStatus.Active),
+        p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => (Guid?)s.Id).FirstOrDefault(),
+        p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.SkuCode).FirstOrDefault(),
+        p.Category != null ? p.Category.Name : "",
+        p.Status.ToString(),
+        p.ImageUrl,
+        p.StoreId,
+        p.CreatedAt);
+
+    /// <summary>
+    /// Applies status filter to the query. Defaults to Active if not specified.
+    /// "All" returns all non-deleted products.
+    /// </summary>
+    private static IQueryable<Product> ApplyStatusFilter(IQueryable<Product> query, string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status) || status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+            return query.Where(p => p.Status == ProductStatus.Active);
+
+        if (status.Equals("All", StringComparison.OrdinalIgnoreCase))
+            return query.Where(p => p.Status != ProductStatus.Deleted);
+
+        if (Enum.TryParse<ProductStatus>(status, true, out var parsed))
+            return query.Where(p => p.Status == parsed);
+
+        return query;
     }
 }

@@ -8,6 +8,11 @@ using Ordering.Domain.Enumerations;
 
 namespace Ordering.Infrastructure.Messaging.Consumers;
 
+/// <summary>
+/// Updates the Order entity when InventoryReservedEvent arrives.
+/// Transitions order status from Submitted to InventoryReserved,
+/// confirming that stock has been allocated for the order items.
+/// </summary>
 public sealed class OrderInventoryReservedConsumer(
     IOrderRepository repository,
     IUnitOfWork uow,

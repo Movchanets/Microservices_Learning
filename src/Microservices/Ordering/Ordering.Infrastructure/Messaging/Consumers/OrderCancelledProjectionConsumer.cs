@@ -7,6 +7,10 @@ using Ordering.Domain.Enumerations;
 
 namespace Ordering.Infrastructure.Messaging.Consumers;
 
+/// <summary>
+/// Updates the Order entity when OrderCancelledEvent arrives from the saga.
+/// Sets order status to Cancelled and publishes domain event for downstream consumers.
+/// </summary>
 public sealed class OrderCancelledProjectionConsumer(
     IOrderRepository repository,
     IUnitOfWork uow,

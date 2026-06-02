@@ -1,14 +1,22 @@
 /**
  * Rozetka Product Detail Page Object
- * 
+ *
  * Extracts full product details from Rozetka product pages:
  * - SKU/Article number (Код товару)
  * - Full image gallery (big/ URLs, not medium/)
  * - Breadcrumbs (from rz-breadcrumbs or JSON-LD)
- * - Description
+ * - Description (from "Опис" tab or meta tag)
+ * - Brand (from product attributes or meta)
+ * - Subtitle / brief summary
+ * - Price (from the current page, not parent tile)
+ * - Product specifications (Характеристики section)
+ * - Availability status
+ * - Variant links with type classification
  */
 
 import { Page } from 'playwright';
+
+// ── Interfaces ──────────────────────────────────────────────────
 
 export interface Breadcrumb {
   name: string;
@@ -20,18 +28,35 @@ export interface ProductVariant {
   pid: string;
   url: string;
   name: string;
-  type: 'color' | 'storage' | 'model' | 'other';
+  type: 'color' | 'storage' | 'model' | 'ram' | 'other';
+}
+
+export interface ProductSpecification {
+  key: string;
+  value: string;
+  group?: string;  // e.g. "Екран", "Процесор", "Пам'ять"
 }
 
 export interface ProductDetails {
-  sku: string;              // Rozetka SKU code (e.g., "528975609")
-  description: string;
-  images: string[];          // Full-size image URLs (/goods/images/big/)
-  thumbnails: string[];      // Thumbnail URLs (/goods/images/medium/)
-  breadcrumbs: Breadcrumb[]; // Category hierarchy
-  categoryPath: string;
+  sku: string;                // Rozetka SKU code (e.g., "528975609")
+  name: string;               // Full product name from page
+  subtitle: string;            // Brief summary below title
+  brand: string;               // Brand name
+  description: string;         // Full description text
+  price: number;               // Current page price (UAH)
+  priceText: string;           // Raw price text
+  images: string[];            // Full-size image URLs (/goods/images/big/)
+  thumbnails: string[];        // Thumbnail URLs (/goods/images/medium/)
+  breadcrumbs: Breadcrumb[];   // Category hierarchy
+  categoryPath: string;        // "Комп'ютери > Ноутбуки" (without product name)
   variants: ProductVariant[];
+  specifications: ProductSpecification[];  // Structured key-value specs
+  availability: string;        // "available" | "out_of_stock" | "preorder" | ""
+  warranty: string;            // e.g. "12 місяців"
+  seller: string;              // Seller name if available
 }
+
+// ── Page Object ─────────────────────────────────────────────────
 
 export class RozetkaProductPage {
   readonly page: Page;
@@ -46,56 +71,236 @@ export class RozetkaProductPage {
   }
 
   /**
-   * Extract all product details from the page
+   * Extract all product details from the page.
+   * Runs independent extractions in parallel for speed.
    */
   async extractDetails(): Promise<ProductDetails> {
-    const [sku, gallery, breadcrumbs, variants] = await Promise.all([
+    const [sku, gallery, breadcrumbs, variants, inlineData] = await Promise.all([
       this.extractSku(),
       this.extractGallery(),
       this.extractBreadcrumbs(),
       this.extractVariants(),
+      this.extractInlineJsonLd(),
     ]);
 
-    const description = await this.extractDescription();
-    const categoryPath = breadcrumbs.map(b => b.name).filter(Boolean).join(' > ');
+    // These depend on page state and may need scrolling
+    const [description, specs, availability, warranty, seller] = await Promise.all([
+      this.extractDescription(),
+      this.extractSpecifications(),
+      this.extractAvailability(),
+      this.extractWarranty(),
+      this.extractSeller(),
+    ]);
+
+    const brand = await this.extractBrand();
+    const subtitle = await this.extractSubtitle();
+    const price = await this.extractPrice();
+    const categoryPath = this.buildCategoryPath(breadcrumbs);
+
+    // Use JSON-LD data as fallback for missing fields
+    const name = inlineData?.name || await this.extractName();
+    const finalDescription = description || inlineData?.description || '';
+    const finalBrand = brand || inlineData?.brand || '';
+    const finalPrice = price.value || (inlineData?.price ?? 0);
 
     return {
       sku,
-      description,
+      name,
+      subtitle,
+      brand: finalBrand,
+      description: finalDescription,
+      price: finalPrice,
+      priceText: price.text,
       images: gallery.images,
       thumbnails: gallery.thumbnails,
       breadcrumbs,
       categoryPath,
       variants,
+      specifications: specs,
+      availability,
+      warranty,
+      seller,
     };
   }
 
+  // ── SKU ─────────────────────────────────────────────────────
+
   /**
-   * Extract SKU/article number
+   * Extract SKU/article number.
    * Pattern: <span class="ms-auto color-black-60">Код:  528975609</span>
    */
   async extractSku(): Promise<string> {
-    // Method 1: Look for "Код:" text in spans
     const fromDom = await this.page.evaluate(() => {
+      // Method 1: Look for "Код:" text
       const spans = document.querySelectorAll('span, div, p');
       for (const el of spans) {
         const t = el.textContent?.trim() || '';
         const match = t.match(/^Код:\s*(\d+)$/);
         if (match) return match[1];
       }
+      // Method 2: Look in product code section
+      const codeEl = document.querySelector('[class*="product-code"], [class*="code"]');
+      if (codeEl) {
+        const match = codeEl.textContent?.match(/(\d{6,})/);
+        if (match) return match[1];
+      }
       return '';
     });
-
     if (fromDom) return fromDom;
 
-    // Method 2: Extract from URL (fallback)
+    // Method 3: Extract from URL
     const url = this.page.url();
     const urlMatch = url.match(/\/p(\d+)\//);
     return urlMatch ? urlMatch[1] : '';
   }
 
+  // ── Name ────────────────────────────────────────────────────
+
+  async extractName(): Promise<string> {
+    return this.page.evaluate(() => {
+      const h1 = document.querySelector('h1');
+      return h1?.textContent?.trim() || '';
+    });
+  }
+
+  // ── Subtitle ────────────────────────────────────────────────
+
   /**
-   * Extract full image gallery
+   * Extract subtitle / brief summary below the product title.
+   * Rozetka shows a short key-feature line under <h1>.
+   */
+  async extractSubtitle(): Promise<string> {
+    return this.page.evaluate(() => {
+      // Method 1: Direct sibling/subtitle selectors
+      const selectors = [
+        '[class*="product-subtitle"]',
+        '[class*="subtitle"]',
+        '[class*="about__brief"]',
+        '[class*="product-about"] > p:first-of-type',
+        'h1 + p',
+        'h1 ~ p',
+      ];
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        const text = el?.textContent?.trim();
+        if (text && text.length > 10 && text.length < 500) return text;
+      }
+      // Method 2: Meta description as subtitle fallback
+      const meta = document.querySelector('meta[name="description"]');
+      const metaContent = meta?.getAttribute('content') || '';
+      if (metaContent.length > 10 && metaContent.length < 500) return metaContent;
+      return '';
+    });
+  }
+
+  // ── Brand ───────────────────────────────────────────────────
+
+  /**
+   * Extract brand from product page.
+   * Checks multiple sources: spec table, brand link, meta, JSON-LD.
+   */
+  async extractBrand(): Promise<string> {
+    return this.page.evaluate(() => {
+      // Method 1: Brand in spec table
+      const specRows = document.querySelectorAll('tr, [class*="spec-row"], [class*="characteristics"] li');
+      for (const row of specRows) {
+        const label = row.querySelector('td:first-child, [class*="label"], [class*="name"]');
+        const value = row.querySelector('td:last-child, [class*="value"]');
+        const labelText = label?.textContent?.trim().toLowerCase() || '';
+        if (labelText === 'бренд' || labelText === 'brand' || labelText === 'виробник') {
+          const val = value?.textContent?.trim();
+          if (val) return val;
+        }
+      }
+
+      // Method 2: Brand link/image near title
+      const brandLink = document.querySelector(
+        '[class*="brand"] a, [class*="brand"] img, [class*="product-brand"] a'
+      );
+      if (brandLink) {
+        const text = brandLink.textContent?.trim();
+        if (text && text.length > 1 && text.length < 50) return text;
+        const alt = brandLink.getAttribute('alt');
+        if (alt) return alt;
+        const title = brandLink.getAttribute('title');
+        if (title) return title;
+      }
+
+      // Method 3: JSON-LD brand
+      const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+      for (const script of scripts) {
+        try {
+          const data = JSON.parse(script.textContent || '{}');
+          if (data['@type'] === 'Product' && data.brand) {
+            return typeof data.brand === 'string' ? data.brand : data.brand.name || '';
+          }
+        } catch {}
+      }
+
+      // Method 4: Meta og:brand
+      const metaBrand = document.querySelector('meta[property="product:brand"]');
+      return metaBrand?.getAttribute('content') || '';
+    });
+  }
+
+  // ── Price ───────────────────────────────────────────────────
+
+  /**
+   * Extract the current page's price (important for variant pages).
+   */
+  async extractPrice(): Promise<{ value: number; text: string }> {
+    return this.page.evaluate(() => {
+      // Method 1: Main price display
+      const priceSelectors = [
+        '[class*="product-price"] [class*="price"]',
+        '[class*="price__big"]',
+        '[class*="main-price"]',
+        '[class*="price--big"]',
+        'p[class*="price"]',
+        '[class*="product-prices"] [class*="big"]',
+      ];
+      for (const sel of priceSelectors) {
+        const el = document.querySelector(sel);
+        const text = el?.textContent?.trim() || '';
+        const match = text.match(/([\d\s]+)\s*₴/);
+        if (match) {
+          const value = parseInt(match[1].replace(/\s/g, ''), 10);
+          if (value > 0) return { value, text };
+        }
+      }
+
+      // Method 2: Any price-like text
+      const allText = document.body.textContent || '';
+      const priceMatches = allText.match(/([\d\s]{2,})\s*₴/g);
+      if (priceMatches && priceMatches.length > 0) {
+        const lastPrice = priceMatches[priceMatches.length - 1];
+        const match = lastPrice.match(/([\d\s]+)\s*₴/);
+        if (match) {
+          const value = parseInt(match[1].replace(/\s/g, ''), 10);
+          if (value > 0) return { value, text: lastPrice.trim() };
+        }
+      }
+
+      // Method 3: JSON-LD price
+      const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+      for (const script of scripts) {
+        try {
+          const data = JSON.parse(script.textContent || '{}');
+          if (data['@type'] === 'Product' && data.offers) {
+            const price = parseFloat(data.offers.price || '0');
+            if (price > 0) return { value: price, text: `${price}₴` };
+          }
+        } catch {}
+      }
+
+      return { value: 0, text: '' };
+    });
+  }
+
+  // ── Gallery ─────────────────────────────────────────────────
+
+  /**
+   * Extract full image gallery.
    * Main images: .main-slider__item img with /goods/images/big/ URLs
    * Thumbnails: .thumbnail-button img with /goods/images/medium/ URLs
    */
@@ -148,8 +353,10 @@ export class RozetkaProductPage {
     });
   }
 
+  // ── Breadcrumbs ─────────────────────────────────────────────
+
   /**
-   * Extract breadcrumbs from rz-breadcrumbs element or JSON-LD
+   * Extract breadcrumbs from JSON-LD BreadcrumbList or rz-breadcrumbs element.
    */
   async extractBreadcrumbs(): Promise<Breadcrumb[]> {
     return this.page.evaluate(() => {
@@ -193,14 +400,106 @@ export class RozetkaProductPage {
     });
   }
 
+  // ── Variants ────────────────────────────────────────────────
+
   /**
-   * Extract product variants (color, storage, model)
-   * Variants are links to /p{id}/ with different product IDs
+   * Extract product variants from the variant selector section.
+   * Rozetka pages have structured selectors with labels like:
+   *   "Колір: Cosmic Orange" → color axis
+   *   "Вбудована пам'ять: 256 ГБ" → storage axis
+   *   "Серія: iPhone 17 Pro Max" → model axis (filtered out)
    */
   async extractVariants(): Promise<ProductVariant[]> {
-    return this.page.evaluate(() => {
+    const currentUrl = this.page.url();
+    const currentPid = currentUrl.match(/\/p(\d+)\//)?.[1] || '';
+
+    // Step 1: Extract variant axes from the selector section
+    const axes = await this.page.evaluate(() => {
+      const axes: Array<{
+        label: string;
+        type: 'color' | 'storage' | 'ram' | 'model' | 'other';
+        options: Array<{ name: string; url: string; pid: string }>;
+      }> = [];
+
+      // Find selector sections — they contain a label paragraph + list of links
+      const sections = document.querySelectorAll('[class*="product"] [class*="variations"], [class*="configurator"], [class*="variant"]');
+      
+      // Fallback: find all <p> that look like axis labels, then get their sibling <ul>
+      const allParas = document.querySelectorAll('p');
+      for (const p of allParas) {
+        const text = p.textContent?.trim() || '';
+        // Match axis labels: "Колір: ...", "Вбудована пам'ять: ...", "Серія: ..."
+        const labelMatch = text.match(/^(Колір|Вбудована пам.?ять|Обсяг пам.?яті|Оперативна пам.?ять|Серія|Модель|Розмір|Color|Storage|RAM|Series|Model|Size):\s*/i);
+        if (!labelMatch) continue;
+        
+        const label = labelMatch[1];
+        const list = p.nextElementSibling;
+        if (!list || list.tagName !== 'UL') continue;
+
+        const options: Array<{ name: string; url: string; pid: string }> = [];
+        list.querySelectorAll('a[href]').forEach(a => {
+          const href = a.getAttribute('href') || '';
+          const pid = href.match(/\/p(\d+)\//)?.[1];
+          if (!pid) return;
+          const name = a.textContent?.trim() || a.querySelector('[class*="value"]')?.textContent?.trim() || '';
+          const fullUrl = href.startsWith('http') ? href : 'https://rozetka.com.ua' + href;
+          options.push({ name: name || pid, url: fullUrl, pid });
+        });
+
+        if (options.length === 0) continue;
+
+        // Classify axis type from label
+        let type: 'color' | 'storage' | 'ram' | 'model' | 'other' = 'other';
+        const labelLower = label.toLowerCase();
+        if (labelLower.includes('колір') || labelLower.includes('color')) type = 'color';
+        else if (labelLower.includes('пам\'ять') && !labelLower.includes('оперативна')) type = 'storage';
+        else if (labelLower.includes('оперативна') || labelLower.includes('ram')) type = 'ram';
+        else if (labelLower.includes('серія') || labelLower.includes('модель') || labelLower.includes('series') || labelLower.includes('model')) type = 'model';
+
+        axes.push({ label, type, options });
+      }
+
+      return axes;
+    });
+
+    // Step 2: Build variant list from axes, filtering out current page and model variants
+    const variants: ProductVariant[] = [];
+    const seen = new Set<string>();
+    seen.add(currentPid);
+
+    for (const axis of axes) {
+      // Skip "series"/"model" axes — those are different products, not variants
+      if (axis.type === 'model') continue;
+
+      for (const opt of axis.options) {
+        if (seen.has(opt.pid)) continue;
+        seen.add(opt.pid);
+        variants.push({
+          pid: opt.pid,
+          url: opt.url,
+          name: opt.name.substring(0, 80),
+          type: axis.type,
+        });
+      }
+    }
+
+    // Step 3: If no axes found, fall back to link-based detection
+    if (axes.length === 0) {
+      const fallback = await this.extractVariantsFromLinks();
+      return fallback;
+    }
+
+    return variants;
+  }
+
+  /**
+   * Fallback: extract variants from product links on the page.
+   * Used when the structured selector section is not found.
+   */
+  private async extractVariantsFromLinks(): Promise<ProductVariant[]> {
+    const { rawVariants, storageSpec } = await this.page.evaluate(() => {
       const currentPid = window.location.href.match(/\/p(\d+)\//)?.[1] || '';
-      const variants: Array<{ pid: string; url: string; name: string; type: 'color' | 'storage' | 'model' | 'other' }> = [];
+      const rawVariants: Array<{ pid: string; url: string; name: string; type: 'color' | 'storage' | 'model' | 'ram' | 'other' }> = [];
       const seen = new Set<string>();
 
       document.querySelectorAll('a[href*="/p"]').forEach(a => {
@@ -213,31 +512,29 @@ export class RozetkaProductPage {
         const cls = a.className || '';
         if (cls.includes('service-product') || cls.includes('footer') || cls.includes('tile-image')) return;
         const fullText = (text + ' ' + title).toLowerCase();
-        // Filter out accessories, bags, monitors, cases, cables, chargers
         const accessoryWords = ['чохол', 'скло', 'кабель', 'заряд', 'рюкзак', 'монітор', 'портативний', 'monitor', 'backpack', 'case', 'charger', 'cable', 'stand', 'dock', 'hub', 'mouse', 'keyboard', 'миша', 'клавіатур', 'підставка', 'holder', 'sleeve', 'sumka', 'сумка', 'тримач'];
         if (accessoryWords.some(w => fullText.includes(w))) return;
-        
-        // Only accept variants that share a similar URL slug pattern
-        // True variants have similar product names in the URL
+
         const currentSlug = window.location.pathname.toLowerCase();
         const variantSlug = href.toLowerCase();
-        // Extract product family from URL (e.g., 'iphone-17-pro-max' from both variants)
         const slugParts = currentSlug.split('/').filter(s => s && !s.startsWith('p') && !s.startsWith('ua'));
         const varSlugParts = variantSlug.split('/').filter(s => s && !s.startsWith('p') && !s.startsWith('ua'));
-        // If slugs are completely different, it's likely not a variant
         if (slugParts.length > 0 && varSlugParts.length > 0) {
           const currentFamily = slugParts[0]?.split('-').slice(0, 3).join('-');
           const varFamily = varSlugParts[0]?.split('-').slice(0, 3).join('-');
-          // Allow if family matches, or if it's a color/storage variant
-          const isVariantType = text.match(/^\d+\s*(ГБ|GB|ТБ|TB)$/i) || 
+          const isVariantType = text.match(/^\d+\s*(ГБ|GB|ТБ|TB)$/i) ||
                                text.match(/^(iPhone|Galaxy|MacBook|iPad|Pixel|Redmi|POCO)/i) ||
                                text.match(/^(Black|White|Blue|Red|Green|Gold|Silver|Purple|Pink|Orange|Titanium|Midnight|Starlight|Cosmic|Deep|Natural|Slate|Space|Graphite|Rose)/i);
           if (!isVariantType && currentFamily && varFamily && currentFamily !== varFamily) return;
         }
         seen.add(pid);
         const fullUrl = href.startsWith('http') ? href : 'https://rozetka.com.ua' + href;
-        let type: 'color' | 'storage' | 'model' | 'other' = 'other';
-        if (text.match(/^\d+\s*(ГБ|GB|ТБ|TB)$/i)) type = 'storage';
+        let type: 'color' | 'storage' | 'model' | 'ram' | 'other' = 'other';
+        const hasRam = text.match(/(\d+)\s*(ГБ|GB)\s*(RAM|ОЗП)/i);
+        const hasTb = text.match(/(\d+)\s*(ТБ|TB)/i);
+        const hasGb = text.match(/(\d+)\s*(ГБ|GB)/i);
+        if (hasRam) type = 'ram';
+        else if (hasTb || hasGb) type = 'storage';
         else if (text.match(/^(iPhone|Galaxy|MacBook|iPad|Pixel|Redmi|POCO)/i)) type = 'model';
         else if (!text && img) type = 'color';
         else if (text.match(/^(Black|White|Blue|Red|Green|Gold|Silver|Purple|Pink|Orange|Titanium|Midnight|Starlight|Cosmic|Deep|Natural|Slate|Space|Graphite|Rose)/i)) type = 'color';
@@ -245,34 +542,317 @@ export class RozetkaProductPage {
           const slug = href.toLowerCase();
           if (slug.match(/(black|white|blue|red|green|gold|silver|purple|pink|orange|titanium|midnight|starlight|cosmic|deep|natural|slate|space|graphite|rose)/)) type = 'color';
         }
-        variants.push({ pid, url: fullUrl, name: (text || title || pid).substring(0, 80), type });
+        rawVariants.push({ pid, url: fullUrl, name: (text || title || pid).substring(0, 80), type });
       });
 
-      return variants;
+      const pageText = document.body.textContent || '';
+      let storageSpec = '';
+      const keywordMatch = pageText.match(/(SSD|HDD|NVMe)\s*(\d+)\s*(ГБ|GB|ТБ|TB)/i);
+      if (keywordMatch) {
+        storageSpec = `${keywordMatch[2]} ${keywordMatch[3]}`;
+      } else {
+        const titleEl = document.querySelector('h1');
+        const titleText = titleEl?.textContent || '';
+        const titleStorageMatch = titleText.match(/(\d+)\s*(ГБ|GB|ТБ|TB)/i);
+        if (titleStorageMatch) {
+          storageSpec = `${titleStorageMatch[1]} ${titleStorageMatch[2]}`;
+        }
+      }
+
+      return { rawVariants, storageSpec };
     });
+
+    const variants: ProductVariant[] = rawVariants;
+
+    // Post-process: laptop mode — reclassify GB variants that don't match SSD
+    const hasStorageKeyword = storageSpec && (await this.page.evaluate(() => {
+      const text = document.body.textContent || '';
+      return /(SSD|HDD|NVMe)\s*\d+\s*(ГБ|GB|ТБ|TB)/i.test(text);
+    }));
+
+    if (hasStorageKeyword) {
+      for (const v of variants) {
+        if (v.type !== 'storage') continue;
+        const vSize = v.name.match(/(\d+)\s*(ГБ|GB|ТБ|TB)/i);
+        if (!vSize) continue;
+        const vValue = `${vSize[1]} ${vSize[2]}`;
+        if (vValue !== storageSpec && !storageSpec.includes(vSize[1])) {
+          v.type = 'ram';
+        }
+      }
+    }
+
+    // Fallback: TB + GB mix → GB is RAM
+    const hasTb = variants.some(v => v.type === 'storage' && /\d+\s*(ТБ|TB)/i.test(v.name));
+    const hasGb = variants.some(v => v.type === 'storage' && /\d+\s*(ГБ|GB)/i.test(v.name) && !/\d+\s*(ТБ|TB)/i.test(v.name));
+    if (hasTb && hasGb) {
+      for (const v of variants) {
+        if (v.type === 'storage' && /\d+\s*(ГБ|GB)/i.test(v.name) && !/\d+\s*(ТБ|TB)/i.test(v.name)) {
+          v.type = 'ram';
+        }
+      }
+    }
+
+    return variants;
   }
 
+  // ── Description ─────────────────────────────────────────────
+
   /**
-   * Extract product description
+   * Extract product description from "Опис" tab or page content.
    */
   async extractDescription(): Promise<string> {
+    // Try clicking the description tab first to load content
+    try {
+      const descTab = await this.page.$('[class*="tab"][class*="about"], button:has-text("Про товар"), button:has-text("Опис")');
+      if (descTab) {
+        await descTab.click();
+        await this.randomDelay(500, 1000);
+      }
+    } catch {}
+
     return this.page.evaluate(() => {
       const selectors = [
         '[class*="product-about"] p',
         '[class*="about__brief"]',
         '[class*="description"] p',
         'article p',
+        '[class*="about-section"] p',
+        '[class*="tab-content"] p',
+        '[class*="product-about"]',
       ];
 
       for (const sel of selectors) {
         const el = document.querySelector(sel);
         const text = el?.textContent?.trim();
-        if (text && text.length > 20) return text;
+        if (text && text.length > 30) return text;
+      }
+
+      // Fallback: meta description
+      const meta = document.querySelector('meta[name="description"]');
+      const metaContent = meta?.getAttribute('content') || '';
+      if (metaContent.length > 30) return metaContent;
+
+      return '';
+    });
+  }
+
+  // ── Specifications ──────────────────────────────────────────
+
+  /**
+   * Extract ALL product specifications dynamically from the page.
+   * Primary source: <dl> (definition lists) — Rozetka's standard format.
+   * Fallbacks: tables, list items, JSON-LD.
+   *
+   * No hardcoded key filtering — every key-value pair is extracted.
+   * Attribute type is inferred from the VALUE pattern.
+   */
+  async extractSpecifications(): Promise<ProductSpecification[]> {
+    // Try clicking the specs tab first
+    try {
+      const specsTab = await this.page.$('button:has-text("Характеристики"), [class*="tab"]:has-text("Характеристики")');
+      if (specsTab) {
+        await specsTab.click();
+        await this.randomDelay(500, 1000);
+      }
+    } catch {}
+
+    return this.page.evaluate(() => {
+      const specs: Array<{ key: string; value: string; group?: string }> = [];
+      const seen = new Set<string>();
+
+      // ── Method 1: <dl> definition lists (Rozetka standard) ──
+      document.querySelectorAll('dl').forEach(dl => {
+        const dts = dl.querySelectorAll('dt');
+        const dds = dl.querySelectorAll('dd');
+        for (let i = 0; i < Math.min(dts.length, dds.length); i++) {
+          const key = dts[i].textContent?.trim() || '';
+          const value = dds[i].textContent?.trim() || '';
+          if (key && value) {
+            // Deduplicate by key+value (same spec can appear in multiple sections)
+            const dedupKey = `${key}::${value.substring(0, 50)}`;
+            if (!seen.has(dedupKey)) {
+              seen.add(dedupKey);
+              specs.push({ key, value });
+            }
+          }
+        }
+      });
+
+      if (specs.length > 0) return specs;
+
+      // ── Method 2: Table rows ──
+      document.querySelectorAll('table tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 2) {
+          const key = cells[0].textContent?.trim() || '';
+          const value = cells[1].textContent?.trim() || '';
+          if (key && value && !seen.has(key)) {
+            seen.add(key);
+            specs.push({ key, value });
+          }
+        }
+      });
+
+      if (specs.length > 0) return specs;
+
+      // ── Method 3: JSON-LD additionalProperty ──
+      document.querySelectorAll('script[type="application/ld+json"]').forEach(script => {
+        try {
+          const data = JSON.parse(script.textContent || '{}');
+          if (data['@type'] === 'Product' && data.additionalProperty) {
+            for (const prop of data.additionalProperty) {
+              if (prop.name && prop.value && !seen.has(prop.name)) {
+                seen.add(prop.name);
+                specs.push({ key: prop.name, value: String(prop.value) });
+              }
+            }
+          }
+        } catch {}
+      });
+
+      return specs;
+    });
+  }
+
+  // ── Availability ────────────────────────────────────────────
+
+  /**
+   * Extract product availability status.
+   */
+  async extractAvailability(): Promise<string> {
+    return this.page.evaluate(() => {
+      const bodyText = document.body.textContent?.toLowerCase() || '';
+
+      // Check for explicit status indicators
+      if (document.querySelector('[class*="status--available"], [class*="in-stock"], [class*="available"]')) {
+        return 'available';
+      }
+      if (document.querySelector('[class*="status--unavailable"], [class*="out-of-stock"], [class*="unavailable"]')) {
+        return 'out_of_stock';
+      }
+      if (document.querySelector('[class*="preorder"], [class*="pre-order"]')) {
+        return 'preorder';
+      }
+
+      // Text-based detection
+      if (bodyText.includes('є в наявності') || bodyText.includes('в наявності') || bodyText.includes('in stock')) {
+        return 'available';
+      }
+      if (bodyText.includes('немає в наявності') || bodyText.includes('out of stock') || bodyText.includes('закінчився')) {
+        return 'out_of_stock';
+      }
+      if (bodyText.includes('передзамовлення') || bodyText.includes('preorder')) {
+        return 'preorder';
+      }
+
+      // JSON-LD availability
+      const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+      for (const script of scripts) {
+        try {
+          const data = JSON.parse(script.textContent || '{}');
+          if (data['@type'] === 'Product' && data.offers?.availability) {
+            const avail = data.offers.availability.toLowerCase();
+            if (avail.includes('instock')) return 'available';
+            if (avail.includes('outofstock')) return 'out_of_stock';
+            if (avail.includes('preorder')) return 'preorder';
+          }
+        } catch {}
       }
 
       return '';
     });
   }
+
+  // ── Warranty ────────────────────────────────────────────────
+
+  async extractWarranty(): Promise<string> {
+    return this.page.evaluate(() => {
+      const text = document.body.textContent || '';
+      const match = text.match(/гарантія[:\s]*(\d+\s*(?:місяц(?:ів|я)|рік|роки))/i);
+      if (match) return match[1];
+      const matchEn = text.match(/warranty[:\s]*(\d+\s*(?:month|year)s?)/i);
+      if (matchEn) return matchEn[1];
+      return '';
+    });
+  }
+
+  // ── Seller ──────────────────────────────────────────────────
+
+  async extractSeller(): Promise<string> {
+    return this.page.evaluate(() => {
+      const sellerEl = document.querySelector(
+        '[class*="seller"] a, [class*="seller-name"], [class*="merchant"] a'
+      );
+      return sellerEl?.textContent?.trim() || '';
+    });
+  }
+
+  // ── Inline JSON-LD ──────────────────────────────────────────
+
+  /**
+   * Extract structured data from JSON-LD for fallback values.
+   */
+  private async extractInlineJsonLd(): Promise<{
+    name?: string;
+    description?: string;
+    brand?: string;
+    price?: number;
+  } | null> {
+    return this.page.evaluate(() => {
+      const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+      for (const script of scripts) {
+        try {
+          const data = JSON.parse(script.textContent || '{}');
+          if (data['@type'] === 'Product') {
+            return {
+              name: data.name,
+              description: data.description,
+              brand: typeof data.brand === 'string' ? data.brand : data.brand?.name,
+              price: data.offers?.price ? parseFloat(data.offers.price) : undefined,
+            };
+          }
+        } catch {}
+      }
+      return null;
+    });
+  }
+
+  // ── Category Path Builder ───────────────────────────────────
+
+  /**
+   * Build category path from breadcrumbs, excluding product name and store name.
+   * Input:  ["Rozetka", "Комп'ютери", "Ноутбуки", "ASUS", "Product Name"]
+   * Output: "Комп'ютери > Ноутбуки > ASUS"
+   */
+  private buildCategoryPath(breadcrumbs: Breadcrumb[]): string {
+    const skipNames = new Set([
+      'інтернет-магазин rozetka',
+      'rozetka',
+      'rozetka.com.ua',
+    ]);
+
+    const segments = breadcrumbs
+      .map(b => b.name)
+      .filter(name => {
+        if (!name || name.length < 2) return false;
+        if (skipNames.has(name.toLowerCase())) return false;
+        return true;
+      });
+
+    // Remove last segment if it looks like a product name (long text, contains specs)
+    if (segments.length > 2) {
+      const last = segments[segments.length - 1];
+      // Product names are typically long and contain technical specs
+      if (last.length > 60 || last.includes('/') || last.match(/\d+.*ГБ|GB|RAM/i)) {
+        segments.pop();
+      }
+    }
+
+    return segments.join(' > ');
+  }
+
+  // ── Utilities ───────────────────────────────────────────────
 
   private randomDelay(min = 1000, max = 2500): Promise<void> {
     const delay = Math.floor(Math.random() * (max - min + 1)) + min;

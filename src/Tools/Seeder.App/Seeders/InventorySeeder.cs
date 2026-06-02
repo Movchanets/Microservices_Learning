@@ -18,18 +18,18 @@ public class InventorySeeder
 
     public async Task EnsureInventoryStockedAsync(ProductModel product, string token, Guid storeId, Guid productId, CancellationToken ct)
     {
-        if (product.InitialStock <= 0) return;
+        var quantity = 10;
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await _client.PutAsJsonAsync(
             $"/api/inventory/items/{product.Sku}/stock",
-            new { Quantity = product.InitialStock, StoreId = storeId, ProductId = productId },
+            new { Quantity = quantity, StoreId = storeId, ProductId = productId },
             ct);
 
         if (response.IsSuccessStatusCode)
         {
-            _logger.LogInformation("Set stock for {Sku} to {Quantity}", product.Sku, product.InitialStock);
+            _logger.LogInformation("Set stock for {Sku} to {Quantity}", product.Sku, quantity);
         }
         else
         {

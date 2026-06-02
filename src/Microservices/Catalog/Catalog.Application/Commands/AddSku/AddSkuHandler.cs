@@ -10,6 +10,11 @@ using MediatR;
 
 namespace Catalog.Application.Commands.AddSku;
 
+/// <summary>
+/// Handles AddSkuCommand: validates SKU code uniqueness within the product,
+/// validates attribute values against category definitions, creates the SKU entity,
+/// publishes SkuCreatedIntegrationEvent, and commits via Outbox.
+/// </summary>
 public sealed class AddSkuHandler(
     IProductRepository productRepository,
     ICategoryRepository categoryRepository,

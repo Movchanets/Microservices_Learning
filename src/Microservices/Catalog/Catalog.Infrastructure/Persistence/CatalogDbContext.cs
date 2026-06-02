@@ -6,6 +6,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Catalog.Infrastructure.Persistence;
 
+/// <summary>
+/// EF Core DbContext for the Catalog bounded context.
+/// Manages Products (aggregate root), SKUs (child entities), Categories, and AttributeDefinitions.
+/// Inherits from DomainEventsDbContext to automatically dispatch domain events after SaveChanges.
+/// Each service has its own isolated database — never share a DbContext across services.
+/// </summary>
 public sealed class CatalogDbContext(
     DbContextOptions<CatalogDbContext> options)
     : DomainEventsDbContext(options)
