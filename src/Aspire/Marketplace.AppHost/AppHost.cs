@@ -220,7 +220,7 @@ var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
 
 var seederApp = builder.AddProject<Projects.Seeder_App>("seeder-app")
     .WithReference(gateway)
-    .WaitFor(gateway)
+    .WaitFor(scalar)
     .WithEnvironment("ApiBaseUrl", gateway.GetEndpoint("http"));
 
 builder.Build().Run();

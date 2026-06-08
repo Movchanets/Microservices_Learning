@@ -34,7 +34,7 @@ public class MediaStep
     }
 
     public async Task ExecuteAsync(
-        List<ProductModel> products,
+        CatalogDataModel catalogData,
         Dictionary<string, (Guid StoreId, Guid ProductId, Guid SkuId)> productIds,
         CancellationToken ct)
     {
@@ -44,9 +44,17 @@ public class MediaStep
         var uploadCount = 0;
         var failCount = 0;
 
-        foreach (var product in products)
+        var variantsByProduct = catalogData.ProductVariants
+            .GroupBy(v => v.ProductExternalId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        foreach (var product in catalogData.BaseProducts)
         {
-            var primarySku = ProductSeedData.ResolvePrimarySku(product);
+            variantsByProduct.TryGetValue(product.ExternalId, out var variants);
+            var primaryVariant = variants?.FirstOrDefault();
+            if (primaryVariant == null) continue;
+
+            var primarySku = ProductSeedData.NormalizeSku(primaryVariant.Sku);
             if (!productIds.TryGetValue(primarySku, out var ids))
                 continue;
 
@@ -56,13 +64,13 @@ public class MediaStep
                 if (sellerCtx == null) continue;
 
                 await mediaSeeder.UploadProductAndVariantGalleriesAsync(
-                    ids.ProductId, skuIdLookup, product, sellerCtx.Token, ct);
+                    ids.ProductId, skuIdLookup, product, variants!, sellerCtx.Token, ct);
                 uploadCount++;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "Media upload failed for {Name} (non-fatal)", product.Name);
+                    "Media upload failed for {Name} (non-fatal)", product.Title);
                 failCount++;
             }
 

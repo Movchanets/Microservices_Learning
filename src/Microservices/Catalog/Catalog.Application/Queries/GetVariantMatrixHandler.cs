@@ -7,13 +7,12 @@ using MediatR;
 namespace Catalog.Application.Queries;
 
 /// <summary>
-/// Handles GetVariantMatrixQuery: retrieves a product and its category's AttributeDefinitions,
+/// Handles GetVariantMatrixQuery: retrieves a product and its own VariantAxes,
 /// then builds a matrix showing which variant combinations (SKU × attribute values) exist
 /// and which are still available for bulk creation.
 /// </summary>
 public sealed class GetVariantMatrixHandler(
-    IProductRepository productRepository,
-    ICategoryRepository categoryRepository)
+    IProductRepository productRepository)
     : IRequestHandler<GetVariantMatrixQuery, VariantMatrixDto?>
 {
     public async Task<VariantMatrixDto?> Handle(
@@ -27,34 +26,13 @@ public sealed class GetVariantMatrixHandler(
         if (product is null)
             return null;
 
-        // 2. Walk up category tree to collect variant-axis definitions
-        //    (own definitions first, then inherited from parent chain)
-        var variantDefs = new List<AttributeDefinition>();
-        var visited = new HashSet<Guid>();
-        var currentCategoryId = (Guid?)product.CategoryId;
-
-        while (currentCategoryId.HasValue && !visited.Contains(currentCategoryId.Value))
-        {
-            var category = await categoryRepository.GetWithAttributeDefinitionsAsync(
-                currentCategoryId.Value, cancellationToken);
-
-            if (category is null) break;
-            visited.Add(category.Id);
-
-            foreach (var attr in category.AttributeDefinitions
-                .Where(a => a.Target == AttributeTarget.Sku
-                    && a.IsVariantAxis
-                    && a.ValueType == AttributeType.Select)
-                .OrderBy(a => a.SortOrder))
-            {
-                // Skip duplicates (child overrides parent with same key)
-                if (variantDefs.Any(d => d.Key.Equals(attr.Key, StringComparison.OrdinalIgnoreCase)))
-                    continue;
-                variantDefs.Add(attr);
-            }
-
-            currentCategoryId = category.ParentCategoryId;
-        }
+        // 2. Get variant-axis definitions from this product's own VariantAxes
+        var variantDefs = product.VariantAxes
+            .OrderBy(a => a.SortOrder)
+            .Select(a => a.AttributeDefinition)
+            .Where(d => d is not null)
+            .Cast<AttributeDefinition>()
+            .ToList();
 
         if (variantDefs.Count == 0)
             return new VariantMatrixDto(product.Id, product.Name, [], []);

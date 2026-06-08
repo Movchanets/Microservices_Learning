@@ -31,6 +31,28 @@ public class VariantSystemTests
     }
 
     // ════════════════════════════════════════════════════════════════
+    // HELPER: Create category with Select attributes + set product variant axes
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Creates attribute definitions on the category (without IsVariantAxis, which no longer exists)
+    /// and then sets the product's variant axes to point at those attribute definitions.
+    /// </summary>
+    private static void SetupVariantAxes(
+        Category category,
+        Product product,
+        params string[] attributeKeys)
+    {
+        var attrIds = category.AttributeDefinitions
+            .Where(a => attributeKeys.Contains(a.Key, StringComparer.OrdinalIgnoreCase))
+            .OrderBy(a => a.SortOrder)
+            .Select(a => a.Id)
+            .ToList();
+
+        product.SetVariantAxes(attrIds);
+    }
+
+    // ════════════════════════════════════════════════════════════════
     // BULK ADD SKU — Cartesian Product
     // ════════════════════════════════════════════════════════════════
 
@@ -44,17 +66,18 @@ public class VariantSystemTests
         var categoryRepo = new CategoryRepository(context);
         var publishEndpoint = new Mock<IPublishEndpoint>();
 
-        // Create category with variant-axis attributes
-        var category = Category.Create("Phones");
+        // Create category with Select attributes (variant axes are now product-level)
+        var category = Category.Create($"Electronics-{Guid.NewGuid()}");
         category.AddAttributeDefinition("color", "Color", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 1, ["Black", "White", "Blue"], isVariantAxis: true);
+            AttributeType.Select, true, true, 1, ["Black", "White", "Blue"]);
         category.AddAttributeDefinition("storage", "Storage", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 2, ["128GB", "256GB", "512GB"], isVariantAxis: true);
+            AttributeType.Select, true, true, 2, ["128GB", "256GB", "512GB"]);
         categoryRepo.Add(category);
         await context.SaveChangesAsync();
 
-        // Create product
+        // Create product and set its variant axes
         var product = Product.Create("iPhone 17", "Latest iPhone", category.Id, Guid.NewGuid());
+        SetupVariantAxes(category, product, "color", "storage");
         productRepo.Add(product);
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
@@ -101,13 +124,14 @@ public class VariantSystemTests
 
         var category = Category.Create("T-Shirts");
         category.AddAttributeDefinition("color", "Color", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 1, ["Red", "Blue"], isVariantAxis: true);
+            AttributeType.Select, true, true, 1, ["Red", "Blue"]);
         category.AddAttributeDefinition("size", "Size", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 2, ["S", "M", "L"], isVariantAxis: true);
+            AttributeType.Select, true, true, 2, ["S", "M", "L"]);
         categoryRepo.Add(category);
         await context.SaveChangesAsync();
 
         var product = Product.Create("Basic Tee", "A t-shirt", category.Id, Guid.NewGuid());
+        SetupVariantAxes(category, product, "color", "size");
         productRepo.Add(product);
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
@@ -143,13 +167,14 @@ public class VariantSystemTests
         var categoryRepo = new CategoryRepository(context);
         var publishEndpoint = new Mock<IPublishEndpoint>();
 
-        var category = Category.Create("Shoes");
+        var category = Category.Create($"Shoes-{Guid.NewGuid()}");
         category.AddAttributeDefinition("color", "Color", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 1, ["Black", "White"], isVariantAxis: true);
+            AttributeType.Select, true, true, 1, ["Black", "White"]);
         categoryRepo.Add(category);
         await context.SaveChangesAsync();
 
         var product = Product.Create("Sneakers", "Running shoes", category.Id, Guid.NewGuid());
+        SetupVariantAxes(category, product, "color");
         productRepo.Add(product);
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
@@ -186,13 +211,14 @@ public class VariantSystemTests
 
         var category = Category.Create("Laptops");
         category.AddAttributeDefinition("color", "Color", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 1, ["Silver", "Space Gray"], isVariantAxis: true);
+            AttributeType.Select, true, true, 1, ["Silver", "Space Gray"]);
         category.AddAttributeDefinition("ram", "RAM", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 2, ["8GB", "16GB"], isVariantAxis: true);
+            AttributeType.Select, true, true, 2, ["8GB", "16GB"]);
         categoryRepo.Add(category);
         await context.SaveChangesAsync();
 
         var product = Product.Create("MacBook Pro", "Apple laptop", category.Id, Guid.NewGuid());
+        SetupVariantAxes(category, product, "color", "ram");
         product.AddSku("MBP-SLV-8GB", Money.Create(1299, "USD"),
             new Dictionary<string, string> { ["color"] = "Silver", ["ram"] = "8GB" });
         product.AddSku("MBP-SLV-16GB", Money.Create(1499, "USD"),
@@ -202,8 +228,8 @@ public class VariantSystemTests
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
 
-        // Act
-        var handler = new GetVariantMatrixHandler(productRepo, categoryRepo);
+        // Act — GetVariantMatrixHandler now takes only productRepository
+        var handler = new GetVariantMatrixHandler(productRepo);
         var result = await handler.Handle(
             new GetVariantMatrixQuery(product.Id), CancellationToken.None);
 
@@ -246,11 +272,12 @@ public class VariantSystemTests
 
         var category = Category.Create("Watches");
         category.AddAttributeDefinition("color", "Color", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 1, ["Gold", "Silver"], isVariantAxis: true);
+            AttributeType.Select, true, true, 1, ["Gold", "Silver"]);
         categoryRepo.Add(category);
         await context.SaveChangesAsync();
 
         var product = Product.Create("Smart Watch", "Fitness tracker", category.Id, Guid.NewGuid());
+        SetupVariantAxes(category, product, "color");
         productRepo.Add(product);
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
@@ -280,13 +307,14 @@ public class VariantSystemTests
 
         var category = Category.Create("Bags");
         category.AddAttributeDefinition("color", "Color", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 1, ["Black", "Brown"], isVariantAxis: true);
+            AttributeType.Select, true, true, 1, ["Black", "Brown"]);
         category.AddAttributeDefinition("size", "Size", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 2, ["Small", "Large"], isVariantAxis: true);
+            AttributeType.Select, true, true, 2, ["Small", "Large"]);
         categoryRepo.Add(category);
         await context.SaveChangesAsync();
 
         var product = Product.Create("Leather Bag", "Premium leather", category.Id, Guid.NewGuid());
+        SetupVariantAxes(category, product, "color", "size");
         product.AddSku("BAG-BLK-SM", Money.Create(199, "USD"),
             new Dictionary<string, string> { ["color"] = "Black", ["size"] = "Small" });
         productRepo.Add(product);
@@ -318,13 +346,14 @@ public class VariantSystemTests
 
         var category = Category.Create("Hats");
         category.AddAttributeDefinition("color", "Color", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 1, ["Black", "White"], isVariantAxis: true);
+            AttributeType.Select, true, true, 1, ["Black", "White"]);
         category.AddAttributeDefinition("size", "Size", AttributeTarget.Sku,
-            AttributeType.Select, true, true, 2, ["S", "M"], isVariantAxis: true);
+            AttributeType.Select, true, true, 2, ["S", "M"]);
         categoryRepo.Add(category);
         await context.SaveChangesAsync();
 
         var product = Product.Create("Baseball Cap", "Classic cap", category.Id, Guid.NewGuid());
+        SetupVariantAxes(category, product, "color", "size");
         product.AddSku("CAP-BLK-S", Money.Create(25, "USD"),
             new Dictionary<string, string> { ["color"] = "Black", ["size"] = "S" });
         productRepo.Add(product);

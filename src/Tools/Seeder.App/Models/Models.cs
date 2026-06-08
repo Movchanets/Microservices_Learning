@@ -41,32 +41,47 @@ public record AttributeDefinitionModel(
 );
 
 /// <summary>
-/// Product seed data from products-v2.json.
+/// Root model for the new relational catalog.json
 /// </summary>
-public record ProductModel(
-    [property: JsonPropertyName("productName")] string Name,
-    [property: JsonPropertyName("categoryName")] string CategoryName,
-    [property: JsonPropertyName("commonAttributes")] Dictionary<string, string>? CommonAttributes = null,
-    [property: JsonPropertyName("variants")] List<SkuVariantModel>? Variants = null,
-    [property: JsonPropertyName("categoryFilters")] List<string>? CategoryFilters = null,
-    decimal Price = 0,
-    string StoreName = "Tech Store",
-    string Description = "Imported from Rozetka",
-    string Currency = "UAH",
-    string Sku = "",
-    string[]? Tags = null,
-    string ImageUrl = "",
-    int InitialStock = 10
+public record CatalogDataModel(
+    [property: JsonPropertyName("categories")] List<ScrapedCategory> Categories,
+    [property: JsonPropertyName("attributeDefinitions")] List<ScrapedAttributeDefinition> AttributeDefinitions,
+    [property: JsonPropertyName("baseProducts")] List<ScrapedBaseProduct> BaseProducts,
+    [property: JsonPropertyName("productVariants")] List<ScrapedProductVariant> ProductVariants
 );
 
-/// <summary>
-/// Variant (SKU) data within a product.
-/// </summary>
-public record SkuVariantModel(
+public record ScrapedCategory(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("parentId")] string? ParentId,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("url")] string Url
+);
+
+public record ScrapedAttributeDefinition(
+    [property: JsonPropertyName("categoryId")] string CategoryId,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("possibleValues")] List<string> PossibleValues
+);
+
+public record ScrapedBaseProduct(
+    [property: JsonPropertyName("externalId")] string ExternalId,
+    [property: JsonPropertyName("categoryId")] string CategoryId,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string Description,
+    [property: JsonPropertyName("brand")] string Brand,
+    string StoreName = "Tech Store",
+    string Currency = "UAH"
+);
+
+public record ScrapedProductVariant(
+    [property: JsonPropertyName("productExternalId")] string ProductExternalId,
     [property: JsonPropertyName("sku")] string Sku,
     [property: JsonPropertyName("price")] decimal Price,
-    [property: JsonPropertyName("attributes")] Dictionary<string, string>? Attributes = null,
-    [property: JsonPropertyName("galleryUrls")] List<string>? GalleryUrls = null
+    [property: JsonPropertyName("currency")] string Currency,
+    [property: JsonPropertyName("inStock")] bool InStock,
+    [property: JsonPropertyName("images")] List<string> Images,
+    [property: JsonPropertyName("attributes")] Dictionary<string, string> Attributes,
+    int InitialStock = 10
 );
 
 /// <summary>Breadcrumb navigation data from Rozetka product pages.</summary>
@@ -104,27 +119,8 @@ public record InventoryItemDto(string Sku, int AvailableQuantity);
 
 public static class ProductSeedData
 {
-    public static string ResolvePrimarySku(ProductModel product)
-    {
-        if (!string.IsNullOrWhiteSpace(product.Sku))
-            return NormalizeSku(product.Sku);
-
-        var firstVariantSku = product.Variants?
-            .Select(v => v.Sku)
-            .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
-
-        return firstVariantSku is null ? "" : NormalizeSku(firstVariantSku);
-    }
-
     public static string NormalizeSku(string sku)
         => sku.StartsWith("ROZ-", StringComparison.OrdinalIgnoreCase)
             ? sku.ToUpperInvariant()
             : $"ROZ-{sku}".ToUpperInvariant();
-
-    public static string? ResolvePrimaryImage(ProductModel product)
-        => !string.IsNullOrWhiteSpace(product.ImageUrl)
-            ? product.ImageUrl
-            : product.Variants?
-                .SelectMany(v => v.GalleryUrls ?? [])
-                .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
 }

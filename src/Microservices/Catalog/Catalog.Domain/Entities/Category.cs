@@ -65,15 +65,14 @@ public sealed class Category : Entity
         bool isFilterable,
         bool isRequired,
         int sortOrder = 0,
-        List<string>? allowedValues = null,
-        bool isVariantAxis = false)
+        List<string>? allowedValues = null)
     {
         var normalizedKey = key.Trim().ToLowerInvariant();
         if (_attributeDefinitions.Any(a => a.Key == normalizedKey))
             throw new InvalidOperationException($"Attribute '{key}' already exists for category '{Name}'");
 
         var attr = AttributeDefinition.Create(
-            Id, key, displayName, target, valueType, isFilterable, isRequired, sortOrder, allowedValues, isVariantAxis);
+            Id, key, displayName, target, valueType, isFilterable, isRequired, sortOrder, allowedValues);
         _attributeDefinitions.Add(attr);
         return attr;
     }

@@ -43,6 +43,9 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Navigation(p => p.AttributeValues)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
+        builder.Navigation(p => p.VariantAxes)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         // Indexes
         builder.HasIndex(p => p.CategoryId);
         builder.HasIndex(p => p.StoreId);

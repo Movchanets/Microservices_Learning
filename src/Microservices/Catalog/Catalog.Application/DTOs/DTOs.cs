@@ -60,7 +60,6 @@ public sealed record AttributeDefinitionDto(
     bool IsRequired,
     int SortOrder,
     List<string> AllowedValues,
-    bool IsVariantAxis = false,
     bool IsInherited = false);
 
 /// <summary>

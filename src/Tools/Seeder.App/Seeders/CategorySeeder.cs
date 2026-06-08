@@ -130,7 +130,7 @@ public class CategorySeeder
             attr.Key,
             attr.DisplayName,
             attr.Target,
-            attr.ValueType,
+            ValueType = attr.IsVariantAxis ? 2 : attr.ValueType, // Force Select if variant axis
             attr.IsFilterable,
             attr.IsRequired,
             attr.SortOrder,
@@ -139,8 +139,9 @@ public class CategorySeeder
         };
 
         _logger.LogInformation(
-            "POST /api/catalog/categories/{CategoryId}/attributes — Key='{Key}', IsVariantAxis={IsVariantAxis}, AllowedValues=[{Values}]",
-            categoryId, attr.Key, attr.IsVariantAxis,
+            "POST /api/catalog/categories/{CategoryId}/attributes — Key='{Key}', IsVariantAxis={IsVariantAxis}, ValueType={ValueType}, AllowedValues=[{Values}]",
+            categoryId, attr.Key, attr.IsVariantAxis, 
+            attr.IsVariantAxis ? 2 : attr.ValueType,
             attr.AllowedValues != null ? string.Join(", ", attr.AllowedValues) : "null");
 
         var response = await _client.PostAsJsonAsync(

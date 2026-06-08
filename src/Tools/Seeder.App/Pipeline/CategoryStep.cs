@@ -5,9 +5,8 @@ using Seeder.App.Seeders;
 namespace Seeder.App.Pipeline;
 
 /// <summary>
-/// Step 3: Create categories from categories.json + Rozetka breadcrumb paths.
-/// Two-pass: parents first, then children (resolves ParentCategoryName → ParentCategoryId).
-/// Returns the full list of categories (existing + created).
+/// Step 3: Create categories from catalog.json
+/// Returns a dictionary mapping ScrapedCategory.Id -> EF Category Guid
 /// </summary>
 public class CategoryStep
 {
@@ -22,84 +21,28 @@ public class CategoryStep
         _dataDirectory = dataDirectory;
     }
 
-    public async Task<List<CategoryDto>> ExecuteAsync(
-        string adminToken, List<ProductModel> products, CancellationToken ct)
+    public async Task<Dictionary<string, Guid>> ExecuteAsync(
+        string adminToken, CatalogDataModel catalogData, CancellationToken ct)
     {
         var categorySeeder = new CategorySeeder(_client, _logger);
-        var categoriesToSeed = await SeedDataLoader.LoadJsonAsync<List<CategoryModel>>(
-            _dataDirectory, "rozetka-categories-flat.json");
         var existingCategories = await categorySeeder.GetExistingCategoriesAsync(ct);
-        var resultCategories = new List<CategoryDto>(existingCategories);
+        var idMapping = new Dictionary<string, Guid>();
 
-        // ── Pass 1: Create parent categories (no ParentCategoryName) ──
-        foreach (var category in categoriesToSeed.Where(c => string.IsNullOrEmpty(c.ParentCategoryName)))
+        foreach (var category in catalogData.Categories)
         {
+            // We ignore ParentId for now as the tree is flat
+            var catModel = new CategoryModel(category.Name, $"Rozetka: {category.Name}", null);
             var created = await categorySeeder.EnsureCategoryExistsAsync(
-                category, adminToken, existingCategories, ct);
-            if (created != null && !resultCategories.Any(c => c.Name == created.Name))
-                resultCategories.Add(created);
-        }
+                catModel, adminToken, existingCategories, ct);
 
-        // ── Pass 2: Create child categories (has ParentCategoryName) ──
-        foreach (var category in categoriesToSeed.Where(c => !string.IsNullOrEmpty(c.ParentCategoryName)))
-        {
-            // Resolve parent name → parent ID
-            var parentCat = resultCategories.FirstOrDefault(c =>
-                c.Name.Equals(category.ParentCategoryName, StringComparison.OrdinalIgnoreCase));
-
-            var resolved = category;
-            if (parentCat != null)
-            {
-                resolved = category with { ParentCategoryId = parentCat.Id };
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "Parent category '{ParentName}' not found for '{ChildName}'. Creating as top-level.",
-                    category.ParentCategoryName, category.Name);
-            }
-
-            var created = await categorySeeder.EnsureCategoryExistsAsync(
-                resolved, adminToken, existingCategories, ct);
-            if (created != null && !resultCategories.Any(c => c.Name == created.Name))
-                resultCategories.Add(created);
-        }
-
-        // ── Pass 3: Create nested categories from Rozetka breadcrumbs ──
-        var breadcrumbPaths = products
-            .Where(p => p.CategoryName.Contains('>'))
-            .Select(p => p.CategoryName)
-            .Distinct()
-            .ToList();
-
-        var segmentOrder = new List<string>();
-        foreach (var path in breadcrumbPaths)
-        {
-            var segments = path.Split('>').Select(s => s.Trim())
-                .Where(s => s.Length > 2 && s != "Інтернет-магазин Rozetka")
-                .ToList();
-            foreach (var seg in segments)
-            {
-                if (!segmentOrder.Contains(seg, StringComparer.OrdinalIgnoreCase))
-                    segmentOrder.Add(seg);
-            }
-        }
-
-        foreach (var catName in segmentOrder)
-        {
-            if (resultCategories.Any(c =>
-                c.Name.Equals(catName, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            Guid? parentId = CategoryResolver.FindParent(catName, breadcrumbPaths, resultCategories);
-
-            var created = await categorySeeder.EnsureCategoryExistsAsync(
-                new CategoryModel(catName, $"Rozetka: {catName}", parentId),
-                adminToken, existingCategories, ct);
             if (created != null)
-                resultCategories.Add(created);
+            {
+                if (!existingCategories.Any(c => c.Id == created.Id))
+                    existingCategories.Add(created);
+                idMapping[category.Id] = created.Id;
+            }
         }
 
-        return resultCategories;
+        return idMapping;
     }
 }

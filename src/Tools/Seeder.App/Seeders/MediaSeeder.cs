@@ -90,20 +90,21 @@ public class MediaSeeder
     public async Task UploadProductAndVariantGalleriesAsync(
         Guid productId,
         Dictionary<string, Guid> skuIds,
-        ProductModel product,
+        ScrapedBaseProduct product,
+        List<ScrapedProductVariant> variants,
         string token,
         CancellationToken ct = default)
     {
         // ── Upload variant SKU galleries ─────────────────────────
-        if (product.Variants != null && product.Variants.Count > 0)
+        if (variants.Count > 0)
         {
-            foreach (var variant in product.Variants)
+            foreach (var variant in variants)
             {
                 var variantSku = ProductSeedData.NormalizeSku(variant.Sku);
                 if (!skuIds.TryGetValue(variantSku, out var skuId))
                     continue;
 
-                var variantImages = variant.GalleryUrls ?? [];
+                var variantImages = variant.Images ?? [];
                 
                 if (variantImages.Count > 0)
                 {
@@ -118,19 +119,7 @@ public class MediaSeeder
         }
         else
         {
-            // Fallback for single product with no explicit variants
-            var images = new List<string>();
-            if (!string.IsNullOrEmpty(product.ImageUrl))
-            {
-                images.Add(product.ImageUrl);
-            }
-            if (images.Count > 0)
-            {
-                _logger.LogInformation(
-                    "Uploading {Count} images for base product {Name} (targetId={ProductId})",
-                    images.Count, product.Name, productId);
-                await UploadProductGalleryAsync(productId, images, token, "Product", ct);
-            }
+            _logger.LogWarning("No variants found for product {Name} (targetId={ProductId}) to upload images.", product.Title, productId);
         }
     }
 

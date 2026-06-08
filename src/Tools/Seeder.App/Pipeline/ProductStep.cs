@@ -23,9 +23,8 @@ public class ProductStep
     }
 
     public async Task<Dictionary<string, (Guid StoreId, Guid ProductId, Guid SkuId)>> ExecuteAsync(
-        List<ProductModel> products,
-        List<CategoryDto> categories,
-        Dictionary<string, string> categoryMapping,
+        CatalogDataModel catalogData,
+        Dictionary<string, Guid> categoryMapping,
         CancellationToken ct)
     {
         var productSeeder = new ProductSeeder(_client, _logger);
@@ -33,30 +32,34 @@ public class ProductStep
         var successCount = 0;
         var skipCount = 0;
 
-        foreach (var product in products)
+        var variantsByProduct = catalogData.ProductVariants
+            .GroupBy(v => v.ProductExternalId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        foreach (var product in catalogData.BaseProducts)
         {
             var sellerCtx = _sellers.ResolveByStoreName(product.StoreName);
             if (sellerCtx == null)
             {
                 _logger.LogWarning(
                     "Skipping product {Name} — no seller context for store '{Store}'.",
-                    product.Name, product.StoreName);
+                    product.Title, product.StoreName);
                 skipCount++;
                 continue;
             }
 
-            var categoryId = CategoryResolver.FindBest(
-                product.CategoryName, categories, categoryMapping);
-            if (categoryId == null)
+            if (!categoryMapping.TryGetValue(product.CategoryId, out var categoryId))
             {
                 _logger.LogWarning(
-                    "Skipping product {Name} — missing category.", product.Name);
+                    "Skipping product {Name} — missing category.", product.Title);
                 skipCount++;
                 continue;
             }
 
+            variantsByProduct.TryGetValue(product.ExternalId, out var variants);
+
             var result = await productSeeder.EnsureProductExistsAsync(
-                product, sellerCtx.Token, categoryId.Value, sellerCtx.StoreId, ct);
+                product, variants ?? new List<ScrapedProductVariant>(), sellerCtx.Token, categoryId, sellerCtx.StoreId, ct);
             if (result != null)
             {
                 var (productId, skuIds) = result.Value;

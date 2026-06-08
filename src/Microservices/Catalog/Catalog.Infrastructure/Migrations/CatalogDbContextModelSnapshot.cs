@@ -98,11 +98,6 @@ namespace Catalog.Infrastructure.Migrations
                     b.Property<bool>("IsRequired")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsVariantAxis")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -191,6 +186,33 @@ namespace Catalog.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("ProductAttributeValues", (string)null);
+                });
+
+            modelBuilder.Entity("Catalog.Domain.Entities.ProductVariantAxis", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AttributeDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttributeDefinitionId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ProductId", "AttributeDefinitionId")
+                        .IsUnique();
+
+                    b.ToTable("ProductVariantAxes", (string)null);
                 });
 
             modelBuilder.Entity("Catalog.Domain.Entities.Sku", b =>
@@ -471,6 +493,23 @@ namespace Catalog.Infrastructure.Migrations
                     b.Navigation("AttributeDefinition");
                 });
 
+            modelBuilder.Entity("Catalog.Domain.Entities.ProductVariantAxis", b =>
+                {
+                    b.HasOne("Catalog.Domain.Entities.AttributeDefinition", "AttributeDefinition")
+                        .WithMany()
+                        .HasForeignKey("AttributeDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Catalog.Domain.Aggregates.Product", null)
+                        .WithMany("VariantAxes")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AttributeDefinition");
+                });
+
             modelBuilder.Entity("Catalog.Domain.Entities.Sku", b =>
                 {
                     b.HasOne("Catalog.Domain.Aggregates.Product", null)
@@ -541,6 +580,8 @@ namespace Catalog.Infrastructure.Migrations
                     b.Navigation("AttributeValues");
 
                     b.Navigation("Skus");
+
+                    b.Navigation("VariantAxes");
                 });
 
             modelBuilder.Entity("Catalog.Domain.Entities.Category", b =>

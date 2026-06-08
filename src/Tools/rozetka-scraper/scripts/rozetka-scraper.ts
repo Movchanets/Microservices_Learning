@@ -1,6 +1,7 @@
 import { type Browser } from "playwright";
 import * as fs from "fs/promises";
 import * as path from "path";
+import * as crypto from "crypto";
 import { program } from "commander";
 import {
   RozetkaCategoryPage,
@@ -19,10 +20,46 @@ import {
   type CategoryConfig,
 } from "../utils/rozetka-transformer";
 import { createScraperContext, launchScraper } from "../fixtures/scraper.fixture";
-import {
-  classifyAttributes,
-  type VariantDetail,
-} from "../utils/attribute-classifier";
+
+// ── Target Data Contracts ──────────────────────────────────────
+
+export interface Category {
+  id: string;
+  parentId: string | null;
+  name: string;
+  url: string;
+}
+
+export interface AttributeDefinition {
+  categoryId: string;
+  name: string;
+  possibleValues: string[];
+}
+
+export interface BaseProduct {
+  externalId: string;
+  categoryId: string;
+  title: string;
+  description: string;
+  brand: string;
+}
+
+export interface ProductVariant {
+  productExternalId: string;
+  sku: string;
+  price: number;
+  currency: string;
+  inStock: boolean;
+  images: string[];
+  attributes: Record<string, string>;
+}
+
+export interface CatalogData {
+  categories: Category[];
+  attributeDefinitions: AttributeDefinition[];
+  baseProducts: BaseProduct[];
+  productVariants: ProductVariant[];
+}
 
 // ── Category Configs ───────────────────────────────────────────
 
@@ -72,7 +109,7 @@ const CATEGORIES: Record<
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../../..");
 const DATA_DIR = path.join(PROJECT_ROOT, "src/Tools/Seeder.App/Data");
 const IMAGES_DIR = path.join(DATA_DIR, "Images");
-const PRODUCTS_JSON = path.join(DATA_DIR, "products-v2.json");
+const CATALOG_JSON = path.join(DATA_DIR, "catalog.json");
 
 // ── Logging ────────────────────────────────────────────────────
 
@@ -113,7 +150,12 @@ function buildImageFolderName(name: string, skuCode: string): string {
 class RozetkaScraper {
   private browser: Browser | null = null;
   private imgDownloader: ImageDownloader;
-  private existing: any[] = [];
+  
+  private categories = new Map<string, Category>();
+  private attributeDefinitions = new Map<string, AttributeDefinition>();
+  private baseProducts = new Map<string, BaseProduct>();
+  private productVariants = new Map<string, ProductVariant>();
+  
   private existingSkus = new Set<string>();
 
   constructor() {
@@ -125,14 +167,19 @@ class RozetkaScraper {
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.mkdir(IMAGES_DIR, { recursive: true });
     try {
-      this.existing = JSON.parse(await fs.readFile(PRODUCTS_JSON, "utf-8"));
-      this.existingSkus = new Set(
-        this.existing.flatMap((p) => p.variants?.map((v: any) => v.sku) || []),
-      );
-      log(`Loaded ${this.existing.length} existing products`);
+      const data: CatalogData = JSON.parse(await fs.readFile(CATALOG_JSON, "utf-8"));
+      
+      data.categories.forEach(c => this.categories.set(c.id, c));
+      data.attributeDefinitions.forEach(a => this.attributeDefinitions.set(`${a.categoryId}_${a.name}`, a));
+      data.baseProducts.forEach(p => this.baseProducts.set(p.externalId, p));
+      data.productVariants.forEach(v => {
+        this.productVariants.set(v.sku, v);
+        this.existingSkus.add(v.sku);
+      });
+      
+      log(`Loaded ${this.baseProducts.size} existing products and ${this.productVariants.size} variants`);
     } catch {
-      this.existing = [];
-      this.existingSkus = new Set();
+      // File doesn't exist or is invalid
     }
     const scraper = await launchScraper();
     this.browser = scraper.browser;
@@ -191,8 +238,9 @@ class RozetkaScraper {
   private async scrapeProduct(
     tile: ProductTile,
     cat: { name: string; url: string } & CategoryConfig,
+    categoryId: string,
     categoryFilters: string[],
-  ): Promise<any | null> {
+  ): Promise<boolean> {
     const code = tile.articleId.replace("p", "");
     if (this.existingSkus.has(generateSku(code))) return null;
     log(`  ${tile.title.substring(0, 50)}...`);
@@ -204,10 +252,24 @@ class RozetkaScraper {
       await pom.goto(tile.url);
       const details = await pom.extractDetails();
       const finalCode = details.sku || code;
-      if (this.existingSkus.has(generateSku(finalCode))) return null;
+      if (this.existingSkus.has(generateSku(finalCode))) return false;
 
       // Log rich data we extracted
       log(`  📝 ${details.name.substring(0, 60)}`);
+
+      // ── Create BaseProduct ──────────────────────────────────
+      const baseProductId = crypto.createHash("sha256").update(details.name + cat.url).digest("hex");
+      
+      let baseBrand = details.brand || tile.brand || "Unknown";
+      
+      const baseProduct: BaseProduct = {
+        externalId: baseProductId,
+        categoryId: categoryId,
+        title: details.name || tile.title,
+        description: details.description || "",
+        brand: baseBrand.trim()
+      };
+      this.baseProducts.set(baseProductId, baseProduct);
 
       const imgs =
         details.images.length > 0
@@ -218,7 +280,14 @@ class RozetkaScraper {
       const slug = buildImageFolderName(details.name, finalCode);
       const local = await this.imgDownloader.downloadMultiple(imgs, slug, 10);
 
-      const scrapedVariants: VariantDetail[] = [];
+      const scrapedVariants: Array<{
+        pid: string;
+        skuCode: string;
+        name: string;
+        price: number;
+        images: string[];
+        specifications: ProductSpecification[];
+      }> = [];
       const visitedPids = new Set<string>();
       visitedPids.add(finalCode);
 
@@ -306,12 +375,10 @@ class RozetkaScraper {
       }
 
       // Map all raw specifications of each variant using dynamic categoryFilters.
-      // This translates raw Ukrainian specification keys to matched category filter keys
-      // and normalizes their values (e.g. brand, storage, ram, color).
       const filterKeys = new Set(categoryFilters.map((f) => mapFilterNameToKey(f)));
       
-      const mappedVariants = scrapedVariants.map((v) => {
-        const mappedSpecs: ProductSpecification[] = [];
+      scrapedVariants.forEach((v) => {
+        const attributesMap: Record<string, string> = {};
         let hasBrand = false;
 
         for (const spec of v.specifications) {
@@ -331,12 +398,8 @@ class RozetkaScraper {
               val = normalizeList(val);
             }
 
-            // Avoid duplicate keys in specifications
-            if (!mappedSpecs.some((s) => s.key === specKey)) {
-              mappedSpecs.push({
-                key: specKey,
-                value: val,
-              });
+            if (!attributesMap[specKey]) {
+              attributesMap[specKey] = val;
             }
 
             if (specKey === "brand") {
@@ -345,42 +408,40 @@ class RozetkaScraper {
           }
         }
 
-        // Ensure brand is present if available in product details or fallback tile brand
+        // Ensure brand is present
         if (!hasBrand && (filterKeys.has("brand") || ["brand"].includes("brand"))) {
-          const brandVal = details.brand || tile.brand;
-          if (brandVal) {
-            mappedSpecs.push({
-              key: "brand",
-              value: brandVal.trim(),
-            });
-          }
+          attributesMap["brand"] = baseBrand.trim();
         }
 
-        return {
-          ...v,
-          specifications: mappedSpecs,
-        };
-      });
-
-      // Classify attributes using the mapped specifications
-      const { commonAttributes, variantAttributes } =
-        classifyAttributes(mappedVariants);
-
-      // Build expected Output JSON Schema
-      const productOutput = {
-        productName: details.name || tile.title,
-        categoryName: cat.name,
-        categoryFilters,
-        commonAttributes,
-        variants: mappedVariants.map((v) => ({
+        // ── Create ProductVariant and AttributeDefinitions ────────────────
+        const variant: ProductVariant = {
+          productExternalId: baseProductId,
           sku: v.skuCode,
           price: v.price,
-          attributes: variantAttributes[v.pid] || {},
-          galleryUrls: v.images,
-        })),
-      };
+          currency: "UAH",
+          inStock: v.price > 0,
+          images: v.images,
+          attributes: attributesMap
+        };
 
-      return productOutput;
+        this.productVariants.set(variant.sku, variant);
+        this.existingSkus.add(variant.sku);
+
+        // Register all attributes as possible options
+        for (const [attrName, attrVal] of Object.entries(attributesMap)) {
+          const key = `${categoryId}_${attrName}`;
+          let def = this.attributeDefinitions.get(key);
+          if (!def) {
+            def = { categoryId: categoryId, name: attrName, possibleValues: [] };
+            this.attributeDefinitions.set(key, def);
+          }
+          if (!def.possibleValues.includes(attrVal)) {
+            def.possibleValues.push(attrVal);
+          }
+        }
+      });
+
+      return true;
     } finally {
       await page.close();
       await ctx.close();
@@ -422,30 +483,45 @@ class RozetkaScraper {
       opts.category || "",
     );
 
+    let finalCategoryName = catConfig.name;
     if (dynamicCategoryName && (!opts.category || !CATEGORIES[opts.category])) {
-      catConfig.name = dynamicCategoryName;
+      finalCategoryName = dynamicCategoryName;
       catConfig.tags = [slugify(dynamicCategoryName).replace(/-/g, "")];
     }
 
-    log(`Phase 2: Scraping ${urls.length} products under category: ${catConfig.name}...`);
+    const categoryId = slugify(finalCategoryName);
+    if (!this.categories.has(categoryId)) {
+      this.categories.set(categoryId, {
+        id: categoryId,
+        parentId: null,
+        name: finalCategoryName,
+        url: targetUrl
+      });
+    }
 
-    const added: any[] = [];
+    log(`Phase 2: Scraping ${urls.length} products under category: ${finalCategoryName}...`);
+
+    let addedCount = 0;
     for (let i = 0; i < urls.length; i++) {
       log(`\n[${i + 1}/${urls.length}] ${urls[i].title.substring(0, 50)}`);
-      const p = await this.scrapeProduct(urls[i], catConfig, categoryFilters);
-      if (p) {
-        added.push(p);
-        this.existing.push(p);
-        p.variants.forEach((v: any) => this.existingSkus.add(v.sku));
+      const success = await this.scrapeProduct(urls[i], catConfig, categoryId, categoryFilters);
+      if (success) {
+        addedCount++;
       }
       await delay(3000, 6000);
     }
 
-    if (added.length) {
-      await fs.writeFile(PRODUCTS_JSON, JSON.stringify(this.existing, null, 2));
-      log(
-        `\n✅ ${added.length} new products added (total: ${this.existing.length})`,
-      );
+    if (addedCount > 0) {
+      const outputData: CatalogData = {
+        categories: Array.from(this.categories.values()),
+        attributeDefinitions: Array.from(this.attributeDefinitions.values()),
+        baseProducts: Array.from(this.baseProducts.values()),
+        productVariants: Array.from(this.productVariants.values())
+      };
+
+      await fs.writeFile(CATALOG_JSON, JSON.stringify(outputData, null, 2));
+      log(`\n✅ ${addedCount} new products added!`);
+      log(`Total DB stats: ${outputData.categories.length} categories, ${outputData.attributeDefinitions.length} attributes, ${outputData.baseProducts.length} products, ${outputData.productVariants.length} variants`);
     } else {
       log("No new products found");
     }

@@ -8,11 +8,6 @@ namespace Seeder.App.Seeders;
 /// <summary>
 /// Creates products and their variant SKUs via Catalog API.
 /// Idempotent — skips creation if product already exists (matched by SKU code).
-///
-/// Flow:
-///   1. Check if product exists by primary SKU code
-///   2. If exists → return existing product ID + SKU IDs
-///   3. If not → create product, create primary SKU, create variant SKUs, activate
 /// </summary>
 public class ProductSeeder
 {
@@ -25,20 +20,19 @@ public class ProductSeeder
         _logger = logger;
     }
 
-    /// <summary>
-    /// Ensures a product exists in the Catalog API. Creates it if missing.
-    /// Returns (ProductId, skuCode→skuId mapping) or null on failure.
-    /// </summary>
     public async Task<(Guid ProductId, Dictionary<string, Guid> SkuIds)?> EnsureProductExistsAsync(
-        ProductModel product, string token, Guid categoryId, Guid storeId, CancellationToken ct)
+        ScrapedBaseProduct product, List<ScrapedProductVariant> variants, string token, Guid categoryId, Guid storeId, CancellationToken ct)
     {
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var primarySku = ProductSeedData.ResolvePrimarySku(product);
-        if (string.IsNullOrWhiteSpace(primarySku))
+        
+        var primaryVariant = variants.FirstOrDefault();
+        if (primaryVariant == null)
         {
-            _logger.LogWarning("Skipping product {Name} — no SKU found in product or variants.", product.Name);
+            _logger.LogWarning("Skipping product {Name} — no variants found.", product.Title);
             return null;
         }
+
+        var primarySku = ProductSeedData.NormalizeSku(primaryVariant.Sku);
 
         // ── Check if product already exists ──────────────────────
         var getResponse = await _client.GetAsync($"/api/catalog/products/sku/{primarySku}", ct);
@@ -58,15 +52,31 @@ public class ProductSeeder
             return (existing!.Id, new Dictionary<string, Guid>());
         }
 
+        // ── Resolve Variant Axes ─────────────────────────────────
+        List<Guid>? variantAxisIds = null;
+        if (variants.Count > 0)
+        {
+            var categorySeeder = new CategorySeeder(_client, _logger);
+            var attributes = await categorySeeder.GetAttributeDefinitionsAsync(categoryId, ct);
+            
+            // Assume any attribute that changes between variants is an axis, or just use all attributes from the first variant
+            variantAxisIds = primaryVariant.Attributes.Keys
+                .Select(k => attributes.FirstOrDefault(a => a.Key.Equals(k, StringComparison.OrdinalIgnoreCase))?.Id)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToList();
+        }
+
         // ── Create product ───────────────────────────────────────
         var request = new
         {
-            product.Name,
-            product.Description,
+            Name = product.Title,
+            Description = product.Description,
             CategoryId = categoryId,
             StoreId = storeId,
-            product.Tags,
-            ImageUrl = ProductSeedData.ResolvePrimaryImage(product)
+            Tags = new[] { product.Brand },
+            ImageUrl = primaryVariant.Images.FirstOrDefault() ?? "",
+            VariantAxisIds = variantAxisIds
         };
 
         var response = await _client.PostAsJsonAsync("/api/catalog/products", request, ct);
@@ -74,61 +84,41 @@ public class ProductSeeder
         {
             var error = await response.Content.ReadAsStringAsync(ct);
             _logger.LogWarning("Failed to create product {Name}: {StatusCode} - {Error}",
-                product.Name, response.StatusCode, error);
+                product.Title, response.StatusCode, error);
             return null;
         }
 
         var dto = await response.Content.ReadFromJsonAsync<ProductDto>(cancellationToken: ct);
         if (dto is null)
         {
-            _logger.LogWarning("Failed to parse created product response for {Name}", product.Name);
+            _logger.LogWarning("Failed to parse created product response for {Name}", product.Title);
             return null;
         }
 
         var skuIds2 = new Dictionary<string, Guid>();
 
-        // Combine common attributes with variant attributes when creating SKUs,
-        // since Catalog API currently expects all attributes at the SKU level via AddSkuCommand.
-        var commonAttrs = product.CommonAttributes ?? new Dictionary<string, string>();
-
         // ── Create variant SKUs ──────────────────────────────────
-        if (product.Variants != null && product.Variants.Count > 0)
+        foreach (var variant in variants)
         {
-            foreach (var variant in product.Variants)
+            var variantSkuCode = ProductSeedData.NormalizeSku(variant.Sku);
+            if (skuIds2.ContainsKey(variantSkuCode)) continue;
+
+            var variantAttrs = new Dictionary<string, string>(variant.Attributes);
+            // Append Brand
+            variantAttrs["brand"] = product.Brand;
+
+            var variantSkuId = await CreateSkuAsync(
+                dto.Id, variantSkuCode, variant.Price, variant.Currency,
+                variantAttrs, ct);
+            if (variantSkuId != null)
             {
-                var variantSkuCode = ProductSeedData.NormalizeSku(variant.Sku);
-                if (skuIds2.ContainsKey(variantSkuCode)) continue;
-
-                var variantAttrs = new Dictionary<string, string>(commonAttrs);
-                if (variant.Attributes != null)
-                {
-                    foreach (var kvp in variant.Attributes)
-                    {
-                        variantAttrs[kvp.Key] = kvp.Value;
-                    }
-                }
-
-                var variantSkuId = await CreateSkuAsync(
-                    dto.Id, variantSkuCode, variant.Price, product.Currency,
-                    variantAttrs, ct);
-                if (variantSkuId != null)
-                {
-                    skuIds2[variantSkuCode] = variantSkuId.Value;
-                    _logger.LogInformation("  + Variant SKU {SkuCode} attrs={Attrs}",
-                        variantSkuCode, 
-                        variantAttrs.Count > 0 
-                            ? string.Join(", ", variantAttrs.Select(a => $"{a.Key}={a.Value}")) 
-                            : "none");
-                }
+                skuIds2[variantSkuCode] = variantSkuId.Value;
+                _logger.LogInformation("  + Variant SKU {SkuCode} attrs={Attrs}",
+                    variantSkuCode, 
+                    variantAttrs.Count > 0 
+                        ? string.Join(", ", variantAttrs.Select(a => $"{a.Key}={a.Value}")) 
+                        : "none");
             }
-        }
-        else
-        {
-            // Create a default primary SKU if no variants exist
-            var primarySkuId = await CreateSkuAsync(
-                dto.Id, primarySku, product.Price, product.Currency, commonAttrs, ct);
-            if (primarySkuId != null)
-                skuIds2[primarySku] = primarySkuId.Value;
         }
 
         // ── Activate product (only if at least one SKU exists) ───
@@ -140,23 +130,19 @@ public class ProductSeeder
             {
                 var activateError = await activateResponse.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning("Failed to activate product {Name}: {StatusCode} - {Error}",
-                    product.Name, activateResponse.StatusCode, activateError);
+                    product.Title, activateResponse.StatusCode, activateError);
             }
         }
         else
         {
-            _logger.LogWarning("Skipping activation for {Name} — no SKUs created.", product.Name);
+            _logger.LogWarning("Skipping activation for {Name} — no SKUs created.", product.Title);
         }
 
         _logger.LogInformation("Created product: {Name} with {Count} SKUs",
-            product.Name, skuIds2.Count);
+            product.Title, skuIds2.Count);
         return (dto.Id, skuIds2);
     }
 
-    /// <summary>
-    /// Creates a single SKU on a product via Catalog API.
-    /// Returns the SKU ID or null on failure.
-    /// </summary>
     private async Task<Guid?> CreateSkuAsync(
         Guid productId, string skuCode, decimal price, string currency,
         Dictionary<string, string>? typedAttributes, CancellationToken ct)
@@ -183,25 +169,6 @@ public class ProductSeeder
         var skuError = await skuResponse.Content.ReadAsStringAsync(ct);
         _logger.LogWarning("Failed to add SKU {SkuCode}: {StatusCode} - {Error}",
             skuCode, skuResponse.StatusCode, skuError);
-        return null;
-    }
-
-    /// <summary>
-    /// Looks up a store ID by name from the StoreManagement API.
-    /// </summary>
-    public async Task<Guid?> GetStoreIdAsync(string storeName, CancellationToken ct)
-    {
-        var response = await _client.GetAsync("/api/stores", ct);
-        if (response.IsSuccessStatusCode)
-        {
-            var storesResponse = await response.Content.ReadFromJsonAsync<List<StoreDto>>(
-                cancellationToken: ct);
-            return storesResponse?.FirstOrDefault(s => s.Name == storeName)?.Id;
-        }
-
-        var error = await response.Content.ReadAsStringAsync(ct);
-        _logger.LogWarning("Failed to fetch stores: {StatusCode} - {Error}",
-            response.StatusCode, error);
         return null;
     }
 }

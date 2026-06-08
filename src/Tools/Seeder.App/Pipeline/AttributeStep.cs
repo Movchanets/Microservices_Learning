@@ -5,9 +5,7 @@ using Seeder.App.Seeders;
 namespace Seeder.App.Pipeline;
 
 /// <summary>
-/// Step 4: Create attribute definitions from two sources:
-///   1. Static definitions in categories.json (for base categories)
-///   2. Product VariantAxes (auto-detected from product data)
+/// Step 4: Create attribute definitions from catalog.json
 /// </summary>
 public class AttributeStep
 {
@@ -24,163 +22,71 @@ public class AttributeStep
 
     public async Task ExecuteAsync(
         string adminToken,
-        List<ProductModel> products,
-        List<CategoryDto> categories,
+        CatalogDataModel catalogData,
+        Dictionary<string, Guid> categoryMapping,
         CancellationToken ct)
     {
         var categorySeeder = new CategorySeeder(_client, _logger);
+        int totalCount = 0;
 
-        // ── Source 1: Static definitions from categories.json ────
-        await CreateStaticDefinitionsAsync(categorySeeder, adminToken, categories, ct);
+        var allBrands = catalogData.BaseProducts
+            .Select(p => p.Brand)
+            .Where(b => !string.IsNullOrWhiteSpace(b))
+            .Distinct()
+            .ToList();
 
-        // ── Source 2: Auto-detected from product VariantAxes ────
-        await CreateVariantAxisDefinitionsAsync(
-            categorySeeder, adminToken, products, categories, ct);
-    }
-
-    /// <summary>
-    /// Creates attribute definitions declared in categories.json.
-    /// Each category can specify its own AttributeDefinitions array.
-    /// </summary>
-    private async Task CreateStaticDefinitionsAsync(
-        CategorySeeder categorySeeder,
-        string adminToken,
-        List<CategoryDto> categories,
-        CancellationToken ct)
-    {
-        var categoriesToSeed = await SeedDataLoader.LoadJsonAsync<List<CategoryModel>>(
-            _dataDirectory, "rozetka-categories-flat.json");
-        var totalCount = 0;
-
-        foreach (var categoryModel in categoriesToSeed)
+        foreach (var attr in catalogData.AttributeDefinitions)
         {
-            if (categoryModel.AttributeDefinitions == null
-                || categoryModel.AttributeDefinitions.Count == 0)
-                continue;
-
-            var categoryId = CategoryResolver.FindBest(categoryModel.Name, categories);
-            if (categoryId == null)
+            if (!categoryMapping.TryGetValue(attr.CategoryId, out var categoryGuid))
             {
-                _logger.LogWarning(
-                    "Could not find category '{Name}' for static attribute definitions.",
-                    categoryModel.Name);
+                _logger.LogWarning("Category {CategoryId} not found for attribute {Name}", attr.CategoryId, attr.Name);
                 continue;
             }
 
-            foreach (var attr in categoryModel.AttributeDefinitions)
+            var displayName = attr.Name.Length > 0 ? char.ToUpper(attr.Name[0]) + attr.Name.Substring(1) : attr.Name;
+            
+            var allowedValues = attr.PossibleValues?.ToList() ?? new List<string>();
+            if (attr.Name.Equals("brand", StringComparison.OrdinalIgnoreCase))
             {
-                await categorySeeder.EnsureAttributeDefinitionAsync(
-                    categoryId.Value, attr, adminToken, ct);
-                totalCount++;
+                allowedValues.AddRange(allBrands!);
+                allowedValues = allowedValues.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             }
 
-            _logger.LogInformation(
-                "Seeded {Count} static attribute definitions on category '{Name}'",
-                categoryModel.AttributeDefinitions.Count, categoryModel.Name);
+            var model = new AttributeDefinitionModel(
+                Key: attr.Name,
+                DisplayName: displayName,
+                Target: 1, // Sku
+                ValueType: 2, // Select
+                IsFilterable: true,
+                IsRequired: false,
+                SortOrder: totalCount,
+                AllowedValues: allowedValues,
+                IsVariantAxis: true
+            );
+
+            await categorySeeder.EnsureAttributeDefinitionAsync(
+                categoryGuid, model, adminToken, ct);
+            totalCount++;
         }
 
-        if (totalCount > 0)
-            _logger.LogInformation("Total static attribute definitions: {Count}", totalCount);
-    }
-
-    /// <summary>
-    /// Auto-detects variant axes from product VariantAxes dictionaries
-    /// and creates Select-type attribute definitions on the matching categories.
-    /// </summary>
-    private async Task CreateVariantAxisDefinitionsAsync(
-        CategorySeeder categorySeeder,
-        string adminToken,
-        List<ProductModel> products,
-        List<CategoryDto> categories,
-        CancellationToken ct)
-    {
-        // Collect unique (categoryName → axisKey → axisValues)
-        var axesToCreate = new Dictionary<string, Dictionary<string, List<string>>>(
-            StringComparer.OrdinalIgnoreCase);
-
-        foreach (var product in products)
+        // Ensure "brand" definition exists for all categories even if not in catalogData.AttributeDefinitions
+        foreach (var categoryGuid in categoryMapping.Values)
         {
-            if (product.Variants == null || product.Variants.Count == 0)
-                continue;
-
-            if (!axesToCreate.ContainsKey(product.CategoryName))
-                axesToCreate[product.CategoryName] = new Dictionary<string, List<string>>(
-                    StringComparer.OrdinalIgnoreCase);
-
-            foreach (var variant in product.Variants)
-            {
-                if (variant.Attributes == null) continue;
-                foreach (var (key, value) in variant.Attributes)
-                {
-                    if (!axesToCreate[product.CategoryName].ContainsKey(key))
-                        axesToCreate[product.CategoryName][key] = new List<string>();
-
-                    if (!axesToCreate[product.CategoryName][key]
-                            .Contains(value, StringComparer.OrdinalIgnoreCase))
-                        axesToCreate[product.CategoryName][key].Add(value);
-                }
-            }
+            var brandModel = new AttributeDefinitionModel(
+                Key: "brand",
+                DisplayName: "Brand",
+                Target: 1, // Sku
+                ValueType: 2, // Select
+                IsFilterable: true,
+                IsRequired: false,
+                SortOrder: totalCount,
+                AllowedValues: allBrands,
+                IsVariantAxis: true
+            );
+            await categorySeeder.EnsureAttributeDefinitionAsync(
+                categoryGuid, brandModel, adminToken, ct);
         }
 
-        if (axesToCreate.Count == 0)
-        {
-            _logger.LogInformation("No variant axes found in product data — skipping auto-detection.");
-            return;
-        }
-
-        _logger.LogInformation(
-            "Found {Count} categories with variant axes from product data: {Categories}",
-            axesToCreate.Count, string.Join(", ", axesToCreate.Keys));
-
-        foreach (var (categoryName, axes) in axesToCreate)
-        {
-            var categoryId = CategoryResolver.FindBest(categoryName, categories);
-
-            // Fallback: try breadcrumb segments
-            if (categoryId == null && categoryName.Contains('>'))
-            {
-                foreach (var segment in categoryName.Split('>').Select(s => s.Trim()))
-                {
-                    var segMatch = categories.FirstOrDefault(c =>
-                        c.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
-                    if (segMatch != null)
-                    {
-                        categoryId = segMatch.Id;
-                        break;
-                    }
-                }
-            }
-
-            if (categoryId == null)
-            {
-                _logger.LogWarning(
-                    "Could not find category '{CategoryName}' for attribute definitions.",
-                    categoryName);
-                continue;
-            }
-
-            var sortOrder = 1;
-            foreach (var (key, values) in axes)
-            {
-                var displayName = key[..1].ToUpperInvariant() + key[1..];
-                var attr = new AttributeDefinitionModel(
-                    Key: key,
-                    DisplayName: displayName,
-                    Target: 1,         // Sku
-                    ValueType: 2,      // Select
-                    IsFilterable: true,
-                    IsRequired: true,
-                    SortOrder: sortOrder++,
-                    AllowedValues: values,
-                    IsVariantAxis: true);
-
-                await categorySeeder.EnsureAttributeDefinitionAsync(
-                    categoryId.Value, attr, adminToken, ct);
-            }
-
-            _logger.LogInformation(
-                "Seeded {Count} variant-axis attribute definitions on category '{CategoryName}'",
-                axes.Count, categoryName);
-        }
+        _logger.LogInformation("Total attribute definitions seeded: {Count}", totalCount);
     }
 }

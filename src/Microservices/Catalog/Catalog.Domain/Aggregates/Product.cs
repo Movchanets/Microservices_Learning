@@ -33,6 +33,9 @@ public sealed class Product : AggregateRoot
     private readonly List<ProductAttributeValue> _attributeValues = [];
     public IReadOnlyCollection<ProductAttributeValue> AttributeValues => _attributeValues.AsReadOnly();
 
+    private readonly List<ProductVariantAxis> _variantAxes = [];
+    public IReadOnlyCollection<ProductVariantAxis> VariantAxes => _variantAxes.AsReadOnly();
+
     public DateTime CreatedAt { get; private init; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -113,14 +116,13 @@ public sealed class Product : AggregateRoot
 
     /// <summary>
     /// Adds a new SKU (sellable variant) to this product.
-    /// When variantAxisKeys are provided, validates that no existing SKU has the same combination.
+    /// Validates variant-axis uniqueness using this product's own VariantAxes.
     /// </summary>
     public Sku AddSku(
         string skuCode,
         Money price,
         Dictionary<string, string> typedAttributes,
-        Dictionary<string, string>? flexibleAttributes = null,
-        IEnumerable<string>? variantAxisKeys = null)
+        Dictionary<string, string>? flexibleAttributes = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(skuCode);
 
@@ -128,9 +130,9 @@ public sealed class Product : AggregateRoot
         if (_skus.Any(s => s.SkuCode == normalizedCode && s.Status != SkuStatus.Deleted))
             throw new InvalidOperationException($"SKU '{normalizedCode}' already exists on this product");
 
-        // Validate variant-axis uniqueness before adding
-        if (variantAxisKeys is not null)
-            ValidateSkuVariantUniqueness(typedAttributes ?? [], variantAxisKeys);
+        // Validate variant-axis uniqueness using this product's own variant axes
+        if (_variantAxes.Count > 0)
+            ValidateSkuVariantUniqueness(typedAttributes ?? []);
 
         var sku = Sku.Create(Id, normalizedCode, price, typedAttributes, flexibleAttributes);
         _skus.Add(sku);
@@ -159,18 +161,65 @@ public sealed class Product : AggregateRoot
         AddDomainEvent(new SkuDeletedDomainEvent(Id, sku.Id, sku.SkuCode));
     }
 
+    // ── Variant Axis Management ──
+
+    /// <summary>
+    /// Adds a variant axis to this product, linking it to an AttributeDefinition.
+    /// </summary>
+    public void AddVariantAxis(Guid attributeDefinitionId, int sortOrder)
+    {
+        if (_variantAxes.Any(a => a.AttributeDefinitionId == attributeDefinitionId))
+            throw new InvalidOperationException(
+                $"Variant axis for attribute definition {attributeDefinitionId} already exists on product {Id}");
+
+        _variantAxes.Add(ProductVariantAxis.Create(Id, attributeDefinitionId, sortOrder));
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Removes a variant axis from this product.
+    /// </summary>
+    public void RemoveVariantAxis(Guid attributeDefinitionId)
+    {
+        var axis = _variantAxes.FirstOrDefault(a => a.AttributeDefinitionId == attributeDefinitionId)
+            ?? throw new InvalidOperationException(
+                $"Variant axis for attribute definition {attributeDefinitionId} not found on product {Id}");
+
+        _variantAxes.Remove(axis);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Replaces all variant axes with a new set. Used when updating the product's variant configuration.
+    /// </summary>
+    public void SetVariantAxes(IEnumerable<Guid> attributeDefinitionIds)
+    {
+        _variantAxes.Clear();
+        int order = 0;
+        foreach (var id in attributeDefinitionIds)
+        {
+            _variantAxes.Add(ProductVariantAxis.Create(Id, id, order++));
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     /// <summary>
     /// Validates that no existing active SKU has the same combination of variant-axis attributes.
     /// Prevents duplicate variants like (Color:Black, Storage:128GB) on the same product.
+    /// Resolves axis keys from this product's own VariantAxes collection.
     /// </summary>
     internal void ValidateSkuVariantUniqueness(
-        Dictionary<string, string> typedAttributes,
-        IEnumerable<string> variantAxisKeys)
+        Dictionary<string, string> typedAttributes)
     {
         var activeSkus = _skus.Where(s => s.Status != SkuStatus.Deleted).ToList();
         if (activeSkus.Count == 0) return;
 
-        var axisKeys = variantAxisKeys.ToList();
+        var axisKeys = _variantAxes
+            .OrderBy(a => a.SortOrder)
+            .Select(a => a.AttributeDefinition?.Key)
+            .Where(k => !string.IsNullOrEmpty(k))
+            .Cast<string>()
+            .ToList();
         if (axisKeys.Count == 0) return;
 
         // Build the new SKU's variant signature

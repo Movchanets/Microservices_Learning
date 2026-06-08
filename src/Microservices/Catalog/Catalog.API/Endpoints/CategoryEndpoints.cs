@@ -114,8 +114,7 @@ public static class CategoryEndpoints
                     request.IsFilterable,
                     request.IsRequired,
                     request.SortOrder,
-                    request.AllowedValues,
-                    request.IsVariantAxis);
+                    request.AllowedValues);
 
                 // EF Core detects the new entity as Added because Id is Guid.Empty
                 // (Guid v7 is generated on insert by GuidV7ValueGenerator).
@@ -131,8 +130,7 @@ public static class CategoryEndpoints
                     attr.IsFilterable,
                     attr.IsRequired,
                     attr.SortOrder,
-                    attr.AllowedValues,
-                    attr.IsVariantAxis);
+                    attr.AllowedValues);
 
                 return Results.Created($"/api/catalog/categories/{id}/attributes/{attr.Id}", dto);
             }
@@ -166,7 +164,7 @@ public static class CategoryEndpoints
                     attr.Id, attr.Key, attr.DisplayName,
                     attr.Target.ToString(), attr.ValueType.ToString(),
                     attr.IsFilterable, attr.IsRequired, attr.SortOrder,
-                    attr.AllowedValues, attr.IsVariantAxis, IsInherited: false));
+                    attr.AllowedValues, IsInherited: false));
             }
 
             // Inherited definitions from parent chain
@@ -195,7 +193,7 @@ public static class CategoryEndpoints
                             attr.Id, attr.Key, attr.DisplayName,
                             attr.Target.ToString(), attr.ValueType.ToString(),
                             attr.IsFilterable, attr.IsRequired, attr.SortOrder,
-                            attr.AllowedValues, attr.IsVariantAxis, IsInherited: true));
+                            attr.AllowedValues, IsInherited: true));
                         ownKeys.Add(attr.Key); // prevent duplicates from grandparent
                     }
 
@@ -252,5 +250,4 @@ public sealed record AddAttributeDefinitionRequest(
     bool IsFilterable,
     bool IsRequired,
     int SortOrder = 0,
-    List<string>? AllowedValues = null,
-    bool IsVariantAxis = false);
+    List<string>? AllowedValues = null);

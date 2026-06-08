@@ -17,11 +17,6 @@ public sealed class AttributeDefinitionConfiguration : IEntityTypeConfiguration<
         builder.Property(a => a.Target).IsRequired();
         builder.Property(a => a.ValueType).IsRequired();
         builder.Property(a => a.IsRequired);
-
-        builder.Property(a => a.IsVariantAxis)
-            .IsRequired()
-            .HasDefaultValue(false);
-
         // List<string> works natively with Npgsql jsonb — no ValueConverter needed.
         // (Dictionary<string, string> in SkuConfiguration does require one.)
         var listComparer = new ValueComparer<List<string>>(

@@ -108,18 +108,20 @@ public sealed class ElasticsearchService(
                 ctx._source.variantAxes[params.axisKey].add(params.axisValue);
             }";
 
-        var parameters = new Dictionary<string, object>
-        {
-            ["axisKey"] = axisKey,
-            ["axisValue"] = axisValue
-        };
-
         var response = await client.UpdateAsync<ProductSearchDocument, object>(
             IndexName,
             productId.ToString(),
             u => u
                 .RetryOnConflict(5)
-                .Script(s => s.Source(script).Params(parameters)),
+                .Script(new Elastic.Clients.Elasticsearch.Script
+                {
+                    Source = script,
+                    Params = new Dictionary<string, object>
+                    {
+                        { "axisKey", axisKey },
+                        { "axisValue", axisValue }
+                    }
+                }),
             ct);
 
         if (!response.IsValidResponse)
@@ -178,11 +180,10 @@ public sealed class ElasticsearchService(
             productId.ToString(),
             u => u
                 .RetryOnConflict(5)
-                .Script(s =>
+                .Script(new Elastic.Clients.Elasticsearch.Script
                 {
-                    s.Source(script);
-                    if (parameters != null)
-                        s.Params(parameters);
+                    Source = script,
+                    Params = parameters != null ? new Dictionary<string, object>(parameters) : null
                 }),
             ct);
 
@@ -234,23 +235,23 @@ public sealed class ElasticsearchService(
                 .Fuzziness(new Fuzziness("AUTO"))));
 
         if (categoryId.HasValue)
-            filters.Add(f => f.Term(t => t.Field("categoryId.keyword").Value(categoryId.Value.ToString())));
+            filters.Add(f => f.Term(t => t.Field(new Elastic.Clients.Elasticsearch.Field("categoryId.keyword")).Value(categoryId.Value.ToString())));
 
         // Price range overlap: product.MaxPrice >= priceMin AND product.MinPrice <= priceMax
         if (priceMin.HasValue)
-            filters.Add(f => f.Range(r => r.Number(nr => nr.Field(f => f.MaxPrice).Gte((double)priceMin.Value))));
+            filters.Add(f => f.Range(r => r.NumberRange(nr => nr.Field(f => f.MaxPrice).Gte((double)priceMin.Value))));
 
         if (priceMax.HasValue)
-            filters.Add(f => f.Range(r => r.Number(nr => nr.Field(f => f.MinPrice).Lte((double)priceMax.Value))));
+            filters.Add(f => f.Range(r => r.NumberRange(nr => nr.Field(f => f.MinPrice).Lte((double)priceMax.Value))));
 
         if (tags is { Count: > 0 })
             filters.Add(f => f.Terms(t => t.Field(f => f.Tags).Terms(new TermsQueryField(tags.Select(FieldValue.String).ToArray()))));
 
         if (!string.IsNullOrWhiteSpace(brand))
-            filters.Add(f => f.Term(t => t.Field("brand.keyword").Value(brand)));
+            filters.Add(f => f.Term(t => t.Field(new Elastic.Clients.Elasticsearch.Field("brand.keyword")).Value(brand)));
 
         if (minRating.HasValue)
-            filters.Add(f => f.Range(r => r.Number(nr => nr.Field(f => f.Rating).Gte(minRating.Value))));
+            filters.Add(f => f.Range(r => r.NumberRange(nr => nr.Field(f => f.Rating).Gte(minRating.Value))));
 
         if (inStock == true)
             filters.Add(f => f.Term(t => t.Field(f => f.InStock).Value(true)));

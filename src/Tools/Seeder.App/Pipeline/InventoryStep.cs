@@ -21,38 +21,28 @@ public class InventoryStep
     }
 
     public async Task ExecuteAsync(
-        List<ProductModel> products,
+        CatalogDataModel catalogData,
         Dictionary<string, (Guid StoreId, Guid ProductId, Guid SkuId)> productIds,
         CancellationToken ct)
     {
         var inventorySeeder = new InventorySeeder(_client, _logger);
 
-        foreach (var product in products)
+        var productStoreMap = catalogData.BaseProducts
+            .ToDictionary(p => p.ExternalId, p => p.StoreName);
+
+        foreach (var variant in catalogData.ProductVariants)
         {
-            var sellerCtx = _sellers.ResolveByStoreName(product.StoreName);
+            if (!productStoreMap.TryGetValue(variant.ProductExternalId, out var storeName))
+                continue;
+
+            var sellerCtx = _sellers.ResolveByStoreName(storeName);
             if (sellerCtx == null) continue;
 
-            // Stock primary SKU
-            var primarySku = ProductSeedData.ResolvePrimarySku(product);
-            if (productIds.TryGetValue(primarySku, out var ids))
+            var variantSku = ProductSeedData.NormalizeSku(variant.Sku);
+            if (productIds.TryGetValue(variantSku, out var variantIds))
             {
                 await inventorySeeder.EnsureInventoryStockedAsync(
-                    product with { Sku = primarySku },
-                    sellerCtx.Token, ids.StoreId, ids.ProductId, ct);
-            }
-
-            // Stock variant SKUs
-            if (product.Variants == null) continue;
-
-            foreach (var variant in product.Variants)
-            {
-                var variantSku = ProductSeedData.NormalizeSku(variant.Sku);
-                if (productIds.TryGetValue(variantSku, out var variantIds))
-                {
-                    await inventorySeeder.EnsureInventoryStockedAsync(
-                        product with { Sku = variantSku },
-                        sellerCtx.Token, variantIds.StoreId, variantIds.ProductId, ct);
-                }
+                    variantSku, variant.InitialStock, sellerCtx.Token, variantIds.StoreId, variantIds.ProductId, ct);
             }
         }
     }

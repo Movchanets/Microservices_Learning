@@ -40,6 +40,11 @@ public sealed class UpdateProductHandler(
             request.Tags,
             request.ImageUrl);
 
+        if (request.VariantAxisIds != null && request.VariantAxisIds.Count > 0)
+        {
+            product.SetVariantAxes(request.VariantAxisIds);
+        }
+
         productRepository.Update(product);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

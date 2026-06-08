@@ -13,7 +13,7 @@ public sealed record BulkAddSkuCommand(
 
     /// <summary>
     /// Variant axes and their allowed values.
-    /// Keys must match AttributeDefinition.Key where IsVariantAxis=true.
+    /// Keys must match the AttributeDefinition keys configured as this product's variant axes.
     /// Example: { "color": ["Black","White","Blue"], "storage": ["128GB","256GB","512GB"] }
     /// </summary>
     Dictionary<string, List<string>> VariantCombinations,

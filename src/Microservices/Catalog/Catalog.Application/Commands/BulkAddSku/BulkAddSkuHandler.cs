@@ -48,13 +48,12 @@ public sealed class BulkAddSkuHandler(
 
         // ── Create SKUs ──────────────────────────────────────────────
         var prefix = request.SkuCodePrefix ?? GeneratePrefix(product!.Name);
-        var variantAxisKeys = variantDefs!.Select(d => d.Key).ToList();
         var price = request.BasePrice.HasValue
             ? Money.Create(request.BasePrice.Value, request.Currency)
             : Money.Create(0, request.Currency);
 
         var (errors, skusToPublish) = CreateSkus(
-            product!, filteredCombinations, prefix, price, variantAxisKeys);
+            product!, filteredCombinations, prefix, price);
 
         // ── Save & Publish ───────────────────────────────────────────
         var createdSkus = new List<SkuDto>();
@@ -87,13 +86,17 @@ public sealed class BulkAddSkuHandler(
         if (category is null)
             return (null, null, null, Result<BulkAddSkuResultDto>.Failure("Category not found", "NOT_FOUND"));
 
-        var variantDefs = category.AttributeDefinitions
-            .Where(a => a.Target == AttributeTarget.Sku && a.IsVariantAxis)
+        // Variant axes are now defined at the Product level
+        var variantDefs = product.VariantAxes
+            .OrderBy(a => a.SortOrder)
+            .Select(a => a.AttributeDefinition)
+            .Where(d => d is not null)
+            .Cast<AttributeDefinition>()
             .ToList();
 
         if (variantDefs.Count == 0)
             return (null, null, null, Result<BulkAddSkuResultDto>.Failure(
-                "Category has no variant-axis attributes defined. Add AttributeDefinitions with IsVariantAxis=true first.",
+                "Product has no variant-axis attributes defined. Use SetVariantAxes to configure variant axes first.",
                 "NO_VARIANT_AXES"));
 
         return (product, category, variantDefs, null);
@@ -138,8 +141,7 @@ public sealed class BulkAddSkuHandler(
             Product product,
             List<Dictionary<string, string>> combinations,
             string prefix,
-            Money price,
-            List<string> variantAxisKeys)
+            Money price)
     {
         var errors = new List<string>();
         var skusToPublish = new List<(Sku Sku, Product Product)>();
@@ -156,7 +158,7 @@ public sealed class BulkAddSkuHandler(
             {
                 // Create a unique Money instance for each SKU to avoid EF Core change tracking issues
                 var skuPrice = Money.Create(price.Amount, price.Currency);
-                var sku = product.AddSku(skuCode, skuPrice, typedAttributes, variantAxisKeys: variantAxisKeys);
+                var sku = product.AddSku(skuCode, skuPrice, typedAttributes);
                 product.ClearDomainEvents();
                 skusToPublish.Add((sku, product));
             }

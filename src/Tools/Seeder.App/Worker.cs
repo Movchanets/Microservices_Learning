@@ -5,19 +5,6 @@ using Seeder.App.Pipeline;
 
 namespace Seeder.App;
 
-/// <summary>
-/// Thin orchestrator — delegates each step to its own pipeline class.
-///
-/// Pipeline order:
-///   1. UserStep        — create admin + sellers, get auth tokens
-///   2. StoreStep       — create stores for each seller, verify
-///   3. CategoryStep    — create from categories.json + Rozetka breadcrumbs
-///   4. AttributeStep   — create attribute definitions (static + VariantAxes)
-///   5. ProductStep     — create products + variant SKUs with per-SKU galleries
-///   6. InventoryStep   — stock initial quantities
-///   7. MediaStep       — upload product/SKU gallery images
-///   8. OrderFlowStep   — run a sample buyer checkout
-/// </summary>
 public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
@@ -59,27 +46,29 @@ public class Worker : BackgroundService
             await Task.Delay(3000, ct);
 
             // ── Step 3: Categories ───────────────────────────────
-            var products = await SeedDataLoader.LoadJsonAsync<List<ProductModel>>(
-                _dataDirectory, "products-v2.json");
+            var catalogData = await SeedDataLoader.LoadJsonAsync<CatalogDataModel>(
+                _dataDirectory, "catalog.json");
+
+            if (catalogData == null) {
+                _logger.LogWarning("catalog.json not found or invalid");
+                return;
+            }
 
             var categoryStep = new CategoryStep(httpClient, _logger, _dataDirectory);
-            var categories = await categoryStep.ExecuteAsync(adminToken, products, ct);
+            var categoryMapping = await categoryStep.ExecuteAsync(adminToken, catalogData, ct);
 
             // ── Step 4: Attribute Definitions ────────────────────
             var attributeStep = new AttributeStep(httpClient, _logger, _dataDirectory);
-            await attributeStep.ExecuteAsync(adminToken, products, categories, ct);
+            await attributeStep.ExecuteAsync(adminToken, catalogData, categoryMapping, ct);
 
             // ── Step 5: Products + SKUs ──────────────────────────
-            var categoryMapping = await SeedDataLoader.LoadCategoryMappingAsync(
-                _dataDirectory, _logger);
-
             var productStep = new ProductStep(httpClient, _logger, sellers);
             var productIds = await productStep.ExecuteAsync(
-                products, categories, categoryMapping, ct);
+                catalogData, categoryMapping, ct);
 
             // ── Step 6: Inventory ────────────────────────────────
             var inventoryStep = new InventoryStep(httpClient, _logger, sellers);
-            await inventoryStep.ExecuteAsync(products, productIds, ct);
+            await inventoryStep.ExecuteAsync(catalogData, productIds, ct);
 
             // ── Step 7: Media Upload ─────────────────────────────
             var downloadClient = _httpClientFactory.CreateClient("download");
@@ -88,7 +77,7 @@ public class Worker : BackgroundService
             var mediaStep = new MediaStep(
                 httpClient, mediaClient, downloadClient,
                 _logger, _dataDirectory, sellers);
-            await mediaStep.ExecuteAsync(products, productIds, ct);
+            await mediaStep.ExecuteAsync(catalogData, productIds, ct);
 
             // ── Step 8: Order Flow ───────────────────────────────
             var orderFlowStep = new OrderFlowStep(httpClient, _logger, _dataDirectory);

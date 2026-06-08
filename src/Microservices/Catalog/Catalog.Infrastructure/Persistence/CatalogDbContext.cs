@@ -22,6 +22,7 @@ public sealed class CatalogDbContext(
     public DbSet<AttributeDefinition> AttributeDefinitions => Set<AttributeDefinition>();
     public DbSet<ProductAttributeValue> ProductAttributeValues => Set<ProductAttributeValue>();
     public DbSet<SkuAttributeValue> SkuAttributeValues => Set<SkuAttributeValue>();
+    public DbSet<ProductVariantAxis> ProductVariantAxes => Set<ProductVariantAxis>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

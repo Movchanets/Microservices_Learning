@@ -35,8 +35,6 @@ public sealed class AddSkuHandler(
         var category = await categoryRepository.GetWithAttributeDefinitionsAsync(
             product.CategoryId, cancellationToken);
 
-        List<string> variantAxisKeys = [];
-
         if (category is not null)
         {
             try
@@ -48,6 +46,7 @@ public sealed class AddSkuHandler(
             }
             catch (InvalidOperationException ex)
             {
+                System.IO.File.AppendAllText(@"d:\code\Microservices\sku_errors.txt", $"Required validation failed: {ex.Message}\n");
                 return Result<SkuDto>.Failure(ex.Message, "VALIDATION_ERROR");
             }
 
@@ -65,30 +64,38 @@ public sealed class AddSkuHandler(
                 {
                     if (!def.AllowedValues.Contains(value, StringComparer.OrdinalIgnoreCase))
                     {
-                        return Result<SkuDto>.Failure(
-                            $"Attribute '{def.DisplayName}' value '{value}' is not allowed. " +
-                            $"Allowed values: {string.Join(", ", def.AllowedValues)}",
-                            "VALIDATION_ERROR");
+                        var msg = $"Attribute '{def.DisplayName}' value '{value}' is not allowed. " +
+                            $"Allowed values: {string.Join(", ", def.AllowedValues)}";
+                        System.IO.File.AppendAllText(@"d:\code\Microservices\sku_errors.txt", $"Select validation failed: {msg}\n");
+                        return Result<SkuDto>.Failure(msg, "VALIDATION_ERROR");
                     }
                 }
             }
-
-            // Collect variant-axis keys for uniqueness validation in AddSku
-            variantAxisKeys = category.AttributeDefinitions
-                .Where(a => a.Target == Domain.Enums.AttributeTarget.Sku && a.IsVariantAxis)
-                .Select(a => a.Key)
-                .ToList();
         }
 
-        // 3. Create SKU (with variant uniqueness check)
+        // 3. Create SKU (variant uniqueness is validated internally by Product using its own VariantAxes)
         var price = Money.Create(request.Price, request.Currency);
         Sku sku;
         try
         {
             sku = product.AddSku(
                 request.SkuCode, price,
-                request.TypedAttributes ?? [], request.FlexibleAttributes,
-                variantAxisKeys.Count > 0 ? variantAxisKeys : null);
+                request.TypedAttributes ?? [], request.FlexibleAttributes);
+
+            // 3.5 Map Sku Attributes
+            if (category is not null && request.TypedAttributes is not null)
+            {
+                foreach (var kvp in request.TypedAttributes)
+                {
+                    var def = category.AttributeDefinitions.FirstOrDefault(a => 
+                        a.Key.Equals(kvp.Key, StringComparison.OrdinalIgnoreCase) && 
+                        a.Target == Domain.Enums.AttributeTarget.Sku);
+                    if (def is not null)
+                    {
+                        sku.AddOrUpdateAttributeValue(def.Id, kvp.Value);
+                    }
+                }
+            }
         }
         catch (InvalidOperationException ex)
         {
