@@ -45,23 +45,27 @@ public class AttributeStep
 
             var displayName = attr.Name.Length > 0 ? char.ToUpper(attr.Name[0]) + attr.Name.Substring(1) : attr.Name;
             
-            var allowedValues = attr.PossibleValues?.ToList() ?? new List<string>();
-            if (attr.Name.Equals("brand", StringComparison.OrdinalIgnoreCase))
+            List<string>? allowedValues = null;
+            if (attr.IsVariantAxis)
             {
-                allowedValues.AddRange(allBrands!);
-                allowedValues = allowedValues.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                allowedValues = attr.PossibleValues?.ToList() ?? new List<string>();
+                if (attr.Name.Equals("brand", StringComparison.OrdinalIgnoreCase))
+                {
+                    allowedValues.AddRange(allBrands!);
+                    allowedValues = allowedValues.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                }
             }
 
             var model = new AttributeDefinitionModel(
                 Key: attr.Name,
                 DisplayName: displayName,
                 Target: 1, // Sku
-                ValueType: 2, // Select
+                ValueType: attr.IsVariantAxis ? 2 : 0, // Select if variant axis, Text otherwise
                 IsFilterable: true,
                 IsRequired: false,
                 SortOrder: totalCount,
                 AllowedValues: allowedValues,
-                IsVariantAxis: true
+                IsVariantAxis: attr.IsVariantAxis
             );
 
             await categorySeeder.EnsureAttributeDefinitionAsync(

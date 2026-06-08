@@ -34,6 +34,7 @@ export interface AttributeDefinition {
   categoryId: string;
   name: string;
   possibleValues: string[];
+  isVariantAxis: boolean;
 }
 
 export interface BaseProduct {
@@ -427,15 +428,19 @@ class RozetkaScraper {
         this.productVariants.set(variant.sku, variant);
         this.existingSkus.add(variant.sku);
 
-        // Register all attributes as possible options
+        // Register all attributes, classifying variant axes vs product specs
+        const VARIANT_AXIS_KEYS = new Set(['color', 'storage', 'ram']);
         for (const [attrName, attrVal] of Object.entries(attributesMap)) {
-          const key = `${categoryId}_${attrName}`;
-          let def = this.attributeDefinitions.get(key);
+          const normalizedKey = mapFilterNameToKey(attrName);
+          const isAxis = VARIANT_AXIS_KEYS.has(normalizedKey);
+          const defKey = `${categoryId}_${attrName}`;
+          let def = this.attributeDefinitions.get(defKey);
           if (!def) {
-            def = { categoryId: categoryId, name: attrName, possibleValues: [] };
-            this.attributeDefinitions.set(key, def);
+            def = { categoryId: categoryId, name: attrName, possibleValues: [], isVariantAxis: isAxis };
+            this.attributeDefinitions.set(defKey, def);
           }
-          if (!def.possibleValues.includes(attrVal)) {
+          // Only track possible values for variant axes
+          if (isAxis && !def.possibleValues.includes(attrVal)) {
             def.possibleValues.push(attrVal);
           }
         }

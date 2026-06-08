@@ -37,17 +37,14 @@ public sealed class GetVariantMatrixHandler(
         if (variantDefs.Count == 0)
             return new VariantMatrixDto(product.Id, product.Name, [], []);
 
-        // 4. Build axes
-        //    If AllowedValues are defined in the attribute, use them.
-        //    Otherwise, fall back to distinct values from existing SKUs.
+        // 4. Build axes — always derive values from actual SKUs
+        //    so we never show a huge Cartesian product of global AllowedValues
+        //    where most combinations don't match any SKU.
         var axes = variantDefs
             .Select(def =>
             {
-                var values = def.AllowedValues.Count > 0
-                    ? def.AllowedValues
-                    : GetDistinctValuesFromSkus(product.Skus, def.Key);
-
-                return new VariantAxisDto(def.Key, def.DisplayName, values);
+                var skuValues = GetDistinctValuesFromSkus(product.Skus, def.Key);
+                return new VariantAxisDto(def.Key, def.DisplayName, skuValues);
             })
             .Where(axis => axis.Values.Count > 0)
             .ToList();

@@ -60,7 +60,8 @@ public record ScrapedCategory(
 public record ScrapedAttributeDefinition(
     [property: JsonPropertyName("categoryId")] string CategoryId,
     [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("possibleValues")] List<string> PossibleValues
+    [property: JsonPropertyName("possibleValues")] List<string> PossibleValues,
+    [property: JsonPropertyName("isVariantAxis")] bool IsVariantAxis = false
 );
 
 public record ScrapedBaseProduct(

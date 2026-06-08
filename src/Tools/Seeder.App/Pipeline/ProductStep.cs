@@ -59,7 +59,7 @@ public class ProductStep
             variantsByProduct.TryGetValue(product.ExternalId, out var variants);
 
             var result = await productSeeder.EnsureProductExistsAsync(
-                product, variants ?? new List<ScrapedProductVariant>(), sellerCtx.Token, categoryId, sellerCtx.StoreId, ct);
+                product, variants ?? new List<ScrapedProductVariant>(), sellerCtx.Token, categoryId, sellerCtx.StoreId, catalogData, ct);
             if (result != null)
             {
                 var (productId, skuIds) = result.Value;

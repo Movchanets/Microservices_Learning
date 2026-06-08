@@ -21,7 +21,8 @@ public class ProductSeeder
     }
 
     public async Task<(Guid ProductId, Dictionary<string, Guid> SkuIds)?> EnsureProductExistsAsync(
-        ScrapedBaseProduct product, List<ScrapedProductVariant> variants, string token, Guid categoryId, Guid storeId, CancellationToken ct)
+        ScrapedBaseProduct product, List<ScrapedProductVariant> variants, string token, Guid categoryId, Guid storeId,
+        CatalogDataModel catalogData, CancellationToken ct)
     {
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         
@@ -53,17 +54,24 @@ public class ProductSeeder
         }
 
         // ── Resolve Variant Axes ─────────────────────────────────
+        // Use catalog.json's isVariantAxis flag instead of querying the API
         List<Guid>? variantAxisIds = null;
         if (variants.Count > 0)
         {
             var categorySeeder = new CategorySeeder(_client, _logger);
             var attributes = await categorySeeder.GetAttributeDefinitionsAsync(categoryId, ct);
             
-            // Assume any attribute that changes between variants is an axis, or just use all attributes from the first variant
-            variantAxisIds = primaryVariant.Attributes.Keys
-                .Select(k => attributes.FirstOrDefault(a => a.Key.Equals(k, StringComparison.OrdinalIgnoreCase))?.Id)
-                .Where(id => id.HasValue)
-                .Select(id => id!.Value)
+            // Build a set of axis keys from catalog.json (exclude 'brand' — it's a product-level attribute, not a SKU differentiator)
+            var axisKeys = new HashSet<string>(
+                catalogData.AttributeDefinitions
+                    .Where(ad => ad.IsVariantAxis && ad.CategoryId == product.CategoryId && !string.Equals(ad.Name, "brand", StringComparison.OrdinalIgnoreCase))
+                    .Select(ad => ad.Name),
+                StringComparer.OrdinalIgnoreCase);
+            
+            // Only include attribute definitions that are marked as variant axes in catalog.json
+            variantAxisIds = attributes
+                .Where(a => axisKeys.Contains(a.Key))
+                .Select(a => a.Id)
                 .ToList();
         }
 

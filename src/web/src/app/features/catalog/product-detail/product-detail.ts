@@ -70,6 +70,27 @@ export class ProductDetailComponent implements OnInit {
    */
   protected galleryImages = computed<GalleryItem[]>(() => {
     const product = this.store.product();
+    const sku = this.selectedSku();
+
+    // If selected SKU has an image, show it first
+    if (sku?.imageUrl) {
+      const skuImage: GalleryItem = {
+        id: sku.id,
+        fileName: sku.skuCode,
+        contentType: 'image/jpeg',
+        url: sku.imageUrl,
+        thumbnailUrl: sku.imageUrl,
+        sizeBytes: 0,
+        type: 'Image',
+        sortOrder: 0,
+        isPrimary: true,
+        createdAt: sku.createdAt,
+      };
+      // Merge: SKU image first, then remaining product gallery (deduped)
+      const productGallery = (product?.gallery ?? []).filter(g => g.url !== sku.imageUrl);
+      return [skuImage, ...productGallery];
+    }
+
     return product?.gallery ?? [];
   });
 

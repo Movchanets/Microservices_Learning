@@ -132,6 +132,18 @@ export const ProductDetailStore = signalStore(
       try {
         const matrix = await catalogService.getVariantMatrix(productId);
         patchState(store, { variantMatrix: matrix });
+
+        // Auto-select the first available combination
+        if (matrix && matrix.axes.length > 0) {
+          const firstAvailable = matrix.options.find(o => o.isAvailable);
+          if (firstAvailable) {
+            patchState(store, { selectedVariants: { ...firstAvailable.combination } });
+            // Load stock for the pre-selected SKU
+            if (firstAvailable.skuCode) {
+              this.loadStock(firstAvailable.skuCode);
+            }
+          }
+        }
       } catch {
         patchState(store, { variantMatrix: null });
       } finally {
