@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "scrape": "tsx scripts/rozetka-scraper.ts",
-    "scrape:categories": "tsx scripts/scrape-categories.ts"
+    "scrape:categories": "tsx scripts/scrape-categories.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "playwright": "^1.43.0",
@@ -15,6 +17,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.4.0",
-    "tsx": "^4.7.0"
+    "tsx": "^4.7.0",
+    "vitest": "^4.1.8"
   }
 }

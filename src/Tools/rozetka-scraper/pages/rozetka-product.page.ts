@@ -31,6 +31,15 @@ export interface ProductVariant {
   type: 'color' | 'storage' | 'model' | 'ram' | 'other';
 }
 
+export interface VariantSelector {
+  type: 'color' | 'storage' | 'ram' | 'other';
+  label: string;
+  value: string;
+  selector: string;   // CSS selector to click (for in-page selectors)
+  url?: string;        // Direct URL (for link-based variants)
+  pid?: string;        // Rozetka product ID (for link-based variants)
+}
+
 export interface ProductSpecification {
   key: string;
   value: string;
@@ -946,6 +955,136 @@ export class RozetkaProductPage {
     }
 
     return segments.join(' > ');
+  }
+
+  // ── Variant Selector Detection ──────────────────────────────
+
+  /**
+   * Extract clickable variant selectors (color swatches, storage tiles, RAM options).
+   * Returns structured data for iterating through variant combinations.
+   */
+  async extractVariantSelectors(): Promise<VariantSelector[]> {
+    return this.page.evaluate(() => {
+      const selectors: Array<{
+        type: 'color' | 'storage' | 'ram' | 'other';
+        label: string;
+        value: string;
+        selector: string;
+        url?: string;
+        pid?: string;
+      }> = [];
+
+      // Pattern 1: Rozetka variant selector containers
+      const selectorGroups = document.querySelectorAll(
+        '[class*="selector"] [class*="item"], ' +
+        '[class*="variant"] [class*="option"], ' +
+        '[class*="product-variations"] a, ' +
+        '[class*="color-selector"] [class*="item"], ' +
+        '[class*="memory-selector"] [class*="item"], ' +
+        'rz-variations-list rz-variation, ' +
+        '[data-testid*="variation"]'
+      );
+
+      selectorGroups.forEach((el, idx) => {
+        const text = el.textContent?.trim() || '';
+        const title = el.getAttribute('title') || '';
+        const cls = el.className || '';
+        const fullText = (text + ' ' + title).toLowerCase();
+
+        if (!text && !title && !el.querySelector('img')) return;
+
+        let type: 'color' | 'storage' | 'ram' | 'other' = 'other';
+        if (text.match(/^\d+\s*(ГБ|GB|ТБ|TB)$/i) || fullText.includes('пам') || fullText.includes('memory') || fullText.includes('storage')) {
+          type = 'storage';
+        } else if (text.match(/^\d+\s*(ГБ|GB)\s*(ОЗП|RAM|ram)$/i) || fullText.includes('озп') || fullText.includes('ram')) {
+          type = 'ram';
+        } else if (
+          el.querySelector('img') || cls.match(/color|колір|swatch/i) ||
+          text.match(/^(Black|White|Blue|Red|Green|Gold|Silver|Purple|Pink|Orange|Titanium|Midnight|Starlight|Cosmic|Deep|Natural|Slate|Space|Graphite|Rose|Чорний|Білий|Синій|Червоний|Золотий|Срібний|Фіолетовий|Рожевий|Помаранчевий)/i)
+        ) {
+          type = 'color';
+        }
+
+        selectors.push({
+          type,
+          label: (text || title || '').substring(0, 80),
+          value: (text || title || '').trim(),
+          selector: `[data-var-idx="${idx}"], :nth-child(${idx + 1})`,
+        });
+      });
+
+      // Pattern 2: Links to other variant pages (with full filtering)
+      if (selectors.length === 0) {
+        const currentPid = window.location.href.match(/\/p(\d+)\//)?.[1] || '';
+        const seen = new Set<string>();
+
+        document.querySelectorAll('a[href*="/p"]').forEach((a) => {
+          const href = a.getAttribute('href') || '';
+          const pid = href.match(/\/p(\d+)\//)?.[1];
+          if (!pid || pid === currentPid || seen.has(pid)) return;
+
+          const cls = a.className || '';
+          if (cls.includes('service-product') || cls.includes('footer') || cls.includes('tile-image')) return;
+
+          const text = a.textContent?.trim() || '';
+          const title = a.getAttribute('title') || '';
+          if (!text && !title && !a.querySelector('img')) return;
+
+          const fullText = (text + ' ' + title).toLowerCase();
+          const accessoryWords = ['чохол', 'скло', 'кабель', 'заряд', 'рюкзак', 'монітор', 'портативний', 'monitor', 'backpack', 'case', 'charger', 'cable', 'stand', 'dock', 'hub', 'mouse', 'keyboard', 'миша', 'клавіатур', 'підставка', 'holder', 'sleeve', 'sumka', 'сумка', 'тримач', 'альбом', 'фотоальбом', 'album'];
+          if (accessoryWords.some(w => fullText.includes(w))) return;
+
+          const currentSlug = window.location.pathname.toLowerCase();
+          const variantSlug = href.toLowerCase();
+          const slugParts = currentSlug.split('/').filter((s: string) => s && !s.startsWith('p') && !s.startsWith('ua'));
+          const varSlugParts = variantSlug.split('/').filter((s: string) => s && !s.startsWith('p') && !s.startsWith('ua'));
+          if (slugParts.length > 0 && varSlugParts.length > 0) {
+            const currentFamily = slugParts[0]?.split('-').slice(0, 3).join('-');
+            const varFamily = varSlugParts[0]?.split('-').slice(0, 3).join('-');
+            const isVariantType = text.match(/^\d+\s*(ГБ|GB|ТБ|TB)$/i) ||
+                                 text.match(/^(iPhone|Galaxy|MacBook|iPad|Pixel|Redmi|POCO)/i) ||
+                                 text.match(/^(Black|White|Blue|Red|Green|Gold|Silver|Purple|Pink|Orange|Titanium|Midnight|Starlight|Cosmic|Deep|Natural|Slate|Space|Graphite|Rose)/i);
+            if (!isVariantType && currentFamily && varFamily && currentFamily !== varFamily) return;
+          }
+
+          seen.add(pid);
+
+          let type: 'color' | 'storage' | 'ram' | 'other' = 'other';
+          if (text.match(/^\d+\s*(ГБ|GB|ТБ|TB)$/i)) type = 'storage';
+          else if (!text && a.querySelector('img')) type = 'color';
+          else if (text.match(/^(Black|White|Blue|Red|Green|Gold|Silver|Purple|Pink|Orange|Titanium|Cosmic|Natural|Deep|Slate|Space|Graphite|Midnight|Starlight|Rose)/i)) type = 'color';
+          else {
+            const slug = href.toLowerCase();
+            if (slug.match(/(black|white|blue|red|green|gold|silver|purple|pink|orange|titanium|midnight|starlight|cosmic|deep|natural|slate|space|graphite|rose)/)) type = 'color';
+          }
+
+          selectors.push({
+            type,
+            label: (text || title || pid).substring(0, 80),
+            value: (text || title || pid).trim(),
+            selector: `a[href*="/p${pid}/"]`,
+            url: href.startsWith('http') ? href : `https://rozetka.com.ua${href}`,
+            pid,
+          });
+        });
+      }
+
+      return selectors;
+    });
+  }
+
+  /**
+   * Click a variant selector and wait for page update.
+   * For in-page selectors (color swatches, storage tiles).
+   */
+  async clickVariantSelector(selector: string): Promise<void> {
+    const el = await this.page.$(selector);
+    if (!el) throw new Error(`Selector not found: ${selector}`);
+    await el.scrollIntoViewIfNeeded();
+    await this.randomDelay(500, 1000);
+    await el.click();
+    await this.page.waitForLoadState('domcontentloaded');
+    await this.randomDelay(2000, 3000);
   }
 
   // ── Utilities ───────────────────────────────────────────────
