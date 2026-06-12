@@ -97,9 +97,12 @@ public sealed class GalleryUpdatedConsumerTests : IDisposable
         // Act
         await _consumer.Consume(consumeContext.Object);
 
-        // Assert
+        // Assert — SKU updated AND propagated to parent product
         var updatedSku = await _context.Skus.FindAsync(sku.Id);
         updatedSku!.ImageUrl.Should().Be("https://cdn.example.com/sku-primary.jpg");
+
+        var updatedProduct = await _context.Products.FindAsync(product.Id);
+        updatedProduct!.ImageUrl.Should().Be("https://cdn.example.com/sku-primary.jpg");
     }
 
     [Fact]
@@ -130,6 +133,76 @@ public sealed class GalleryUpdatedConsumerTests : IDisposable
         // Assert
         var unchanged = await _context.Products.FindAsync(product.Id);
         unchanged!.ImageUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Consume_PrimarySkuImage_ProductHasNoImageUrl_PropagatesToProduct()
+    {
+        // Arrange — product.ImageUrl is null (seeder scenario)
+        var product = Product.Create("Test Product", "Description", _categoryId, Guid.NewGuid());
+        var sku = product.AddSku("SKU-001", Money.Create(10m, "USD"), new Dictionary<string, string> { { "Color", "Red" } });
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        // Precondition
+        product.ImageUrl.Should().BeNull();
+
+        var evt = new GalleryUpdatedIntegrationEvent(
+            TargetId: sku.Id,
+            TargetType: "SKU",
+            Items:
+            [
+                new GalleryItemContract(Guid.NewGuid(), "/api/media/sku-primary.jpg", null, 0, true)
+            ],
+            Timestamp: DateTime.UtcNow);
+
+        var consumeContext = new Mock<ConsumeContext<GalleryUpdatedIntegrationEvent>>();
+        consumeContext.Setup(x => x.Message).Returns(evt);
+        consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        // Act
+        await _consumer.Consume(consumeContext.Object);
+
+        // Assert — both SKU and parent Product updated
+        var updatedSku = await _context.Skus.FindAsync(sku.Id);
+        updatedSku!.ImageUrl.Should().Be("/api/media/sku-primary.jpg");
+
+        var updatedProduct = await _context.Products.FindAsync(product.Id);
+        updatedProduct!.ImageUrl.Should().Be("/api/media/sku-primary.jpg");
+    }
+
+    [Fact]
+    public async Task Consume_PrimarySkuImage_ProductAlreadyHasImageUrl_DoesNotOverwrite()
+    {
+        // Arrange — product already has a valid /api/media/ ImageUrl
+        var product = Product.Create("Test Product", "Description", _categoryId, Guid.NewGuid(),
+            imageUrl: "/api/media/existing.jpg");
+        var sku = product.AddSku("SKU-001", Money.Create(10m, "USD"), new Dictionary<string, string> { { "Color", "Red" } });
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        var evt = new GalleryUpdatedIntegrationEvent(
+            TargetId: sku.Id,
+            TargetType: "SKU",
+            Items:
+            [
+                new GalleryItemContract(Guid.NewGuid(), "/api/media/new-sku-image.jpg", null, 0, true)
+            ],
+            Timestamp: DateTime.UtcNow);
+
+        var consumeContext = new Mock<ConsumeContext<GalleryUpdatedIntegrationEvent>>();
+        consumeContext.Setup(x => x.Message).Returns(evt);
+        consumeContext.Setup(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        // Act
+        await _consumer.Consume(consumeContext.Object);
+
+        // Assert — SKU updated, product keeps its existing image
+        var updatedSku = await _context.Skus.FindAsync(sku.Id);
+        updatedSku!.ImageUrl.Should().Be("/api/media/new-sku-image.jpg");
+
+        var updatedProduct = await _context.Products.FindAsync(product.Id);
+        updatedProduct!.ImageUrl.Should().Be("/api/media/existing.jpg");
     }
 
     [Fact]

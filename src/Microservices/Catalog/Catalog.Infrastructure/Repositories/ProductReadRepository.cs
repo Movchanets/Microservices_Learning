@@ -32,7 +32,10 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
                 p.CategoryId,
                 p.Category != null ? p.Category.Name : "",
                 p.Status.ToString(),
-                p.ImageUrl,
+                p.ImageUrl ?? p.Skus
+                    .Where(s => s.Status != SkuStatus.Deleted && s.ImageUrl != null)
+                    .Select(s => s.ImageUrl)
+                    .FirstOrDefault(),
                 p.Brand,
                 p.StoreId,
                 p.Tags,
@@ -150,7 +153,10 @@ public sealed class ProductReadRepository(CatalogDbContext context) : IProductRe
         p.Skus.Where(s => s.Status == SkuStatus.Active).Select(s => s.SkuCode).FirstOrDefault(),
         p.Category != null ? p.Category.Name : "",
         p.Status.ToString(),
-        p.ImageUrl,
+        p.ImageUrl ?? p.Skus
+            .Where(s => s.Status == SkuStatus.Active && s.ImageUrl != null)
+            .Select(s => s.ImageUrl)
+            .FirstOrDefault(),
         p.StoreId,
         p.CreatedAt);
 
