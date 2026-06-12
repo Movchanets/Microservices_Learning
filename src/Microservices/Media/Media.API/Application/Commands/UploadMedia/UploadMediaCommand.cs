@@ -11,4 +11,5 @@ public sealed record UploadMediaCommand(
     Guid TargetId,
     string TargetType,
     bool IsPrimary,
-    string? CreatedBy = null) : IRequest<Result<MediaItemDto>>;
+    string? CreatedBy = null,
+    Guid? LinkedProductId = null) : IRequest<Result<MediaItemDto>>;

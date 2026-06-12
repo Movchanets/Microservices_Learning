@@ -38,6 +38,17 @@ public class Worker : BackgroundService
             var userStep = new UserStep(httpClient, _logger, _dataDirectory, sellers);
             var adminToken = await userStep.ExecuteAsync(ct);
 
+            // ── Step 1.5: Clear database (if --clear flag) ───────
+            var clearFlag = Environment.GetCommandLineArgs().Contains("--clear");
+            if (clearFlag)
+            {
+                _logger.LogInformation("🗑️  --clear flag detected: wiping all products and categories...");
+                var clearStep = new ClearStep(httpClient, _logger);
+                await clearStep.ExecuteAsync(adminToken, ct);
+                _logger.LogInformation("Waiting for clear events to propagate...");
+                await Task.Delay(3000, ct);
+            }
+
             // ── Step 2: Stores ───────────────────────────────────
             var storeStep = new StoreStep(httpClient, _logger, _dataDirectory, sellers);
             await storeStep.ExecuteAsync(adminToken, ct);

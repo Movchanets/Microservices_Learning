@@ -59,6 +59,21 @@ public sealed class MediaUploadedConsumer(
                 sku.SetImageUrl(evt.Url);
                 await context.SaveChangesAsync(ct);
                 logger.LogInformation("Updated Sku.ImageUrl for {SkuId}", evt.TargetId);
+
+                // Propagate first primary SKU image to parent product's ImageUrl
+                // (used by list views / product cards that don't fetch full gallery)
+                var product = await context.Products
+                    .FirstOrDefaultAsync(p => p.Id == sku.ProductId, ct);
+
+                if (product is not null
+                    && (string.IsNullOrEmpty(product.ImageUrl)
+                        || !product.ImageUrl.StartsWith("/api/media/", StringComparison.OrdinalIgnoreCase)))
+                {
+                    product.SetImageUrl(evt.Url);
+                    await context.SaveChangesAsync(ct);
+                    logger.LogInformation(
+                        "Propagated SKU image to Product.ImageUrl for {ProductId}", product.Id);
+                }
             }
         }
     }

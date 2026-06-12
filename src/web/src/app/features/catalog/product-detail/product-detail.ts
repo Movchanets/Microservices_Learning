@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import { GalleryItem, Sku } from '../catalog.models';
+import { Sku } from '../catalog.models';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { ProductDetailStore } from './product-detail.store';
 import { BuyBoxComponent } from '../components/buy-box/buy-box';
@@ -65,33 +65,14 @@ export class ProductDetailComponent implements OnInit {
   });
 
   /**
-   * Gallery images for the current view.
-   * Prefers the selected SKU's image, falls back to product gallery.
+   * Variant breadcrumb text, e.g. "Gold · 512GB".
+   * Derived from selected variant entries.
    */
-  protected galleryImages = computed<GalleryItem[]>(() => {
-    const product = this.store.product();
-    const sku = this.selectedSku();
-
-    // If selected SKU has an image, show it first
-    if (sku?.imageUrl) {
-      const skuImage: GalleryItem = {
-        id: sku.id,
-        fileName: sku.skuCode,
-        contentType: 'image/jpeg',
-        url: sku.imageUrl,
-        thumbnailUrl: sku.imageUrl,
-        sizeBytes: 0,
-        type: 'Image',
-        sortOrder: 0,
-        isPrimary: true,
-        createdAt: sku.createdAt,
-      };
-      // Merge: SKU image first, then remaining product gallery (deduped)
-      const productGallery = (product?.gallery ?? []).filter(g => g.url !== sku.imageUrl);
-      return [skuImage, ...productGallery];
-    }
-
-    return product?.gallery ?? [];
+  protected variantBreadcrumbText = computed(() => {
+    const selected = this.store.selectedVariants();
+    const entries = Object.entries(selected).filter(([key]) => !key.startsWith('_'));
+    if (entries.length === 0) return null;
+    return entries.map(([, value]) => value).join(' · ');
   });
 
   protected fallbackImageUrl = computed(() => {
@@ -115,12 +96,13 @@ export class ProductDetailComponent implements OnInit {
    */
   onVariantSelected(event: { axisKey: string; value: string }): void {
     if (event.axisKey === '_sku') {
-      // Legacy SKU selector — track selected SKU and reload stock
+      // Legacy SKU selector — track selected SKU, reload stock + gallery
       this.selectedSkuId.set(event.value);
       const product = this.store.product();
       const sku = product?.skus?.find(s => s.id === event.value);
       if (sku) {
         this.store.loadStock(sku.skuCode);
+        this.store.loadSkuGallery(sku.id);
       }
       return;
     }
@@ -129,15 +111,5 @@ export class ProductDetailComponent implements OnInit {
 
   onBuyNow(): void {
     this.router.navigate(['/checkout']);
-  }
-
-  /**
-   * Converts selected variants record to an iterable array for the template.
-   * Skips internal keys like '_sku'.
-   */
-  protected getVariantEntries(selected: Record<string, string>): Array<{ key: string; value: string }> {
-    return Object.entries(selected)
-      .filter(([key]) => !key.startsWith('_'))
-      .map(([key, value]) => ({ key, value }));
   }
 }

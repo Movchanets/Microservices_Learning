@@ -13,6 +13,8 @@ using Catalog.Infrastructure.Repositories;
 using Catalog.IntegrationTests.Fixtures;
 using FluentAssertions;
 using MassTransit;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -283,7 +285,7 @@ public class VariantSystemTests
         context.ChangeTracker.Clear();
 
         // Act — "Rose Gold" is not in AllowedValues
-        var handler = new AddSkuHandler(productRepo, categoryRepo, context, publishEndpoint.Object);
+        var handler = new AddSkuHandler(productRepo, categoryRepo, context, publishEndpoint.Object, NullLogger<AddSkuHandler>.Instance);
         var command = new AddSkuCommand(
             product.Id, "WATCH-ROSEGOLD", 299.99m, "USD",
             new Dictionary<string, string> { ["color"] = "Rose Gold" });
@@ -322,7 +324,7 @@ public class VariantSystemTests
         context.ChangeTracker.Clear();
 
         // Act — try to add duplicate (Black, Small) with different SKU code
-        var handler = new AddSkuHandler(productRepo, categoryRepo, context, publishEndpoint.Object);
+        var handler = new AddSkuHandler(productRepo, categoryRepo, context, publishEndpoint.Object, NullLogger<AddSkuHandler>.Instance);
         var command = new AddSkuCommand(
             product.Id, "BAG-BLK-SM-2", 199m, "USD",
             new Dictionary<string, string> { ["color"] = "Black", ["size"] = "Small" });
@@ -361,7 +363,7 @@ public class VariantSystemTests
         context.ChangeTracker.Clear();
 
         // Act — add different combo (White, M)
-        var handler = new AddSkuHandler(productRepo, categoryRepo, context, publishEndpoint.Object);
+        var handler = new AddSkuHandler(productRepo, categoryRepo, context, publishEndpoint.Object, NullLogger<AddSkuHandler>.Instance);
         var command = new AddSkuCommand(
             product.Id, "CAP-WHT-M", 25m, "USD",
             new Dictionary<string, string> { ["color"] = "White", ["size"] = "M" });

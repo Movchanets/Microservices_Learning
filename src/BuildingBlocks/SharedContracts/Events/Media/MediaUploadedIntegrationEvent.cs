@@ -11,4 +11,5 @@ public sealed record MediaUploadedIntegrationEvent(
     string Url,
     string? ThumbnailUrl,
     bool IsPrimary,
-    DateTime Timestamp);
+    DateTime Timestamp,
+    Guid? LinkedProductId = null);

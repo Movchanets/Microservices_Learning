@@ -1,4 +1,3 @@
-using Scalar.Aspire;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -178,40 +177,8 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!")
     .WithExternalHttpEndpoints();
 
-// ──────────────────────────────────────────────
-// Scalar API Reference — unified docs for all services
-// ──────────────────────────────────────────────
-var scalar = builder.AddScalarApiReference(options =>
-{
-    options.WithTheme(ScalarTheme.Purple);
-});
-
-// Register implemented services (add new services here as they come online)
-scalar
-    .WithApiReference(identityApi)
-    .WithApiReference(gateway)
-    .WithApiReference(catalogApi)
-    .WithApiReference(searchApi)
-    .WithApiReference(inventoryApi)
-    .WithApiReference(cartApi)
-    .WithApiReference(orderingApi)
-    .WithApiReference(paymentApi)
-    .WithApiReference(storeApi)
-    .WithApiReference(mediaApi)
-    .WaitFor(identityApi)
-    .WaitFor(gateway)
-    .WaitFor(catalogApi)
-    .WaitFor(searchApi)
-    .WaitFor(inventoryApi)
-    .WaitFor(cartApi)
-    .WaitFor(orderingApi)
-    .WaitFor(paymentApi)
-    .WaitFor(storeApi)
-    .WaitFor(mediaApi);
-
 // Phase 7: Angular       -> builder.AddNpmApp(...)
 var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
-    .WaitFor(scalar)
     .WithReference(gateway)
     // targetPort: 4200 tells Aspire to expect Angular on 4200.
     // port: 4201 exposes the Aspire proxy on localhost:4201 so they don't clash.
@@ -220,7 +187,6 @@ var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
 
 var seederApp = builder.AddProject<Projects.Seeder_App>("seeder-app")
     .WithReference(gateway)
-    .WaitFor(scalar)
     .WithEnvironment("ApiBaseUrl", gateway.GetEndpoint("http"));
 
 builder.Build().Run();

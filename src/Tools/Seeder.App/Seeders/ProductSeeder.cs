@@ -83,7 +83,7 @@ public class ProductSeeder
             CategoryId = categoryId,
             StoreId = storeId,
             Tags = new[] { product.Brand },
-            ImageUrl = primaryVariant.Images.FirstOrDefault() ?? "",
+            ImageUrl = (string?)null, // Don't set — MediaStep uploads images and MediaUploadedConsumer propagates the URL
             VariantAxisIds = variantAxisIds
         };
 

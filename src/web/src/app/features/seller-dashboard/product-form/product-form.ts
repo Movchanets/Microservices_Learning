@@ -530,7 +530,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       for (let i = 0; i < this.skus().length; i++) {
         const sku = this.skus()[i];
         if (sku.pendingUploads.length > 0 && sku.serverSkuId) {
-          await this.uploadPendingImages(sku.pendingUploads, sku.serverSkuId, 'SKU');
+          await this.uploadPendingImages(sku.pendingUploads, sku.serverSkuId, 'SKU', this.productId()!);
           this.skus.update(rows => rows.map((r, idx) =>
             idx === i ? { ...r, pendingUploads: [] } : r
           ));
@@ -606,7 +606,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       });
 
       if (sku) {
-        await this.uploadPendingImages(entry.pendingUploads, sku.id, 'SKU');
+        await this.uploadPendingImages(entry.pendingUploads, sku.id, 'SKU', productId);
       } else {
         failedSkus.push(entry.skuCode);
       }
@@ -645,10 +645,11 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     pending: PendingImage[],
     targetId: string,
     targetType: 'Product' | 'SKU',
+    linkedProductId?: string,
   ): Promise<void> {
     for (let i = 0; i < pending.length; i++) {
       try {
-        await this.mediaService.upload(pending[i].file, targetId, targetType, i === 0);
+        await this.mediaService.upload(pending[i].file, targetId, targetType, i === 0, linkedProductId);
       } catch {
         // Non-fatal — continue with remaining images
       }

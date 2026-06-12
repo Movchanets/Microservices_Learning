@@ -103,7 +103,10 @@ public sealed class UploadMediaHandler(
         // Set the API-served URL (not the raw blob URL)
         mediaItem.SetUrl(mediaItem.GetMediaUrl());
 
-        // ── Step 6: Handle primary image + gallery entry ─────────
+        // ── Step 6: Add MediaItem first so EF generates its Id ──
+        mediaRepository.Add(mediaItem);
+
+        // ── Step 7: Handle primary image + gallery entry ─────────
         var existingEntries = await galleryRepository.GetByTargetAsync(
             request.TargetId, request.TargetType, cancellationToken);
 
@@ -118,14 +121,13 @@ public sealed class UploadMediaHandler(
         }
 
         var galleryEntry = GalleryEntry.Create(
-            mediaItem.Id,
+            mediaItem.Id,  // now populated by EF value generator
             request.TargetId,
             request.TargetType,
             existingEntries.Count,  // sort order = append to end
             request.IsPrimary,
             request.TargetType.Equals("SKU", StringComparison.OrdinalIgnoreCase) ? request.TargetId : null);
 
-        mediaRepository.Add(mediaItem);
         galleryRepository.Add(galleryEntry);
 
         logger.LogInformation(
@@ -143,7 +145,8 @@ public sealed class UploadMediaHandler(
             mediaItem.GetMediaUrl(),
             mediaItem.GetThumbnailUrl(),
             request.IsPrimary,
-            DateTime.UtcNow), cancellationToken);
+            DateTime.UtcNow,
+            request.LinkedProductId), cancellationToken);
 
         // ── Step 8: Commit (Outbox atomically saves event + entities) ───────
         await unitOfWork.SaveChangesAsync(cancellationToken);

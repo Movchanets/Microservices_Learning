@@ -509,3 +509,6 @@ tests/E2ETests/playwright-report/index.html
 .antigravitycli/
 src/Tools/Seeder.App/Data/Images/
 guides/
+tests/E2ETests/playwright/.auth/admin/state.json
+tests/E2ETests/playwright/.auth/buyer/state.json
+tests/E2ETests/playwright/.auth/seller/state.json

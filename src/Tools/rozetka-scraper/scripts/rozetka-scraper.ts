@@ -43,6 +43,8 @@ export interface BaseProduct {
   title: string;
   description: string;
   brand: string;
+  storeName: string;
+  currency: string;
 }
 
 export interface ProductVariant {
@@ -197,6 +199,7 @@ class RozetkaScraper {
     limit: number,
     catUrl: string,
     categoryKey: string,
+    updateMode: boolean,
   ): Promise<{ tiles: ProductTile[]; categoryFilters: string[]; dynamicCategoryName: string }> {
     log("Phase 1: Collecting URLs...");
     const ctx = await this.newCtx();
@@ -216,12 +219,15 @@ class RozetkaScraper {
       while (tiles.length < limit && pg <= 5) {
         log(`  Page ${pg}...`);
         const all = await catPage.extractProductTiles();
-        const fresh = all.filter(
-          (t) =>
-            !this.existingSkus.has(generateSku(t.articleId.replace("p", ""))),
-        );
+        // In update mode, include existing products so they get re-scraped for fresh price/stock
+        const fresh = updateMode
+          ? all
+          : all.filter(
+              (t) =>
+                !this.existingSkus.has(generateSku(t.articleId.replace("p", ""))),
+            );
         tiles.push(...fresh.slice(0, limit - tiles.length));
-        log(`  ${all.length} tiles, ${tiles.length} new`);
+        log(`  ${all.length} tiles, ${tiles.length}${updateMode ? " (update mode)" : " new"}`);
         if (tiles.length >= limit || !(await catPage.nextPage())) break;
         pg++;
       }
@@ -241,9 +247,21 @@ class RozetkaScraper {
     cat: { name: string; url: string } & CategoryConfig,
     categoryId: string,
     categoryFilters: string[],
-  ): Promise<boolean> {
+    updateMode: boolean,
+  ): Promise<"added" | "updated" | null> {
     const code = tile.articleId.replace("p", "");
-    if (this.existingSkus.has(generateSku(code))) return null;
+    const primarySku = generateSku(code);
+
+    // In normal mode, skip existing products
+    if (!updateMode && this.existingSkus.has(primarySku)) return null;
+
+    // In update mode, if product exists, refresh its data instead of skipping
+    if (updateMode && this.existingSkus.has(primarySku)) {
+      log(`  🔄 Updating: ${tile.title.substring(0, 50)}...`);
+      const success = await this.updateExistingProduct(tile, cat, categoryId, categoryFilters);
+      return success ? "updated" : null;
+    }
+
     log(`  ${tile.title.substring(0, 50)}...`);
 
     const ctx = await this.newCtx();
@@ -253,7 +271,7 @@ class RozetkaScraper {
       await pom.goto(tile.url);
       const details = await pom.extractDetails();
       const finalCode = details.sku || code;
-      if (this.existingSkus.has(generateSku(finalCode))) return false;
+      if (this.existingSkus.has(generateSku(finalCode))) return null;
 
       // Log rich data we extracted
       log(`  📝 ${details.name.substring(0, 60)}`);
@@ -268,7 +286,9 @@ class RozetkaScraper {
         categoryId: categoryId,
         title: details.name || tile.title,
         description: details.description || "",
-        brand: baseBrand.trim()
+        brand: baseBrand.trim(),
+        storeName: cat.storeName,
+        currency: "UAH"
       };
       this.baseProducts.set(baseProductId, baseProduct);
 
@@ -446,7 +466,123 @@ class RozetkaScraper {
         }
       });
 
+      return "added";
+    } finally {
+      await page.close();
+      await ctx.close();
+    }
+  }
+
+  // ── Update existing product: refresh price/stock/images ──────
+
+  private async updateExistingProduct(
+    tile: ProductTile,
+    cat: { name: string; url: string } & CategoryConfig,
+    categoryId: string,
+    categoryFilters: string[],
+  ): Promise<boolean> {
+    const ctx = await this.newCtx();
+    const page = await ctx.newPage();
+    const pom = new RozetkaProductPage(page);
+    try {
+      await pom.goto(tile.url);
+      const details = await pom.extractDetails();
+      const finalCode = details.sku || tile.articleId.replace("p", "");
+      const primarySku = generateSku(finalCode);
+
+      // Update base product if it exists
+      const baseProductId = crypto.createHash("sha256").update(details.name + cat.url).digest("hex");
+      const existingBase = this.baseProducts.get(baseProductId);
+      if (existingBase) {
+        // Update description if we got a better one
+        if (details.description && details.description.length > (existingBase.description?.length || 0)) {
+          existingBase.description = details.description;
+        }
+      }
+
+      // Re-scrape variant pages to get fresh prices
+      const visitedPids = new Set<string>();
+      visitedPids.add(finalCode);
+
+      // Update primary variant
+      const primaryLocal = details.images.length > 0
+        ? await this.imgDownloader.downloadMultiple(details.images, buildImageFolderName(details.name, finalCode), 10)
+        : [];
+
+      const existingPrimary = this.productVariants.get(primarySku);
+      if (existingPrimary) {
+        existingPrimary.price = details.price;
+        existingPrimary.inStock = details.price > 0;
+        if (primaryLocal.length > 0) existingPrimary.images = primaryLocal;
+        log(`    💰 Updated ${details.name}: ${details.price}₴`);
+      }
+
+      // Discover and update variant pages
+      const queue: Array<{ url: string; name: string }> = [];
+      for (const v of details.variants) {
+        queue.push({ url: v.url, name: v.name });
+      }
+
+      let scrapeLimit = 15;
+      while (queue.length > 0 && scrapeLimit > 0) {
+        const current = queue.shift()!;
+        const currentPidMatch = current.url.match(/\/p(\d+)\//);
+        const currentPid = currentPidMatch ? currentPidMatch[1] : '';
+
+        if (!currentPid || visitedPids.has(currentPid)) continue;
+        visitedPids.add(currentPid);
+        scrapeLimit--;
+
+        const vCtx = await this.newCtx();
+        const vPage = await vCtx.newPage();
+        const vPom = new RozetkaProductPage(vPage);
+
+        try {
+          await vPom.goto(current.url);
+          const [price, gallery, sku] = await Promise.all([
+            vPom.extractPrice(),
+            vPom.extractGallery(),
+            vPom.extractSku(),
+          ]);
+
+          const variantSku = generateSku(sku || currentPid);
+          const existingVariant = this.productVariants.get(variantSku);
+
+          if (existingVariant) {
+            existingVariant.price = price.value;
+            existingVariant.inStock = price.value > 0;
+            // Re-download images if we got fresh ones
+            if (gallery.images.length > 0) {
+              const slug = buildImageFolderName(current.name, sku || currentPid);
+              const localImgs = await this.imgDownloader.downloadMultiple(gallery.images, slug, 10);
+              if (localImgs.length > 0) existingVariant.images = localImgs;
+            }
+            log(`    💰 Updated variant ${current.name}: ${price.value}₴`);
+          }
+
+          // Discover sub-variants
+          const subVariants = await vPom.extractVariants();
+          for (const sv of subVariants) {
+            const svPidMatch = sv.url.match(/\/p(\d+)\//);
+            const svPid = svPidMatch ? svPidMatch[1] : '';
+            if (svPid && !visitedPids.has(svPid) && !queue.some((q) => q.url.includes(`/p${svPid}/`))) {
+              queue.push({ url: sv.url, name: sv.name });
+            }
+          }
+        } catch (e) {
+          log(`      Failed to update variant: ${e}`, "warn");
+        } finally {
+          await vPage.close();
+          await vCtx.close();
+        }
+
+        await delay(1000, 2000);
+      }
+
       return true;
+    } catch (e) {
+      log(`  Failed to update product: ${e}`, "warn");
+      return false;
     } finally {
       await page.close();
       await ctx.close();
@@ -455,7 +591,26 @@ class RozetkaScraper {
 
   // ── Main scrape entry ────────────────────────────────────────
 
-  async scrape(opts: { category?: string; url?: string; limit: number }) {
+  async scrape(opts: { category?: string; url?: string; limit: number; update?: boolean; clear?: boolean }) {
+    // ── Clear mode: wipe everything and start fresh ──────────
+    if (opts.clear) {
+      log("🗑️  Clear mode: wiping existing catalog data...");
+      this.categories.clear();
+      this.attributeDefinitions.clear();
+      this.baseProducts.clear();
+      this.productVariants.clear();
+      this.existingSkus.clear();
+      try {
+        await fs.unlink(CATALOG_JSON);
+        log("  Deleted catalog.json");
+      } catch { /* file doesn't exist */ }
+      try {
+        await fs.rm(IMAGES_DIR, { recursive: true, force: true });
+        log("  Deleted Images directory");
+      } catch { /* dir doesn't exist */ }
+      await fs.mkdir(IMAGES_DIR, { recursive: true });
+    }
+
     let targetUrl = opts.url || "";
     let catConfig = {
       name: "Custom Category",
@@ -480,12 +635,13 @@ class RozetkaScraper {
       targetUrl = predefined.url;
     }
 
-    log(`Scraping category URL: ${targetUrl}`);
+    log(`Scraping category URL: ${targetUrl}${opts.update ? " (UPDATE MODE)" : ""}`);
 
     const { tiles: urls, categoryFilters, dynamicCategoryName } = await this.collectUrls(
       opts.limit,
       targetUrl,
       opts.category || "",
+      opts.update ?? false,
     );
 
     let finalCategoryName = catConfig.name;
@@ -507,16 +663,19 @@ class RozetkaScraper {
     log(`Phase 2: Scraping ${urls.length} products under category: ${finalCategoryName}...`);
 
     let addedCount = 0;
+    let updatedCount = 0;
     for (let i = 0; i < urls.length; i++) {
       log(`\n[${i + 1}/${urls.length}] ${urls[i].title.substring(0, 50)}`);
-      const success = await this.scrapeProduct(urls[i], catConfig, categoryId, categoryFilters);
-      if (success) {
+      const result = await this.scrapeProduct(urls[i], catConfig, categoryId, categoryFilters, opts.update ?? false);
+      if (result === "added") {
         addedCount++;
+      } else if (result === "updated") {
+        updatedCount++;
       }
       await delay(3000, 6000);
     }
 
-    if (addedCount > 0) {
+    if (addedCount > 0 || updatedCount > 0) {
       const outputData: CatalogData = {
         categories: Array.from(this.categories.values()),
         attributeDefinitions: Array.from(this.attributeDefinitions.values()),
@@ -525,10 +684,10 @@ class RozetkaScraper {
       };
 
       await fs.writeFile(CATALOG_JSON, JSON.stringify(outputData, null, 2));
-      log(`\n✅ ${addedCount} new products added!`);
+      log(`\n✅ ${addedCount} new products added, ${updatedCount} products updated!`);
       log(`Total DB stats: ${outputData.categories.length} categories, ${outputData.attributeDefinitions.length} attributes, ${outputData.baseProducts.length} products, ${outputData.productVariants.length} variants`);
     } else {
-      log("No new products found");
+      log("No new or updated products found");
     }
     log("Done!");
   }
@@ -543,7 +702,7 @@ class RozetkaScraper {
 
 program
   .name("rozetka-scraper")
-  .version("2.2")
+  .version("3.0")
   .option(
     "-c, --category <c>",
     "Category key (optional): laptops|phones|tablets|headphones",
@@ -551,6 +710,8 @@ program
   )
   .option("-u, --url <url>", "Category URL to scrape directly", "")
   .option("-l, --limit <n>", "Max products to scrape", "10")
+  .option("--update", "Update mode: re-scrape existing products to refresh price/stock/images")
+  .option("--clear", "Clear mode: wipe existing catalog data and start fresh")
   .action(async (opts) => {
     const s = new RozetkaScraper();
     try {
@@ -559,6 +720,8 @@ program
         category: opts.category,
         url: opts.url,
         limit: parseInt(opts.limit),
+        update: !!opts.update,
+        clear: !!opts.clear,
       });
     } catch (e) {
       log(`Fatal: ${e}`, "error");

@@ -27,6 +27,7 @@ public static class MediaEndpoints
             [FromForm] Guid targetId,
             [FromForm] string targetType,
             [FromForm] bool isPrimary,
+            [FromForm] Guid? linkedProductId,
             ClaimsPrincipal user,
             ISender sender,
             CancellationToken ct) =>
@@ -44,7 +45,8 @@ public static class MediaEndpoints
                 targetId,
                 targetType,
                 isPrimary,
-                userId);
+                userId,
+                linkedProductId);
 
             var result = await sender.Send(command, ct);
             return result.IsSuccess

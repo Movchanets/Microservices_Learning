@@ -52,16 +52,27 @@ public class MediaStep
         {
             variantsByProduct.TryGetValue(product.ExternalId, out var variants);
             var primaryVariant = variants?.FirstOrDefault();
-            if (primaryVariant == null) continue;
+            if (primaryVariant == null)
+            {
+                _logger.LogWarning("MediaStep: Skipping {Name} — no variants found.", product.Title);
+                continue;
+            }
 
             var primarySku = ProductSeedData.NormalizeSku(primaryVariant.Sku);
             if (!productIds.TryGetValue(primarySku, out var ids))
+            {
+                _logger.LogWarning("MediaStep: Skipping {Name} — SKU {Sku} not found in productIds.", product.Title, primarySku);
                 continue;
+            }
 
             try
             {
                 var sellerCtx = _sellers.ResolveByStoreName(product.StoreName);
-                if (sellerCtx == null) continue;
+                if (sellerCtx == null)
+                {
+                    _logger.LogWarning("MediaStep: Skipping {Name} — no seller context for store '{Store}'.", product.Title, product.StoreName);
+                    continue;
+                }
 
                 await mediaSeeder.UploadProductAndVariantGalleriesAsync(
                     ids.ProductId, skuIdLookup, product, variants!, sellerCtx.Token, ct);

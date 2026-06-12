@@ -57,6 +57,7 @@ public class MediaSeeder
         List<string> imagePaths,
         string token,
         string targetType = "Product",
+        Guid? linkedProductId = null,
         CancellationToken ct = default)
     {
         var mediaIds = new List<Guid>();
@@ -71,7 +72,7 @@ public class MediaSeeder
             var fileName = ResolveFileName(path, i);
             var mediaId = await UploadSingleImageAsync(
                 productId, fileBytes, fileName, targetType,
-                isPrimary: i == 0, token, ct);
+                isPrimary: i == 0, token, ct, linkedProductId);
 
             if (mediaId.HasValue)
                 mediaIds.Add(mediaId.Value);
@@ -113,7 +114,8 @@ public class MediaSeeder
                         variantImages.Count, variantSku);
                     // Pass TargetType = "SKU" to hit the Media API upload endpoint.
                     // Media.API uses TargetId for SkuId when TargetType is "SKU"
-                    await UploadProductGalleryAsync(skuId, variantImages, token, "SKU", ct);
+                    // Pass linkedProductId so the event carries the parent product ID for Search index sync
+                    await UploadProductGalleryAsync(skuId, variantImages, token, "SKU", productId, ct);
                 }
             }
         }
@@ -190,7 +192,8 @@ public class MediaSeeder
         string targetType,
         bool isPrimary,
         string token,
-        CancellationToken ct)
+        CancellationToken ct,
+        Guid? linkedProductId = null)
     {
         try
         {
@@ -202,6 +205,8 @@ public class MediaSeeder
             content.Add(new StringContent(targetId.ToString()), "targetId");
             content.Add(new StringContent(targetType), "targetType");
             content.Add(new StringContent(isPrimary.ToString().ToLower()), "isPrimary");
+            if (linkedProductId.HasValue)
+                content.Add(new StringContent(linkedProductId.Value.ToString()), "linkedProductId");
 
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/media/upload")
             {
