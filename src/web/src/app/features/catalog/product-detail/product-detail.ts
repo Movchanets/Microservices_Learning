@@ -75,6 +75,18 @@ export class ProductDetailComponent implements OnInit {
     return entries.map(([, value]) => value).join(' · ');
   });
 
+  /**
+   * Dynamic product title: base name + variant breadcrumb.
+   * e.g. "Навушники Motorola Moto XT220 — White · 512GB"
+   */
+  protected selectedVariantTitle = computed(() => {
+    const product = this.store.product();
+    if (!product) return '';
+    const breadcrumb = this.variantBreadcrumbText();
+    if (!breadcrumb) return product.name;
+    return `${product.name} — ${breadcrumb}`;
+  });
+
   protected fallbackImageUrl = computed(() => {
     const product = this.store.product();
     const sku = this.selectedSku();
