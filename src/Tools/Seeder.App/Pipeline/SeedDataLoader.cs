@@ -59,11 +59,11 @@ public static class SeedDataLoader
     {
         logger.LogInformation("Waiting for API Gateway to become responsive...");
         var retries = 0;
-        while (!ct.IsCancellationRequested && retries < 30)
+        while (!ct.IsCancellationRequested && retries < 60)
         {
             try
             {
-                var response = await client.GetAsync("/health", ct);
+                var response = await client.GetAsync("/bff/health", ct);
                 if (response.IsSuccessStatusCode)
                 {
                     logger.LogInformation("API Gateway is ready.");

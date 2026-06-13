@@ -31,35 +31,37 @@ var messaging = builder.AddRabbitMQ("messaging")
 // ──────────────────────────────────────────────
 // Elasticsearch — used by Search.API
 // ──────────────────────────────────────────────
-// Elastic.Clients.Elasticsearch 8.11.x+ requires ES server 8.x
 var elasticsearch = builder.AddElasticsearch("elasticsearch")
     .WithImage("elasticsearch")
     .WithImageTag("8.17.0")
     .WithEnvironment("ES_JAVA_OPTS", "-Xms512m -Xmx512m");
 
 // ──────────────────────────────────────────────
-// Microservices (to be added in later phases)
+// Microservices
 // ──────────────────────────────────────────────
 
-// Phase 1: Identity.API  -> .WithReference(identityDb).WithReference(messaging)
-var identityApi = builder.AddProject<Projects.Identity_API>("identity-api")
+// IMPORTANT: "http" launch profile on every AddProject prevents DCP from
+// registering HTTPS endpoints, which avoids the Windows container tunnel crash.
+
+// Phase 1: Identity.API
+var identityApi = builder.AddProject<Projects.Identity_API>("identity-api", "http")
     .WithReference(identityDb)
     .WaitFor(identityDb)
     .WithReference(messaging)
     .WaitFor(messaging)
-    // Provide JWT configuration / secrets for local development
     .WithEnvironment("Jwt__Issuer", "marketplace-identity")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
-// Phase 2: Search.API must come up before Catalog dev seeding publishes events.
-var searchApi = builder.AddProject<Projects.Search_API>("search-api")
+// Phase 2: Search.API
+var searchApi = builder.AddProject<Projects.Search_API>("search-api", "http")
     .WithReference(elasticsearch)
     .WaitFor(elasticsearch)
     .WithReference(messaging)
     .WaitFor(messaging);
 
-var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
+// Phase 2: Catalog.API
+var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api", "http")
     .WithReference(catalogDb)
     .WaitFor(catalogDb)
     .WithReference(messaging)
@@ -69,7 +71,7 @@ var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 3: Inventory.API
-var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api")
+var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api", "http")
     .WithReference(inventoryDb)
     .WaitFor(inventoryDb)
     .WithReference(messaging)
@@ -79,7 +81,7 @@ var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 3: Cart.API
-var cartApi = builder.AddProject<Projects.Cart_API>("cart-api")
+var cartApi = builder.AddProject<Projects.Cart_API>("cart-api", "http")
     .WithReference(cartDb)
     .WaitFor(cartDb)
     .WithReference(redis)
@@ -91,7 +93,7 @@ var cartApi = builder.AddProject<Projects.Cart_API>("cart-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 4: Ordering.API
-var orderingApi = builder.AddProject<Projects.Ordering_API>("ordering-api")
+var orderingApi = builder.AddProject<Projects.Ordering_API>("ordering-api", "http")
     .WithReference(orderingDb)
     .WaitFor(orderingDb)
     .WithReference(messaging)
@@ -104,7 +106,7 @@ var orderingApi = builder.AddProject<Projects.Ordering_API>("ordering-api")
 catalogApi.WithReference(orderingApi).WaitFor(orderingApi);
 
 // Phase 4: Payment.API
-var paymentApi = builder.AddProject<Projects.Payment_API>("payment-api")
+var paymentApi = builder.AddProject<Projects.Payment_API>("payment-api", "http")
     .WithReference(paymentDb)
     .WaitFor(paymentDb)
     .WithReference(messaging)
@@ -114,7 +116,7 @@ var paymentApi = builder.AddProject<Projects.Payment_API>("payment-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 5: Notification.Worker
-var notificationWorker = builder.AddProject<Projects.Notification_Worker>("notification-api")
+var notificationWorker = builder.AddProject<Projects.Notification_Worker>("notification-api", "http")
     .WithReference(redis)
     .WaitFor(redis)
     .WithReference(messaging)
@@ -126,7 +128,7 @@ var storage = builder.AddAzureStorage("storage").RunAsEmulator();
 var blobs = storage.AddBlobs("blobs");
 
 // Phase 6: StoreManagement.API
-var storeApi = builder.AddProject<Projects.StoreManagement_API>("store-api")
+var storeApi = builder.AddProject<Projects.StoreManagement_API>("store-api", "http")
     .WithReference(storeDb)
     .WaitFor(storeDb)
     .WithReference(messaging)
@@ -136,7 +138,7 @@ var storeApi = builder.AddProject<Projects.StoreManagement_API>("store-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
 // Phase 6: Media.API
-var mediaApi = builder.AddProject<Projects.Media_API>("media-api")
+var mediaApi = builder.AddProject<Projects.Media_API>("media-api", "http")
     .WithReference(mediaDb)
     .WaitFor(mediaDb)
     .WithReference(blobs)
@@ -147,8 +149,12 @@ var mediaApi = builder.AddProject<Projects.Media_API>("media-api")
     .WithEnvironment("Jwt__Audience", "marketplace-api")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
 
-// Phase 1: ApiGateway    -> .WithReference(redis)
-var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
+// Phase 1: ApiGateway
+// Gateway WaitFor only hard prerequisites (identity, catalog, search).
+// Soft dependencies (payment, notification, store, media) use WithReference
+// for service discovery but don't block gateway startup.
+var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway", "http")
+    // Hard dependencies — gateway can't function without these
     .WithReference(identityApi)
     .WaitFor(identityApi)
     .WithReference(catalogApi)
@@ -161,14 +167,11 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WaitFor(cartApi)
     .WithReference(orderingApi)
     .WaitFor(orderingApi)
+    // Soft dependencies — service discovery only, don't block startup
     .WithReference(paymentApi)
-    .WaitFor(paymentApi)
     .WithReference(notificationWorker)
-    .WaitFor(notificationWorker)
     .WithReference(storeApi)
-    .WaitFor(storeApi)
     .WithReference(mediaApi)
-    .WaitFor(mediaApi)
     .WithReference(redis)
     .WaitFor(redis)
     .WithEnvironment("Identity__ApiBaseUrl", "http://identity-api")
@@ -177,16 +180,16 @@ var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!")
     .WithExternalHttpEndpoints();
 
-// Phase 7: Angular       -> builder.AddNpmApp(...)
+// Phase 7: Angular frontend
 var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
     .WithReference(gateway)
-    // targetPort: 4200 tells Aspire to expect Angular on 4200.
-    // port: 4201 exposes the Aspire proxy on localhost:4201 so they don't clash.
     .WithHttpEndpoint(targetPort: 4200, port: 4201, name: "http")
     .WithExternalHttpEndpoints();
 
-var seederApp = builder.AddProject<Projects.Seeder_App>("seeder-app")
+// Seeder — waits for gateway so it can reach all services through BFF
+var seederApp = builder.AddProject<Projects.Seeder_App>("seeder-app", "http")
     .WithReference(gateway)
+    .WaitFor(gateway)
     .WithEnvironment("ApiBaseUrl", gateway.GetEndpoint("http"));
 
 builder.Build().Run();
