@@ -1,6 +1,7 @@
 using Catalog.Domain.Aggregates;
 using Catalog.Domain.Entities;
 using Catalog.Domain.Enums;
+using Catalog.Domain.Events;
 using Catalog.UnitTests.Domain.Builders;
 using FluentAssertions;
 using System;
@@ -114,5 +115,22 @@ public class ProductAggregateTests
         // Assert
         product.VariantAxes.Should().ContainSingle();
         product.VariantAxes.First().AttributeDefinitionId.Should().Be(storageAttrId);
+    }
+
+    [Fact]
+    public void Create_AssignsNonEmptyId_AndEventCarriesIt()
+    {
+        // Arrange & Act
+        var product = Product.Create(
+            "Test Product", "Description", Guid.NewGuid(), Guid.NewGuid());
+
+        // Assert — Id must be assigned before domain events are raised
+        product.Id.Should().NotBe(Guid.Empty);
+
+        var domainEvent = product.DomainEvents
+            .OfType<ProductCreatedDomainEvent>()
+            .Single();
+
+        domainEvent.ProductId.Should().Be(product.Id);
     }
 }

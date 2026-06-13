@@ -70,6 +70,7 @@ public sealed class Product : AggregateRoot
 
         var product = new Product
         {
+            Id = Guid.CreateVersion7(),
             Name = name.Trim(),
             Description = description.Trim(),
             Brand = brand?.Trim(),

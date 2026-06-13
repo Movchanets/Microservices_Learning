@@ -1,8 +1,9 @@
 using Catalog.Domain.Aggregates;
 using Catalog.Domain.Entities;
+using Catalog.Domain.Enums;
+using Catalog.Domain.Events;
 using Catalog.Domain.ValueObjects;
 using Catalog.UnitTests.Domain.Builders;
-using Catalog.Domain.Enums;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
@@ -115,5 +116,27 @@ public class SkuTests
 
         // Assert
         sku.AttributeValues.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddSku_AssignsNonEmptyId_AndEventCarriesIt()
+    {
+        // Arrange
+        var product = Product.Create(
+            "Test Product", "Description", Guid.NewGuid(), Guid.NewGuid());
+
+        // Act
+        var sku = product.AddSku("TEST-SKU", Money.Create(99m, "USD"),
+            new Dictionary<string, string> { ["color"] = "Black" });
+
+        // Assert — Sku.Id must be assigned before domain events are raised
+        sku.Id.Should().NotBe(Guid.Empty);
+
+        var domainEvent = product.DomainEvents
+            .OfType<SkuCreatedDomainEvent>()
+            .Single();
+
+        domainEvent.SkuId.Should().Be(sku.Id);
+        domainEvent.ProductId.Should().Be(product.Id);
     }
 }

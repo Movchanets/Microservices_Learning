@@ -15,6 +15,9 @@ public sealed class SkuConfiguration : IEntityTypeConfiguration<Sku>
         builder.ToTable("Skus");
         builder.HasKey(s => s.Id);
 
+        // Factory assigns GuidV7 — EF Core must not overwrite it
+        builder.Property(s => s.Id).ValueGeneratedNever();
+
         builder.Property(s => s.ProductId).IsRequired();
         builder.Property(s => s.SkuCode).IsRequired().HasMaxLength(50);
         builder.Property(s => s.Status).IsRequired();

@@ -12,6 +12,9 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.ToTable("Products");
         builder.HasKey(p => p.Id);
 
+        // Factory assigns GuidV7 — EF Core must not overwrite it
+        builder.Property(p => p.Id).ValueGeneratedNever();
+
         builder.Property(p => p.Name).IsRequired().HasMaxLength(500);
         builder.Property(p => p.Description).IsRequired().HasMaxLength(5000);
         builder.Property(p => p.CategoryId).IsRequired();

@@ -52,6 +52,7 @@ public sealed class Sku : Entity
 
         return new Sku
         {
+            Id = Guid.CreateVersion7(),
             ProductId = productId,
             SkuCode = skuCode.Trim().ToUpperInvariant(),
             Price = price,

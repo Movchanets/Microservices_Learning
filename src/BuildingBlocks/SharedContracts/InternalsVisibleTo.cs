@@ -25,3 +25,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Ordering.Domain")]
 [assembly: InternalsVisibleTo("Identity.Domain")]
 [assembly: InternalsVisibleTo("StoreManagement.Domain")]
+[assembly: InternalsVisibleTo("Catalog.Domain")]
