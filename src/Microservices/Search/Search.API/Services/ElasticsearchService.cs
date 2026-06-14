@@ -192,6 +192,15 @@ public sealed class ElasticsearchService(
                 productId, response.DebugInformation);
     }
 
+    // ── Searchable Fields ────────────────────────────────────────
+
+    /// <summary>
+    /// Fields used in the MultiMatch full-text query with their boost weights.
+    /// Excludes 'description' to avoid false positives from scraped marketing noise
+    /// (e.g., "Apple Pay" in descriptions matching "apple" queries).
+    /// </summary>
+    internal static string[] GetSearchableFields() => ["name^3", "brand^2", "tags^2", "attributes.*^1"];
+
     // ── Query Building ────────────────────────────────────────────
 
     private Action<SearchRequestDescriptor<ProductSearchDocument>> BuildSearchQuery(SearchRequest request)
@@ -231,7 +240,7 @@ public sealed class ElasticsearchService(
         if (!string.IsNullOrWhiteSpace(query))
             filters.Add(f => f.MultiMatch(mm => mm
                 .Query(query)
-                .Fields(Elastic.Clients.Elasticsearch.Fields.FromStrings(["name^3", "description", "tags^2"]))
+                .Fields(Elastic.Clients.Elasticsearch.Fields.FromStrings(GetSearchableFields()))
                 .Fuzziness(new Fuzziness("AUTO"))));
 
         if (categoryId.HasValue)
