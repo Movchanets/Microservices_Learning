@@ -70,8 +70,8 @@ export class CheckoutEnhancedPage extends BasePage {
     this.statusFaulted = page.getByTestId('checkout-status-faulted');
   }
 
-  async goto() {
-    await this.page.goto('/checkout');
+  get url(): string {
+    return '/checkout';
   }
 
   async fillAddress(address: {

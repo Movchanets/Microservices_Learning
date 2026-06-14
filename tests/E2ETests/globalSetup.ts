@@ -3,23 +3,60 @@ import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 
-async function globalSetup(config: FullConfig) {
-  const frontendURL = config.projects[0].use.baseURL || 'http://localhost:4200';
-  const probeTimeoutMs = 5000;
-  let appHostPid: number | undefined;
+// ── Configuration ───────────────────────────────────────────
 
-  // Check if frontend is already running (AppHost started externally)
+const BFF_URL = 'http://localhost:4200';
+const FRONTEND_URL = 'http://localhost:4201';
+const PROBE_TIMEOUT_MS = 5_000;
+const APP_HOST_STARTUP_TIMEOUT_MS = 300_000;
+const BACKEND_READINESS_TIMEOUT_MS = 120_000;
+const BACKEND_PROBE_INTERVAL_MS = 3_000;
+
+// Endpoints that must return 200 before tests can run.
+// These verify the BFF gateway and core microservices are alive.
+const HEALTH_ENDPOINTS = [
+  `${BFF_URL}/`,                               // Gateway responds
+  `${BFF_URL}/api/catalog/products`,           // Catalog API is serving data
+] as const;
+
+// ── Helpers ─────────────────────────────────────────────────
+
+async function probe(url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {
+  try {
+    const resp = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function probeAll(urls: readonly string[]): Promise<{ ready: boolean; failed: string[] }> {
+  const results = await Promise.all(urls.map(async (url) => ({
+    url,
+    ok: await probe(url),
+  })));
+  const failed = results.filter(r => !r.ok).map(r => r.url);
+  return { ready: failed.length === 0, failed };
+}
+
+// ── Main ────────────────────────────────────────────────────
+
+async function globalSetup(config: FullConfig) {
+  const frontendURL = config.projects[0].use.baseURL || FRONTEND_URL;
+
+  // Step 1: Check if frontend is already running (AppHost started externally)
   let alreadyRunning = false;
   try {
-    const resp = await fetch(frontendURL, { signal: AbortSignal.timeout(probeTimeoutMs) });
+    const resp = await fetch(frontendURL, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
     if (resp.ok || resp.status === 302) {
       alreadyRunning = true;
-      console.log(`Frontend already running at ${frontendURL}, skipping AppHost startup.`);
+      console.log(`[globalSetup] Frontend already running at ${frontendURL}, skipping AppHost startup.`);
     }
   } catch { /* not running */ }
 
+  // Step 2: Start AppHost if needed
   if (!alreadyRunning) {
-    console.log('Starting .NET Aspire AppHost...');
+    console.log('[globalSetup] Starting .NET Aspire AppHost...');
     const projectPath = path.resolve(__dirname, '../../src/Aspire/Marketplace.AppHost/Marketplace.AppHost.csproj');
 
     const child = spawn('dotnet', ['run', '--project', projectPath], {
@@ -29,7 +66,6 @@ async function globalSetup(config: FullConfig) {
     });
 
     child.unref();
-    appHostPid = child.pid;
     fs.writeFileSync(path.join(__dirname, 'server.pid'), child.pid?.toString() || '');
 
     child.stdout?.on('data', () => {});
@@ -38,29 +74,45 @@ async function globalSetup(config: FullConfig) {
     });
 
     // Wait for frontend to be ready
-    console.log(`Waiting for frontend at ${frontendURL}...`);
-    const timeout = 300 * 1000;
+    console.log(`[globalSetup] Waiting for frontend at ${frontendURL}...`);
     const start = Date.now();
-    let ready = false;
+    let frontendReady = false;
 
-    while (!ready && Date.now() - start < timeout) {
-      try {
-        const resp = await fetch(frontendURL, { signal: AbortSignal.timeout(probeTimeoutMs) });
-        if (resp.ok || resp.status === 302) {
-          ready = true;
-        }
-      } catch { /* ignore */ }
-      if (!ready) await new Promise(r => setTimeout(r, 2000));
+    while (!frontendReady && Date.now() - start < APP_HOST_STARTUP_TIMEOUT_MS) {
+      frontendReady = await probe(frontendURL);
+      if (!frontendReady) await new Promise(r => setTimeout(r, 2_000));
     }
 
-    if (!ready) throw new Error(`Frontend failed to start at ${frontendURL} within ${timeout}ms`);
-    console.log('Frontend is ready!');
+    if (!frontendReady) {
+      throw new Error(`[globalSetup] Frontend failed to start at ${frontendURL} within ${APP_HOST_STARTUP_TIMEOUT_MS}ms`);
+    }
+    console.log('[globalSetup] Frontend is ready!');
+  }
 
-    // Wait additional time for backend services to stabilize
-    // The frontend (Angular SSR) responds before backend APIs are fully ready
-    console.log('Waiting for backend services to stabilize...');
-    await new Promise(r => setTimeout(r, 30_000));
-    console.log('Server is ready!');
+  // Step 3: Wait for backend services to be fully ready (replaces blind 30s sleep)
+  // Always runs — even if AppHost was started externally, backend may still be warming up.
+  console.log('[globalSetup] Waiting for backend services to be ready...');
+  const backendStart = Date.now();
+
+  while (Date.now() - backendStart < BACKEND_READINESS_TIMEOUT_MS) {
+    const { ready, failed } = await probeAll(HEALTH_ENDPOINTS);
+    if (ready) {
+      const elapsed = ((Date.now() - backendStart) / 1000).toFixed(1);
+      console.log(`[globalSetup] All backend services ready! (${elapsed}s)`);
+      break;
+    }
+    const elapsed = ((Date.now() - backendStart) / 1000).toFixed(0);
+    console.log(`[globalSetup] Waiting for: ${failed.join(', ')} (${elapsed}s elapsed)`);
+    await new Promise(r => setTimeout(r, BACKEND_PROBE_INTERVAL_MS));
+  }
+
+  // Final check — fail fast if backend never came up
+  const { ready, failed } = await probeAll(HEALTH_ENDPOINTS);
+  if (!ready) {
+    throw new Error(
+      `[globalSetup] Backend services failed to become ready within ${BACKEND_READINESS_TIMEOUT_MS / 1000}s.\n` +
+      `Still failing: ${failed.join(', ')}`
+    );
   }
 
   // Save whether we started the AppHost (for teardown)

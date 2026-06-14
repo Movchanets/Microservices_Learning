@@ -7,7 +7,7 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
 
   test('should search and reduce product count', async ({ page, catalogPage }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 
@@ -29,7 +29,7 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
 
   test('should show empty state for no-match search', async ({ page, catalogPage }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 
@@ -49,7 +49,7 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
 
   test.skip('should filter products by category via sidebar', async ({ page, catalogPage }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 
@@ -75,7 +75,7 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
 
   test.skip('should sort products by price', async ({ page, catalogPage }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 
@@ -96,7 +96,7 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
 
   test.skip('should filter by price range', async ({ page, catalogPage }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 
@@ -117,7 +117,7 @@ test.describe('Catalog: Filtering, Sorting & Pagination', () => {
 
   test.skip('should paginate through product pages', async ({ page, catalogPage }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 

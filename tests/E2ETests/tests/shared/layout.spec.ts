@@ -28,7 +28,7 @@ test.describe('Shared Layout: Header', () => {
 
   test('should navigate to home when clicking logo', async ({ page, catalogPage, header }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 

@@ -22,8 +22,8 @@ export class CartPage extends BasePage {
     this.checkoutBtn = page.getByTestId('cart-checkout-btn');
   }
 
-  async goto() {
-    await this.page.goto('/cart');
+  get url(): string {
+    return '/cart';
   }
 
   async getCartItem(skuId: string): Promise<Locator> {

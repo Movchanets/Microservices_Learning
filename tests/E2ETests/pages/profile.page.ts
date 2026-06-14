@@ -21,8 +21,8 @@ export class ProfilePage extends BasePage {
 
   // ── Actions ─────────────────────────────────────────────
 
-  async goto() {
-    await this.page.goto('/profile');
+  get url(): string {
+    return '/profile';
   }
 
   async logout() {

@@ -5,7 +5,7 @@ test.describe('Catalog: Browse Products', () => {
 
   test('should display product list on catalog page', async ({ catalogPage, page }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 
@@ -21,7 +21,7 @@ test.describe('Catalog: Browse Products', () => {
 
   test('should navigate to product detail when clicking a product', async ({ catalogPage, page }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 
@@ -37,7 +37,7 @@ test.describe('Catalog: Browse Products', () => {
 
   test('should search for products', async ({ catalogPage, page }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 
@@ -60,7 +60,7 @@ test.describe('Catalog: Browse Products', () => {
   // Category filter buttons not yet rendered on catalog page — skip until implemented
   test.skip('should filter products by category', async ({ catalogPage, page }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 

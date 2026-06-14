@@ -24,9 +24,8 @@ export class SellerProductsPage extends BasePage {
     this.searchInput = page.getByPlaceholder(/search/i);
   }
 
-  async goto() {
-    await super.goto('/seller/products');
-    await this.page.waitForLoadState('domcontentloaded');
+  get url(): string {
+    return '/seller/products';
   }
 
   async getProductCount(): Promise<number> {

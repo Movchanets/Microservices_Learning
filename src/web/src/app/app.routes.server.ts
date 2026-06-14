@@ -1,6 +1,7 @@
 import { RenderMode, ServerRoute } from '@angular/ssr';
 
 export const serverRoutes: ServerRoute[] = [
+  // ── Public routes — SSR for SEO and fast first paint ──────
   {
     path: 'home',
     renderMode: RenderMode.Server,
@@ -21,34 +22,50 @@ export const serverRoutes: ServerRoute[] = [
     path: 'stores/:id',
     renderMode: RenderMode.Server,
   },
+
+  // ── Authenticated routes — client-only (SSR can't impersonate users) ──
+  {
+    path: 'profile',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'profile/**',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'cart',
+    renderMode: RenderMode.Client,
+  },
   {
     path: 'checkout',
-    renderMode: RenderMode.Server,
+    renderMode: RenderMode.Client,
   },
   {
     path: 'orders',
-    renderMode: RenderMode.Server,
+    renderMode: RenderMode.Client,
   },
   {
     path: 'orders/:id',
-    renderMode: RenderMode.Server,
+    renderMode: RenderMode.Client,
   },
   {
     path: 'seller',
-    renderMode: RenderMode.Server,
+    renderMode: RenderMode.Client,
   },
   {
     path: 'seller/**',
-    renderMode: RenderMode.Server,
+    renderMode: RenderMode.Client,
   },
   {
     path: 'admin',
-    renderMode: RenderMode.Server,
+    renderMode: RenderMode.Client,
   },
   {
     path: 'admin/**',
-    renderMode: RenderMode.Server,
+    renderMode: RenderMode.Client,
   },
+
+  // ── Catch-all — prerender static pages ────────────────────
   {
     path: '**',
     renderMode: RenderMode.Prerender,

@@ -30,9 +30,8 @@ export class HomePage extends BasePage {
     this.recentlyViewedSection = page.getByRole('heading', { name: /recently viewed/i });
   }
 
-  async goto() {
-    await this.page.goto('/home');
-    await this.waitForPageLoad();
+  get url(): string {
+    return '/home';
   }
 
   async getCategoryTileCount(): Promise<number> {

@@ -65,6 +65,11 @@ export class ProductDetailEnhancedPage extends BasePage {
     this.addBundleToCartBtn = this.frequentlyBoughtTogether.getByRole('button', { name: /add.*to cart|add selected/i });
   }
 
+  get url(): string {
+    return '/catalog';
+  }
+
+
   async goto(productId: string) {
     await this.page.goto(`/catalog/${productId}`);
   }

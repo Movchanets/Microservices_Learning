@@ -43,9 +43,13 @@ export class InventoryPage extends BasePage {
     this.addStockBtns = page.getByRole('button', { name: /add stock/i });
   }
 
-  async goto() {
-    await this.page.goto('/seller/dashboard');
-    // Navigate to inventory tab if needed
+  get url(): string {
+    return '/seller';
+  }
+
+  /** Override: navigate to dashboard then click inventory tab. */
+  override async goto(): Promise<void> {
+    await this.navigateTo('/seller/dashboard');
     const inventoryTab = this.page.getByRole('link', { name: /inventory/i });
     if (await inventoryTab.isVisible()) {
       await inventoryTab.click();

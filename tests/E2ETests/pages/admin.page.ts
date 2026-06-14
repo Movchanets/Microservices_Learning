@@ -40,9 +40,8 @@ export class AdminPage extends BasePage {
     this.verificationCards = page.getByTestId('store-verification-card');
   }
 
-  async goto() {
-    await this.page.goto('/admin');
-    await this.waitForPageLoad();
+  get url(): string {
+    return '/admin';
   }
 
   async navigateToUsers() {

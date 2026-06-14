@@ -33,8 +33,8 @@ export class SellerDashboardPage extends BasePage {
     this.createStoreBtn = page.getByRole('button', { name: 'Create Store' });
   }
 
-  async goto() {
-    await this.page.goto('/seller');
+  get url(): string {
+    return '/seller';
   }
 
   /** Fill the Create Your Store form and submit. */

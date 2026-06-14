@@ -7,8 +7,9 @@ import { TIMEOUTS } from '../utils/constants';
  * Abstract base for all page objects.
  *
  * Provides:
- * - Shared header / footer components
- * - `goto()` + `waitForPageLoad()` navigation helpers
+ * - `url` property — each subclass declares its route
+ * - `navigate()` + `waitForPageLoad()` navigation helpers
+ * - `waitForAngularReady()` — spinner disappear pattern
  * - `submitWithRetry()` — form submit with Angular zoneless compatibility
  */
 export abstract class BasePage {
@@ -22,16 +23,71 @@ export abstract class BasePage {
     this.footer = new FooterComponent(page);
   }
 
+  // ── Route Declaration ────────────────────────────────────
+
+  /** Each subclass declares its own URL path (relative to BASE_URL). */
+  abstract get url(): string;
+
   // ── Navigation ──────────────────────────────────────────
 
-  /** Navigate to a route (relative to BASE_URL). */
-  async goto(path: string) {
-    await this.page.goto(path);
+  /**
+   * Navigate to this page's URL and wait for the page to be interactive.
+   *
+   * For client-rendered pages (authenticated routes), waits for Angular
+   * to bootstrap and any loading spinners to resolve.
+   *
+   * Override `goto()` in subclasses that need extra navigation logic
+   * (e.g., tab switching, conditional flows).
+   */
+  async goto(): Promise<void> {
+    await this.page.goto(this.url);
+    await this.waitForPageLoad();
   }
 
-  /** Wait for DOMContentLoaded. Prefer `expect(header.logo).toBeVisible()` for Angular SSR pages. */
-  async waitForPageLoad() {
+  /** Navigate to an arbitrary path (for subclasses that need custom URLs). */
+  protected async navigateTo(path: string): Promise<void> {
+    await this.page.goto(path);
+    await this.waitForPageLoad();
+  }
+
+  /**
+   * Wait for the page to be interactive.
+   *
+   * Strategy:
+   * 1. Wait for `domcontentloaded` — DOM is parsed
+   * 2. Wait for Angular to stabilize — spinners disappear, API calls resolve
+   */
+  async waitForPageLoad(): Promise<void> {
     await this.page.waitForLoadState('domcontentloaded');
+    await this.waitForAngularReady();
+  }
+
+  /**
+   * Wait for Angular client-side rendering to stabilize.
+   *
+   * Handles the common pattern where:
+   * 1. Angular bootstraps → shows a loading spinner
+   * 2. API calls resolve → spinner disappears → real content renders
+   *
+   * If no spinner appears within 2s, assumes the page loaded instantly.
+   */
+  async waitForAngularReady(): Promise<void> {
+    const spinner = this.page.locator('.animate-spin');
+
+    // If a spinner appears, wait for it to disappear
+    const spinnerAppeared = await spinner
+      .waitFor({ state: 'visible', timeout: 2_000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (spinnerAppeared) {
+      await spinner.waitFor({ state: 'hidden', timeout: TIMEOUTS.api });
+    }
+  }
+
+  /** Assert the browser is currently on this page. */
+  async assertOnPage(): Promise<void> {
+    await expect(this.page, `Should be on ${this.url}`).toHaveURL(new RegExp(this.url));
   }
 
   // ── Form Helpers ────────────────────────────────────────

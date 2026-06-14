@@ -6,27 +6,6 @@ test.describe('Seller: Dashboard', () => {
   test('should show seller dashboard for seller users', async ({ sellerDashboardPage }) => {
     await test.step('Navigate to seller page', async () => {
       await sellerDashboardPage.goto();
-      await sellerDashboardPage.waitForPageLoad();
-    });
-
-    await test.step('Wait for Angular to stabilize', async () => {
-      const page = sellerDashboardPage.page;
-      const spinner = page.locator('.animate-spin');
-
-      // Wait for all JS bundles loaded so Angular can bootstrap
-      await page.waitForLoadState('load');
-
-      // Angular hydrates → loadSettings() → spinner appears (briefly).
-      // If spinner never shows, Angular hydrated + API resolved instantly.
-      const spinnerAppeared = await spinner
-        .waitFor({ state: 'visible', timeout: 3000 })
-        .then(() => true)
-        .catch(() => false);
-
-      if (spinnerAppeared) {
-        // Wait for API to resolve — spinner disappears when loadSettings() completes
-        await spinner.waitFor({ state: 'hidden', timeout: TIMEOUTS.api });
-      }
     });
 
     await test.step('Create store if needed', async () => {

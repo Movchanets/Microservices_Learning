@@ -30,6 +30,11 @@ export class StorePagePage extends BasePage {
     this.errorReturnLink = page.getByRole('link', { name: /return to catalog/i });
   }
 
+  get url(): string {
+    return '/stores';
+  }
+
+
   async goto(storeId: string) {
     await this.page.goto(`/stores/${storeId}`);
     await this.waitForPageLoad();
