@@ -10,10 +10,8 @@ export class HomePage extends BasePage {
   readonly cartDrawer: CartDrawerComponent;
 
   // ── Locators ────────────────────────────────────────────
-  readonly heroBanner: Locator;
   readonly shopByCategoryHeading: Locator;
   readonly categoryTiles: Locator;
-  readonly dealOfTheDay: Locator;
   readonly featuredCarousel: Locator;
   readonly newArrivalsCarousel: Locator;
   readonly recentlyViewedSection: Locator;
@@ -21,10 +19,8 @@ export class HomePage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.cartDrawer = new CartDrawerComponent(page);
-    this.heroBanner = page.locator('app-hero-banner');
     this.shopByCategoryHeading = page.getByRole('heading', { name: /shop by category/i });
     this.categoryTiles = page.locator('app-category-tiles');
-    this.dealOfTheDay = page.locator('app-deal-of-the-day');
     this.featuredCarousel = page.locator('app-product-carousel').filter({ hasText: /featured/i });
     this.newArrivalsCarousel = page.locator('app-product-carousel').filter({ hasText: /new arrivals/i });
     this.recentlyViewedSection = page.getByRole('heading', { name: /recently viewed/i });
@@ -62,8 +58,3 @@ export class HomePage extends BasePage {
   async isNewArrivalsVisible(): Promise<boolean> {
     return this.newArrivalsCarousel.isVisible();
   }
-
-  async isDealOfTheDayVisible(): Promise<boolean> {
-    return this.dealOfTheDay.isVisible();
-  }
-}

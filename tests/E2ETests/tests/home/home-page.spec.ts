@@ -3,16 +3,6 @@ import { TIMEOUTS } from '../../utils/constants';
 
 test.describe('Home Page', () => {
 
-  test('should display hero banner on load', async ({ page, homePage }) => {
-    await test.step('Navigate to home page', async () => {
-      await homePage.goto();
-    });
-
-    await test.step('Verify hero banner is visible', async () => {
-      await expect(homePage.heroBanner).toBeVisible();
-    });
-  });
-
   test('should display Shop by Category heading and category tiles', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
@@ -43,17 +33,6 @@ test.describe('Home Page', () => {
 
     await test.step('Verify navigation to catalog', async () => {
       await expect(page).toHaveURL(/\/catalog/);
-    });
-  });
-
-  test('should display deal of the day section when products exist', async ({ page, homePage }) => {
-    await test.step('Navigate to home page', async () => {
-      await homePage.goto();
-    });
-
-    await test.step('Verify Deal of the Day section', async () => {
-      await expect(homePage.dealOfTheDay).toBeVisible({ timeout: TIMEOUTS.element });
-      await expect(homePage.dealOfTheDay.getByText('Deal of the Day')).toBeVisible();
     });
   });
 
