@@ -58,3 +58,4 @@ export class HomePage extends BasePage {
   async isNewArrivalsVisible(): Promise<boolean> {
     return this.newArrivalsCarousel.isVisible();
   }
+}

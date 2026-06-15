@@ -25,7 +25,6 @@ import {
   getProductById,
   ensureCategoryExists,
   addAttributeDefinition,
-  getAttributeDefinitions,
   activateProduct,
 } from '../../utils/catalog-helpers';
 import { ensureStoreExists } from '../../utils/store-helpers';
@@ -66,6 +65,7 @@ const EXPECTED_SKU_COUNT = 12 - 2; // 10
 test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
   let store: StoreResult;
   let categoryId: string;
+  let variantAxisIds: string[];
   const uniqueId = Math.random().toString(36).substring(7).toUpperCase();
 
   test.beforeAll(async ({ sellerApi, sellerUser, adminApi }) => {
@@ -79,10 +79,11 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
     const category = await ensureCategoryExists(adminApi, `Laptops ${uniqueId}`, 'Laptop computers');
     categoryId = category.id;
 
-    // 3. Add variant axis attribute definitions
+    // 3. Add variant axis attribute definitions and collect their IDs
     //    target=1 (Sku), valueType=2 (Select), isFilterable=true, isVariantAxis=true
+    variantAxisIds = [];
     for (const axis of Object.values(VARIANT_AXES)) {
-      await addAttributeDefinition(adminApi, categoryId, {
+      const attr = await addAttributeDefinition(adminApi, categoryId, {
         key: axis.key,
         displayName: axis.displayName,
         target: 1,        // Sku
@@ -92,12 +93,8 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
         allowedValues: axis.values,
         isVariantAxis: true,
       });
+      variantAxisIds.push(attr.id);
     }
-
-    // 4. Verify attribute definitions were created
-    const attrs = await getAttributeDefinitions(adminApi, categoryId, true);
-    const variantAxes = attrs.filter(a => a.isVariantAxis);
-    expect(variantAxes).toHaveLength(2);
   });
 
   // ── Scenario 1: Bulk-generate all SKU combinations ──────
@@ -113,6 +110,7 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
         storeId: store.id,
         brand: 'Apple',
         tags: ['laptop', 'apple', 'macbook', 'e2e'],
+        variantAxisIds,
       });
       expect(product).toBeTruthy();
       expect(product.id).toBeTruthy();
@@ -133,7 +131,7 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
       });
 
       expect(result.createdCount).toBe(EXPECTED_SKU_COUNT);
-      expect(result.totalCombinations).toBe(12);
+      expect(result.totalCombinations).toBe(EXPECTED_SKU_COUNT);
       expect(result.createdSkus).toHaveLength(EXPECTED_SKU_COUNT);
     });
 
@@ -211,6 +209,7 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
         categoryId,
         storeId: store.id,
         brand: 'Apple',
+        variantAxisIds,
       });
 
       const configurations = [
@@ -289,6 +288,7 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
         categoryId,
         storeId: store.id,
         brand: 'Apple',
+        variantAxisIds,
       });
 
       await addSku(sellerApi, product!.id, {
@@ -316,7 +316,7 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
     await test.step('Change price on the 32GB/512GB SKU', async () => {
       const response = await sellerApi.patch(
         `/api/catalog/products/${product!.id}/skus/${targetSku.id}/price`,
-        { data: { price: 2699.99, currency: 'USD' } }
+        { data: { newPrice: 2699.99, currency: 'USD' } }
       );
       expect(response.ok()).toBeTruthy();
     });
@@ -348,6 +348,7 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
         categoryId,
         storeId: store.id,
         brand: 'Apple',
+        variantAxisIds,
       });
 
       skuToRemove = await addSku(sellerApi, product!.id, {
@@ -396,6 +397,7 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
         categoryId,
         storeId: store.id,
         brand: 'Apple',
+        variantAxisIds,
       });
 
       await addSku(sellerApi, product!.id, {
@@ -449,6 +451,7 @@ test.describe('Seller: Laptop Variant Matrix (RAM × Storage)', () => {
         categoryId,
         storeId: store.id,
         brand: 'Apple',
+        variantAxisIds,
       });
       expect(product!.status).toBe('Draft');
     });

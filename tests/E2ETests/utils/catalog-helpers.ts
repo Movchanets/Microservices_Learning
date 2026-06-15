@@ -17,6 +17,7 @@ export async function createProduct(
     brand?: string;
     tags?: string[];
     imageUrl?: string;
+    variantAxisIds?: string[];
   }
 ): Promise<ProductResult> {
   const response = await api.post('/api/catalog/products', {
@@ -62,6 +63,10 @@ export async function bulkAddSku(
   const response = await api.post(`/api/catalog/products/${productId}/skus/bulk`, {
     data: request,
   });
+  // 409 Conflict — SKUs already exist from a prior run; treat as idempotent success
+  if (response.status() === 409) {
+    return { createdCount: 0, totalCombinations: 0, createdSkus: [] };
+  }
   if (!response.ok()) {
     throw new Error(`Bulk add SKU failed: ${response.status()} ${await response.text()}`);
   }
@@ -135,24 +140,24 @@ export async function createCategory(
 
 // ── Inventory ──
 
+/**
+ * Idempotently sets inventory stock for a SKU.
+ *
+ * Uses PUT /api/inventory/items/{skuCode}/stock which creates the item
+ * with the given quantity if it doesn't exist, or updates it if it does.
+ * This avoids the race condition with MassTransit's SkuCreatedConsumer
+ * which auto-creates inventory items with qty=0.
+ */
 export async function createInventoryItem(
   api: APIRequestContext,
   params: {
-    skuId: string;
     skuCode: string;
     productId: string;
     initialQuantity: number;
     storeId: string;
   }
 ): Promise<void> {
-  const response = await api.post('/api/inventory/items', {
-    data: params,
-  });
-  if (!response.ok()) {
-    // Ignore 409 Conflict — item may already exist
-    if (response.status() === 409) return;
-    throw new Error(`Create inventory item failed: ${response.status()} ${await response.text()}`);
-  }
+  await setInventoryStock(api, params.skuCode, params.initialQuantity, params.storeId, params.productId);
 }
 
 export async function setInventoryStock(
@@ -221,6 +226,15 @@ export async function addAttributeDefinition(
     data: attr,
   });
   if (!response.ok()) {
+    // If attribute already exists (400 or 409), fetch and return the existing one
+    if (response.status() === 400 || response.status() === 409) {
+      const body = await response.text();
+      if (body.includes('already exists')) {
+        const existing = await getAttributeDefinitions(api, categoryId);
+        const match = existing.find(a => a.key === attr.key);
+        if (match) return { id: match.id, key: match.key, displayName: match.displayName };
+      }
+    }
     throw new Error(`Add attribute definition failed: ${response.status()} ${await response.text()}`);
   }
   return response.json();
@@ -233,7 +247,7 @@ export async function getAttributeDefinitions(
   api: APIRequestContext,
   categoryId: string,
   includeInherited = false
-): Promise<Array<{ id: string; key: string; displayName: string; target: string; valueType: string; isVariantAxis: boolean; allowedValues: string[] }>> {
+): Promise<Array<{ id: string; key: string; displayName: string; target: string; valueType: string; allowedValues: string[] }>> {
   const params = includeInherited ? '?includeInherited=true' : '';
   const response = await api.get(`/api/catalog/categories/${categoryId}/attributes${params}`);
   if (!response.ok()) {
@@ -286,7 +300,6 @@ export async function ensureProductExists(
   // Set inventory stock
   if (initialStock > 0) {
     await createInventoryItem(sellerApi, {
-      skuId: skuResult.id,
       skuCode: skuResult.skuCode,
       productId: created.id,
       initialQuantity: initialStock,

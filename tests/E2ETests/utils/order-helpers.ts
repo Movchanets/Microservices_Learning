@@ -25,9 +25,10 @@ export async function getOrder(
 }
 
 export async function getOrders(
-  api: APIRequestContext
+  api: APIRequestContext,
+  buyerId: string
 ): Promise<OrderResult[]> {
-  const response = await api.get('/api/orders');
+  const response = await api.get(`/api/orders/buyer/${buyerId}`);
   if (!response.ok()) {
     throw new Error(`Get orders failed: ${response.status()} ${await response.text()}`);
   }

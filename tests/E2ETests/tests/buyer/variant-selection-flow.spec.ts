@@ -71,9 +71,10 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
     const category = await ensureCategoryExists(adminApi, `Phones ${uniqueId}`, 'Smartphones');
     categoryId = category.id;
 
-    // 3. Add variant axis attribute definitions
+    // 3. Add variant axis attribute definitions and collect their IDs
+    const variantAxisIds: string[] = [];
     for (const axis of Object.values(VARIANT_AXES)) {
-      await addAttributeDefinition(adminApi, categoryId, {
+      const attr = await addAttributeDefinition(adminApi, categoryId, {
         key: axis.key,
         displayName: axis.displayName,
         target: 1,        // Sku
@@ -83,9 +84,10 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
         allowedValues: axis.values,
         isVariantAxis: true,
       });
+      variantAxisIds.push(attr.id);
     }
 
-    // 4. Create product
+    // 4. Create product with variant axes configured
     product = await createProduct(sellerApi, {
       name: `iPhone 16 Pro ${uniqueId}`,
       description: 'Apple iPhone 16 Pro — E2E variant selection test',
@@ -93,6 +95,7 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
       storeId: store.id,
       brand: 'Apple',
       tags: ['phone', 'apple', 'e2e'],
+      variantAxisIds,
     });
 
     // 5. Bulk-generate SKU combinations (3 colors × 2 storage = 6 SKUs)
@@ -118,7 +121,6 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
 
     for (const sku of fullProduct!.skus) {
       await createInventoryItem(sellerApi, {
-        skuId: sku.id,
         skuCode: sku.skuCode,
         productId: product.id,
         initialQuantity: 50,
@@ -349,7 +351,7 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
 
   // ── Test 5: Order history shows the order ────────────────
 
-  test('should show completed order in order history', async ({ ordersPage, buyerApi }) => {
+  test('should show completed order in order history', async ({ ordersPage, buyerApi, buyerUser }) => {
     await test.step('Navigate to orders page', async () => {
       await ordersPage.goto();
       await ordersPage.waitForPageLoad();
@@ -361,7 +363,7 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
     });
 
     await test.step('Verify at least one order exists via API', async () => {
-      const orders = await getOrders(buyerApi);
+      const orders = await getOrders(buyerApi, buyerUser.id);
       expect(orders.length).toBeGreaterThan(0);
     });
   });
