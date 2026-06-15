@@ -6,6 +6,7 @@ test.describe('Home Page', () => {
   test('should display Shop by Category heading and category tiles', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Verify Shop by Category heading', async () => {
@@ -21,6 +22,7 @@ test.describe('Home Page', () => {
   test('should navigate to catalog when clicking a category tile', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Wait for category tiles to load', async () => {
@@ -39,6 +41,7 @@ test.describe('Home Page', () => {
   test('should display featured products carousel', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Verify featured carousel is visible', async () => {
@@ -54,6 +57,7 @@ test.describe('Home Page', () => {
   test('should display new arrivals carousel', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Verify new arrivals carousel is visible', async () => {
@@ -64,6 +68,7 @@ test.describe('Home Page', () => {
   test('should navigate to product detail when clicking a featured product', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Wait for featured carousel', async () => {
@@ -83,6 +88,7 @@ test.describe('Home Page', () => {
   test('should have working header navigation on home page', async ({ page, homePage, header }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Verify header elements are visible', async () => {

@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ensureUserExists, getCurrentUser, promoteToSeller, loginApi } from '../utils/api-helpers';
 import { ensureStoreExists } from '../utils/store-helpers';
+import { ensureCategoryExists, ensureProductExists } from '../utils/catalog-helpers';
 import * as users from '../data/users.json';
 
 const AUTH_DIR = path.join(__dirname, '../playwright/.auth');
@@ -89,7 +90,7 @@ setup('authenticate seller', async ({ playwright }) => {
   const adminApi = await loginApi(playwright.request, users.adminUser.email, users.adminUser.password);
 
   // Ensure store exists and is verified
-  await ensureStoreExists(
+  const store = await ensureStoreExists(
     freshSellerApi,
     adminApi,
     seller.id,
@@ -97,6 +98,38 @@ setup('authenticate seller', async ({ playwright }) => {
     'Automated test store for E2E tests',
   );
   console.log(`[auth.setup] Store ensured for seller: ${seller.email}`);
+
+  // Seed products for browse-products and home-page E2E tests
+  const category = await ensureCategoryExists(adminApi, 'Electronics', 'Consumer electronics');
+  await ensureProductExists(
+    freshSellerApi,
+    {
+      name: 'iPhone 15 Pro',
+      description: 'Latest Apple smartphone with A17 Pro chip',
+      categoryId: category.id,
+      storeId: store.id,
+      brand: 'Apple',
+      tags: ['phone', 'apple', 'iphone'],
+    },
+    { skuCode: 'BROWSE-IPHONE15PRO', price: 999, currency: 'USD' },
+    50,
+  );
+  console.log(`[auth.setup] Seeded product: iPhone 15 Pro`);
+
+  await ensureProductExists(
+    freshSellerApi,
+    {
+      name: 'Sony WH-1000XM5',
+      description: 'Premium noise-cancelling headphones',
+      categoryId: category.id,
+      storeId: store.id,
+      brand: 'Sony',
+      tags: ['headphones', 'audio', 'sony'],
+    },
+    { skuCode: 'HOME-SONY-WH1000XM5', price: 349, currency: 'USD' },
+    25,
+  );
+  console.log(`[auth.setup] Seeded product: Sony WH-1000XM5`);
 
   // Re-save seller state with updated JWT
   const stateDir = path.join(AUTH_DIR, 'seller');

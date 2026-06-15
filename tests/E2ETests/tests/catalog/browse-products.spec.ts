@@ -7,6 +7,9 @@ test.describe('Catalog: Browse Products', () => {
     await test.step('Navigate to catalog page', async () => {
       await catalogPage.goto();
       await catalogPage.waitForPageLoad();
+      // Reload to bypass stale Angular SSR after API seeding in auth.setup
+      await page.reload();
+      await catalogPage.waitForPageLoad();
     });
 
     await test.step('Verify catalog title is visible', async () => {
@@ -23,6 +26,8 @@ test.describe('Catalog: Browse Products', () => {
     await test.step('Navigate to catalog page', async () => {
       await catalogPage.goto();
       await catalogPage.waitForPageLoad();
+      await page.reload();
+      await catalogPage.waitForPageLoad();
     });
 
     await test.step('Click first product card', async () => {
@@ -38,6 +43,8 @@ test.describe('Catalog: Browse Products', () => {
   test('should search for products', async ({ catalogPage, page }) => {
     await test.step('Navigate to catalog page', async () => {
       await catalogPage.goto();
+      await catalogPage.waitForPageLoad();
+      await page.reload();
       await catalogPage.waitForPageLoad();
     });
 
