@@ -15,7 +15,7 @@ builder.Services.AddHttpClient("ApiGateway", client =>
 // Direct client for media uploads (bypasses YARP gateway to avoid multipart form forwarding issues)
 builder.Services.AddHttpClient("MediaApi", client =>
 {
-    var mediaUrl = builder.Configuration["services:media-api:http:0"] ?? "http://localhost:5210";
+    var mediaUrl = builder.Configuration["services:media-api:http:0"] ?? "http://localhost:5361";
     client.BaseAddress = new Uri(mediaUrl);
 });
 

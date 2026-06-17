@@ -1,11 +1,36 @@
+using Aspire.Hosting.ApplicationModel;
 
 var builder = DistributedApplication.CreateBuilder(args);
+
+const string HttpLaunchProfile = "http";
+const string JwtIssuer = "marketplace-identity";
+const string JwtAudience = "marketplace-api";
+const string JwtSecret = "super-secret-key-for-dev-only-min-32-chars!!";
+const int GatewayHttpPort = 5390;
+const string GatewayHttpUrl = "http://localhost:5390";
+
+// IMPORTANT: using the "http" launch profile for every project prevents DCP
+// from registering HTTPS endpoints, which avoids the Windows container tunnel
+// crash seen in local development.
+IResourceBuilder<ProjectResource> AddHttpProject<TProject>(string resourceName)
+    where TProject : IProjectMetadata, new()
+    => builder.AddProject<TProject>(resourceName, HttpLaunchProfile);
+
+IResourceBuilder<ProjectResource> WithMarketplaceJwt(IResourceBuilder<ProjectResource> project) =>
+    project
+        .WithEnvironment("Jwt__Issuer", JwtIssuer)
+        .WithEnvironment("Jwt__Audience", JwtAudience)
+        .WithEnvironment("Jwt__Secret", JwtSecret);
+
+IResourceBuilder<ProjectResource> WithRequiredProject(
+    IResourceBuilder<ProjectResource> project,
+    IResourceBuilder<ProjectResource> dependency) =>
+    project.WithReference(dependency).WaitFor(dependency);
 
 // ──────────────────────────────────────────────
 // Infrastructure Resources
 // ──────────────────────────────────────────────
 
-// PostgreSQL server + per-service databases
 var postgres = builder.AddPostgres("postgres")
     .WithPgAdmin()
     .WithHostPort(55555);
@@ -19,175 +44,144 @@ var storeDb = postgres.AddDatabase("store-db");
 var cartDb = postgres.AddDatabase("cart-db");
 var mediaDb = postgres.AddDatabase("media-db");
 
-// Redis — used by Cart.API, Notification.Worker (SignalR backplane)
 var redis = builder.AddRedis("redis")
     .WithRedisInsight();
 
-// RabbitMQ — message broker for MassTransit
 var messaging = builder.AddRabbitMQ("messaging")
     .WithManagementPlugin();
 
-
-// ──────────────────────────────────────────────
-// Elasticsearch — used by Search.API
-// ──────────────────────────────────────────────
 var elasticsearch = builder.AddElasticsearch("elasticsearch")
     .WithImage("elasticsearch")
     .WithImageTag("8.17.0")
     .WithEnvironment("ES_JAVA_OPTS", "-Xms512m -Xmx512m");
 
+var storage = builder.AddAzureStorage("storage").RunAsEmulator();
+var blobs = storage.AddBlobs("blobs");
+
+IResourceBuilder<ProjectResource> WithMessaging(IResourceBuilder<ProjectResource> project) =>
+    project.WithReference(messaging).WaitFor(messaging);
+
+IResourceBuilder<ProjectResource> WithSecuredMessaging(IResourceBuilder<ProjectResource> project) =>
+    WithMarketplaceJwt(WithMessaging(project));
+
 // ──────────────────────────────────────────────
 // Microservices
 // ──────────────────────────────────────────────
 
-// IMPORTANT: "http" launch profile on every AddProject prevents DCP from
-// registering HTTPS endpoints, which avoids the Windows container tunnel crash.
+var identityApi = WithSecuredMessaging(
+    AddHttpProject<Projects.Identity_API>("identity-api")
+        .WithReference(identityDb)
+        .WaitFor(identityDb));
 
-// Phase 1: Identity.API
-var identityApi = builder.AddProject<Projects.Identity_API>("identity-api", "http")
-    .WithReference(identityDb)
-    .WaitFor(identityDb)
-    .WithReference(messaging)
-    .WaitFor(messaging)
-    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
-    .WithEnvironment("Jwt__Audience", "marketplace-api")
-    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+var searchApi = WithMessaging(
+    AddHttpProject<Projects.Search_API>("search-api")
+        .WithReference(elasticsearch)
+        .WaitFor(elasticsearch));
 
-// Phase 2: Search.API
-var searchApi = builder.AddProject<Projects.Search_API>("search-api", "http")
-    .WithReference(elasticsearch)
-    .WaitFor(elasticsearch)
-    .WithReference(messaging)
-    .WaitFor(messaging);
+var catalogApi = WithSecuredMessaging(
+    AddHttpProject<Projects.Catalog_API>("catalog-api")
+        .WithReference(catalogDb)
+        .WaitFor(catalogDb));
 
-// Phase 2: Catalog.API
-var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api", "http")
-    .WithReference(catalogDb)
-    .WaitFor(catalogDb)
-    .WithReference(messaging)
-    .WaitFor(messaging)
-    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
-    .WithEnvironment("Jwt__Audience", "marketplace-api")
-    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+var inventoryApi = WithSecuredMessaging(
+    AddHttpProject<Projects.Inventory_API>("inventory-api")
+        .WithReference(inventoryDb)
+        .WaitFor(inventoryDb));
 
-// Phase 3: Inventory.API
-var inventoryApi = builder.AddProject<Projects.Inventory_API>("inventory-api", "http")
-    .WithReference(inventoryDb)
-    .WaitFor(inventoryDb)
-    .WithReference(messaging)
-    .WaitFor(messaging)
-    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
-    .WithEnvironment("Jwt__Audience", "marketplace-api")
-    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+var cartApi = WithSecuredMessaging(
+    AddHttpProject<Projects.Cart_API>("cart-api")
+        .WithReference(cartDb)
+        .WaitFor(cartDb)
+        .WithReference(redis)
+        .WaitFor(redis));
 
-// Phase 3: Cart.API
-var cartApi = builder.AddProject<Projects.Cart_API>("cart-api", "http")
-    .WithReference(cartDb)
-    .WaitFor(cartDb)
-    .WithReference(redis)
-    .WaitFor(redis)
-    .WithReference(messaging)
-    .WaitFor(messaging)
-    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
-    .WithEnvironment("Jwt__Audience", "marketplace-api")
-    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+var orderingApi = WithSecuredMessaging(
+    AddHttpProject<Projects.Ordering_API>("ordering-api")
+        .WithReference(orderingDb)
+        .WaitFor(orderingDb));
 
-// Phase 4: Ordering.API
-var orderingApi = builder.AddProject<Projects.Ordering_API>("ordering-api", "http")
-    .WithReference(orderingDb)
-    .WaitFor(orderingDb)
-    .WithReference(messaging)
-    .WaitFor(messaging)
-    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
-    .WithEnvironment("Jwt__Audience", "marketplace-api")
-    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
-
-// Catalog depends on Ordering for verified-purchase checks
+// Catalog depends on Ordering for verified-purchase checks.
 catalogApi.WithReference(orderingApi).WaitFor(orderingApi);
 
-// Phase 4: Payment.API
-var paymentApi = builder.AddProject<Projects.Payment_API>("payment-api", "http")
-    .WithReference(paymentDb)
-    .WaitFor(paymentDb)
-    .WithReference(messaging)
-    .WaitFor(messaging)
-    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
-    .WithEnvironment("Jwt__Audience", "marketplace-api")
-    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+var paymentApi = WithSecuredMessaging(
+    AddHttpProject<Projects.Payment_API>("payment-api")
+        .WithReference(paymentDb)
+        .WaitFor(paymentDb));
 
-// Phase 5: Notification.Worker
-var notificationWorker = builder.AddProject<Projects.Notification_Worker>("notification-api", "http")
-    .WithReference(redis)
-    .WaitFor(redis)
-    .WithReference(messaging)
-    .WaitFor(messaging)
+var notificationWorker = WithMessaging(
+    AddHttpProject<Projects.Notification_Worker>("notification-api")
+        .WithReference(redis)
+        .WaitFor(redis))
     .WithExternalHttpEndpoints();
 
-// Phase 6: Azure Blob Storage (Azurite emulator locally)
-var storage = builder.AddAzureStorage("storage").RunAsEmulator();
-var blobs = storage.AddBlobs("blobs");
+var storeApi = WithSecuredMessaging(
+    AddHttpProject<Projects.StoreManagement_API>("store-api")
+        .WithReference(storeDb)
+        .WaitFor(storeDb));
 
-// Phase 6: StoreManagement.API
-var storeApi = builder.AddProject<Projects.StoreManagement_API>("store-api", "http")
-    .WithReference(storeDb)
-    .WaitFor(storeDb)
-    .WithReference(messaging)
-    .WaitFor(messaging)
-    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
-    .WithEnvironment("Jwt__Audience", "marketplace-api")
-    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+var mediaApi = WithSecuredMessaging(
+    AddHttpProject<Projects.Media_API>("media-api")
+        .WithReference(mediaDb)
+        .WaitFor(mediaDb)
+        .WithReference(blobs)
+        .WaitFor(blobs));
 
-// Phase 6: Media.API
-var mediaApi = builder.AddProject<Projects.Media_API>("media-api", "http")
-    .WithReference(mediaDb)
-    .WaitFor(mediaDb)
-    .WithReference(blobs)
-    .WaitFor(blobs)
-    .WithReference(messaging)
-    .WaitFor(messaging)
-    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
-    .WithEnvironment("Jwt__Audience", "marketplace-api")
-    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!");
+// ──────────────────────────────────────────────
+// Gateway, Frontend, and Tools
+// ──────────────────────────────────────────────
 
-// Phase 1: ApiGateway
-// Gateway WaitFor only hard prerequisites (identity, catalog, search).
-// Soft dependencies (payment, notification, store, media) use WithReference
-// for service discovery but don't block gateway startup.
-var gateway = builder.AddProject<Projects.ApiGateway>("api-gateway", "http")
-    // Hard dependencies — gateway can't function without these
-    .WithReference(identityApi)
-    .WaitFor(identityApi)
-    .WithReference(catalogApi)
-    .WaitFor(catalogApi)
-    .WithReference(searchApi)
-    .WaitFor(searchApi)
-    .WithReference(inventoryApi)
-    .WaitFor(inventoryApi)
-    .WithReference(cartApi)
-    .WaitFor(cartApi)
-    .WithReference(orderingApi)
-    .WaitFor(orderingApi)
-    // Soft dependencies — service discovery only, don't block startup
-    .WithReference(paymentApi)
-    .WithReference(notificationWorker)
-    .WithReference(storeApi)
-    .WithReference(mediaApi)
+var gateway = WithMarketplaceJwt(AddHttpProject<Projects.ApiGateway>("api-gateway"));
+
+// Hard dependencies block gateway startup because the BFF cannot function
+// correctly without their routes and service discovery entries.
+foreach (var dependency in new[]
+{
+    identityApi,
+    catalogApi,
+    searchApi,
+    inventoryApi,
+    cartApi,
+    orderingApi,
+})
+{
+    gateway = WithRequiredProject(gateway, dependency);
+}
+
+// Soft dependencies are exposed for service discovery but do not block startup.
+foreach (var dependency in new[]
+{
+    paymentApi,
+    notificationWorker,
+    storeApi,
+    mediaApi,
+})
+{
+    gateway = gateway.WithReference(dependency);
+}
+
+gateway = gateway
     .WithReference(redis)
     .WaitFor(redis)
     .WithEnvironment("Identity__ApiBaseUrl", "http://identity-api")
-    .WithEnvironment("Jwt__Issuer", "marketplace-identity")
-    .WithEnvironment("Jwt__Audience", "marketplace-api")
-    .WithEnvironment("Jwt__Secret", "super-secret-key-for-dev-only-min-32-chars!!")
-    .WithExternalHttpEndpoints();
+    // Non-proxied: gateway listens directly on port 5390, bypassing DCP port
+    // forwarding which is broken on Windows. ASPNETCORE_URLS is set explicitly
+    // because --no-launch-profile ignores launchSettings.json.
+    // Do not call WithExternalHttpEndpoints() here; that makes DCP claim the
+    // same port and can trigger WSAEACCES 10013 on Windows.
+    .WithEnvironment("ASPNETCORE_URLS", GatewayHttpUrl)
+    .WithEndpoint("http", endpoint =>
+    {
+        endpoint.IsProxied = false;
+        endpoint.Port = GatewayHttpPort;
+        endpoint.TargetPort = GatewayHttpPort;
+    });
 
-// Phase 7: Angular frontend
 var frontend = builder.AddExecutable("angular", "pnpm", "../../web", "start")
     .WithReference(gateway)
     .WithHttpEndpoint(targetPort: 4200, port: 4201, name: "http")
     .WithExternalHttpEndpoints();
 
-// Seeder — waits for gateway so it can reach all services through BFF
-var seederApp = builder.AddProject<Projects.Seeder_App>("seeder-app", "http")
+var seederApp = AddHttpProject<Projects.Seeder_App>("seeder-app")
     .WithReference(gateway)
     .WaitFor(gateway)
     .WithEnvironment("ApiBaseUrl", gateway.GetEndpoint("http"));

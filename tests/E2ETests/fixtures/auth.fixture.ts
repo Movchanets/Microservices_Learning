@@ -8,7 +8,7 @@ import { APIRequestContext, BrowserContext } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { loginApi, getCurrentUser, type BffUser } from '../utils/api-helpers';
+import { loginApi, registerApi, getCurrentUser, type BffUser } from '../utils/api-helpers';
 import * as users from '../data/users.json';
 import { test as pageTest } from './test-base';
 
@@ -59,6 +59,50 @@ async function loginAndSaveState(
   return { statePath, api };
 }
 
+// Password used for all auto-generated isolated buyers
+const ISOLATED_BUYER_PASSWORD = 'P@ssw0rd123!';
+
+/**
+ * Registers (or falls back to login) a deterministic per-worker buyer,
+ * saves storageState to a worker-indexed temp file with 30-min cache.
+ */
+async function registerAndSaveState(
+  requestFactory: APIRequestContext,
+  workerIndex: number
+): Promise<{ statePath: string; api: APIRequestContext }> {
+  await ensureStorageDir();
+  const email = `buyer+w${workerIndex}@marketplace.com`;
+  const statePath = path.join(STORAGE_DIR, `isolated-buyer-w${workerIndex}.json`);
+
+  // Reuse cached state if fresh (< 30 min old) and valid
+  try {
+    const stat = await fs.promises.stat(statePath);
+    const ageMinutes = (Date.now() - stat.mtimeMs) / 60_000;
+    if (ageMinutes < 30 && stat.size > 10) {
+      const content = await fs.promises.readFile(statePath, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (parsed.cookies && parsed.cookies.length > 0) {
+        const api = await loginApi(requestFactory, email, ISOLATED_BUYER_PASSWORD);
+        return { statePath, api };
+      }
+    }
+  } catch {
+    // File doesn't exist or is invalid — proceed with registration
+  }
+
+  const api = await registerApi(
+    requestFactory,
+    'Buyer',
+    `Worker${workerIndex}`,
+    email,
+    ISOLATED_BUYER_PASSWORD
+  );
+  const state = await api.storageState();
+  await fs.promises.writeFile(statePath, JSON.stringify(state, null, 2));
+
+  return { statePath, api };
+}
+
 // ── Fixture Types ─────────────────────────────────────────
 
 export type AuthFixtures = {
@@ -80,6 +124,12 @@ export type AuthFixtures = {
   sellerContext: BrowserContext;
   /** Browser context pre-authenticated as admin */
   adminContext: BrowserContext;
+  /** Isolated per-worker buyer API context (unique email per worker) */
+  isolatedBuyerApi: APIRequestContext;
+  /** Isolated per-worker buyer user info */
+  isolatedBuyerUser: BffUser;
+  /** Isolated per-worker browser context pre-authenticated as buyer */
+  isolatedBuyerContext: BrowserContext;
 };
 
 // ── Auth Test (extends pageTest with auth fixtures) ───────
@@ -174,6 +224,32 @@ export const authTest = pageTest.extend<AuthFixtures>({
       users.adminUser.email,
       users.adminUser.password,
       'admin',
+      testInfo.workerIndex
+    );
+    const context = await browser.newContext({ storageState: statePath });
+    await use(context);
+    await context.close();
+  },
+
+  // ── Isolated Buyer (per-worker unique account) ─────────
+
+  isolatedBuyerApi: async ({ playwright }, use, testInfo) => {
+    const { api } = await registerAndSaveState(
+      playwright.request,
+      testInfo.workerIndex
+    );
+    await use(api);
+    await api.dispose();
+  },
+
+  isolatedBuyerUser: async ({ isolatedBuyerApi }, use) => {
+    const user = await getCurrentUser(isolatedBuyerApi);
+    await use(user);
+  },
+
+  isolatedBuyerContext: async ({ browser, playwright }, use, testInfo) => {
+    const { statePath } = await registerAndSaveState(
+      playwright.request,
       testInfo.workerIndex
     );
     const context = await browser.newContext({ storageState: statePath });

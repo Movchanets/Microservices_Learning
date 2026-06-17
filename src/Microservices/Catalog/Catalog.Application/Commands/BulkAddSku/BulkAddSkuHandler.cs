@@ -66,6 +66,11 @@ public sealed class BulkAddSkuHandler(
             createdSkus = await PublishEventsAsync(skusToPublish, cancellationToken);
         }
 
+        if (createdSkus.Count == 0 && errors.Count > 0)
+            return Result<BulkAddSkuResultDto>.Failure(
+                $"All {errors.Count} SKU creation(s) failed: {string.Join("; ", errors)}",
+                "ALL_SKUS_FAILED");
+
         return Result<BulkAddSkuResultDto>.Success(new BulkAddSkuResultDto(
             createdSkus.Count,
             filteredCombinations.Count,

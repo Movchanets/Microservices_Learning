@@ -63,10 +63,6 @@ export async function bulkAddSku(
   const response = await api.post(`/api/catalog/products/${productId}/skus/bulk`, {
     data: request,
   });
-  // 409 Conflict — SKUs already exist from a prior run; treat as idempotent success
-  if (response.status() === 409) {
-    return { createdCount: 0, totalCombinations: 0, createdSkus: [] };
-  }
   if (!response.ok()) {
     throw new Error(`Bulk add SKU failed: ${response.status()} ${await response.text()}`);
   }

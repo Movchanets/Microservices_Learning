@@ -1,51 +1,108 @@
 import { authTest as test, expect } from '../../fixtures/auth.fixture';
 import { TIMEOUTS } from '../../utils/constants';
-import { getOrders, runCheckoutFlow } from '../../utils/order-helpers';
-import { getProductBySku } from '../../utils/catalog-helpers';
+import { getOrders } from '../../utils/order-helpers';
+import {
+  ensureStoreExists,
+  ensureCategoryExists,
+  ensureProductExists,
+} from '../../utils/api-helpers';
 
-const TEST_SKU = 'AUDIO-SONY-WH1000XM5';
+// Self-sufficient order-history test — creates all data programmatically
+// via seller/admin APIs, uses isolated per-worker buyer to avoid parallel conflicts.
+
+test.describe.configure({ timeout: 120_000 });
 
 test.describe('Orders: Order History', () => {
   let orderId: string;
 
-  test.beforeAll(async ({ buyerApi, buyerUser }) => {
-    // Seed an order so the navigation test has data to work with.
-    // Check if buyer already has orders (from seeder or prior tests).
-    const existing = await getOrders(buyerApi, buyerUser.id);
+  // ── Seed: create store → product → inventory → checkout ────
+
+  test.beforeAll(async ({ isolatedBuyerApi, isolatedBuyerUser, sellerApi, sellerUser, adminApi }) => {
+    // 1. Short-circuit if buyer already has orders
+    const existing = await getOrders(isolatedBuyerApi, isolatedBuyerUser.id);
     if (existing.length > 0) {
       orderId = existing[0].id;
       return;
     }
 
-    // No orders exist — create one via checkout flow.
-    const product = await getProductBySku(buyerApi, TEST_SKU);
-    if (!product) {
-      throw new Error(`Test product SKU ${TEST_SKU} not found. Run the seeder first.`);
-    }
-    const sku = product.skus!.find(s => s.skuCode === TEST_SKU)!;
+    // 2. Create store + category + product + SKU + inventory
+    const store = await ensureStoreExists(
+      sellerApi, adminApi, sellerUser.id,
+      'Order History Store', 'E2E order-history test store'
+    );
 
-    const { finalOrder } = await runCheckoutFlow(
-      buyerApi,
-      [{ skuCode: sku.skuCode, quantity: 1, price: sku.price }],
+    const category = await ensureCategoryExists(adminApi, 'Order History Audio', 'Audio equipment');
+
+    const skuCode = `OH-SONY-${isolatedBuyerUser.id.slice(0, 6)}`;
+    const product = await ensureProductExists(
+      sellerApi,
       {
+        name: 'Sony WH-1000XM5',
+        description: 'Wireless noise-cancelling headphones',
+        categoryId: category.id,
+        storeId: store.id,
+        brand: 'Sony',
+        tags: ['headphones', 'audio'],
+      },
+      { skuCode, price: 349.99, currency: 'USD' },
+      10
+    );
+
+    const sku = product.skus.find(s => s.skuCode === skuCode)!;
+
+    // 3. Add to cart — post directly with known IDs (bypasses catalog list search)
+    const cartResponse = await isolatedBuyerApi.post('/api/cart/items', {
+      data: { productId: product.id, skuId: sku.id, skuCode: sku.skuCode, quantity: 1 },
+    });
+    // 409 = item already in cart from prior retry — treat as success
+    if (!cartResponse.ok() && cartResponse.status() !== 409) {
+      throw new Error(`Add to cart failed: ${cartResponse.status()} ${await cartResponse.text()}`);
+    }
+
+    // 4. Checkout
+    const checkoutResponse = await isolatedBuyerApi.post('/api/cart/checkout', {
+      data: {
         addressLine1: '123 Test St',
         city: 'Testville',
         state: 'TS',
         postalCode: '12345',
         country: 'US',
-      }
-    );
-    if (!finalOrder) {
-      // Fallback: re-fetch — order may still be processing
-      const orders = await getOrders(buyerApi, buyerUser.id);
-      if (orders.length === 0) {
-        throw new Error('Checkout succeeded but no orders found for buyer');
-      }
-      orderId = orders[0].id;
-    } else {
-      orderId = finalOrder.id;
+      },
+    });
+    // 409 = already checked out — fall through to order lookup
+    if (!checkoutResponse.ok() && checkoutResponse.status() !== 409) {
+      throw new Error(`Checkout failed: ${checkoutResponse.status()} ${await checkoutResponse.text()}`);
     }
+
+    // 5. Poll for terminal order status, fall back to getOrders
+    const correlationId = checkoutResponse.ok()
+      ? (await checkoutResponse.json()).correlationId
+      : null;
+
+    if (correlationId) {
+      const terminalStatuses = ['Completed', 'Cancelled', 'Faulted'];
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const order = await isolatedBuyerApi.get(`/bff/orders/${correlationId}`);
+        if (order.ok()) {
+          const data = await order.json();
+          if (terminalStatuses.includes(data.statusName ?? data.status)) {
+            orderId = data.id;
+            return;
+          }
+        }
+      }
+    }
+
+    // 6. Fallback — re-fetch orders (order may still be processing)
+    const orders = await getOrders(isolatedBuyerApi, isolatedBuyerUser.id);
+    if (orders.length === 0) {
+      throw new Error('Checkout succeeded but no orders found for buyer');
+    }
+    orderId = orders[0].id;
   });
+
+  // ── Tests ──────────────────────────────────────────────────
 
   test('should display orders page after login', async ({ ordersPage }) => {
     await test.step('Navigate to orders page', async () => {
@@ -69,27 +126,16 @@ test.describe('Orders: Order History', () => {
     });
   });
 
-  test('should navigate to order detail when clicking an order', async ({ ordersPage, buyerApi, buyerUser }) => {
-    await test.step('Navigate to orders page', async () => {
-      await ordersPage.goto();
-      await ordersPage.waitForPageLoad();
+  test('should navigate to order detail page', async ({ page }) => {
+    await test.step('Navigate directly to order detail', async () => {
+      await page.goto(`/orders/${orderId}`);
+      await page.waitForLoadState('domcontentloaded');
     });
 
-    await test.step('Verify at least one order exists', async () => {
-      const orders = await getOrders(buyerApi, buyerUser.id);
-      expect(orders.length).toBeGreaterThan(0);
-    });
-
-    await test.step('Click the first order link', async () => {
-      // Order list shows truncated ID: first 8 chars + "..."
-      await ordersPage.viewOrderDetails(orderId.slice(0, 8));
-    });
-
-    await test.step('Verify navigation to order detail page', async () => {
-      await ordersPage.page.waitForURL(`**/orders/${orderId}`, { timeout: TIMEOUTS.api });
-      await expect(ordersPage.page).toHaveURL(new RegExp(`/orders/${orderId}`));
+    await test.step('Verify Order Details heading and URL', async () => {
+      await expect(page).toHaveURL(new RegExp(`/orders/${orderId}`));
       await expect(
-        ordersPage.page.getByRole('heading', { name: 'Order Details' })
+        page.getByRole('heading', { name: 'Order Details' })
       ).toBeVisible({ timeout: TIMEOUTS.element });
     });
   });

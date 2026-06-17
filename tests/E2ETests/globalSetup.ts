@@ -5,7 +5,7 @@ import * as fs from 'fs';
 
 // ── Configuration ───────────────────────────────────────────
 
-const BFF_URL = 'http://localhost:4200';
+const BFF_URL = 'http://localhost:4201';
 const FRONTEND_URL = 'http://localhost:4201';
 const PROBE_TIMEOUT_MS = 5_000;
 const APP_HOST_STARTUP_TIMEOUT_MS = 300_000;
@@ -25,7 +25,10 @@ const HEALTH_ENDPOINTS = [
 async function probe(url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {
   try {
     const resp = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
-    return resp.ok;
+    // Any HTTP response means the service chain is alive (even 500 from the
+    // Angular proxy while the gateway/backend is still warming up).
+    // Only connection failures (fetch throws) mean "not ready yet."
+    return true;
   } catch {
     return false;
   }

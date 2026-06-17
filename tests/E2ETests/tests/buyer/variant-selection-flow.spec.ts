@@ -104,12 +104,13 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
       variantCombinations[axis.key] = axis.values;
     }
 
-    await bulkAddSku(sellerApi, product.id, {
+    const bulkResult = await bulkAddSku(sellerApi, product.id, {
       variantCombinations,
       basePrice: 999.99,
       currency: 'USD',
       skuCodePrefix: `IPH16-${uniqueId}`,
     });
+    expect(bulkResult.createdCount, `bulkAddSku errors: ${JSON.stringify(bulkResult.errors)}`).toBe(EXPECTED_SKU_COUNT);
 
     // 6. Activate product
     await activateProduct(sellerApi, product.id);
