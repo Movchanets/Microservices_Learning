@@ -3,8 +3,12 @@
   "mcp": {
     "aspire": {
       "type": "local",
-      "command": ["aspire", "agent", "mcp"],
-      "enabled": true,
-    },
-  },
+      "command": [
+        "aspire",
+        "agent",
+        "mcp"
+      ],
+      "enabled": true
+    }
+  }
 }

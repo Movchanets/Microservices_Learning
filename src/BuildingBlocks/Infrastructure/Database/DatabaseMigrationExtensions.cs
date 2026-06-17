@@ -11,6 +11,37 @@ namespace BuildingBlocks.Infrastructure.Database;
 public static class DatabaseMigrationExtensions
 {
     /// <summary>
+    /// Executes an action with retry logic for transient database failures.
+    /// Used by ApplyMigrations to handle cases where PostgreSQL isn't ready yet
+    /// (e.g., during Aspire startup where the DB container may still be initializing).
+    /// </summary>
+    public static void ApplyWithRetry(
+        Action action,
+        string serviceName,
+        ILogger logger,
+        int maxRetries = 5,
+        TimeSpan? delay = null)
+    {
+        var retryDelay = delay ?? TimeSpan.FromSeconds(5);
+
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                action();
+                return; // success
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                logger.LogWarning(ex,
+                    "{Service} migration attempt {Attempt}/{MaxRetries} failed. Retrying in {Delay}s...",
+                    serviceName, attempt, maxRetries, retryDelay.TotalSeconds);
+                Thread.Sleep(retryDelay);
+            }
+        }
+    }
+
+    /// <summary>
     /// Applies pending EF Core migrations for the specified DbContext type.
     /// </summary>
     public static WebApplication ApplyMigrations<TDbContext>(this WebApplication app, string serviceName)
@@ -21,18 +52,15 @@ public static class DatabaseMigrationExtensions
             .GetRequiredService<ILoggerFactory>()
             .CreateLogger($"{serviceName}.DatabaseMigration");
 
-        try
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<TDbContext>();
-            logger.LogInformation("Applying {Service} database migrations...", serviceName);
-            dbContext.Database.Migrate();
-            logger.LogInformation("{Service} database migrations applied successfully.", serviceName);
-        }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, "An error occurred while applying {Service} database migrations.", serviceName);
-            throw;
-        }
+        var dbContext = scope.ServiceProvider.GetRequiredService<TDbContext>();
+        logger.LogInformation("Applying {Service} database migrations...", serviceName);
+
+        ApplyWithRetry(
+            () => dbContext.Database.Migrate(),
+            serviceName,
+            logger);
+
+        logger.LogInformation("{Service} database migrations applied successfully.", serviceName);
 
         return app;
     }

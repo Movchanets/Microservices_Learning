@@ -1,7 +1,34 @@
-import { test, expect } from '../../fixtures/test-base';
+import { authTest as test, expect } from '../../fixtures/auth.fixture';
 import { TIMEOUTS } from '../../utils/constants';
+import {
+  ensureCategoryExists,
+  ensureProductExists,
+} from '../../utils/catalog-helpers';
+import { ensureStoreExists } from '../../utils/store-helpers';
 
 test.describe('Home Page', () => {
+  test.beforeAll(async ({ sellerApi, sellerUser, adminApi }) => {
+    // Seed: store → category → product → SKU → activate → inventory
+    const uniqueId = Math.random().toString(36).substring(7).toUpperCase();
+    const store = await ensureStoreExists(
+      sellerApi, adminApi, sellerUser.id,
+      `Home Store ${uniqueId}`, 'E2E home-page test store'
+    );
+    const category = await ensureCategoryExists(adminApi, `Home Category ${uniqueId}`, 'Test category');
+    await ensureProductExists(
+      sellerApi,
+      {
+        name: `Home Product ${uniqueId}`,
+        description: 'Product for home-page E2E test',
+        categoryId: category.id,
+        storeId: store.id,
+        brand: 'TestBrand',
+        tags: ['e2e', 'home'],
+      },
+      { skuCode: `HOME-SKU-${uniqueId}`, price: 79.99, currency: 'USD' },
+      100
+    );
+  });
 
   test('should display Shop by Category heading and category tiles', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {

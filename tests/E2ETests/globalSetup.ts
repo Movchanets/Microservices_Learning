@@ -17,6 +17,7 @@ const BACKEND_PROBE_INTERVAL_MS = 3_000;
 const HEALTH_ENDPOINTS = [
   `${BFF_URL}/`,                               // Gateway responds
   `${BFF_URL}/api/catalog/products`,           // Catalog API is serving data
+  `${BFF_URL}/bff/health/identity-api`,        // Identity API is serving auth
 ] as const;
 
 // ── Helpers ─────────────────────────────────────────────────
