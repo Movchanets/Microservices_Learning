@@ -3,7 +3,7 @@
  */
 
 import { APIRequestContext } from '@playwright/test';
-import type { ProductResult, SkuResult, CategoryResult, InventoryResult } from './types';
+import type { ProductResult, ProductListResult, SkuResult, CategoryResult, InventoryResult } from './types';
 
 // ── Products ──
 
@@ -83,7 +83,7 @@ export async function getProductById(
 
 /**
  * Finds a product that has a SKU matching the given skuCode.
- * Searches via the catalog list endpoint and filters client-side.
+ * Searches via the catalog list endpoint using defaultSkuCode (list doesn't include skus array).
  */
 export async function getProductBySku(
   api: APIRequestContext,
@@ -92,9 +92,13 @@ export async function getProductBySku(
   const response = await api.get('/api/catalog/products');
   if (!response.ok()) return null;
   const data = await response.json();
-  // Endpoint returns PagedResult<ProductResult> with { items, totalCount, ... }
-  const products: ProductResult[] = data.items ?? data;
-  return products.find(p => p.skus?.some(s => s.skuCode === skuCode)) ?? null;
+  // Endpoint returns PagedResult with { items, totalCount, ... }
+  // List items have defaultSkuCode but NOT a skus array — match on that
+  const products: ProductListResult[] = data.items ?? data;
+  const match = products.find(p => p.defaultSkuCode === skuCode);
+  if (!match) return null;
+  // Re-fetch by ID to get the full product with skus populated
+  return getProductById(api, match.id);
 }
 
 export async function activateProduct(
@@ -193,11 +197,25 @@ export async function ensureCategoryExists(
   name: string,
   description: string
 ): Promise<CategoryResult> {
+  // Check first to avoid unnecessary create calls
   const existing = await getCategories(adminApi);
   const match = existing.find(c => c.name === name);
   if (match) return match;
 
-  return createCategory(adminApi, name, description);
+  // Create with 409 retry — parallel workers may race to create the same category
+  const response = await adminApi.post('/api/catalog/categories', {
+    data: { name, description },
+  });
+  if (response.ok()) return response.json();
+
+  if (response.status() === 409) {
+    // Another worker created it — re-fetch
+    const refreshed = await getCategories(adminApi);
+    const found = refreshed.find(c => c.name === name);
+    if (found) return found;
+  }
+
+  throw new Error(`Create category failed: ${response.status()} ${await response.text()}`);
 }
 
 /**
@@ -255,6 +273,8 @@ export async function getAttributeDefinitions(
 /**
  * Ensures a product exists with at least one SKU and inventory.
  * Creates product → adds SKU → activates → sets inventory if not present.
+ *
+ * Fully idempotent — handles 409 conflicts from parallel workers and retries.
  */
 export async function ensureProductExists(
   sellerApi: APIRequestContext,
@@ -274,36 +294,77 @@ export async function ensureProductExists(
   },
   initialStock: number
 ): Promise<ProductResult> {
-  // Check if product already exists by SKU code
-  const existing = await getProductBySku(sellerApi, sku.skuCode);
-  if (existing) {
-    return existing;
+  // 1. Check if product already exists by SKU code (fast path)
+  const existingBySku = await getProductBySku(sellerApi, sku.skuCode);
+  if (existingBySku) {
+    // Ensure inventory is set (idempotent)
+    if (initialStock > 0) {
+      await setInventoryStock(sellerApi, sku.skuCode, initialStock, existingBySku.storeId, existingBySku.id);
+    }
+    return existingBySku;
   }
 
-  // Create product (no SKU/price — just product metadata)
-  const created = await createProduct(sellerApi, product);
+  // 2. Create product — handle 409 (name already exists from parallel worker or retry)
+  let created: ProductResult;
+  const createResponse = await sellerApi.post('/api/catalog/products', {
+    data: product,
+  });
+  if (createResponse.ok()) {
+    created = await createResponse.json();
+  } else if (createResponse.status() === 409) {
+    // Product name conflict — find existing product by searching catalog
+    const catalogResponse = await sellerApi.get('/api/catalog/products');
+    if (!catalogResponse.ok()) {
+      throw new Error(`Search catalog failed: ${catalogResponse.status()}`);
+    }
+    const catalogData = await catalogResponse.json();
+    const products: ProductResult[] = catalogData.items ?? catalogData;
+    const found = products.find(p => p.name === product.name && p.storeId === product.storeId);
+    if (!found) {
+      throw new Error(`Product create got 409 but could not find "${product.name}" in catalog`);
+    }
+    created = found;
+  } else {
+    throw new Error(`Create product failed: ${createResponse.status()} ${await createResponse.text()}`);
+  }
 
-  // Add SKU to the product
-  const skuResult = await addSku(sellerApi, created.id, sku);
+  // 3. Add SKU — handle 409 (parallel worker already added it to a different product)
+  const skuResponse = await sellerApi.post(`/api/catalog/products/${created.id}/skus`, {
+    data: { skuCode: sku.skuCode, price: sku.price, currency: sku.currency },
+  });
+  if (skuResponse.ok()) {
+    // SKU added to our product
+  } else if (skuResponse.status() === 409) {
+    // SKU already exists on another product — find the product that owns it
+    const owner = await getProductBySku(sellerApi, sku.skuCode);
+    if (owner) {
+      // Ensure inventory and return the owner (it has our SKU)
+      if (initialStock > 0) {
+        await setInventoryStock(sellerApi, sku.skuCode, initialStock, owner.storeId, owner.id);
+      }
+      return owner;
+    }
+    // Fallback: re-fetch our product (maybe it was added to this product after all)
+    const refetch = await getProductById(sellerApi, created.id);
+    if (refetch) return refetch;
+    throw new Error(`SKU 409 conflict but could not find product with SKU "${sku.skuCode}"`);
+  } else {
+    throw new Error(`Add SKU failed: ${skuResponse.status()} ${await skuResponse.text()}`);
+  }
 
-  // Activate the product (ignore if endpoint doesn't exist)
+  // 4. Activate the product (ignore 409 = already active)
   try {
     await activateProduct(sellerApi, created.id);
   } catch {
     // Activation endpoint may not exist
   }
 
-  // Set inventory stock
+  // 5. Set inventory stock (idempotent PUT)
   if (initialStock > 0) {
-    await createInventoryItem(sellerApi, {
-      skuCode: skuResult.skuCode,
-      productId: created.id,
-      initialQuantity: initialStock,
-      storeId: created.storeId,
-    });
+    await setInventoryStock(sellerApi, sku.skuCode, initialStock, created.storeId, created.id);
   }
 
-  // Re-fetch the product so the returned object has the SKU populated
+  // 6. Re-fetch via product detail endpoint (includes skus in response)
   const full = await getProductById(sellerApi, created.id);
-  return full ?? { ...created, skus: [skuResult] };
+  return full ?? created;
 }
