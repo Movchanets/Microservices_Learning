@@ -33,11 +33,13 @@ test.describe('Orders: Order History', () => {
 
     const category = await ensureCategoryExists(adminApi, 'Order History Audio', 'Audio equipment');
 
-    const skuCode = `OH-SONY-${isolatedBuyerUser.id.slice(0, 6)}`;
+    // Use worker-unique suffix from email to avoid SKU/product name collisions across parallel workers
+    const workerTag = isolatedBuyerUser.email.split('@')[0].replace('+', '').toUpperCase(); // "BUYERW0", "BUYERW1", ...
+    const skuCode = `OH-SONY-${workerTag}`;
     const product = await ensureProductExists(
       sellerApi,
       {
-        name: 'Sony WH-1000XM5',
+        name: `Sony WH-1000XM5 (${workerTag})`,
         description: 'Wireless noise-cancelling headphones',
         categoryId: category.id,
         storeId: store.id,
