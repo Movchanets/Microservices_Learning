@@ -35,8 +35,8 @@ test.describe('Orders: Order History', () => {
 
     // Use worker-unique suffix from email to avoid SKU/product name collisions across parallel workers
     const workerTag = isolatedBuyerUser.email.split('@')[0].replace('+', '').toUpperCase(); // "BUYERW0", "BUYERW1", ...
-    const skuCode = `OH-SONY-${workerTag}`;
-    const product = await ensureProductExists(
+    let skuCode = `OH-SONY-${workerTag}`;
+    let product = await ensureProductExists(
       sellerApi,
       {
         name: `Sony WH-1000XM5 (${workerTag})`,
@@ -50,15 +50,68 @@ test.describe('Orders: Order History', () => {
       10
     );
 
-    const sku = product.skus.find(s => s.skuCode === skuCode)!;
+    let sku = product.skus.find(s => s.skuCode === skuCode);
+    if (!sku) {
+      throw new Error(
+        `SKU "${skuCode}" not found in product "${product.name}" (id=${product.id}). ` +
+        `Available SKUs: [${product.skus.map(s => s.skuCode).join(', ')}]`
+      );
+    }
 
-    // 3. Add to cart — post directly with known IDs (bypasses catalog list search)
-    const cartResponse = await isolatedBuyerApi.post('/api/cart/items', {
-      data: { productId: product.id, skuId: sku.id, skuCode: sku.skuCode, quantity: 1 },
-    });
-    // 409 = item already in cart from prior retry — treat as success
-    if (!cartResponse.ok() && cartResponse.status() !== 409) {
+    // 3. Add to cart — retry to handle eventual consistency (SkuCreated event propagation)
+    //    Cart service returns 400 "SKU not found" until it processes the integration event.
+    //    If retries exhaust, the SKU may be stale from a prior test run — create a fresh product.
+    let cartOk = false;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const cartResponse = await isolatedBuyerApi.post('/api/cart/items', {
+        data: { productId: product.id, skuId: sku.id, skuCode: sku.skuCode, quantity: 1 },
+      });
+      // 409 = item already in cart from prior retry — treat as success
+      if (cartResponse.ok() || cartResponse.status() === 409) {
+        cartOk = true;
+        break;
+      }
+      // 400 = SKU not yet propagated to Cart service — wait and retry
+      if (cartResponse.status() === 400 && attempt < 9) {
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+      // Retries exhausted — SKU is likely stale. Create a fresh product with new SKU code.
+      if (cartResponse.status() === 400) {
+        console.log(`[order-history] SKU "${skuCode}" not in Cart after 20s — creating fresh product`);
+        const freshSuffix = Date.now().toString(36).toUpperCase();
+        skuCode = `OH-SONY-${workerTag}-${freshSuffix}`;
+        product = await ensureProductExists(
+          sellerApi,
+          {
+            name: `Sony WH-1000XM5 (${workerTag}-${freshSuffix})`,
+            description: 'Wireless noise-cancelling headphones',
+            categoryId: category.id,
+            storeId: store.id,
+            brand: 'Sony',
+            tags: ['headphones', 'audio'],
+          },
+          { skuCode, price: 349.99, currency: 'USD' },
+          10
+        );
+        sku = product.skus.find(s => s.skuCode === skuCode);
+        if (!sku) {
+          throw new Error(`Fresh SKU "${skuCode}" not found in product "${product.name}"`);
+        }
+        // Retry cart add with fresh SKU
+        const retryResp = await isolatedBuyerApi.post('/api/cart/items', {
+          data: { productId: product.id, skuId: sku.id, skuCode: sku.skuCode, quantity: 1 },
+        });
+        if (retryResp.ok() || retryResp.status() === 409) {
+          cartOk = true;
+          break;
+        }
+        throw new Error(`Cart add failed even with fresh product: ${retryResp.status()} ${await retryResp.text()}`);
+      }
       throw new Error(`Add to cart failed: ${cartResponse.status()} ${await cartResponse.text()}`);
+    }
+    if (!cartOk) {
+      throw new Error('Failed to add item to cart after all retries');
     }
 
     // 4. Checkout

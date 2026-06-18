@@ -15,6 +15,8 @@ public sealed record CartDto(
 /// </summary>
 public sealed record CartItemDetailsDto(
     Guid ProductId,
+    Guid SkuId,
+    string SkuCode,
     string Title,
     string? ImageUrl,
     int Quantity,
@@ -35,6 +37,8 @@ internal sealed record RawCartResponse(
 
 internal sealed record RawCartItemResponse(
     Guid ProductId,
+    Guid SkuId,
+    string SkuCode,
     Guid StoreId,
     int Quantity,
     decimal Price,

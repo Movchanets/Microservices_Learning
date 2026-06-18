@@ -17,6 +17,7 @@ import {
   createProduct,
   bulkAddSku,
   getProductById,
+  getProductBySku,
   ensureCategoryExists,
   addAttributeDefinition,
   activateProduct,
@@ -88,37 +89,57 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
     }
 
     // 4. Create product with variant axes configured
-    product = await createProduct(sellerApi, {
-      name: `iPhone 16 Pro ${uniqueId}`,
-      description: 'Apple iPhone 16 Pro — E2E variant selection test',
-      categoryId,
-      storeId: store.id,
-      brand: 'Apple',
-      tags: ['phone', 'apple', 'e2e'],
-      variantAxisIds,
-    });
+    //    On retry: product may already exist — try to find it first via SKU lookup.
+    //    SKU codes use the API's AbbreviateValue logic (Black→BLK, Gold→GLD, Silver→SLV, storage stays as-is).
+    const skuValueAbbr: Record<string, string> = {
+      BLACK: 'BLK', GOLD: 'GLD', SILVER: 'SLV',
+    };
+    const abbr = (v: string) => {
+      const u = v.trim().toUpperCase();
+      return skuValueAbbr[u] ?? (u.length <= 5 || /\d/.test(u) ? u : u.slice(0, 3));
+    };
+    const skuCodePrefix = `IPH16-${uniqueId}`;
+    // Use the first variant combination to probe for an existing product
+    const probeSkuCode = `${skuCodePrefix}-${abbr(VARIANT_AXES.color.values[0])}-${abbr(VARIANT_AXES.storage.values[0])}`.toUpperCase();
 
-    // 5. Bulk-generate SKU combinations (3 colors × 2 storage = 6 SKUs)
-    const variantCombinations: Record<string, string[]> = {};
-    for (const axis of Object.values(VARIANT_AXES)) {
-      variantCombinations[axis.key] = axis.values;
+    let existingProduct = await getProductBySku(sellerApi, probeSkuCode);
+    if (existingProduct) {
+      // Retry path: product with SKUs already exists from first run
+      product = existingProduct;
+    } else {
+      // First run: create product and bulk-add SKUs
+      product = await createProduct(sellerApi, {
+        name: `iPhone 16 Pro ${uniqueId}`,
+        description: 'Apple iPhone 16 Pro — E2E variant selection test',
+        categoryId,
+        storeId: store.id,
+        brand: 'Apple',
+        tags: ['phone', 'apple', 'e2e'],
+        variantAxisIds,
+      });
+
+      // 5. Bulk-generate SKU combinations (3 colors × 2 storage = 6 SKUs)
+      const variantCombinations: Record<string, string[]> = {};
+      for (const axis of Object.values(VARIANT_AXES)) {
+        variantCombinations[axis.key] = axis.values;
+      }
+
+      const bulkResult = await bulkAddSku(sellerApi, product.id, {
+        variantCombinations,
+        basePrice: 999.99,
+        currency: 'USD',
+        skuCodePrefix,
+      });
+      expect(bulkResult.createdCount, `bulkAddSku errors: ${JSON.stringify(bulkResult.errors)}`).toBe(EXPECTED_SKU_COUNT);
     }
 
-    const bulkResult = await bulkAddSku(sellerApi, product.id, {
-      variantCombinations,
-      basePrice: 999.99,
-      currency: 'USD',
-      skuCodePrefix: `IPH16-${uniqueId}`,
-    });
-    expect(bulkResult.createdCount, `bulkAddSku errors: ${JSON.stringify(bulkResult.errors)}`).toBe(EXPECTED_SKU_COUNT);
-
-    // 6. Activate product
-    await activateProduct(sellerApi, product.id);
-
-    // 7. Set inventory for all SKUs
+    // 6. Fetch full product with SKUs (works for both first-run and retry)
     const fullProduct = await getProductById(sellerApi, product.id);
     expect(fullProduct).toBeTruthy();
     expect(fullProduct!.skus).toHaveLength(EXPECTED_SKU_COUNT);
+
+    // 7. Activate product (idempotent — 409 if already active)
+    await activateProduct(sellerApi, fullProduct.id);
 
     for (const sku of fullProduct!.skus) {
       await createInventoryItem(sellerApi, {
@@ -221,19 +242,33 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
     });
 
     await test.step('Add to cart', async () => {
+      // Wait for the addItem POST to complete, then wait for loadCart GET to settle
+      const addPost = page.waitForResponse(r =>
+        r.url().includes('/api/cart/items') && r.request().method() === 'POST'
+      );
       await productDetailPage.addToCart();
-      // Wait for cart store to process the add
-      await page.waitForTimeout(1500);
+      const postResp = await addPost;
+      expect(postResp.ok()).toBeTruthy();
+      // Wait for the subsequent loadCart GET that enriches cart data from BFF
+      const cartGet = page.waitForResponse(r =>
+        r.url().includes('/bff/cart') && r.request().method() === 'GET' && r.status() === 200
+      ).catch(() => null); // Don't fail if loadCart already completed
+      await cartGet;
+      // Allow Angular change detection to process the updated cart store
+      await page.waitForTimeout(500);
     });
 
     await test.step('Navigate to cart page', async () => {
       await cartPage.goto();
       await cartPage.waitForPageLoad();
-      await page.waitForTimeout(1000);
+      // Wait for cart items to render (loading indicator disappears)
+      await page.locator('[data-testid^="cart-item-"]').first()
+        .waitFor({ state: 'visible', timeout: TIMEOUTS.api })
+        .catch(() => {}); // May already be visible
     });
 
     await test.step('Verify cart contains the target SKU', async () => {
-      const cartItem = cartPage.getCartItem(targetSku.id);
+      const cartItem = await cartPage.getCartItem(targetSku.id);
       await expect(cartItem).toBeVisible({ timeout: TIMEOUTS.element });
     });
 
@@ -257,14 +292,22 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
       await productDetailPage.variantPicker.waitFor({ state: 'visible', timeout: TIMEOUTS.api });
       await productDetailPage.selectVariant('color', TARGET_COLOR);
       await productDetailPage.selectVariant('storage', TARGET_STORAGE);
+      const addPost = page.waitForResponse(r =>
+        r.url().includes('/api/cart/items') && r.request().method() === 'POST'
+      );
       await productDetailPage.addToCart();
-      await page.waitForTimeout(1500);
+      const postResp = await addPost;
+      expect(postResp.ok()).toBeTruthy();
+      // Wait for loadCart GET that enriches cart data
+      await page.waitForResponse(r =>
+        r.url().includes('/bff/cart') && r.request().method() === 'GET' && r.status() === 200
+      ).catch(() => null);
+      await page.waitForTimeout(500);
     });
 
     await test.step('Navigate to checkout', async () => {
       await checkoutPage.goto();
       await checkoutPage.waitForPageLoad();
-      await page.waitForTimeout(500);
     });
 
     await test.step('Fill shipping address', async () => {
@@ -354,9 +397,11 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
 
   test('should show completed order in order history', async ({ ordersPage, buyerApi, buyerUser }) => {
     await test.step('Navigate to orders page', async () => {
+      const ordersResponse = ordersPage.page.waitForResponse(r =>
+        r.url().includes('/bff/orders/buyer/') && r.request().method() === 'GET' && r.status() === 200
+      );
       await ordersPage.goto();
-      await ordersPage.waitForPageLoad();
-      await ordersPage.page.waitForTimeout(2000);
+      await ordersResponse;
     });
 
     await test.step('Verify orders heading is visible', async () => {

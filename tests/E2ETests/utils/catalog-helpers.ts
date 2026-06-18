@@ -3,7 +3,7 @@
  */
 
 import { APIRequestContext } from '@playwright/test';
-import type { ProductResult, ProductListResult, SkuResult, CategoryResult, InventoryResult } from './types';
+import type { ProductResult, SkuResult, CategoryResult, InventoryResult } from './types';
 
 // ── Products ──
 
@@ -63,6 +63,10 @@ export async function bulkAddSku(
   const response = await api.post(`/api/catalog/products/${productId}/skus/bulk`, {
     data: request,
   });
+  // 409 = SKUs already exist (e.g. Playwright retry) — treat as success
+  if (response.status() === 409) {
+    return { createdCount: 0, totalCombinations: 0, createdSkus: [] };
+  }
   if (!response.ok()) {
     throw new Error(`Bulk add SKU failed: ${response.status()} ${await response.text()}`);
   }
@@ -83,22 +87,16 @@ export async function getProductById(
 
 /**
  * Finds a product that has a SKU matching the given skuCode.
- * Searches via the catalog list endpoint using defaultSkuCode (list doesn't include skus array).
+ * Uses the dedicated catalog endpoint that does a direct DB lookup by SKU code.
  */
 export async function getProductBySku(
   api: APIRequestContext,
   skuCode: string
 ): Promise<ProductResult | null> {
-  const response = await api.get('/api/catalog/products');
+  const response = await api.get(`/api/catalog/products/sku/${encodeURIComponent(skuCode)}`);
+  if (response.status() === 404) return null;
   if (!response.ok()) return null;
-  const data = await response.json();
-  // Endpoint returns PagedResult with { items, totalCount, ... }
-  // List items have defaultSkuCode but NOT a skus array — match on that
-  const products: ProductListResult[] = data.items ?? data;
-  const match = products.find(p => p.defaultSkuCode === skuCode);
-  if (!match) return null;
-  // Re-fetch by ID to get the full product with skus populated
-  return getProductById(api, match.id);
+  return response.json();
 }
 
 export async function activateProduct(
@@ -301,7 +299,9 @@ export async function ensureProductExists(
     if (initialStock > 0) {
       await setInventoryStock(sellerApi, sku.skuCode, initialStock, existingBySku.storeId, existingBySku.id);
     }
-    return existingBySku;
+    // Re-fetch via detail endpoint to guarantee skus[] is populated
+    const full = await getProductById(sellerApi, existingBySku.id);
+    return full ?? existingBySku;
   }
 
   // 2. Create product — handle 409 (name already exists from parallel worker or retry)
@@ -342,7 +342,9 @@ export async function ensureProductExists(
       if (initialStock > 0) {
         await setInventoryStock(sellerApi, sku.skuCode, initialStock, owner.storeId, owner.id);
       }
-      return owner;
+      // Re-fetch via detail endpoint to guarantee skus[] is populated
+      const full = await getProductById(sellerApi, owner.id);
+      return full ?? owner;
     }
     // Fallback: re-fetch our product (maybe it was added to this product after all)
     const refetch = await getProductById(sellerApi, created.id);

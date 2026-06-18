@@ -12,7 +12,7 @@ import { loginApi, registerApi, getCurrentUser, type BffUser } from '../utils/ap
 import * as users from '../data/users.json';
 import { test as pageTest } from './test-base';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:4200';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:4201';
 const STORAGE_DIR = path.join(os.tmpdir(), 'playwright-auth');
 
 // ── Helpers ───────────────────────────────────────────────

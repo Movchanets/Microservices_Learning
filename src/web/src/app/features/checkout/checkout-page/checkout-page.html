@@ -93,7 +93,7 @@
           <div class="accordion-content">
             <div class="shipping-methods">
               <label class="shipping-method">
-                <input data-testid="checkout-shipping-standard" type="radio" name="shipping" (change)="setShippingMethod('standard')" [checked]="checkoutStore.shippingMethod() === 'standard'">
+                <input data-testid="checkout-shipping-standard" type="radio" name="shipping" (click)="setShippingMethod('standard')" [checked]="checkoutStore.shippingMethod() === 'standard'">
                 <div class="method-info">
                   <span class="method-name">Standard Shipping</span>
                   <span class="method-desc">5-7 business days</span>
@@ -101,7 +101,7 @@
                 <span class="method-price">Free</span>
               </label>
               <label class="shipping-method">
-                <input data-testid="checkout-shipping-express" type="radio" name="shipping" (change)="setShippingMethod('express')" [checked]="checkoutStore.shippingMethod() === 'express'">
+                <input data-testid="checkout-shipping-express" type="radio" name="shipping" (click)="setShippingMethod('express')" [checked]="checkoutStore.shippingMethod() === 'express'">
                 <div class="method-info">
                   <span class="method-name">Express Shipping</span>
                   <span class="method-desc">1-2 business days</span>
