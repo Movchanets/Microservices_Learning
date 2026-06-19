@@ -31,7 +31,7 @@ IResourceBuilder<ProjectResource> WithRequiredProject(
 // Infrastructure Resources
 // ──────────────────────────────────────────────
 
-var isTesting = builder.Environment.IsEnvironment("Testing");
+var isTesting = builder.Environment.EnvironmentName == "Testing";
 
 var postgres = builder.AddPostgres("postgres")
     .WithHostPort(55555);
