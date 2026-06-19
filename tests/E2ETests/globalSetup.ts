@@ -7,9 +7,9 @@ import * as fs from 'fs';
 
 const BFF_URL = 'http://localhost:4201';
 const FRONTEND_URL = 'http://localhost:4201';
-const PROBE_TIMEOUT_MS = 5_000;
+const PROBE_TIMEOUT_MS = 10_000;
 const APP_HOST_STARTUP_TIMEOUT_MS = 300_000;
-const BACKEND_READINESS_TIMEOUT_MS = 300_000;
+const BACKEND_READINESS_TIMEOUT_MS = 600_000;
 const BACKEND_PROBE_INTERVAL_MS = 3_000;
 
 // Endpoints that must return 2xx before tests can run.

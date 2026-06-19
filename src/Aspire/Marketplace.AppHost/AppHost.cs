@@ -31,9 +31,11 @@ IResourceBuilder<ProjectResource> WithRequiredProject(
 // Infrastructure Resources
 // ──────────────────────────────────────────────
 
+var isTesting = builder.Environment.IsEnvironment("Testing");
+
 var postgres = builder.AddPostgres("postgres")
-    .WithPgAdmin()
     .WithHostPort(55555);
+if (!isTesting) postgres.WithPgAdmin();
 
 var identityDb = postgres.AddDatabase("identity-db");
 var catalogDb = postgres.AddDatabase("catalog-db");
@@ -44,11 +46,11 @@ var storeDb = postgres.AddDatabase("store-db");
 var cartDb = postgres.AddDatabase("cart-db");
 var mediaDb = postgres.AddDatabase("media-db");
 
-var redis = builder.AddRedis("redis")
-    .WithRedisInsight();
+var redis = builder.AddRedis("redis");
+if (!isTesting) redis.WithRedisInsight();
 
-var messaging = builder.AddRabbitMQ("messaging")
-    .WithManagementPlugin();
+var messaging = builder.AddRabbitMQ("messaging");
+if (!isTesting) messaging.WithManagementPlugin();
 
 var elasticsearch = builder.AddElasticsearch("elasticsearch")
     .WithImage("elasticsearch")
