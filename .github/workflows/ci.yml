@@ -13,6 +13,7 @@ permissions:
 jobs:
   main:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -75,6 +76,19 @@ jobs:
           restore-keys: |
             nx-cache-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-
             nx-cache-${{ runner.os }}-
+
+      # Pre-pull Docker images that Aspire AppHost needs for E2E tests.
+      # Without this, cold CI runs spend 5+ min pulling postgres, redis,
+      # rabbitmq, elasticsearch, and azurite — exceeding the health-check timeout.
+      - name: Pre-pull Aspire Docker images
+        run: |
+          docker pull postgres:latest &
+          docker pull redis:latest &
+          docker pull rabbitmq:4-management &
+          docker pull elasticsearch:8.17.0 &
+          docker pull mcr.microsoft.com/azure-storage/azurite:latest &
+          wait
+          echo "All images pulled."
 
       # Run affected targets with local cache only and without daemon
       - name: Run affected targets
