@@ -24,7 +24,7 @@ import {
   createInventoryItem,
 } from '../../utils/catalog-helpers';
 import { ensureStoreExists } from '../../utils/store-helpers';
-import { getOrder, getOrders } from '../../utils/order-helpers';
+import { getOrder, getOrders, runCheckoutFlow } from '../../utils/order-helpers';
 import type { StoreResult, ProductResult, SkuResult } from '../../utils/types';
 import { TIMEOUTS } from '../../utils/constants';
 
@@ -61,7 +61,7 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
 
   // ── Setup: Seed variant product via API ──────────────────
 
-  test.beforeAll(async ({ sellerApi, sellerUser, adminApi }) => {
+  test.beforeAll(async ({ sellerApi, sellerUser, adminApi, buyerApi, buyerUser }) => {
     // 1. Create and verify store
     store = await ensureStoreExists(
       sellerApi, adminApi, sellerUser.id,
@@ -156,6 +156,29 @@ test.describe('Buyer: Variant Selection → Cart → Order', () => {
       s.typedAttributes?.storage === TARGET_STORAGE
     )!;
     expect(targetSku).toBeTruthy();
+
+    // 8. Create order programmatically (so Test 5 has a guaranteed order to find).
+    //    Check first — order may already exist from a prior retry.
+    const existingOrders = await getOrders(buyerApi, buyerUser.id);
+    if (existingOrders.length === 0) {
+      const { finalOrder } = await runCheckoutFlow(
+        buyerApi,
+        [{ skuCode: targetSku.skuCode, quantity: 1, price: targetSku.price, shopId: store.id }],
+        {
+          addressLine1: '123 Variant St',
+          city: 'Kyiv',
+          state: 'Kyiv',
+          postalCode: '01001',
+          country: 'UA',
+        }
+      );
+      if (!finalOrder || finalOrder.statusName !== 'Completed') {
+        throw new Error(
+          `Programmatic checkout did not reach Completed status. ` +
+          `Status: ${finalOrder?.statusName ?? 'null'}`
+        );
+      }
+    }
   });
 
   // ── Test 1: Variant picker visible with correct axes ─────

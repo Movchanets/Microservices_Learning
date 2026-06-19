@@ -28,11 +28,19 @@ export async function getOrders(
   api: APIRequestContext,
   buyerId: string
 ): Promise<OrderResult[]> {
-  const response = await api.get(`/api/orders/buyer/${buyerId}`);
+  // Use the BFF route (same as the Angular orders page) — not the YARP direct route.
+  // The BFF enriches orders with product details and is the canonical path the app uses.
+  const response = await api.get(`/bff/orders/buyer/${buyerId}`);
   if (!response.ok()) {
     throw new Error(`Get orders failed: ${response.status()} ${await response.text()}`);
   }
-  return response.json();
+  const data = await response.json();
+  // BFF returns Status as a string (e.g. "Completed"), map to OrderResult shape
+  return data.map((o: any) => ({
+    ...o,
+    statusName: o.statusName ?? o.status,
+    status: typeof o.status === 'number' ? o.status : 0,
+  }));
 }
 
 export async function cancelOrder(

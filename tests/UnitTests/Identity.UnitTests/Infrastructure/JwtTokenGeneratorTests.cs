@@ -53,6 +53,35 @@ public sealed class JwtTokenGeneratorTests
     }
 
     [Fact]
+    public void GenerateAccessToken_MultiRoleUser_ShouldEmitSeparateRoleClaimsForEachFlag()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Secret"] = "super-secret-key-for-tests-min-32-characters",
+                ["Jwt:Issuer"] = "identity-tests",
+                ["Jwt:Audience"] = "gateway-tests"
+            })
+            .Build();
+
+        var generator = new JwtTokenGenerator(configuration);
+
+        // Create a Buyer, then promote to Seller — mirrors the promoteToSeller → re-login flow
+        var user = User.Create("seller@example.com", "hashed-password", "Jane", "Doe", UserRole.Buyer);
+        user.AddRole(UserRole.Seller);
+
+        // Act
+        var token = generator.GenerateAccessToken(user);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        // Assert — both Buyer and Seller role claims must be present
+        var roleClaims = jwt.Claims.Where(x => x.Type == ClaimTypes.Role).Select(x => x.Value).ToList();
+        roleClaims.Should().Contain("Buyer");
+        roleClaims.Should().Contain("Seller");
+        roleClaims.Should().NotContain("Admin");
+    }
+
+    [Fact]
     public void GenerateRefreshToken_ShouldGenerateUniqueBase64Tokens()
     {
         var configuration = new ConfigurationBuilder()

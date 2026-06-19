@@ -12,12 +12,15 @@ const APP_HOST_STARTUP_TIMEOUT_MS = 300_000;
 const BACKEND_READINESS_TIMEOUT_MS = 120_000;
 const BACKEND_PROBE_INTERVAL_MS = 3_000;
 
-// Endpoints that must return 200 before tests can run.
-// These verify the BFF gateway and core microservices are alive.
+// Endpoints that must return 2xx before tests can run.
+// /bff/health is the aggregated health endpoint that probes ALL downstream
+// microservices in parallel and returns 200 only when every service is healthy,
+// 503 if any are degraded. This is proxied by the Angular dev server (/bff/*).
+//
+// Previously used "/" (not proxied → unreliable) and accepted ANY HTTP status
+// as "alive", causing auth.setup to run before services were truly ready.
 const HEALTH_ENDPOINTS = [
-  `${BFF_URL}/`,                               // Gateway responds
-  `${BFF_URL}/api/catalog/products`,           // Catalog API is serving data
-  `${BFF_URL}/bff/health/identity-api`,        // Identity API is serving auth
+  `${BFF_URL}/bff/health`,                   // Aggregated: 200 when ALL services healthy
 ] as const;
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -25,10 +28,10 @@ const HEALTH_ENDPOINTS = [
 async function probe(url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {
   try {
     const resp = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
-    // Any HTTP response means the service chain is alive (even 500 from the
-    // Angular proxy while the gateway/backend is still warming up).
-    // Only connection failures (fetch throws) mean "not ready yet."
-    return true;
+    // Only 2xx responses mean the service is actually healthy and ready
+    // to handle requests. A 502 from the Angular proxy or 503 from the
+    // health endpoint means the backend is still warming up.
+    return resp.ok;
   } catch {
     return false;
   }

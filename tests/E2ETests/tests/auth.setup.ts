@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ensureUserExists, getCurrentUser, promoteToSeller, loginApi } from '../utils/api-helpers';
 import { ensureStoreExists } from '../utils/store-helpers';
-import { ensureCategoryExists, ensureProductExists } from '../utils/catalog-helpers';
 import * as users from '../data/users.json';
 
 const AUTH_DIR = path.join(__dirname, '../playwright/.auth');
@@ -73,24 +72,24 @@ setup('authenticate seller', async ({ playwright }) => {
     'seller',
   );
 
-  // Promote to seller role
+  // Login as admin FIRST — needed to promote seller (endpoint requires Admin role)
+  const adminApi = await loginApi(playwright.request, users.adminUser.email, users.adminUser.password);
+
+  // Promote to seller role via admin context
   const seller = await getCurrentUser(sellerApi);
   try {
-    await promoteToSeller(sellerApi, seller.id);
+    await promoteToSeller(adminApi, seller.id);
     console.log(`[auth.setup] Promoted ${seller.email} to Seller`);
   } catch {
-    // Already seller
+    // Already seller (409)
   }
 
   // Re-login to get JWT with Seller role claim
   await sellerApi.dispose();
   const freshSellerApi = await loginApi(playwright.request, users.sellerUser.email, users.sellerUser.password);
 
-  // Login as admin to verify the store
-  const adminApi = await loginApi(playwright.request, users.adminUser.email, users.adminUser.password);
-
   // Ensure store exists and is verified
-  const store = await ensureStoreExists(
+  const _store = await ensureStoreExists(
     freshSellerApi,
     adminApi,
     seller.id,
@@ -98,38 +97,6 @@ setup('authenticate seller', async ({ playwright }) => {
     'Automated test store for E2E tests',
   );
   console.log(`[auth.setup] Store ensured for seller: ${seller.email}`);
-
-  // Seed products for browse-products and home-page E2E tests
-  const category = await ensureCategoryExists(adminApi, 'Electronics', 'Consumer electronics');
-  await ensureProductExists(
-    freshSellerApi,
-    {
-      name: 'iPhone 15 Pro',
-      description: 'Latest Apple smartphone with A17 Pro chip',
-      categoryId: category.id,
-      storeId: store.id,
-      brand: 'Apple',
-      tags: ['phone', 'apple', 'iphone'],
-    },
-    { skuCode: 'BROWSE-IPHONE15PRO', price: 999, currency: 'USD' },
-    50,
-  );
-  console.log(`[auth.setup] Seeded product: iPhone 15 Pro`);
-
-  await ensureProductExists(
-    freshSellerApi,
-    {
-      name: 'Sony WH-1000XM5',
-      description: 'Premium noise-cancelling headphones',
-      categoryId: category.id,
-      storeId: store.id,
-      brand: 'Sony',
-      tags: ['headphones', 'audio', 'sony'],
-    },
-    { skuCode: 'HOME-SONY-WH1000XM5', price: 349, currency: 'USD' },
-    25,
-  );
-  console.log(`[auth.setup] Seeded product: Sony WH-1000XM5`);
 
   // Re-save seller state with updated JWT
   const stateDir = path.join(AUTH_DIR, 'seller');
