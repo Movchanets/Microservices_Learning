@@ -105,6 +105,10 @@ public static class HealthEndpoints
         {
             return new ServiceHealthStatus("Unhealthy", null, "Request timed out");
         }
+        catch (Exception ex)
+        {
+            return new ServiceHealthStatus("Unhealthy", null, ex.Message);
+        }
     }
 
     private sealed record ServiceHealthStatus(string Status, int? StatusCode, string? Error);
