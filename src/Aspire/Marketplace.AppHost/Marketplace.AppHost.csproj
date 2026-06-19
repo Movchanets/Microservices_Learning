@@ -16,6 +16,9 @@
     <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="13.4.5" />
     <PackageReference Include="Aspire.Hosting.Redis" Version="13.4.5" />
     <PackageReference Include="Scalar.Aspire" Version="0.10.4" />
+    <!-- Explicit: KubernetesClient (via Aspire DCP) needs Fractions at runtime.
+         Without this, the assembly isn't copied to the output on Linux. -->
+    <PackageReference Include="Fractions" Version="7.3.0" />
   </ItemGroup>
 
   <ItemGroup>
