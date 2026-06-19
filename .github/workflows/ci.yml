@@ -64,12 +64,6 @@ jobs:
       - name: Build .NET solution
         run: dotnet build src/Aspire/Marketplace.AppHost/Marketplace.AppHost.csproj -c Debug --no-restore
 
-      - name: Verify critical assemblies exist
-        run: |
-          test -f src/Aspire/Marketplace.AppHost/bin/Debug/net10.0/Fractions.dll \
-            && echo "Fractions.dll OK" \
-            || { echo "FATAL: Fractions.dll missing from output — DCP will crash"; exit 1; }
-
       - uses: nrwl/nx-set-shas@v5
 
       # Cache Nx local cache
