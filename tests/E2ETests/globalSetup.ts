@@ -9,7 +9,7 @@ const BFF_URL = 'http://localhost:4201';
 const FRONTEND_URL = 'http://localhost:4201';
 const PROBE_TIMEOUT_MS = 5_000;
 const APP_HOST_STARTUP_TIMEOUT_MS = 300_000;
-const BACKEND_READINESS_TIMEOUT_MS = 120_000;
+const BACKEND_READINESS_TIMEOUT_MS = 300_000;
 const BACKEND_PROBE_INTERVAL_MS = 3_000;
 
 // Endpoints that must return 2xx before tests can run.
@@ -31,8 +31,14 @@ async function probe(url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean
     // Only 2xx responses mean the service is actually healthy and ready
     // to handle requests. A 502 from the Angular proxy or 503 from the
     // health endpoint means the backend is still warming up.
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      console.warn(`[probe] ${url} → ${resp.status} ${resp.statusText}${body ? ` — ${body.slice(0, 200)}` : ''}`);
+    }
     return resp.ok;
-  } catch {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[probe] ${url} → error: ${msg}`);
     return false;
   }
 }
