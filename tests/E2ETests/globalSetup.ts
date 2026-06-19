@@ -72,7 +72,11 @@ async function globalSetup(config: FullConfig) {
     console.log('[globalSetup] Starting .NET Aspire AppHost...');
     const projectPath = path.resolve(__dirname, '../../src/Aspire/Marketplace.AppHost/Marketplace.AppHost.csproj');
 
-    const child = spawn('dotnet', ['run', '--project', projectPath], {
+    // On CI the AppHost is pre-built by the workflow; skip the implicit
+    // rebuild to avoid .NET 10 package-pruning stripping the transitive
+    // Fractions assembly that KubernetesClient needs at runtime.
+    const runArgs = ['run', ...(process.env.CI ? ['--no-build'] : []), '--project', projectPath];
+    const child = spawn('dotnet', runArgs, {
       env: { ...process.env, ASPNETCORE_ENVIRONMENT: 'Testing' },
       detached: true,
       stdio: 'pipe'
