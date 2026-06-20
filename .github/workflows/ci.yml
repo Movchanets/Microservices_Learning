@@ -95,4 +95,5 @@ jobs:
         env:
           NX_NO_CLOUD: true
           NX_DAEMON: false # Вимикає фоновий процес Nx, який викликає зависання
+          TESTCONTAINERS_RYUK_DISABLED: true # Ryuk can't bind port 8080 on CI runners; safe to disable — runners are ephemeral
         run: pnpm exec nx affected -t test build
