@@ -13,14 +13,17 @@
 
 | Entity | Type | Key Properties |
 |:---|:---|:---|
-| `Product` | Aggregate Root | Name, Description, Brand, **ImageUrl** (cached), Tags, Status (Draft/Active/Inactive/Deleted), CategoryId, StoreId |
-| `Sku` | Child Entity (of Product) | ProductId, SkuCode, Price (Money VO), Status, **ImageUrl** (cached), TypedAttributes (jsonb), FlexibleAttributes (jsonb) |
-| `Category` | Entity | Name, ParentId (tree), AttributeDefinitions |
-| `AttributeDefinition` | Entity | Key, DisplayName, Target (Product/Sku), ValueType, IsFilterable, IsRequired, AllowedValues |
-| `Review` | Aggregate Root | ProductId, UserId, Rating, Title, Body, Photos, SellerResponse |
-| `ReviewVote` | Entity | ReviewId, UserId, IsHelpful |
+| `Product` | Aggregate Root | Name, Description, Brand, **ImageUrl** (cached), Tags, Status (Draft/Active/Inactive/Deleted), CategoryId, StoreId, CreatedAt, UpdatedAt |
+| `Sku` | Child Entity (of Product) | ProductId, SkuCode, Price (Money VO), Status, **ImageUrl** (cached), TypedAttributes (jsonb), FlexibleAttributes (jsonb), CreatedAt, UpdatedAt |
+| `Category` | Entity | Name, Description, Slug, ParentCategoryId (tree), SortOrder, IsActive, AttributeDefinitions |
+| `AttributeDefinition` | Entity | CategoryId, Key, DisplayName, Target (Product/Sku), ValueType, IsFilterable, IsRequired, SortOrder, AllowedValues |
+| `ProductVariantAxis` | Child Entity (of Product) | ProductId, AttributeDefinitionId, SortOrder — declares which attributes form variant axes |
+| `ProductAttributeValue` | Child Entity (of Product) | ProductId, AttributeDefinitionId, Value — product-level attribute values |
+| `SkuAttributeValue` | Child Entity (of Sku) | SkuId, AttributeDefinitionId, Value — SKU-level attribute values |
 
 **ImageUrl caching:** `Product.ImageUrl` and `Sku.ImageUrl` are denormalized caches of the primary gallery image. They're synced by Media integration events (see below). This avoids N+1 calls to Media.API in list views.
+
+**Variant Axes:** Products can declare variant axes (e.g., Color, Storage) via `ProductVariantAxis`. When adding a SKU, the system validates that no existing active SKU has the same combination of variant-axis attributes, preventing duplicate variants.
 
 ## API Endpoints
 
@@ -31,34 +34,25 @@
 | `GET` | `/featured` | `GetFeaturedProductsQuery` | Public |
 | `POST` | `/by-ids` | `GetProductsByIdsQuery` | Public (max 100) |
 | `GET` | `/sku/{sku}` | `GetProductBySkuQuery` | Public |
-| `GET` | `/` | `ListProductsQuery` | Public (paginated) |
+| `GET` | `/` | `ListProductsQuery` | Public (paginated, filterable by categoryId, storeId, search, status) |
 | `GET` | `/{id}` | `GetProductByIdQuery` | Public |
 | `POST` | `/` | `CreateProductCommand` | Authenticated |
 | `PUT` | `/{id}` | `UpdateProductCommand` | Authenticated |
 | `PATCH` | `/{id}/price` | `ChangePriceCommand` | Authenticated |
-| `GET` | `/{id}/recommendations` | `GetProductRecommendationsQuery` | Public |
+| `GET` | `/{id}/variant-matrix` | `GetVariantMatrixQuery` | Public |
 | `PUT` | `/{id}/activate` | `ActivateProductCommand` | Authenticated |
 | `PUT` | `/{id}/deactivate` | `DeactivateProductCommand` | Authenticated |
 | `DELETE` | `/{id}` | `DeleteProductCommand` | Authenticated |
 
-### SKUs (sub-resource of Products)
+### SKUs (sub-resource at `/api/catalog/products/{id}/skus`)
 
 | Method | Path | Handler | Auth |
 |:---|:---|:---|:---:|
-| `GET` | `/skus/{skuId}` | `GetSkuByIdQuery` | Public |
-| `POST` | `/{id}/skus` | `AddSkuCommand` | Authenticated |
-| `DELETE` | `/{id}/skus/{skuId}` | `RemoveSkuCommand` | Authenticated |
-| `PATCH` | `/{id}/skus/{skuId}/price` | `ChangePriceCommand` | Authenticated |
-
-### Reviews (sub-resource of Products)
-
-| Method | Path | Handler | Auth |
-|:---|:---|:---|:---:|
-| `GET` | `/{id}/reviews/summary` | `GetReviewSummaryQuery` | Public |
-| `GET` | `/{id}/reviews` | `GetProductReviewsQuery` | Public (paginated, filterable) |
-| `POST` | `/{id}/reviews` | `CreateReviewCommand` | Authenticated |
-| `POST` | `/reviews/{reviewId}/vote` | `VoteReviewCommand` | Authenticated |
-| `POST` | `/reviews/{reviewId}/response` | `SellerResponseCommand` | Seller |
+| `GET` | `/api/catalog/products/skus/{skuId}` | `GetSkuByIdQuery` | Public |
+| `POST` | `/api/catalog/products/{id}/skus` | `AddSkuCommand` | Authenticated |
+| `POST` | `/api/catalog/products/{id}/skus/bulk` | `BulkAddSkuCommand` | Authenticated |
+| `DELETE` | `/api/catalog/products/{id}/skus/{skuId}` | `RemoveSkuCommand` | Authenticated |
+| `PATCH` | `/api/catalog/products/{id}/skus/{skuId}/price` | `ChangePriceCommand` | Authenticated |
 
 ### Categories (`/api/catalog/categories`)
 
@@ -69,9 +63,9 @@
 | `POST` | `/` | `CreateCategoryCommand` | Authenticated |
 | `PUT` | `/{id}` | `UpdateCategoryCommand` | Authenticated |
 | `DELETE` | `/{id}` | `DeleteCategoryCommand` | Authenticated |
-| `POST` | `/{id}/attributes` | Direct (AddAttributeDefinition) | Authenticated |
-| `GET` | `/{id}/attributes` | Direct (GetAttributeDefinitions) | Public |
-| `DELETE` | `/{id}/attributes/{attrId}` | Direct (RemoveAttributeDefinition) | Authenticated |
+| `POST` | `/{id}/attributes` | `AddAttributeDefinition` (direct) | Authenticated |
+| `GET` | `/{id}/attributes` | `GetAttributeDefinitions` (direct, supports `?includeInherited=true`) | Public |
+| `DELETE` | `/{id}/attributes/{attrId}` | `RemoveAttributeDefinition` (direct) | Authenticated |
 
 ## Integration Events
 
@@ -79,10 +73,11 @@
 
 | Event | Domain Trigger |
 |:---|:---|
-| `ProductCreatedEvent` | Product.Create() |
+| `ProductCreatedEvent` | Product.Create() — includes ProductId, Name, Description, CategoryId, CategoryName, Tags, ImageUrl, StoreId, Brand, Attributes, CreatedAt |
 | `ProductUpdatedEvent` | Product.Update() / Activate() / Deactivate() |
 | `ProductDeletedEvent` | Product.SoftDelete() |
-| `SkuCreatedIntegrationEvent` | Product.AddSku() |
+| `ProductPriceChangedEvent` | Product price change (OldPrice, NewPrice, Currency) |
+| `SkuCreatedIntegrationEvent` | Product.AddSku() — includes ProductId, SkuId, SkuCode, ProductName, StoreId, Price, Currency, TypedAttributes, FlexibleAttributes |
 | `SkuDeletedEvent` | Product.RemoveSku() |
 | `SkuPriceChangedEvent` | Product.ChangeSkuPrice() |
 
@@ -101,5 +96,12 @@ These consumers implement the **hybrid caching pattern**: list views use the cac
 - ✅ SKU refactor complete with all 6 domain events
 - ✅ Media consumers for ImageUrl caching (upload, gallery update, delete)
 - ✅ GetSkuById endpoint for SKU detail pages
-- ✅ Reviews with seller responses and helpful votes
-- ✅ Product recommendations (same category)
+- ✅ Variant matrix endpoint for variant picker UI
+- ✅ Bulk SKU creation for variant combinations
+- ✅ Product variant axes with uniqueness validation
+- ✅ Category attribute definitions with inheritance
+- 🟠 No Review entity implemented (planned, not built)
+
+---
+
+*Last Updated: 2026-06-20*

@@ -6,6 +6,7 @@
 |:---|:---|
 | **Feature Path** | `src/web/src/app/shared/` |
 | **Scope** | Global — used across all features |
+| **Last Updated** | 2026-06-19 |
 
 ## Component Structure
 
@@ -37,6 +38,8 @@ shared/
 │   ├── stock-indicator/
 │   │   ├── stock-indicator.ts   # StockIndicatorComponent — in-stock/low-stock badge
 │   │   └── stock-indicator.spec.ts  # ✅ Tests
+│   ├── image-gallery-uploader/
+│   │   └── image-gallery-uploader.ts # ImageGalleryUploaderComponent — drag-and-drop image upload with preview
 │   └── breadcrumbs/
 │       └── breadcrumbs.ts       # BreadcrumbsComponent — breadcrumb navigation
 └── pages/
@@ -80,6 +83,12 @@ shared/
 ### BreadcrumbsComponent
 - Dynamic breadcrumb trail
 - Likely reads from route data or a breadcrumb service
+
+### ImageGalleryUploaderComponent
+- Reusable drag-and-drop image upload with preview grid
+- Supports uploaded (server-persisted) and pending (local blob) images
+- Primary image selection, file validation (JPEG/PNG/GIF/WebP, max 10MB)
+- Emits `filesSelected`, `removeUploaded`, `removePending`, `setPrimary` outputs
 
 ### NotFoundComponent
 - 404 page for wildcard routes (`**`)

@@ -1,5 +1,7 @@
 # Cart Service
 
+> **Last Updated:** 2026-06-20
+
 ## Overview
 
 | Property | Value |
@@ -7,16 +9,16 @@
 | **Service Type** | Full 4-layer (Domain → Application → Infrastructure → API) |
 | **Database** | PostgreSQL (EF Core) |
 | **Messaging** | RabbitMQ via MassTransit (with EF Outbox) |
-| **Concurrency** | Optimistic (PostgreSQL xmin) |
+| **Concurrency** | Optimistic (PostgreSQL `xmin` system column) |
 | **Project Path** | `src/Microservices/Cart/` |
 
 ## Key Domain Entities
 
 | Entity | Type | Key Properties |
 |:---|:---|:---|
-| `ShoppingCart` | Aggregate Root | BuyerId (nullable for anonymous), Version (xmin), MaxItems=50 |
-| `CartItem` | Child Entity | CartId, **ProductId**, **SkuId**, **SkuCode**, Quantity, Price, StoreId |
-| `ProductPrice` | Entity (read model) | ProductId, **SkuId**, SkuCode, Name, Price, Currency, StoreId |
+| `ShoppingCart` | Aggregate Root | BuyerId (nullable Guid for anonymous), Version (xmin), CreatedAt, UpdatedAt, MaxItems=50 |
+| `CartItem` | Child Entity | CartId, ProductId, SkuId, SkuCode, Quantity, Price, StoreId |
+| `ProductPrice` | Entity (read model) | ProductId, SkuId, SkuCode, Name, Price, Currency, StoreId, UpdatedAt |
 
 ### SKU Refactor Status
 
@@ -30,12 +32,12 @@ Cart is **SKU-aware** as of the refactor:
 
 | Method | Path | Handler | Auth |
 |:---|:---|:---|:---:|
-| `GET` | `/` | `GetCartQuery` | Anonymous (BuyerId or X-Cart-Id) |
+| `GET` | `/` | `GetCartQuery` | Anonymous (BuyerId from JWT or `X-Cart-Id` header) |
 | `DELETE` | `/` | `DeleteCartCommand` | Anonymous |
-| `POST` | `/checkout` | `CheckoutCartCommand` | Authenticated |
-| `POST` | `/items` | `AddCartItemCommand` | Anonymous |
-| `PUT` | `/items/{productId}/{skuId}` | `UpdateCartItemCommand` | Anonymous |
-| `DELETE` | `/items/{productId}/{skuId}` | `RemoveCartItemCommand` | Anonymous |
+| `POST` | `/checkout` | `CheckoutCartCommand` | Authenticated (body: address fields) |
+| `POST` | `/items` | `AddCartItemCommand` | Anonymous (body: `{ productId, skuId, skuCode, quantity }`) |
+| `PUT` | `/items/{productId:guid}/{skuId:guid}` | `UpdateCartItemCommand` | Anonymous (body: `{ quantity }`) |
+| `DELETE` | `/items/{productId:guid}/{skuId:guid}` | `RemoveCartItemCommand` | Anonymous |
 
 **Anonymous cart support:** Uses `X-Cart-Id` header. Carts created anonymously can be claimed by authenticated users on checkout.
 
@@ -43,6 +45,7 @@ Cart is **SKU-aware** as of the refactor:
 
 ```csharp
 record AddCartItemRequest(Guid ProductId, Guid SkuId, string SkuCode, int Quantity);
+record UpdateCartItemRequest(int Quantity);
 record CheckoutRequest(string? AddressLine1, string? AddressLine2, string? City, string? State, string? PostalCode, string? Country);
 ```
 
@@ -67,7 +70,7 @@ record CheckoutRequest(string? AddressLine1, string? AddressLine2, string? City,
 
 - ✅ SKU-aware model with composite (ProductId, SkuId) identity
 - ✅ All SKU-level consumers created (SkuCreated, SkuDeleted, SkuPriceChanged)
+- ✅ ProductDeleted consumer for catalog cleanup
 - ✅ Anonymous cart support with X-Cart-Id header
 - ✅ Optimistic concurrency via PostgreSQL xmin
-- 🟡 `SkuCreatedConsumer` needs verification — may not populate price from event correctly
-- 🟡 Legacy `ProductUpdatedConsumer` removed (was overwriting prices with stale data)
+- ⚠️ `SkuCreatedConsumer` needs verification — may not populate price from event correctly

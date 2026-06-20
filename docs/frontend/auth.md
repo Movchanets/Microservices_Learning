@@ -9,6 +9,7 @@
 | **Profile Store** | `ProfileStore` — `providedIn: 'root'` |
 | **Route Prefix** | `/auth/*`, `/profile` |
 | **Render Mode** | `RenderMode.Prerender` |
+| **Last Updated** | 2026-06-19 |
 
 ## Component Structure
 
@@ -18,12 +19,12 @@ auth/
 │   ├── login.ts               # Login — login form
 │   ├── login.html             # External template
 │   ├── login.css
-│   └── login.spec.ts          # ✅ Tests
+│   └── login.spec.ts          # ✅ 7 tests passing
 ├── register/
 │   ├── register.ts            # Register — registration form
 │   ├── register.html          # External template
 │   ├── register.css
-│   └── register.spec.ts       # ✅ Tests
+│   └── register.spec.ts       # ✅ 7 tests passing
 ├── forgot-password/
 │   ├── forgot-password.ts     # ForgotPassword — password reset request
 │   └── forgot-password.html
@@ -48,6 +49,8 @@ auth/
 | `loading` | `boolean` | Auth operation in progress |
 | `error` | `string \| null` | Auth error message |
 
+**Key methods:** `login(credentials)`, `register(credentials)`, `logout()`, `checkAuth()`
+
 ### ProfileStore (root singleton)
 
 | State Property | Type | Description |
@@ -61,24 +64,26 @@ auth/
 
 ## Key Routes
 
+Routes are defined in `app.routes.ts`. Auth guards are applied at the parent `/profile` route — child routes inherit protection.
+
 | Path | Component | Guard |
 |:---|:---|:---|
 | `/auth/login` | `Login` | None |
 | `/auth/register` | `Register` | None |
 | `/auth/forgot-password` | `ForgotPassword` | None |
 | `/profile` | `ProfileComponent` | `authGuard` |
-| `/profile/orders` | `OrderListComponent` | `authGuard` (via children) |
-| `/profile/settings` | `ProfileSettingsComponent` | `authGuard` (via children) |
+| `/profile/orders` | `OrderListComponent` | Inherited from parent |
+| `/profile/settings` | `ProfileSettingsComponent` | Inherited from parent |
 
-**Note:** `/profile` redirects to `/profile/orders` by default.
+**Note:** `/profile` redirects to `/profile/orders` by default (via `PROFILE_ROUTES`).
 
 ## Test Coverage Status
 
 | Spec File | Tests | Status |
 |:---|:---|:---|
-| `login/login.spec.ts` | ✅ | Passing |
-| `register/register.spec.ts` | ✅ | Passing |
-| `profile/profile.store.ts` | ❌ | **No tests** |
+| `login/login.spec.ts` | 7 | ✅ Passing |
+| `register/register.spec.ts` | 7 | ✅ Passing |
+| `profile/profile.store.ts` | 0 | **No tests** |
 
 **E2E Coverage:** Partially covered — `login.spec.ts` (~2 tests), `profile.spec.ts` (~4 tests). Missing: register flow, token refresh, session expiry, forgot password.
 

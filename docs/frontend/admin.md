@@ -9,6 +9,7 @@
 | **Route Prefix** | `/admin` |
 | **Guard** | `authGuard` + `roleGuard('Admin')` |
 | **Render Mode** | `RenderMode.Server` (SSR) |
+| **Last Updated** | 2026-06-19 |
 
 ## Component Structure
 
@@ -28,8 +29,10 @@ admin/
 ├── store-detail/
 │   └── store-detail.ts         # StoreDetailComponent — single store view + actions
 └── components/
-    └── stats-card/
-        └── stats-card.ts       # StatsCardComponent — metric display card
+    ├── stats-card/
+    │   └── stats-card.ts           # StatsCardComponent — metric display card
+    └── category-attributes/
+        └── category-attributes.ts  # CategoryAttributesComponent — CRUD for category attribute definitions
 ```
 
 ## SignalStore State Management
@@ -59,6 +62,7 @@ admin/
 | `/admin/verifications` | `StoreVerificationComponent` | (inherited) |
 | `/admin/stores` | `StoreVerificationComponent` | (inherited) — **same component as verifications** |
 | `/admin/stores/:id` | `StoreDetailComponent` | (inherited) |
+| `/admin/attributes` | `CategoryAttributesComponent` | (inherited) |
 
 ## Test Coverage Status
 
@@ -66,7 +70,7 @@ admin/
 |:---|:---|:---|
 | All admin specs | ❌ | **0 unit tests** |
 
-**E2E Coverage:** Partially covered — `admin-panel.spec.ts` (~6 tests). Only panel display. Missing: store approval/rejection, user role change, user deactivation, refund flow.
+**E2E Coverage:** Partially covered — `admin-panel.spec.ts` (5 tests). Only panel display. Missing: store approval/rejection, user role change, user deactivation, refund flow.
 
 ## Known Gaps / Issues
 

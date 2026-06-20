@@ -9,13 +9,15 @@
 | **Route Prefix** | `/checkout` |
 | **Guard** | `authGuard` |
 | **Render Mode** | `RenderMode.Server` (SSR) |
+| **Last Updated** | 2026-06-19 |
 
 ## Component Structure
 
 ```
 checkout/
 ├── checkout.store.ts              # CheckoutStore (root singleton)
-├── checkout.models.ts             # Order, Address, OrderStatus types
+├── checkout.store.spec.ts         # ✅ Tests
+├── checkout.models.ts             # Order, Address, OrderItem, OrderStatus, PaymentStatus
 ├── checkout.routes.ts             # Default export routes
 ├── checkout-page/
 │   ├── checkout-page.ts           # CheckoutPageComponent — main checkout flow
@@ -31,6 +33,16 @@ checkout/
     ├── address-form.html
     └── address-form.css
 ```
+
+## Models (`checkout.models.ts`)
+
+| Type | Fields | Description |
+|:---|:---|:---|
+| `OrderStatus` | `'Submitted' \| 'InventoryReserved' \| 'PaymentProcessing' \| 'Completed' \| 'Cancelled' \| 'Faulted' \| 'Processing' \| 'Shipped' \| 'Delivered'` | Union type for order lifecycle |
+| `OrderItem` | `id`, `sku`, `productName`, `unitPrice`, `quantity`, `totalPrice` | Single line item in an order |
+| `Address` | `addressLine1`, `addressLine2?`, `city`, `state`, `postalCode`, `country` | Shipping address |
+| `Order` | `id`, `buyerId`, `status: OrderStatus`, `totalAmount`, `createdAt`, `completedAt \| null`, `items: OrderItem[]` | Full order object |
+| `PaymentStatus` | `id`, `orderId`, `amount`, `status`, `transactionId \| null`, `failureReason \| null`, `createdAt`, `processedAt \| null` | Payment transaction status |
 
 ## SignalStore State Management
 
@@ -48,7 +60,18 @@ checkout/
 
 **Computed signals:** `hasOrder`, `orderStatus`
 
-**Key methods:** `setAddress(address)`, `setShippingMethod(method)`, `submitCheckout()`, `setOrder(order)`, `setPollingExpired(expired)`, `markTerminalFailure(reason)`, `retryCheckout()`, `reset()`
+**Key methods:**
+
+| Method | Signature | Description |
+|:---|:---|:---|
+| `setAddress()` | `(address: Address) => void` | Store shipping address |
+| `setShippingMethod()` | `(method: 'standard' \| 'express') => void` | Set shipping method |
+| `submitCheckout()` | `async () => Promise<void>` | Validate, call CartStore.checkout(), set optimistic order |
+| `setOrder()` | `(order: Order) => void` | Update order (from SignalR/polling) |
+| `setPollingExpired()` | `(expired: boolean) => void` | Mark polling timeout |
+| `markTerminalFailure()` | `(reason: string \| null) => void` | Handle terminal failure (Cancelled/Faulted) |
+| `retryCheckout()` | `() => void` | Reset for retry |
+| `reset()` | `() => void` | Full state reset |
 
 ## Checkout Flow
 
@@ -59,10 +82,11 @@ checkout/
    - Calls `CartStore.checkout(address)` → POST `/api/cart/checkout`
    - Backend publishes `OrderSubmittedEvent` → saga orchestrator
    - Sets optimistic order with `status: 'Submitted'`
-4. `CheckoutStatusComponent` polls or receives SignalR updates
+4. `CheckoutPageComponent` starts status polling (2s interval, 60s max)
+   - Also listens for SignalR `orderUpdates` for instant transitions
    - On terminal failure: `markTerminalFailure(reason)` → show retry
    - On polling timeout: `setPollingExpired(true)` → show retry
-5. On success: redirects to order detail page
+5. On success: "View Orders" link shown
 
 ## Key Routes
 
@@ -82,7 +106,7 @@ checkout/
 ## Known Gaps / Issues
 
 - **No dedicated payment component:** Payment processing happens server-side via saga. Frontend only shows status — no Stripe/payment form integration visible.
-- **`checkout-status` component:** Appears to handle polling but the polling logic is not in the store — likely lives in the component itself.
+- **Polling lives in component:** `CheckoutPageComponent` owns the polling logic (not the store) — `startStatusPolling()`, `stopPolling()`, `restartPollingWithId()`.
 - **Optimistic order lacks items:** The optimistic `Order` object has `items: []` — real items arrive via SignalR/polling update.
 - **No address validation:** `AddressFormComponent` uses reactive forms but no server-side address validation.
 - **Shipping method:** Only `standard`/`express` toggle — no carrier selection, delivery date estimation, or shipping cost calculation on frontend.

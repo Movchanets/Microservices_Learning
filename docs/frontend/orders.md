@@ -7,15 +7,16 @@
 | **Feature Path** | `src/web/src/app/features/orders/` |
 | **Store Scope** | `OrderStore` — `providedIn: 'root'` (singleton) |
 | **Route Prefix** | `/orders` |
-| **Guard** | `authGuard` |
+| **Guard** | `authGuard` (on parent route in `app.routes.ts`) |
 | **Render Mode** | `RenderMode.Server` (SSR) |
+| **Last Updated** | 2026-06-19 |
 
 ## Component Structure
 
 ```
 orders/
 ├── order.store.ts                # OrderStore (root singleton)
-├── order.service.ts              # HTTP service → BFF /api/orders
+├── order.service.ts              # HTTP service → BFF /bff/orders + /api/orders
 ├── order.service.spec.ts         # ✅ Tests
 ├── orders.routes.ts              # Default export routes
 ├── order-list/
@@ -31,6 +32,47 @@ orders/
     └── status-badge/
         ├── status-badge.ts       # StatusBadgeComponent — colored status chip
         └── status-badge.spec.ts  # ✅ Tests
+```
+
+## Models
+
+Defined in `checkout/checkout.models.ts` (shared with checkout feature):
+
+```typescript
+type OrderStatus =
+  | 'Submitted' | 'InventoryReserved' | 'PaymentProcessing'
+  | 'Completed' | 'Cancelled' | 'Faulted'
+  | 'Processing' | 'Shipped' | 'Delivered';
+
+interface Order {
+  id: string;
+  buyerId: string;
+  status: OrderStatus;
+  totalAmount: number;
+  createdAt: string;
+  completedAt: string | null;
+  items: OrderItem[];
+}
+
+interface OrderItem {
+  id: string;
+  sku: string;
+  productName: string;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+}
+
+interface PaymentStatus {
+  id: string;
+  orderId: string;
+  amount: number;
+  status: 'Pending' | 'Completed' | 'Failed' | 'Refunded';
+  transactionId: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  processedAt: string | null;
+}
 ```
 
 ## SignalStore State Management
@@ -54,6 +96,7 @@ orders/
 Submitted → InventoryReserved → PaymentProcessing → Completed
                                                   → Cancelled
                                                   → Faulted
+                                                  → Processing → Shipped → Delivered
 ```
 
 `updateOrderStatus()` is called by `NotificationService` (SignalR) when real-time status updates arrive. It guards against no-op updates to avoid unnecessary signal re-fires.
@@ -62,10 +105,20 @@ Submitted → InventoryReserved → PaymentProcessing → Completed
 
 | Path | Component | Guard |
 |:---|:---|:---|
-| `/orders` | `OrderListComponent` | `authGuard` |
-| `/orders/:id` | `OrderDetailComponent` | `authGuard` |
+| `/orders` | `OrderListComponent` | `authGuard` (parent) |
+| `/orders/:id` | `OrderDetailComponent` | `authGuard` (parent) |
 
 > **Note:** `OrderListComponent` is also reused in `/profile/orders` via `ProfileRoutes`.
+
+## Service Endpoints
+
+| Method | Endpoint | Purpose |
+|:---|:---|:---|
+| `GET` | `/bff/orders/{orderId}` | Get single order (returns `null` on 404) |
+| `GET` | `/bff/orders/buyer/{buyerId}` | Get all orders for buyer |
+| `GET` | `/api/payments/order/{orderId}` | Get payment status |
+| `POST` | `/api/orders/{orderId}/cancel` | Cancel order with optional reason |
+| `PUT` | `/api/orders/{orderId}/status` | Update order status (admin/seller) |
 
 ## Test Coverage Status
 
