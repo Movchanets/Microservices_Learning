@@ -1,8 +1,7 @@
 # Test Coverage Summary
 
 **Project:** Marketplace Microservices
-**Last Updated:** 2026-05-26
-**Source of Truth:** [feature-coverage-audit.md](../../feature-coverage-audit.md) · [test_plans/coverage.md](../../test_plans/coverage.md)
+**Last Updated:** 2026-06-19
 
 ---
 
@@ -14,29 +13,29 @@
 | Backend Integration | 13 | 51 | ⚠️ Needs work |
 | Backend Contract | 11 | 51 | ✅ Good |
 | Frontend Unit (Vitest) | 36 | 337 | ✅ Good |
-| E2E (Playwright) | 13 | ~55 | ⚠️ Critical gap |
-| **Total** | **130** | **~733** | |
+| E2E (Playwright) | 17 | ~63 | ⚠️ Critical gap |
+| **Total** | **134** | **~741** | |
 
 ---
 
 ## Per-Feature Coverage Matrix
 
-| Feature | Unit | Integration | Contract | E2E | Overall | Detail |
-|---------|------|-------------|----------|-----|---------|--------|
-| Identity | ✅ 40 | ⚠️ 10 | ⚠️ 5 | ⚠️ 6 | **Partial** | [identity.md](../../test_plans/identity.md) |
-| Catalog | ✅ 45 | ⚠️ 15 | ✅ 15 | ⚠️ 10 | **Partial** | [catalog.md](../../test_plans/catalog.md) |
-| Cart | ✅ 35 | ⚠️ 10 | ✅ 5 | ❌ 0 | **Gap** | [cart.md](../../test_plans/cart.md) |
-| Search | ✅ 12 | ⚠️ 8 | ✅ 5 | ❌ 0 | **Gap** | [search.md](../../test_plans/search.md) |
-| Ordering | ✅ 35 | ⚠️ 8 | ✅ 5 | ⚠️ 3 | **Partial** | [ordering.md](../../test_plans/ordering.md) |
-| Payment | ✅ 25 | ❌ 0 | ✅ 5 | ❌ 0 | **Gap** | [payment.md](../../test_plans/payment.md) |
-| Inventory | ✅ 18 | ⚠️ 10 | ✅ 5 | ❌ 0 | **Gap** | [inventory.md](../../test_plans/inventory.md) |
-| Notification | ✅ 15 | ❌ 0 | ⚠️ 5 | ❌ 0 | **Gap** | [notification.md](../../test_plans/notification.md) |
-| StoreManagement | ✅ 25 | ❌ 0 | ❌ 0 | ⚠️ 4 | **Gap** | [store-management.md](../../test_plans/store-management.md) |
-| Admin | ❌ 0 | ❌ 0 | ❌ 0 | ⚠️ 6 | **Gap** | [admin.md](../../test_plans/admin.md) |
-| Checkout | ❌ 0 | ❌ 0 | ❌ 0 | ⚠️ 2 | **Critical** | [checkout.md](../../test_plans/checkout.md) |
-| Home/Shared | ✅ 25 | — | — | ⚠️ 13 | **Partial** | [home-and-shared.md](../../test_plans/home-and-shared.md) |
-| BuildingBlocks | ✅ 4 | — | — | — | **OK** | Embedded in unit tests |
-| ApiGateway | ✅ 3 | ⚠️ 2 | — | — | **Partial** | Middleware tests |
+| Feature | Unit | Integration | Contract | E2E | Overall |
+|---------|------|-------------|----------|-----|---------|
+| Identity | ✅ 40 | ⚠️ 10 | ⚠️ 5 | ⚠️ 6 | **Partial** |
+| Catalog | ✅ 45 | ⚠️ 15 | ✅ 15 | ⚠️ 10 | **Partial** |
+| Cart | ✅ 35 | ⚠️ 10 | ✅ 5 | ❌ 0 | **Gap** |
+| Search | ✅ 12 | ⚠️ 8 | ✅ 5 | ❌ 0 | **Gap** |
+| Ordering | ✅ 35 | ⚠️ 8 | ✅ 5 | ⚠️ 3 | **Partial** |
+| Payment | ✅ 25 | ❌ 0 | ✅ 5 | ❌ 0 | **Gap** |
+| Inventory | ✅ 18 | ⚠️ 10 | ✅ 5 | ❌ 0 | **Gap** |
+| Notification | ✅ 15 | ❌ 0 | ⚠️ 5 | ❌ 0 | **Gap** |
+| StoreManagement | ✅ 25 | ❌ 0 | ❌ 0 | ⚠️ 4 | **Gap** |
+| Admin | ❌ 0 | ❌ 0 | ❌ 0 | ⚠️ 6 | **Gap** |
+| Checkout | ❌ 0 | ❌ 0 | ❌ 0 | ⚠️ 2 | **Critical** |
+| Home/Shared | ✅ 25 | — | — | ⚠️ 13 | **Partial** |
+| BuildingBlocks | ✅ 4 | — | — | — | **OK** |
+| ApiGateway | ✅ 3 | ⚠️ 2 | — | — | **Partial** |
 
 ---
 
@@ -56,8 +55,8 @@
 
 | Metric | Before Cleanup | After Cleanup | Delta |
 |--------|---------------|---------------|-------|
-| E2E Test Files | 31 | 13 | -18 |
-| E2E Test Cases | ~131 | ~55 | -76 |
+| E2E Test Files | 31 | 17 | -14 |
+| E2E Test Cases | ~131 | ~63 | -68 |
 | Features Partially Covered | 9 | 5 | -4 |
 | Features Not Covered | 1 | 5 | +4 |
 
@@ -86,4 +85,4 @@
 
 ---
 
-*Generated from `feature-coverage-audit.md` and `test_plans/` data.*
+*This document summarizes test coverage across the Marketplace Microservices project.*

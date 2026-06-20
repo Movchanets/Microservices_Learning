@@ -1,14 +1,14 @@
 # Test Strategy
 
 **Project:** Marketplace Microservices
-**Last Updated:** 2026-05-26
+**Last Updated:** 2026-06-19
 
 ---
 
 ## Testing Pyramid
 
 ```
-        ╱  E2E  ╲          ~55 tests (Playwright)
+        ╱  E2E  ╲          ~63 tests (Playwright)
        ╱─────────╲         Smoke + critical paths
       ╱ Contract   ╲        51 tests (xUnit)
      ╱───────────────╲      API contract validation
@@ -24,8 +24,8 @@
 | Backend Integration | 51 | xUnit, Testcontainers | CI/local | ~60s |
 | Backend Contract | 51 | xUnit | CI/local | <15s |
 | Frontend Unit | 337 | Vitest, Angular TestBed | CI/local | <30s |
-| E2E | ~55 | Playwright | CI (staging) | ~120s |
-| **Total** | **~733** | | | |
+| E2E | ~63 | Playwright | CI (staging) | ~120s |
+| **Total** | **~741** | | | |
 
 ---
 
@@ -201,8 +201,6 @@ tests/E2ETests/tests/
 | Backend Integration Tests | [backend-integration-tests.md](backend-integration-tests.md) |
 | Frontend Tests | [frontend-tests.md](frontend-tests.md) |
 | E2E Tests | [e2e-tests.md](e2e-tests.md) |
-| Feature Coverage Audit | [../../feature-coverage-audit.md](../../feature-coverage-audit.md) |
-| Test Plans Index | [../../test_plans/INDEX.md](../../test_plans/INDEX.md) |
 
 ---
 

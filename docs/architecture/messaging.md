@@ -1,7 +1,6 @@
 # Messaging & Integration Events
 
-> **Last Updated:** 2026-05-26
-> **Sources:** `DDD_EventAlignment_Audit.md`, `plans/05-messaging-sagas.md`
+> **Last Updated:** 2026-06-19
 
 ---
 

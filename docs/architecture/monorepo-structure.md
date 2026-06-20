@@ -1,7 +1,6 @@
 # Monorepo Structure & Conventions
 
-> **Last Updated:** 2026-05-26
-> **Source:** `plans/04-monorepo-structure.md`
+> **Last Updated:** 2026-06-19
 
 ---
 
@@ -9,15 +8,11 @@
 
 ```
 d:\code\Microservices\
-├── plans/                            # Architecture documentation
-│   ├── product-sku-refactor/         # SKU refactor task plan & phases
-│   ├── next_steps/                   # Future feature plans
-│   ├── future_design/                # UI/UX design plans
-│   └── *.md                          # Numbered plan docs (01-13)
-│
 ├── docs/                             # Living documentation
 │   ├── architecture/                 # System architecture docs
-│   └── status/                       # Project status tracking
+│   ├── backend/                      # Per-service docs
+│   ├── frontend/                     # Angular SPA docs
+│   └── testing/                      # Test strategy & coverage
 │
 ├── src/
 │   ├── Aspire/
@@ -59,7 +54,7 @@ d:\code\Microservices\
 │   │       ├── Database/             # DomainEventsDbContext, interceptors
 │   │       └── Messaging/            # MassTransit base configurations
 │   │
-│   └── web/                          # Angular 19+ SPA
+│   └── web/                          # Angular 21 SPA
 │       └── src/app/
 │           ├── features/             # Feature modules (catalog, cart, seller-dashboard)
 │           ├── shared/               # Shared components, services, guards

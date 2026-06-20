@@ -1,7 +1,6 @@
 # C4 Architecture Diagrams
 
-> **Last Updated:** 2026-05-26
-> **Source:** `plans/12-c4-diagrams.md`
+> **Last Updated:** 2026-06-19
 
 This document contains standard C4 architecture diagrams for the Enterprise Marketplace Platform rendered as Mermaid diagrams.
 

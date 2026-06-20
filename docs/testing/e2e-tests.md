@@ -2,8 +2,8 @@
 
 **Project:** Marketplace Microservices
 **Framework:** Playwright (TypeScript)
-**Last Updated:** 2026-05-26
-**Total:** 13 spec files, ~55 tests
+**Last Updated:** 2026-06-19
+**Total:** 17 spec files, ~63 tests
 **Config:** `tests/E2ETests/playwright.config.ts`
 **Base URL:** `http://localhost:4201` (default)
 
@@ -164,7 +164,7 @@
 
 ## Deleted E2E Tests (21 files, ~94 tests)
 
-These were removed during flaky test cleanup. See [coverage.md](../../test_plans/coverage.md) for root causes.
+These were removed during flaky test cleanup.
 
 | Deleted File | Tests | Feature | Reason |
 |-------------|-------|---------|--------|
