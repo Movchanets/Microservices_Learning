@@ -44,7 +44,7 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
             b.Property(x => x.ProductId).IsRequired();
             b.Property(x => x.Price).HasPrecision(18, 2);
             b.Property(x => x.StoreId).IsRequired();
-            b.HasIndex(x => new { x.CartId, x.ProductId }).IsUnique();
+            b.HasIndex(x => new { x.CartId, x.ProductId, x.SkuId }).IsUnique();
         });
 
         builder.ApplyConfigurationsFromAssembly(typeof(CartDbContext).Assembly);

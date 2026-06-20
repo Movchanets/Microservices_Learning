@@ -25,6 +25,7 @@ namespace Cart.Infrastructure.Migrations
             modelBuilder.Entity("Cart.Domain.Aggregates.CartItem", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("CartId")
@@ -52,7 +53,7 @@ namespace Cart.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CartId", "ProductId")
+                    b.HasIndex("CartId", "ProductId", "SkuId")
                         .IsUnique();
 
                     b.ToTable("CartItems");
@@ -61,6 +62,7 @@ namespace Cart.Infrastructure.Migrations
             modelBuilder.Entity("Cart.Domain.Aggregates.ShoppingCart", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("BuyerId")
