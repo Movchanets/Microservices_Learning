@@ -1,26 +1,18 @@
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Logging;
 using Search.API.Models;
 using Search.API.Services;
+using Testcontainers.Elasticsearch;
 
 namespace Search.IntegrationTests;
 
 public sealed class SearchDatabaseFixture : IAsyncLifetime
 {
-    private readonly IContainer _container = new ContainerBuilder()
-        .WithImage("docker.elastic.co/elasticsearch/elasticsearch:9.0.0")
+    private readonly ElasticsearchContainer _container = new ElasticsearchBuilder("docker.elastic.co/elasticsearch/elasticsearch:9.0.0")
         .WithEnvironment("discovery.type", "single-node")
         .WithEnvironment("xpack.security.enabled", "false")
         .WithEnvironment("xpack.security.enrollment.enabled", "false")
         .WithEnvironment("ES_JAVA_OPTS", "-Xms256m -Xmx256m")
-        .WithPortBinding(9200, true)
-        .WithWaitStrategy(Wait.ForUnixContainer()
-            .UntilHttpRequestIsSucceeded(request => request
-                .ForPath("/_cluster/health")
-                .ForPort(9200)
-                .ForStatusCode(System.Net.HttpStatusCode.OK)))
         .Build();
 
     public ElasticsearchClient Client { get; private set; } = null!;
@@ -30,8 +22,7 @@ public sealed class SearchDatabaseFixture : IAsyncLifetime
     {
         await _container.StartAsync();
 
-        var port = _container.GetMappedPublicPort(9200);
-        var uri = new Uri($"http://localhost:{port}");
+        var uri = new Uri(_container.GetConnectionString());
 
         var settings = new ElasticsearchClientSettings(uri)
             .DefaultIndex("marketplace-products")
