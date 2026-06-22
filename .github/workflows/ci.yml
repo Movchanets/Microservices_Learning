@@ -77,10 +77,10 @@ jobs:
             nx-cache-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-
             nx-cache-${{ runner.os }}-
 
-      # Pre-pull Docker images that Aspire AppHost needs for E2E tests.
+      # Pre-pull Docker images that integration and E2E tests need.
       # Without this, cold CI runs spend 5+ min pulling postgres, redis,
-      # rabbitmq, elasticsearch, and azurite — exceeding the health-check timeout.
-      - name: Pre-pull Aspire Docker images
+      # rabbitmq, elasticsearch, and azurite — exceeding health-check timeouts.
+      - name: Pre-pull Docker images
         run: |
           docker pull postgres:latest &
           docker pull redis:latest &
@@ -90,10 +90,20 @@ jobs:
           wait
           echo "All images pulled."
 
-      # Run affected targets with local cache only and without daemon
-      - name: Run affected targets
+      # Run unit + integration tests first (excludes E2E to avoid Docker port conflicts
+      # with Testcontainers — the E2E globalSetup starts the AppHost which also spawns
+      # Elasticsearch, Postgres, Redis, etc.)
+      - name: Run unit & integration tests
         env:
           NX_NO_CLOUD: true
-          NX_DAEMON: false # Вимикає фоновий процес Nx, який викликає зависання
-          TESTCONTAINERS_RYUK_DISABLED: true # Ryuk can't bind port 8080 on CI runners; safe to disable — runners are ephemeral
-        run: pnpm exec nx affected -t test build
+          NX_DAEMON: false
+          TESTCONTAINERS_RYUK_DISABLED: true
+        run: pnpm exec nx affected -t test build --exclude=e2e-tests
+
+      # E2E tests run last — they start the full AppHost and must not conflict
+      # with Testcontainers used by integration tests above.
+      - name: Run E2E tests
+        env:
+          NX_NO_CLOUD: true
+          NX_DAEMON: false
+        run: pnpm exec nx run e2e-tests:test

@@ -53,8 +53,8 @@ var messaging = builder.AddRabbitMQ("messaging");
 if (!isTesting) messaging.WithManagementPlugin();
 
 var elasticsearch = builder.AddElasticsearch("elasticsearch")
-    .WithImage("elasticsearch")
-    .WithImageTag("8.17.0")
+    .WithImage("docker.elastic.co/elasticsearch/elasticsearch")
+    .WithImageTag("9.0.0")
     .WithEnvironment("ES_JAVA_OPTS", "-Xms512m -Xmx512m");
 
 var storage = builder.AddAzureStorage("storage").RunAsEmulator();
