@@ -1,100 +1,267 @@
-import { chromium, type Browser } from 'playwright';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { program } from 'commander';
-import { RozetkaCategoryPage, type ProductTile } from '../pages/rozetka-category.page';
-import { RozetkaProductPage } from '../pages/rozetka-product.page';
-import { ImageDownloader } from '../utils/image-downloader';
-import { toSeederProduct, generateSku, slugify, parsePrice, type SeederProduct, type CategoryConfig } from '../utils/rozetka-transformer';
+import { type Browser } from "playwright";
+import * as fs from "fs/promises";
+import * as path from "path";
+import * as crypto from "crypto";
+import { program } from "commander";
+import {
+  RozetkaCategoryPage,
+  type ProductTile,
+} from "../pages/rozetka-category.page";
+import { RozetkaProductPage, type ProductSpecification } from "../pages/rozetka-product.page";
+import { ImageDownloader } from "../utils/image-downloader";
+import {
+  generateSku,
+  slugify,
+  mapFilterNameToKey,
+  inferAttributeType,
+  normalizeColor,
+  normalizeNumber,
+  normalizeList,
+  type CategoryConfig,
+} from "../utils/rozetka-transformer";
+import { createScraperContext, launchScraper } from "../fixtures/scraper.fixture";
 
-const CATEGORIES: Record<string, { name: string; url: string } & CategoryConfig> = {
-  laptops: { name: 'Laptops', url: 'https://rozetka.com.ua/ua/notebooks/c80004/', storeName: 'Tech Store', categoryName: 'Electronics', tags: ['laptop', 'notebook', 'computer'] },
-  phones: { name: 'Smartphones', url: 'https://rozetka.com.ua/ua/mobile-phones/c80259/', storeName: 'Tech Store', categoryName: 'Electronics', tags: ['smartphone', 'phone', 'mobile'] },
-  tablets: { name: 'Tablets', url: 'https://rozetka.com.ua/ua/tablets/c130309/', storeName: 'Tech Store', categoryName: 'Electronics', tags: ['tablet', 'ipad'] },
-  headphones: { name: 'Headphones', url: 'https://rozetka.com.ua/ua/headphones/c80027/', storeName: 'Tech Store', categoryName: 'Electronics', tags: ['headphones', 'audio', 'wireless'] },
+// ── Target Data Contracts ──────────────────────────────────────
+
+export interface Category {
+  id: string;
+  parentId: string | null;
+  name: string;
+  url: string;
+}
+
+export interface AttributeDefinition {
+  categoryId: string;
+  name: string;
+  possibleValues: string[];
+  isVariantAxis: boolean;
+}
+
+export interface BaseProduct {
+  externalId: string;
+  categoryId: string;
+  title: string;
+  description: string;
+  brand: string;
+  storeName: string;
+  currency: string;
+}
+
+export interface ProductVariant {
+  productExternalId: string;
+  sku: string;
+  price: number;
+  currency: string;
+  inStock: boolean;
+  images: string[];
+  attributes: Record<string, string>;
+}
+
+export interface CatalogData {
+  categories: Category[];
+  attributeDefinitions: AttributeDefinition[];
+  baseProducts: BaseProduct[];
+  productVariants: ProductVariant[];
+}
+
+// ── Category Configs ───────────────────────────────────────────
+
+const CATEGORIES: Record<
+  string,
+  { name: string; url: string } & CategoryConfig
+> = {
+  laptops: {
+    name: "Laptops",
+    url: "https://rozetka.com.ua/ua/notebooks/c80004/",
+    storeName: "Tech Store",
+    categoryName: "Electronics",
+    tags: ["laptop", "notebook", "computer"],
+  },
+  phones: {
+    name: "Smartphones",
+    url: "https://rozetka.com.ua/ua/mobile-phones/c80003/",
+    storeName: "Tech Store",
+    categoryName: "Electronics",
+    tags: ["smartphone", "phone", "mobile"],
+  },
+  tablets: {
+    name: "Tablets",
+    url: "https://rozetka.com.ua/ua/tablets/c130309/",
+    storeName: "Tech Store",
+    categoryName: "Electronics",
+    tags: ["tablet", "ipad"],
+  },
+  headphones: {
+    name: "Headphones",
+    url: "https://rozetka.com.ua/ua/headphones/c80027/",
+    storeName: "Tech Store",
+    categoryName: "Electronics",
+    tags: ["headphones", "audio", "wireless"],
+  },
+  books: {
+    name: "Books",
+    url: "https://rozetka.com.ua/ua/hudojestvennaya-literatura/c4326593/",
+    storeName: "Book Store",
+    categoryName: "Books",
+    tags: ["books", "fiction", "literature"],
+  },
 };
 
-const PROJECT_ROOT = path.resolve(import.meta.dirname, '../../../..');
-const DATA_DIR = path.join(PROJECT_ROOT, 'src/Tools/Seeder.App/Data');
-const IMAGES_DIR = path.join(DATA_DIR, 'Images');
-const PRODUCTS_JSON = path.join(DATA_DIR, 'products.json');
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36';
+// ── Constants ──────────────────────────────────────────────────
 
-function log(msg: string, lvl: 'info'|'warn'|'error' = 'info') {
-  const icon = lvl === 'error' ? '❌' : lvl === 'warn' ? '⚠️' : 'ℹ️';
+const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../../..");
+const DATA_DIR = path.join(PROJECT_ROOT, "src/Tools/Seeder.App/Data");
+const IMAGES_DIR = path.join(DATA_DIR, "Images");
+const CATALOG_JSON = path.join(DATA_DIR, "catalog.json");
+
+// ── Logging ────────────────────────────────────────────────────
+
+function log(msg: string, lvl: "info" | "warn" | "error" = "info") {
+  const icon = lvl === "error" ? "❌" : lvl === "warn" ? "⚠️" : "ℹ️";
   console.log(`${icon} [${new Date().toISOString()}] ${msg}`);
 }
-function delay(min = 2000, max = 4000) { return new Promise(r => setTimeout(r, Math.floor(Math.random()*(max-min+1))+min)); }
+
+function delay(min = 2000, max = 4000) {
+  return new Promise((r) =>
+    setTimeout(r, Math.floor(Math.random() * (max - min + 1)) + min),
+  );
+}
+
+function buildImageFolderName(name: string, skuCode: string): string {
+  // Clean generic prefix
+  let clean = name.replace(/^(Мобільний телефон|Ноутбук|Планшет|Навушники|Камера|Колонка)\s+/i, '');
+  // Remove parentheses (like model codes)
+  clean = clean.replace(/\([^)]*\)/g, '');
+  
+  // Clean up extra spaces
+  clean = clean.trim();
+
+  // Slugify the cleaned product/variant name
+  const nameSlug = slugify(clean);
+  
+  // Normalize the SKU to be safe for filenames
+  const safeSku = skuCode.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
+
+  // Combine them
+  const combined = `${nameSlug}-${safeSku}`;
+  
+  return combined.substring(0, 95);
+}
+
+// ── Scraper Class ──────────────────────────────────────────────
 
 class RozetkaScraper {
   private browser: Browser | null = null;
   private imgDownloader: ImageDownloader;
-  private existing: SeederProduct[] = [];
+  
+  private categories = new Map<string, Category>();
+  private attributeDefinitions = new Map<string, AttributeDefinition>();
+  private baseProducts = new Map<string, BaseProduct>();
+  private productVariants = new Map<string, ProductVariant>();
+  
   private existingSkus = new Set<string>();
 
-  constructor() { this.imgDownloader = new ImageDownloader(IMAGES_DIR); }
+  constructor() {
+    this.imgDownloader = new ImageDownloader(IMAGES_DIR);
+  }
 
   async init() {
-    log('Initializing...');
+    log("Initializing...");
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.mkdir(IMAGES_DIR, { recursive: true });
-    try { this.existing = JSON.parse(await fs.readFile(PRODUCTS_JSON, 'utf-8')); this.existingSkus = new Set(this.existing.map(p => p.Sku)); log(`Loaded ${this.existing.length} existing`); } catch { this.existing = []; this.existingSkus = new Set(); }
-    this.browser = await chromium.launch({ headless: true, args: ['--disable-blink-features=AutomationControlled'] });
-    log('Browser ready');
+    try {
+      const data: CatalogData = JSON.parse(await fs.readFile(CATALOG_JSON, "utf-8"));
+      
+      data.categories.forEach(c => this.categories.set(c.id, c));
+      data.attributeDefinitions.forEach(a => this.attributeDefinitions.set(`${a.categoryId}_${a.name}`, a));
+      data.baseProducts.forEach(p => this.baseProducts.set(p.externalId, p));
+      data.productVariants.forEach(v => {
+        this.productVariants.set(v.sku, v);
+        this.existingSkus.add(v.sku);
+      });
+      
+      log(`Loaded ${this.baseProducts.size} existing products and ${this.productVariants.size} variants`);
+    } catch {
+      // File doesn't exist or is invalid
+    }
+    const scraper = await launchScraper();
+    this.browser = scraper.browser;
+    log("Browser ready");
   }
 
   private async newCtx() {
-    const ctx = await this.browser!.newContext({ userAgent: UA, viewport: { width: 1920, height: 1080 }, locale: 'uk-UA', timezoneId: 'Europe/Kiev', extraHTTPHeaders: { 'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.7' } });
-    await ctx.addInitScript(() => { Object.defineProperty(navigator, 'webdriver', { get: () => false }); });
-    return ctx;
+    return createScraperContext(this.browser!);
   }
 
-  /** PHASE 1: Collect product URLs from category listing */
-  private async collectUrls(limit: number, catUrl: string): Promise<ProductTile[]> {
-    log('Phase 1: Collecting URLs...');
+  // ── Phase 1: Collect product URLs from category listing ──────
+
+  private async collectUrls(
+    limit: number,
+    catUrl: string,
+    categoryKey: string,
+    updateMode: boolean,
+  ): Promise<{ tiles: ProductTile[]; categoryFilters: string[]; dynamicCategoryName: string }> {
+    log("Phase 1: Collecting URLs...");
     const ctx = await this.newCtx();
     const page = await ctx.newPage();
     const catPage = new RozetkaCategoryPage(page);
     try {
-      await catPage.goto(catUrl);
+      await catPage.goto(catUrl, categoryKey);
       await delay(1500, 2500);
+
+      const categoryFilters = await catPage.extractSidebarFilters();
+      log(`  Extracted ${categoryFilters.length} category filters.`);
+
+      const dynamicCategoryName = await catPage.extractCategoryName();
+
       const tiles: ProductTile[] = [];
       let pg = 1;
       while (tiles.length < limit && pg <= 5) {
         log(`  Page ${pg}...`);
         const all = await catPage.extractProductTiles();
-        const fresh = all.filter(t => !this.existingSkus.has(generateSku(t.articleId.replace('p', ''))));
+        // In update mode, include existing products so they get re-scraped for fresh price/stock
+        const fresh = updateMode
+          ? all
+          : all.filter(
+              (t) =>
+                !this.existingSkus.has(generateSku(t.articleId.replace("p", ""))),
+            );
         tiles.push(...fresh.slice(0, limit - tiles.length));
-        log(`  ${all.length} tiles, ${tiles.length} new`);
+        log(`  ${all.length} tiles, ${tiles.length}${updateMode ? " (update mode)" : " new"}`);
         if (tiles.length >= limit || !(await catPage.nextPage())) break;
         pg++;
       }
-      return tiles.slice(0, limit);
-    } finally { await page.close(); await ctx.close(); }
+      return { tiles: tiles.slice(0, limit), categoryFilters, dynamicCategoryName };
+    } finally {
+      await page.close();
+      await ctx.close();
+    }
   }
 
-  /** Scrape a single variant page and download its images */
-  private async scrapeVariantImages(variantUrl: string, variantSlug: string): Promise<string[]> {
-    const ctx = await this.newCtx();
-    const page = await ctx.newPage();
-    const pom = new RozetkaProductPage(page);
-    try {
-      await pom.goto(variantUrl);
-      const gallery = await pom.extractGallery();
-      const imgs = gallery.images.length > 0 ? gallery.images : [];
-      if (imgs.length === 0) return [];
-      const local = await this.imgDownloader.downloadMultiple(imgs, variantSlug, 10);
-      return local;
-    } catch (e) {
-      log(`    Variant scrape fail: ${e}`, 'warn');
-      return [];
-    } finally { await page.close(); await ctx.close(); }
-  }
 
-  /** PHASE 2: Visit product URL directly with fresh context */
-  private async scrapeProduct(tile: ProductTile, cat: CategoryConfig): Promise<SeederProduct | null> {
-    const code = tile.articleId.replace('p', '');
-    if (this.existingSkus.has(generateSku(code))) return null;
+
+  // ── Phase 2: Scrape full product ─────────────────────────────
+
+  private async scrapeProduct(
+    tile: ProductTile,
+    cat: { name: string; url: string } & CategoryConfig,
+    categoryId: string,
+    categoryFilters: string[],
+    updateMode: boolean,
+  ): Promise<"added" | "updated" | null> {
+    const code = tile.articleId.replace("p", "");
+    const primarySku = generateSku(code);
+
+    // In normal mode, skip existing products
+    if (!updateMode && this.existingSkus.has(primarySku)) return null;
+
+    // In update mode, if product exists, refresh its data instead of skipping
+    if (updateMode && this.existingSkus.has(primarySku)) {
+      log(`  🔄 Updating: ${tile.title.substring(0, 50)}...`);
+      const success = await this.updateExistingProduct(tile, cat, categoryId, categoryFilters);
+      return success ? "updated" : null;
+    }
+
     log(`  ${tile.title.substring(0, 50)}...`);
 
     const ctx = await this.newCtx();
@@ -106,65 +273,461 @@ class RozetkaScraper {
       const finalCode = details.sku || code;
       if (this.existingSkus.has(generateSku(finalCode))) return null;
 
-      // Download main product images
-      const imgs = details.images.length > 0 ? details.images : (tile.imgSrc ? [tile.imgSrc] : []);
-      const slug = slugify(tile.title).substring(0, 60);
+      // Log rich data we extracted
+      log(`  📝 ${details.name.substring(0, 60)}`);
+
+      // ── Create BaseProduct ──────────────────────────────────
+      const baseProductId = crypto.createHash("sha256").update(details.name + cat.url).digest("hex");
+      
+      let baseBrand = details.brand || tile.brand || "Unknown";
+      
+      const baseProduct: BaseProduct = {
+        externalId: baseProductId,
+        categoryId: categoryId,
+        title: details.name || tile.title,
+        description: details.description || "",
+        brand: baseBrand.trim(),
+        storeName: cat.storeName,
+        currency: "UAH"
+      };
+      this.baseProducts.set(baseProductId, baseProduct);
+
+      const imgs =
+        details.images.length > 0
+          ? details.images
+          : tile.imgSrc
+            ? [tile.imgSrc]
+            : [];
+      const slug = buildImageFolderName(details.name, finalCode);
       const local = await this.imgDownloader.downloadMultiple(imgs, slug, 10);
-      if (local.length) log(`  📸 ${local.length} imgs: ${local[0]}`);
 
-      // Build product
-      const product = toSeederProduct(tile, details, local, cat);
+      const scrapedVariants: Array<{
+        pid: string;
+        skuCode: string;
+        name: string;
+        price: number;
+        images: string[];
+        specifications: ProductSpecification[];
+      }> = [];
+      const visitedPids = new Set<string>();
+      visitedPids.add(finalCode);
 
-      // Scrape variant images
-      if (details.variants.length > 0) {
-        log(`  🔀 ${details.variants.length} variants found, scraping images...`);
-        for (const variant of details.variants) {
-          const variantSlug = slugify(variant.name || variant.pid).substring(0, 60);
-          const variantImgs = await this.scrapeVariantImages(variant.url, variantSlug);
+      const queue: Array<{ url: string; name: string }> = [];
+      for (const v of details.variants) {
+        queue.push({ url: v.url, name: v.name });
+      }
+
+      // Include the base product itself as one of the variants
+      scrapedVariants.push({
+        pid: finalCode,
+        skuCode: generateSku(finalCode),
+        name: details.name,
+        price: details.price,
+        images: local,
+        specifications: details.specifications,
+      });
+
+      if (queue.length > 0) {
+        log(`  🔀 Discovering complete variant matrix recursively...`);
+        let scrapeLimit = 15; // safety limit to prevent infinite loops or getting blocked
+        
+        while (queue.length > 0 && scrapeLimit > 0) {
+          const current = queue.shift()!;
+          const currentPidMatch = current.url.match(/\/p(\d+)\//);
+          const currentPid = currentPidMatch ? currentPidMatch[1] : '';
+
+          if (!currentPid || visitedPids.has(currentPid)) continue;
+          visitedPids.add(currentPid);
+          scrapeLimit--;
+
+          log(`    🔄 Scraping variant page: ${current.name} (${current.url})`);
           
-          // Update variant with image paths
-          const existingVariant = product.Variants.find(v => v.RozetkaCode === variant.pid);
-          if (existingVariant) {
-            (existingVariant as any).Gallery = variantImgs;
-            (existingVariant as any).ImageUrl = variantImgs[0] || '';
+          const ctx = await this.newCtx();
+          const page = await ctx.newPage();
+          const pom = new RozetkaProductPage(page);
+          
+          try {
+            await pom.goto(current.url);
+            const [price, gallery, specs, name, sku, subVariants] = await Promise.all([
+              pom.extractPrice(),
+              pom.extractGallery(),
+              pom.extractSpecifications(),
+              pom.extractName(),
+              pom.extractSku(),
+              pom.extractVariants(),
+            ]);
+
+            const variantSlug = buildImageFolderName(name, sku || currentPid);
+            const imgs = gallery.images.length > 0 ? gallery.images : [];
+            const localImgs = imgs.length > 0
+              ? await this.imgDownloader.downloadMultiple(imgs, variantSlug, 10)
+              : [];
+
+            scrapedVariants.push({
+              pid: sku || currentPid,
+              skuCode: generateSku(sku || currentPid),
+              name,
+              price: price.value,
+              images: localImgs,
+              specifications: specs,
+            });
+
+            if (price.value > 0) {
+              log(`      💰 ${name}: ${price.value}₴ (${localImgs.length} images)`);
+            }
+
+            // Discover and add any sub-variants linked from this variant page
+            for (const sv of subVariants) {
+              const svPidMatch = sv.url.match(/\/p(\d+)\//);
+              const svPid = svPidMatch ? svPidMatch[1] : '';
+              if (svPid && !visitedPids.has(svPid) && !queue.some((q) => q.url.includes(`/p${svPid}/`))) {
+                queue.push({ url: sv.url, name: sv.name });
+              }
+            }
+          } catch (e) {
+            log(`      Failed to scrape variant details: ${e}`, "warn");
+          } finally {
+            await page.close();
+            await ctx.close();
           }
-          
-          if (variantImgs.length) log(`    📸 ${variant.name}: ${variantImgs.length} imgs`);
-          else log(`    ⚠️ ${variant.name}: no images`);
-          
+
           await delay(2000, 4000);
         }
       }
 
-      return product;
-    } finally { await page.close(); await ctx.close(); }
+      // Map all raw specifications of each variant using dynamic categoryFilters.
+      const filterKeys = new Set(categoryFilters.map((f) => mapFilterNameToKey(f)));
+      
+      scrapedVariants.forEach((v) => {
+        const attributesMap: Record<string, string> = {};
+        let hasBrand = false;
+
+        for (const spec of v.specifications) {
+          const specKey = mapFilterNameToKey(spec.key);
+          
+          // Match against dynamic category filters or standard/required fields
+          if (filterKeys.has(specKey) || ["brand", "color", "storage", "ram"].includes(specKey)) {
+            let val = spec.value.trim();
+            const type = inferAttributeType(spec.key, spec.value);
+            
+            // Normalize values based on inferred type
+            if (type === "color") {
+              val = normalizeColor(val);
+            } else if (type === "number") {
+              val = normalizeNumber(val);
+            } else if (type === "list") {
+              val = normalizeList(val);
+            }
+
+            if (!attributesMap[specKey]) {
+              attributesMap[specKey] = val;
+            }
+
+            if (specKey === "brand") {
+              hasBrand = true;
+            }
+          }
+        }
+
+        // Ensure brand is present
+        if (!hasBrand && (filterKeys.has("brand") || ["brand"].includes("brand"))) {
+          attributesMap["brand"] = baseBrand.trim();
+        }
+
+        // ── Create ProductVariant and AttributeDefinitions ────────────────
+        const variant: ProductVariant = {
+          productExternalId: baseProductId,
+          sku: v.skuCode,
+          price: v.price,
+          currency: "UAH",
+          inStock: v.price > 0,
+          images: v.images,
+          attributes: attributesMap
+        };
+
+        this.productVariants.set(variant.sku, variant);
+        this.existingSkus.add(variant.sku);
+
+        // Register all attributes, classifying variant axes vs product specs
+        const VARIANT_AXIS_KEYS = new Set(['color', 'storage', 'ram']);
+        for (const [attrName, attrVal] of Object.entries(attributesMap)) {
+          const normalizedKey = mapFilterNameToKey(attrName);
+          const isAxis = VARIANT_AXIS_KEYS.has(normalizedKey);
+          const defKey = `${categoryId}_${attrName}`;
+          let def = this.attributeDefinitions.get(defKey);
+          if (!def) {
+            def = { categoryId: categoryId, name: attrName, possibleValues: [], isVariantAxis: isAxis };
+            this.attributeDefinitions.set(defKey, def);
+          }
+          // Only track possible values for variant axes
+          if (isAxis && !def.possibleValues.includes(attrVal)) {
+            def.possibleValues.push(attrVal);
+          }
+        }
+      });
+
+      return "added";
+    } finally {
+      await page.close();
+      await ctx.close();
+    }
   }
 
-  async scrape(category: string, limit: number) {
-    const cat = CATEGORIES[category];
-    if (!cat) throw new Error(`Unknown: ${category}`);
-    log(`${cat.name}, limit ${limit}`);
+  // ── Update existing product: refresh price/stock/images ──────
 
-    const urls = await this.collectUrls(limit, cat.url);
-    log(`Phase 2: ${urls.length} products`);
+  private async updateExistingProduct(
+    tile: ProductTile,
+    cat: { name: string; url: string } & CategoryConfig,
+    categoryId: string,
+    categoryFilters: string[],
+  ): Promise<boolean> {
+    const ctx = await this.newCtx();
+    const page = await ctx.newPage();
+    const pom = new RozetkaProductPage(page);
+    try {
+      await pom.goto(tile.url);
+      const details = await pom.extractDetails();
+      const finalCode = details.sku || tile.articleId.replace("p", "");
+      const primarySku = generateSku(finalCode);
 
-    const added: SeederProduct[] = [];
+      // Update base product if it exists
+      const baseProductId = crypto.createHash("sha256").update(details.name + cat.url).digest("hex");
+      const existingBase = this.baseProducts.get(baseProductId);
+      if (existingBase) {
+        // Update description if we got a better one
+        if (details.description && details.description.length > (existingBase.description?.length || 0)) {
+          existingBase.description = details.description;
+        }
+      }
+
+      // Re-scrape variant pages to get fresh prices
+      const visitedPids = new Set<string>();
+      visitedPids.add(finalCode);
+
+      // Update primary variant
+      const primaryLocal = details.images.length > 0
+        ? await this.imgDownloader.downloadMultiple(details.images, buildImageFolderName(details.name, finalCode), 10)
+        : [];
+
+      const existingPrimary = this.productVariants.get(primarySku);
+      if (existingPrimary) {
+        existingPrimary.price = details.price;
+        existingPrimary.inStock = details.price > 0;
+        if (primaryLocal.length > 0) existingPrimary.images = primaryLocal;
+        log(`    💰 Updated ${details.name}: ${details.price}₴`);
+      }
+
+      // Discover and update variant pages
+      const queue: Array<{ url: string; name: string }> = [];
+      for (const v of details.variants) {
+        queue.push({ url: v.url, name: v.name });
+      }
+
+      let scrapeLimit = 15;
+      while (queue.length > 0 && scrapeLimit > 0) {
+        const current = queue.shift()!;
+        const currentPidMatch = current.url.match(/\/p(\d+)\//);
+        const currentPid = currentPidMatch ? currentPidMatch[1] : '';
+
+        if (!currentPid || visitedPids.has(currentPid)) continue;
+        visitedPids.add(currentPid);
+        scrapeLimit--;
+
+        const vCtx = await this.newCtx();
+        const vPage = await vCtx.newPage();
+        const vPom = new RozetkaProductPage(vPage);
+
+        try {
+          await vPom.goto(current.url);
+          const [price, gallery, sku] = await Promise.all([
+            vPom.extractPrice(),
+            vPom.extractGallery(),
+            vPom.extractSku(),
+          ]);
+
+          const variantSku = generateSku(sku || currentPid);
+          const existingVariant = this.productVariants.get(variantSku);
+
+          if (existingVariant) {
+            existingVariant.price = price.value;
+            existingVariant.inStock = price.value > 0;
+            // Re-download images if we got fresh ones
+            if (gallery.images.length > 0) {
+              const slug = buildImageFolderName(current.name, sku || currentPid);
+              const localImgs = await this.imgDownloader.downloadMultiple(gallery.images, slug, 10);
+              if (localImgs.length > 0) existingVariant.images = localImgs;
+            }
+            log(`    💰 Updated variant ${current.name}: ${price.value}₴`);
+          }
+
+          // Discover sub-variants
+          const subVariants = await vPom.extractVariants();
+          for (const sv of subVariants) {
+            const svPidMatch = sv.url.match(/\/p(\d+)\//);
+            const svPid = svPidMatch ? svPidMatch[1] : '';
+            if (svPid && !visitedPids.has(svPid) && !queue.some((q) => q.url.includes(`/p${svPid}/`))) {
+              queue.push({ url: sv.url, name: sv.name });
+            }
+          }
+        } catch (e) {
+          log(`      Failed to update variant: ${e}`, "warn");
+        } finally {
+          await vPage.close();
+          await vCtx.close();
+        }
+
+        await delay(1000, 2000);
+      }
+
+      return true;
+    } catch (e) {
+      log(`  Failed to update product: ${e}`, "warn");
+      return false;
+    } finally {
+      await page.close();
+      await ctx.close();
+    }
+  }
+
+  // ── Main scrape entry ────────────────────────────────────────
+
+  async scrape(opts: { category?: string; url?: string; limit: number; update?: boolean; clear?: boolean }) {
+    // ── Clear mode: wipe everything and start fresh ──────────
+    if (opts.clear) {
+      log("🗑️  Clear mode: wiping existing catalog data...");
+      this.categories.clear();
+      this.attributeDefinitions.clear();
+      this.baseProducts.clear();
+      this.productVariants.clear();
+      this.existingSkus.clear();
+      try {
+        await fs.unlink(CATALOG_JSON);
+        log("  Deleted catalog.json");
+      } catch { /* file doesn't exist */ }
+      try {
+        await fs.rm(IMAGES_DIR, { recursive: true, force: true });
+        log("  Deleted Images directory");
+      } catch { /* dir doesn't exist */ }
+      await fs.mkdir(IMAGES_DIR, { recursive: true });
+    }
+
+    let targetUrl = opts.url || "";
+    let catConfig = {
+      name: "Custom Category",
+      url: targetUrl,
+      storeName: "Tech Store",
+      categoryName: "Electronics",
+      tags: ["electronics"],
+    };
+
+    if (opts.category) {
+      const predefined = CATEGORIES[opts.category];
+      if (predefined) {
+        catConfig = { ...predefined };
+        if (!targetUrl) targetUrl = predefined.url;
+      } else if (!targetUrl) {
+        throw new Error(`Unknown category: ${opts.category} and no URL provided.`);
+      }
+    } else if (!targetUrl) {
+      // Default to laptops if nothing is specified
+      const predefined = CATEGORIES["laptops"];
+      catConfig = { ...predefined };
+      targetUrl = predefined.url;
+    }
+
+    log(`Scraping category URL: ${targetUrl}${opts.update ? " (UPDATE MODE)" : ""}`);
+
+    const { tiles: urls, categoryFilters, dynamicCategoryName } = await this.collectUrls(
+      opts.limit,
+      targetUrl,
+      opts.category || "",
+      opts.update ?? false,
+    );
+
+    let finalCategoryName = catConfig.name;
+    if (dynamicCategoryName && (!opts.category || !CATEGORIES[opts.category])) {
+      finalCategoryName = dynamicCategoryName;
+      catConfig.tags = [slugify(dynamicCategoryName).replace(/-/g, "")];
+    }
+
+    const categoryId = slugify(finalCategoryName);
+    if (!this.categories.has(categoryId)) {
+      this.categories.set(categoryId, {
+        id: categoryId,
+        parentId: null,
+        name: finalCategoryName,
+        url: targetUrl
+      });
+    }
+
+    log(`Phase 2: Scraping ${urls.length} products under category: ${finalCategoryName}...`);
+
+    let addedCount = 0;
+    let updatedCount = 0;
     for (let i = 0; i < urls.length; i++) {
-      log(`[${i+1}/${urls.length}] ${urls[i].title.substring(0, 50)}`);
-      const p = await this.scrapeProduct(urls[i], cat);
-      if (p) { added.push(p); this.existing.push(p); this.existingSkus.add(p.Sku); }
+      log(`\n[${i + 1}/${urls.length}] ${urls[i].title.substring(0, 50)}`);
+      const result = await this.scrapeProduct(urls[i], catConfig, categoryId, categoryFilters, opts.update ?? false);
+      if (result === "added") {
+        addedCount++;
+      } else if (result === "updated") {
+        updatedCount++;
+      }
       await delay(3000, 6000);
     }
 
-    if (added.length) { await fs.writeFile(PRODUCTS_JSON, JSON.stringify(this.existing, null, 2)); log(`✅ ${added.length} new (total ${this.existing.length})`); }
-    else log('No new');
-    log('Done!');
+    if (addedCount > 0 || updatedCount > 0) {
+      const outputData: CatalogData = {
+        categories: Array.from(this.categories.values()),
+        attributeDefinitions: Array.from(this.attributeDefinitions.values()),
+        baseProducts: Array.from(this.baseProducts.values()),
+        productVariants: Array.from(this.productVariants.values())
+      };
+
+      await fs.writeFile(CATALOG_JSON, JSON.stringify(outputData, null, 2));
+      log(`\n✅ ${addedCount} new products added, ${updatedCount} products updated!`);
+      log(`Total DB stats: ${outputData.categories.length} categories, ${outputData.attributeDefinitions.length} attributes, ${outputData.baseProducts.length} products, ${outputData.productVariants.length} variants`);
+    } else {
+      log("No new or updated products found");
+    }
+    log("Done!");
   }
 
-  async cleanup() { await this.browser?.close(); log('Closed'); }
+  async cleanup() {
+    await this.browser?.close();
+    log("Browser closed");
+  }
 }
 
-program.name('rozetka-scraper').version('2.0').option('-c, --category <c>', 'cat', 'laptops').option('-l, --limit <n>', 'max', '10').action(async o => {
-  const s = new RozetkaScraper();
-  try { await s.init(); await s.scrape(o.category, parseInt(o.limit)); } catch(e) { log(`Fatal: ${e}`, 'error'); process.exit(1); } finally { await s.cleanup(); }
-}).parse();
+// ── CLI ────────────────────────────────────────────────────────
+
+program
+  .name("rozetka-scraper")
+  .version("3.0")
+  .option(
+    "-c, --category <c>",
+    "Category key (optional): laptops|phones|tablets|headphones",
+    "",
+  )
+  .option("-u, --url <url>", "Category URL to scrape directly", "")
+  .option("-l, --limit <n>", "Max products to scrape", "10")
+  .option("--update", "Update mode: re-scrape existing products to refresh price/stock/images")
+  .option("--clear", "Clear mode: wipe existing catalog data and start fresh")
+  .action(async (opts) => {
+    const s = new RozetkaScraper();
+    try {
+      await s.init();
+      await s.scrape({
+        category: opts.category,
+        url: opts.url,
+        limit: parseInt(opts.limit),
+        update: !!opts.update,
+        clear: !!opts.clear,
+      });
+    } catch (e) {
+      log(`Fatal: ${e}`, "error");
+      process.exit(1);
+    } finally {
+      await s.cleanup();
+    }
+  })
+  .parse();

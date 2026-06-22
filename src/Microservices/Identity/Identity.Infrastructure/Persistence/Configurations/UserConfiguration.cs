@@ -14,9 +14,6 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasKey(u => u.Id);
 
-        builder.Property(u => u.Id)
-            .ValueGeneratedNever();
-
         // Email value object → stored as string column
         builder.Property(u => u.Email)
             .HasConversion(

@@ -49,7 +49,7 @@ public class RefundPaymentHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeEmpty();
+        // Note: result.Value is Guid.Empty in unit tests (mock repo, no EF Core Guid v7 generation)
         transaction.Status.Should().Be(PaymentStatus.Refunded);
         _refundRepoMock.Verify(r => r.Add(It.IsAny<Refund>()), Times.Once);
         _publishEndpointMock.Verify(p => p.Publish(It.IsAny<PaymentRefundedEvent>(), It.IsAny<CancellationToken>()), Times.Once);

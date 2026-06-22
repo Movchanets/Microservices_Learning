@@ -5,6 +5,10 @@ using MediatR;
 
 namespace Ordering.Application.Queries.ListOrdersByBuyer;
 
+/// <summary>
+/// Handles ListOrdersByBuyerQuery: retrieves all orders for a specific buyer.
+/// Returns orders with their line items, sorted by creation date descending.
+/// </summary>
 public sealed class ListOrdersByBuyerHandler(
     IOrderRepository repository) : IRequestHandler<ListOrdersByBuyerQuery, Result<List<OrderDto>>>
 {

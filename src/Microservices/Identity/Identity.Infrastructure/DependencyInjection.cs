@@ -10,6 +10,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Identity.Infrastructure;
 
+/// <summary>
+/// Registers Identity infrastructure services: DbContext, repositories, unit of work,
+/// and MassTransit Outbox. Called from Identity.API Program.cs.
+/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddIdentityInfrastructure(
@@ -20,7 +24,6 @@ public static class DependencyInjection
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<ISavedSearchRepository, SavedSearchRepository>();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<IdentityDbContext>());
 
         // Services

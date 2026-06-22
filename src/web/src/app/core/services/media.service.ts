@@ -18,12 +18,16 @@ export class MediaService {
     targetId: string,
     targetType: 'Product' | 'SKU',
     isPrimary: boolean = false,
+    linkedProductId?: string,
   ): Promise<GalleryItem> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('targetId', targetId);
     formData.append('targetType', targetType);
     formData.append('isPrimary', String(isPrimary));
+    if (linkedProductId) {
+      formData.append('linkedProductId', linkedProductId);
+    }
 
     return firstValueFrom(
       this.http.post<GalleryItem>('/api/media/upload', formData),

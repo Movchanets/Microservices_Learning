@@ -2,6 +2,7 @@ using System.Text.Json;
 using Catalog.Domain.Aggregates;
 using Catalog.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -13,6 +14,9 @@ public sealed class SkuConfiguration : IEntityTypeConfiguration<Sku>
     {
         builder.ToTable("Skus");
         builder.HasKey(s => s.Id);
+
+        // Factory assigns GuidV7 — EF Core must not overwrite it
+        builder.Property(s => s.Id).ValueGeneratedNever();
 
         builder.Property(s => s.ProductId).IsRequired();
         builder.Property(s => s.SkuCode).IsRequired().HasMaxLength(50);
@@ -36,19 +40,27 @@ public sealed class SkuConfiguration : IEntityTypeConfiguration<Sku>
             v => JsonSerializer.Serialize(v, CatalogJsonOptions.Default),
             v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, CatalogJsonOptions.Default) ?? new Dictionary<string, string>());
 
+        var dictionaryComparer = new ValueComparer<Dictionary<string, string>>(
+            (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToDictionary(k => k.Key, v => v.Value));
+
         builder.Property(s => s.TypedAttributes)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter, dictionaryComparer);
 
         builder.Property(s => s.FlexibleAttributes)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter, dictionaryComparer);
 
         // Relationship: SKU belongs to Product
         builder.HasOne<Product>()
             .WithMany(p => p.Skus)
             .HasForeignKey(s => s.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(s => s.AttributeValues)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         // Indexes
         builder.HasIndex(s => s.SkuCode).IsUnique();

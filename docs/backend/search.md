@@ -13,21 +13,19 @@
 
 | Model | Key Fields |
 |:---|:---|
-| `ProductSearchDocument` | Id, Name, Description, Price, Currency, Sku, CategoryId, CategoryName, Tags, **ImageUrl** (cached), StoreId, IsActive, Brand, Attributes (dict), Rating, ReviewCount, InStock |
-| `SearchResult<T>` | Items, TotalCount, Page, PageSize, Facets |
+| `ProductSearchDocument` | Id, Name, Description, **MinPrice**, **MaxPrice**, Currency, **SkuCount**, CategoryId, CategoryName, Tags, **ImageUrl** (cached), StoreId, IsActive, Brand, Attributes (dict), **VariantAxes** (dict of lists), Rating, ReviewCount, InStock, CreatedAt, UpdatedAt |
+| `SearchResult<T>` | Items, TotalCount, Page, PageSize, Facets, TotalPages |
 | `FacetValue` | Key, Count |
 
 ### SKU Refactor Status
 
-Search index is **product-level** with single-valued fields:
-- `Price` — single decimal (not per-SKU)
-- `Sku` — single string
-- `Attributes` — single dictionary
-- `InStock` — single boolean
+Search index is **product-level** with aggregated SKU data:
+- `MinPrice` / `MaxPrice` — range across all active SKUs
+- `SkuCount` — total number of active SKUs
+- `VariantAxes` — dictionary of variant-axis values for faceted search (e.g., `{ "color": ["Black","White"], "storage": ["128GB","256GB"] }`)
+- `Attributes` — merged product-level attributes
 
-**Known limitation:** Multi-SKU products only show one SKU's data. Faceted search by SKU attributes (size, color) is not yet possible. Two options for fix:
-- **Option A (nested):** Store SKUs as nested objects within product document
-- **Option B (denormalized):** Index one document per SKU
+**VariantAxes** enables faceted filtering by SKU attributes (color, size, storage) without nested documents. Each variant axis aggregates all unique values from the product's active SKUs.
 
 ## API Endpoints (`/api/search`)
 
@@ -56,9 +54,10 @@ Search index is **product-level** with single-valued fields:
 
 | Event | Consumer | Action |
 |:---|:---|:---|
-| `SkuCreatedIntegrationEvent` | `SkuCreatedConsumer` | Indexes/updates product in search |
+| `ProductCreatedEvent` | `ProductCreatedConsumer` | Indexes new product in search (price/SKU data arrives later via SkuCreated) |
+| `SkuCreatedIntegrationEvent` | `SkuCreatedConsumer` | Updates product in search (adds SKU data, updates price range) |
 | `SkuDeletedEvent` | `SkuDeletedConsumer` | Updates product index (removes SKU data) |
-| `SkuPriceChangedEvent` | `SkuPriceChangedConsumer` | Updates price in search index |
+| `SkuPriceChangedEvent` | `SkuPriceChangedConsumer` | Updates price range in search index |
 | `ProductDeletedEvent` | `ProductDeletedConsumer` | Removes product from index |
 | `ProductUpdatedEvent` | `ProductUpdatedConsumer` | Re-indexes product (name, description, tags, ImageUrl) |
 
@@ -66,14 +65,21 @@ Search index is **product-level** with single-valued fields:
 
 | Event | Consumer | Action |
 |:---|:---|:---|
-| `GalleryUpdatedIntegrationEvent` | `MediaGalleryUpdatedConsumer` | Updates ProductSearchDocument.ImageUrl when primary image changes |
+| `MediaUploadedIntegrationEvent` | `MediaUploadedConsumer` | Updates ProductSearchDocument.ImageUrl on primary image upload (handles both Product and SKU targets with LinkedProductId) |
+| `GalleryUpdatedIntegrationEvent` | `MediaGalleryUpdatedConsumer` | Updates ProductSearchDocument.ImageUrl when primary image changes via gallery reorder/set-primary |
 
-This is a **fast path** — the Catalog consumer handles the canonical Product.ImageUrl update, but this consumer keeps Elasticsearch in sync directly from Media events without waiting for the Catalog domain event to propagate.
+The `MediaUploadedConsumer` handles the initial upload path, while `MediaGalleryUpdatedConsumer` handles gallery reorder/set-primary events. Both keep Elasticsearch in sync directly from Media events without waiting for Catalog domain events to propagate.
 
 ## Current Status
 
 - ✅ Full-text search with faceted filtering
 - ✅ SKU-level consumers (SkuCreated, SkuDeleted, SkuPriceChanged)
-- ✅ Media gallery consumer for ImageUrl sync
-- 🟠 **Product-level index** — single Price/Sku/Attributes per product document
-- 🟡 `InStock` field not updated on stock changes (no inventory event for AddStock)
+- ✅ ProductCreated consumer for initial indexing
+- ✅ Media consumers for ImageUrl sync (upload + gallery update)
+- ✅ VariantAxes for faceted search by SKU attributes
+- ✅ Aggregated price range (MinPrice/MaxPrice) across SKUs
+- 🟠 `InStock` field not updated on stock changes (no inventory event for AddStock)
+
+---
+
+*Last Updated: 2026-06-20*

@@ -13,6 +13,11 @@ public sealed class AttributeDefinition : Entity
     public Guid CategoryId { get; private set; }
 
     /// <summary>
+    /// The category this attribute definition belongs to.
+    /// </summary>
+    public Category? Category { get; private set; }
+
+    /// <summary>
     /// Machine-readable key (e.g., "color", "size", "material").
     /// Unique per category.
     /// </summary>
@@ -68,8 +73,6 @@ public sealed class AttributeDefinition : Entity
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
-        if (categoryId == Guid.Empty)
-            throw new InvalidOperationException("CategoryId is required for AttributeDefinition");
 
         return new AttributeDefinition
         {
@@ -93,6 +96,7 @@ public sealed class AttributeDefinition : Entity
         List<string>? allowedValues = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+
         DisplayName = displayName.Trim();
         IsFilterable = isFilterable;
         IsRequired = isRequired;

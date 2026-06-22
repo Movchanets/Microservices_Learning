@@ -79,9 +79,8 @@ export class ProductFormPage extends BasePage {
     this.skuFileInput = page.locator('input[type="file"]').last();
   }
 
-  async goto() {
-    await super.goto('/seller/products/new');
-    await this.page.waitForLoadState('domcontentloaded');
+  get url(): string {
+    return '/seller/products/new';
   }
 
   async fillProductInfo(fields: ProductFormFields) {

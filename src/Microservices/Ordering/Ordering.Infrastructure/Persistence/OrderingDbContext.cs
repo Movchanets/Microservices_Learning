@@ -5,6 +5,12 @@ using Ordering.Domain.Aggregates;
 
 namespace Ordering.Infrastructure.Persistence;
 
+/// <summary>
+/// EF Core DbContext for the Ordering bounded context.
+/// Manages Order aggregate roots and OrderState (saga state) entities.
+/// Inherits from DomainEventsDbContext for automatic domain event dispatch.
+/// The OrderState table is used by MassTransit's saga state machine.
+/// </summary>
 public sealed class OrderingDbContext(DbContextOptions<OrderingDbContext> options)
     : DomainEventsDbContext(options)
 {

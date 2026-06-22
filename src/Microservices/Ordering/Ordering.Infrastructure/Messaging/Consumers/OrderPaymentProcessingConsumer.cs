@@ -7,6 +7,11 @@ using Ordering.Domain.Enumerations;
 
 namespace Ordering.Infrastructure.Messaging.Consumers;
 
+/// <summary>
+/// Updates the Order entity when ProcessPaymentCommand is published by the saga.
+/// Transitions order status to PaymentProcessing, indicating the payment gateway
+/// is actively processing the transaction.
+/// </summary>
 public sealed class OrderPaymentProcessingConsumer(
     IOrderRepository repository,
     IUnitOfWork uow,

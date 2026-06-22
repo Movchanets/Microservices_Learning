@@ -508,3 +508,11 @@ tests/E2ETests/playwright-report/index.html
 .playwright-mcp/
 .antigravitycli/
 src/Tools/Seeder.App/Data/Images/
+guides/
+tests/E2ETests/playwright/.auth/admin/state.json
+tests/E2ETests/playwright/.auth/buyer/state.json
+tests/E2ETests/playwright/.auth/seller/state.json
+
+# Graphify knowledge graph output
+graphify-out/
+.graphify_*

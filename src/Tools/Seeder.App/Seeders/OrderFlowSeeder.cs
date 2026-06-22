@@ -82,14 +82,12 @@ public class OrderFlowSeeder
             new AuthenticationHeaderValue("Bearer", token);
 
         // ── Step 1: Add items to cart ──────────────────────────
-        var itemsToAdd = new[]
-        {
-            ("PHONE-IPHONE-15-PRO", 1),   // iPhone 15 Pro × 1
-            ("AUDIO-SONY-WH1000XM5", 2),  // Sony headphones × 2
-            ("BOOK-CLEANCODE", 3),         // Clean Code × 3
-        };
+        // Pick first 3 available products from seeded data
+        var itemsToAdd = productIds.Take(3)
+            .Select((kvp, i) => (kvp.Key, i + 1))  // SKU, quantity
+            .ToList();
 
-        _logger.LogInformation("═══ Order Flow: Adding items to cart ═══");
+        _logger.LogInformation("═══ Order Flow: Adding {Count} items to cart ═══", itemsToAdd.Count);
 
         foreach (var (sku, qty) in itemsToAdd)
         {

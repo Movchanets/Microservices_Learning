@@ -9,6 +9,7 @@
 | **Route Prefix** | `/home` |
 | **Guard** | None (public) |
 | **Render Mode** | `RenderMode.Prerender` |
+| **Last Updated** | 2026-06-19 |
 
 ## Component Structure
 
@@ -19,14 +20,10 @@ home/
 ├── home-page/
 │   └── home-page.ts                 # HomePageComponent — composes all sections
 └── components/
-    ├── hero-banner/
-    │   └── hero-banner.ts           # HeroBannerComponent — main banner
     ├── product-carousel/
     │   └── product-carousel.ts      # ProductCarouselComponent — horizontal scroll
-    ├── category-tiles/
-    │   └── category-tiles.ts        # CategoryTilesComponent — category grid
-    └── deal-of-the-day/
-        └── deal-of-the-day.ts       # DealOfTheDayComponent — featured deal
+    └── category-tiles/
+        └── category-tiles.ts        # CategoryTilesComponent — category grid
 ```
 
 ## SignalStore State Management
@@ -59,9 +56,10 @@ home/
 
 ## Known Gaps / Issues
 
+- **Missing components:** `HeroBannerComponent` and `DealOfTheDayComponent` are planned but not yet implemented — only `ProductCarouselComponent` and `CategoryTilesComponent` exist.
 - **Zero tests (unit + E2E):** Entire feature is untested.
 - **No computed signals:** `HomeStore` has no `withComputed` — all state is raw.
-- **Deal of the day:** The `DealOfTheDayComponent` exists but the store has no dedicated `dealOfTheDay` state — likely reuses `featuredProducts` or has its own internal logic.
+- **Deal of the day:** Not implemented — `DealOfTheDayComponent` does not exist yet. Store has no dedicated `dealOfTheDay` state.
 - **`loadNewArrivals()` reuses `getProducts({ page: 1, pageSize: 8 })`:** This fetches from the general catalog API, not a dedicated "new arrivals" endpoint. Results depend on API sort order.
 - **Category filtering:** `loadCategories()` filters to `isActive` and takes first 8 — no sorting by popularity or featured status.
 - **No carousel state:** `ProductCarouselComponent` likely manages its own scroll position via local signals — no store involvement.

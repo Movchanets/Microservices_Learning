@@ -5,6 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Inventory.Infrastructure.Data;
 
+/// <summary>
+/// EF Core DbContext for the Inventory bounded context.
+/// Manages InventoryItem entities that track stock quantities per SKU per warehouse.
+/// Inherits from DomainEventsDbContext for automatic domain event dispatch after persistence.
+/// </summary>
 public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> options)
     : DomainEventsDbContext(options)
 {

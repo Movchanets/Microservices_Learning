@@ -10,6 +10,15 @@ public interface ISearchService
     Task AddSkuToProductAsync(Guid productId, decimal price, string currency, CancellationToken ct = default);
     Task RemoveSkuFromProductAsync(Guid productId, CancellationToken ct = default);
     Task UpdateProductImageUrlAsync(Guid productId, string? imageUrl, CancellationToken ct = default);
+
+    /// <summary>
+    /// Adds a value to a variant axis on a product's search document.
+    /// Creates the axis if it doesn't exist, appends the value if it does.
+    /// </summary>
+    Task AddVariantAxisValueAsync(
+        Guid productId, string axisKey, string axisValue,
+        CancellationToken ct = default);
+
     Task DeleteProductAsync(Guid productId, CancellationToken ct = default);
     Task<SearchResult<ProductSearchDocument>> SearchAsync(SearchRequest request, CancellationToken ct = default);
 }

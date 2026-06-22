@@ -5,6 +5,10 @@ using MediatR;
 
 namespace Payment.Application.Commands.ProcessPayment;
 
+/// <summary>
+/// Handles ProcessPaymentInternalCommand: creates a PaymentTransaction entity
+/// and persists it. The actual gateway call happens in ProcessPaymentConsumer.
+/// </summary>
 public sealed class ProcessPaymentHandler(
     IPaymentTransactionRepository repository,
     IUnitOfWork uow) : IRequestHandler<ProcessPaymentInternalCommand, Result<bool>>

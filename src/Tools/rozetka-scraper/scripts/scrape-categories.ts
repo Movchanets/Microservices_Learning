@@ -9,11 +9,11 @@
  *   npx tsx scripts/scrape-categories.ts --depth 2
  */
 
-import { chromium } from 'playwright';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { program } from 'commander';
 import { RozetkaCategoriesPage, type CategoryNode } from '../pages/rozetka-categories.page';
+import { launchScraper } from '../fixtures/scraper.fixture';
 
 // Paths
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '../../../..');
@@ -27,23 +27,13 @@ function log(msg: string): void {
 async function main(depth: number) {
   log(`Scraping Rozetka categories (depth: ${depth})...`);
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--disable-blink-features=AutomationControlled'],
-  });
+  const { browser, context } = await launchScraper();
 
-  const ctx = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
-    locale: 'uk-UA',
-    timezoneId: 'Europe/Kiev',
-  });
-
-  await ctx.addInitScript(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => false });
-  });
-
-  const page = await ctx.newPage();
+  const page = await context.newPage();
   const categoriesPage = new RozetkaCategoriesPage(page);
+
+  log('Navigating to Rozetka home...');
+  await categoriesPage.goto();
 
   log('Fetching top-level categories...');
   const tree = await categoriesPage.buildCategoryTree(depth);

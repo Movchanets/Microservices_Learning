@@ -59,6 +59,11 @@ import { StatsCardComponent } from '../components/stats-card/stats-card';
              routerLinkActive="bg-background text-foreground shadow-sm">
             All Stores
           </a>
+          <a routerLink="/admin/attributes"
+             class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-background transition-colors"
+             routerLinkActive="bg-background text-foreground shadow-sm">
+            Attributes
+          </a>
         </nav>
 
         <!-- Content -->

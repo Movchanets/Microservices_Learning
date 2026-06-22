@@ -16,7 +16,7 @@
     }
 
     @if (formErrors().length > 0) {
-      <div class="mb-6 p-4 bg-red-500/10 text-red-500 rounded-xl text-sm space-y-1">
+      <div class="mb-6 p-4 bg-red-500/10 text-red-500 rounded-xl text-sm space-y-1" role="alert" aria-live="polite">
         @for (err of formErrors(); track err) {
           <p>{{ err }}</p>
         }
@@ -36,7 +36,7 @@
                  class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                  required />
           @if (formTouched() && !name().trim()) {
-            <p class="text-xs text-red-500 mt-1">Product name is required.</p>
+            <p class="text-xs text-red-500 mt-1" aria-live="polite">Product name is required.</p>
           }
         </div>
 
@@ -56,7 +56,8 @@
           </div>
           <div>
             <label class="block text-sm font-medium mb-1.5">Category</label>
-            <select #categorySelect [value]="categoryId()" (change)="categoryId.set(categorySelect.value)"
+            <select #categorySelect [value]="categoryId()"
+                    (change)="categoryId.set(categorySelect.value); loadVariantAxes(categorySelect.value)"
                     class="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     required>
               <option value="" disabled>Select a category</option>
@@ -65,7 +66,7 @@
               }
             </select>
             @if (formTouched() && !categoryId()) {
-              <p class="text-xs text-red-500 mt-1">Category is required.</p>
+              <p class="text-xs text-red-500 mt-1" aria-live="polite">Category is required.</p>
             }
           </div>
         </div>
@@ -98,117 +99,197 @@
         />
       </section>
 
-      <!-- ═══════════ SKUs ═══════════ -->
+      <!-- ═══════════ SKUs / VARIANTS ═══════════ -->
       <section class="bg-card border border-border rounded-2xl p-6 space-y-4">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-semibold font-lexend">SKUs / Variants</h2>
             <p class="text-sm text-muted mt-1">Each variant can have its own images and pricing.</p>
           </div>
-          @if (!isEditing()) {
+          <div class="flex gap-2">
+            @if (variantAxes().length > 0) {
+              <button type="button" (click)="toggleVariantMatrix()"
+                      [class]="showVariantMatrix()
+                        ? 'px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-secondary transition-colors cursor-pointer flex items-center gap-1.5'
+                        : 'px-4 py-2 bg-primary/10 text-primary rounded-xl text-sm font-medium hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-1.5'"
+                      data-testid="toggle-variant-matrix">
+                <lucide-icon name="Grid3x3" class="w-4 h-4"></lucide-icon>
+                {{ showVariantMatrix() ? 'Hide Matrix' : 'Generate Variants' }}
+              </button>
+            }
             <button type="button" (click)="addSkuRow()"
-                    class="px-4 py-2 bg-primary/10 text-primary rounded-xl text-sm font-medium hover:bg-primary/20 transition-colors cursor-pointer flex items-center gap-1.5">
+                    class="px-4 py-2 bg-muted/10 text-foreground rounded-xl text-sm font-medium hover:bg-muted/20 transition-colors cursor-pointer flex items-center gap-1.5"
+                    data-testid="add-sku-row">
               <lucide-icon name="Plus" class="w-4 h-4"></lucide-icon>
               Add Variant
             </button>
-          }
+          </div>
         </div>
 
-        @if (isEditing()) {
-          <!-- Edit mode: show existing SKUs read-only -->
-          @for (sku of existingSkus(); track sku.skuCode) {
-            <div class="p-4 bg-muted/10 rounded-xl">
-              <div class="flex items-center gap-3 mb-3">
-                <span class="font-mono text-sm font-medium">{{ sku.skuCode }}</span>
-                <span class="text-sm text-muted">{{ sku.price | number:'1.2-2' }} {{ sku.currency }}</span>
-              </div>
-              @if (sku.images.length > 0) {
-                <div class="flex gap-2">
-                  @for (img of sku.images; track img.id) {
-                    <img [src]="img.thumbnailUrl ?? img.url" class="w-16 h-16 rounded-lg object-cover border border-border" />
-                  }
-                </div>
-              }
+        <!-- Variant Matrix Builder -->
+        @if (showVariantMatrix() && variantAxes().length > 0) {
+          <div class="p-4 bg-muted/5 rounded-xl border border-border space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold">Variant Matrix Builder</h3>
+              <p class="text-xs text-muted">Select values for each axis to generate SKU combinations</p>
             </div>
-          }
-        } @else {
-          <!-- Create mode: SKU tabs -->
-          @if (skus().length > 1) {
-            <div class="flex gap-1 overflow-x-auto pb-1">
-              @for (sku of skus(); track sku.id; let i = $index) {
-                <button type="button"
-                  (click)="activeSkuTab.set(i)"
-                  [class]="skuTabClass(i)">
-                  {{ sku.skuCode || 'Variant ' + (i + 1) }}
+
+            <app-variant-matrix-builder
+              [axes]="variantAxes()"
+              [skuCodePrefix]="skuCodePrefix()"
+            />
+
+            <div class="flex gap-2 justify-end">
+              <button type="button" (click)="toggleVariantMatrix()"
+                      class="px-4 py-2 text-muted hover:text-foreground transition-colors text-sm cursor-pointer">
+                Cancel
+              </button>
+              <button type="button" (click)="onVariantMatrixConfirm()"
+                      [disabled]="bulkGenerating()"
+                      class="px-6 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-secondary transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                      data-testid="confirm-variant-matrix">
+                @if (bulkGenerating()) {
+                  <lucide-icon name="Loader" class="w-4 h-4 animate-spin"></lucide-icon>
+                  Generating...
+                } @else {
+                  Generate SKUs
+                }
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- SKU tabs -->
+        @if (skus().length > 1) {
+          <div class="flex gap-1 overflow-x-auto pb-1">
+            @for (sku of skus(); track sku.id; let i = $index) {
+              <button type="button"
+                (click)="activeSkuTab.set(i)"
+                [class]="skuTabClass(i)"
+                [attr.data-testid]="'sku-tab-' + i">
+                {{ sku.skuCode || 'Variant ' + (i + 1) }}
+                @if (sku.serverSkuId) {
+                  <span class="ml-1 text-[10px] opacity-60">saved</span>
+                }
+              </button>
+            }
+          </div>
+        }
+
+        <!-- Active SKU detail -->
+        @if (skus().length > 0) {
+          <div class="space-y-4 p-4 bg-muted/5 rounded-xl border border-border">
+            <!-- SKU fields -->
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_140px_120px_auto] gap-3 items-end">
+              <div>
+                <label class="block text-xs text-muted mb-1">SKU Code</label>
+                <div class="flex gap-2">
+                  <input #skuInput [value]="skus()[activeSkuTab()].skuCode"
+                         (input)="updateSkuCode(activeSkuTab(), skuInput.value)"
+                         placeholder="e.g. WIDGET-001"
+                         class="flex-1 px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
+                         [attr.data-testid]="'sku-code-input-' + activeSkuTab()"
+                         required />
+                  <button type="button" (click)="generateSkuFor(activeSkuTab())"
+                          class="px-3 py-2 bg-muted/20 text-foreground rounded-lg text-xs font-medium hover:bg-muted/30 transition-colors cursor-pointer whitespace-nowrap">
+                    Generate
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs text-muted mb-1">Price</label>
+                <input #priceInput type="number"
+                       [value]="skus()[activeSkuTab()].price"
+                       (input)="updateSkuPrice(activeSkuTab(), +priceInput.value)"
+                       min="0" step="0.01"
+                       class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
+                       [attr.data-testid]="'sku-price-input-' + activeSkuTab()"
+                       required />
+              </div>
+              <div>
+                <label class="block text-xs text-muted mb-1">Currency</label>
+                <select #currencySelect
+                        [value]="skus()[activeSkuTab()].currency"
+                        (change)="updateSkuCurrency(activeSkuTab(), currencySelect.value)"
+                        class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm">
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                  <option value="UAH">UAH</option>
+                </select>
+              </div>
+              @if (canRemoveSku()) {
+                <button type="button" (click)="removeSkuRow(activeSkuTab())"
+                        [disabled]="removingSku()"
+                        class="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                        aria-label="Remove variant"
+                        data-testid="remove-sku-btn">
+                  @if (removingSku()) {
+                    <lucide-icon name="Loader" class="w-4 h-4 animate-spin"></lucide-icon>
+                  } @else {
+                    <lucide-icon name="Trash2" class="w-4 h-4"></lucide-icon>
+                  }
                 </button>
               }
             </div>
-          }
 
-          <!-- Active SKU detail — direct access to avoid @for/@if binding staleness -->
-          @if (skus().length > 0) {
-            <div class="space-y-4 p-4 bg-muted/5 rounded-xl border border-border">
-              <!-- SKU fields -->
-              <div class="grid grid-cols-1 sm:grid-cols-[1fr_140px_120px_auto] gap-3 items-end">
-                <div>
-                  <label class="block text-xs text-muted mb-1">SKU Code</label>
-                  <div class="flex gap-2">
-                    <input #skuInput [value]="skus()[activeSkuTab()].skuCode"
-                           (input)="updateSkuCode(activeSkuTab(), skuInput.value)"
-                           placeholder="e.g. WIDGET-001"
-                           class="flex-1 px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
-                           required />
-                    <button type="button" (click)="generateSkuFor(activeSkuTab())"
-                            class="px-3 py-2 bg-muted/20 text-foreground rounded-lg text-xs font-medium hover:bg-muted/30 transition-colors cursor-pointer whitespace-nowrap">
-                      Generate
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-xs text-muted mb-1">Price</label>
-                  <input #priceInput type="number"
-                         [value]="skus()[activeSkuTab()].price"
-                         (input)="updateSkuPrice(activeSkuTab(), +priceInput.value)"
-                         min="0" step="0.01"
-                         class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
-                         required />
-                </div>
-                <div>
-                  <label class="block text-xs text-muted mb-1">Currency</label>
-                  <select #currencySelect
-                          [value]="skus()[activeSkuTab()].currency"
-                          (change)="updateSkuCurrency(activeSkuTab(), currencySelect.value)"
-                          class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm">
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="UAH">UAH</option>
-                  </select>
-                </div>
-                @if (skus().length > 1) {
-                  <button type="button" (click)="removeSkuRow(activeSkuTab())"
-                          class="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                          aria-label="Remove variant">
-                    <lucide-icon name="Trash2" class="w-4 h-4"></lucide-icon>
-                  </button>
-                }
-              </div>
-
-              <!-- Per-SKU images — bound to active SKU directly -->
+            <!-- Variant Attributes -->
+            @if (variantAxes().length > 0) {
               <div>
-                <label class="block text-sm font-medium mb-2">Variant Images</label>
-                <p class="text-xs text-muted mb-3">Images specific to this variant (e.g. different color). Click to set primary.</p>
-                <app-image-gallery-uploader
-                  [uploadedImages]="skus()[activeSkuTab()].images"
-                  [pendingImages]="skus()[activeSkuTab()].pendingUploads"
-                  (filesSelected)="onSkuFilesSelected(activeSkuTab(), $event)"
-                  (removeUploaded)="removeSkuUploaded(activeSkuTab(), $event)"
-                  (removePending)="removeSkuPending(activeSkuTab(), $event)"
-                  (setPrimary)="setSkuPrimary(activeSkuTab(), $event)"
-                />
+                <label class="block text-sm font-medium mb-2">Variant Attributes</label>
+                <p class="text-xs text-muted mb-3">Define what makes this variant unique (e.g. color, storage size).</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  @for (axis of variantAxes(); track axis.key) {
+                    <div>
+                      <label class="block text-xs text-muted mb-1">
+                        {{ axis.displayName }}
+                        @if (axis.isRequired) {
+                          <span class="text-red-500">*</span>
+                        }
+                      </label>
+                      @if (axis.valueType === 'Select') {
+                        <select
+                          #attrSelect
+                          [value]="skus()[activeSkuTab()].typedAttributes[axis.key] || ''"
+                          (change)="updateSkuAttribute(activeSkuTab(), axis.key, attrSelect.value)"
+                          class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
+                          [attr.data-testid]="'attr-' + axis.key">
+                          <option value="">Select {{ axis.displayName }}...</option>
+                          @for (val of axis.allowedValues; track val) {
+                            <option [value]="val">{{ val }}</option>
+                          }
+                        </select>
+                      } @else {
+                        <input
+                          #attrInput
+                          [value]="skus()[activeSkuTab()].typedAttributes[axis.key] || ''"
+                          (input)="updateSkuAttribute(activeSkuTab(), axis.key, attrInput.value)"
+                          [placeholder]="'Enter ' + axis.displayName"
+                          class="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm"
+                          [attr.data-testid]="'attr-' + axis.key" />
+                      }
+                    </div>
+                  }
+                </div>
               </div>
+            } @else if (variantAxesLoading()) {
+              <div class="h-12 bg-muted/10 rounded-lg animate-pulse"></div>
+            }
+
+            <!-- Per-SKU images -->
+            <div>
+              <label class="block text-sm font-medium mb-2">Variant Images</label>
+              <p class="text-xs text-muted mb-3">Images specific to this variant (e.g. different color). Click to set primary.</p>
+              <app-image-gallery-uploader
+                [uploadedImages]="skus()[activeSkuTab()].images"
+                [pendingImages]="skus()[activeSkuTab()].pendingUploads"
+                (filesSelected)="onSkuFilesSelected(activeSkuTab(), $event)"
+                (removeUploaded)="removeSkuUploaded(activeSkuTab(), $event)"
+                (removePending)="removeSkuPending(activeSkuTab(), $event)"
+                (setPrimary)="setSkuPrimary(activeSkuTab(), $event)"
+              />
             </div>
-          }
+          </div>
         }
       </section>
 
@@ -216,8 +297,10 @@
       <div class="flex items-center gap-3">
         <button type="submit"
                 [disabled]="store.loading()"
-                class="px-8 py-3 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors disabled:opacity-50 cursor-pointer">
+                class="px-8 py-3 bg-primary text-white rounded-xl font-medium hover:bg-secondary transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                data-testid="submit-product">
           @if (store.loading()) {
+            <lucide-icon name="Loader" class="w-4 h-4 animate-spin"></lucide-icon>
             Saving...
           } @else {
             {{ isEditing() ? 'Update Product' : 'Create Product' }}

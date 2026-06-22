@@ -58,6 +58,11 @@ export class OrderDetailEnhancedPage extends BasePage {
     this.errorMessage = page.locator('[class*="text-red"], [role="alert"]');
   }
 
+  get url(): string {
+    return '/orders';
+  }
+
+
   async goto(orderId: string) {
     await this.page.goto(`/orders/${orderId}`);
   }

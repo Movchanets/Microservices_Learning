@@ -29,6 +29,11 @@ export class OrderDetailPage extends BasePage {
     this.orderItems = this.orderItemsList.locator('li');
   }
 
+  get url(): string {
+    return '/orders';
+  }
+
+
   async getOrderId(): Promise<string> {
     return await this.orderIdText.innerText();
   }

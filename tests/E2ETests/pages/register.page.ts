@@ -20,6 +20,11 @@ export class RegisterPage extends BasePage {
     this.registerSubmitBtn = page.getByTestId('register-submit-btn');
   }
 
+  get url(): string {
+    return '/auth/register';
+  }
+
+
   async register(firstName: string, lastName: string, email: string, password: string) {
     await this.submitWithRetry(this.registerSubmitBtn, [
       { input: this.firstNameInput, value: firstName },

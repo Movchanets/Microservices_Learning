@@ -14,9 +14,13 @@ export class ForgotPasswordPage extends BasePage {
     this.forgotSubmitBtn = page.getByTestId('forgot-submit-btn');
   }
 
-  async goto() {
-    await this.page.goto('/auth/forgot-password');
-    // Wait for Angular hydration to complete — the form is inside @else block
+  get url(): string {
+    return '/auth/forgot-password';
+  }
+
+  /** Override: wait for Angular hydration after navigation. */
+  override async goto(): Promise<void> {
+    await this.page.goto(this.url);
     await this.forgotSubmitBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.api });
   }
 

@@ -4,6 +4,11 @@ using Search.API.Models;
 
 namespace Search.API.Services;
 
+/// <summary>
+/// Hosted service that creates the Elasticsearch index on application startup.
+/// Defines the index mapping (text fields, keyword fields, numeric fields)
+/// and handles idempotent creation (skips if index already exists).
+/// </summary>
 public sealed class ElasticsearchInitializer(
     ElasticsearchClient client,
     ILogger<ElasticsearchInitializer> logger)

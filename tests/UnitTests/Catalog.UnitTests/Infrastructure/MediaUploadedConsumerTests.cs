@@ -34,9 +34,9 @@ public sealed class MediaUploadedConsumerTests : IDisposable
 
         // Seed a category so Product FK is satisfied
         var category = Category.Create("Test Category");
-        _categoryId = category.Id;
         _context.Categories.Add(category);
         _context.SaveChanges();
+        _categoryId = category.Id;
 
         var logger = Mock.Of<ILogger<MediaUploadedConsumer>>();
         _consumer = new MediaUploadedConsumer(_context, logger);
@@ -96,9 +96,12 @@ public sealed class MediaUploadedConsumerTests : IDisposable
         // Act
         await _consumer.Consume(consumeContext.Object);
 
-        // Assert
+        // Assert — SKU updated AND propagated to parent product
         var updatedSku = await _context.Skus.FindAsync(sku.Id);
         updatedSku!.ImageUrl.Should().Be("https://cdn.example.com/sku-image.jpg");
+
+        var updatedProduct = await _context.Products.FindAsync(product.Id);
+        updatedProduct!.ImageUrl.Should().Be("https://cdn.example.com/sku-image.jpg");
     }
 
     [Fact]

@@ -84,36 +84,92 @@ d:\code\Microservices\
 
 ---
 
-## 4. Workflow: Trello Task Management
+## 4. Development Workflow: Grill → PRD → Issues → TDD
 
-Every development step MUST be tracked in Trello.
+Every feature follows this pipeline. Do NOT skip steps.
 
-### Process
-1. **Before coding**: Move the Trello card from **To Do** → **In Progress**
-2. **During coding**: Log blockers or design decisions as comments on the card
-3. **After coding**: Move to **Review** (if PR needed) or **Done**
+### 4.1 Pipeline Overview
 
-### Trello Configuration
-- **Board ID**: `69f8a84ab3c95b66da809269`
-- **Board URL**: https://trello.com/b/qUl75p1Q
+```
+Grill (grill-with-docs)
+  → challenge the plan against the domain model
+  → resolve terminology, update CONTEXT.md glossary
+  → identify what's already implemented vs what's missing
 
-| List | ID |
-|:---|:---|
-| Backlog | `69f8a892c1356567cb2f2730` |
-| To Do | `69f8a8942b982614c89874d6` |
-| In Progress | `69f8a89487c004e5c4a53fe2` |
-| Review | `69f8a8953c1f85aa1b611aac` |
-| Done | `69f8a89556cc4f8584cfa103` |
+PRD (to-prd)
+  → synthesize the grilling session into a structured PRD
+  → publish to GitHub issue tracker with `ready-for-agent` label
 
-### Card Format
-Every card description MUST include:
-- `📄 Sub-Plan` — path to the implementation sub-plan file
-- `📐 Architecture Reference` — path to the relevant `plans/` doc
-- `Acceptance Criteria` — checkbox list of verifiable outcomes
+Issues (to-issues)
+  → break PRD into tracer-bullet vertical slices
+  → each slice is a thin end-to-end path through ALL layers
+  → publish with dependency chain and `ready-for-agent` label
+
+TDD (test-driven-development)
+  → implement each issue with RED-GREEN-REFACTOR
+  → tests before code, always
+```
+
+### 4.2 Grill Phase (grill-with-docs)
+
+- Challenge every assumption against the actual codebase — don't trust the plan
+- Check if features already exist before listing them as work items
+- Resolve domain terminology conflicts against `CONTEXT.md`
+- Update `CONTEXT.md` glossary inline as terms are resolved
+- Create ADRs only for decisions that are hard to reverse, surprising, and involve real trade-offs
+
+### 4.3 PRD Phase (to-prd)
+
+- Synthesize the grilling session into a PRD using the template
+- Use project domain vocabulary from `CONTEXT.md`
+- Include user stories, implementation decisions, testing decisions, out of scope
+- Publish to GitHub issues with `ready-for-agent` label
+
+### 4.4 Issues Phase (to-issues)
+
+- Break PRD into vertical slices (tracer bullets), NOT horizontal layers
+- Each slice delivers a narrow but COMPLETE path through every layer
+- Mark slices as HITL (needs human) or AFK (agent can implement autonomously)
+- Prefer AFK over HITL
+- Publish in dependency order so blockers have real issue numbers
+- Label all with `ready-for-agent`
+
+### 4.5 TDD Phase
+
+- Implement each issue with RED-GREEN-REFACTOR
+- Write the test first, watch it fail, implement, watch it pass, refactor
+- See `test-driven-development` skill for enforcement details
 
 ---
 
-## 5. Context Management: Graphify
+## 5. Issue Tracker: GitHub Issues
+
+Issues are tracked on GitHub: https://github.com/Movchanets/Microservices
+
+### Labels
+
+| Label | Purpose |
+|:---|:---|
+| `ready-for-agent` | Triage complete, agent can pick up immediately |
+| `blocked` | Waiting on another issue or human decision |
+
+### Issue Types
+
+- **PRD** — top-level feature document (e.g., #42)
+- **Vertical Slice** — independently-grabbable implementation ticket (e.g., #43-#47)
+- **HITL** — requires human interaction (architectural decision, design review)
+- **AFK** — can be implemented and merged without human interaction
+
+### Workflow
+
+1. Agent picks issue labeled `ready-for-agent`
+2. Implements with TDD (RED-GREEN-REFACTOR)
+3. Opens PR referencing the issue
+4. PR auto-closes issue on merge
+
+---
+
+## 6. Context Management: Graphify
 
 To maintain a consistent mental model of the distributed system, agents must use **Graphify**.
 - **Graph Updates**: After creating a new microservice, integration event, or saga, update the knowledge graph.
@@ -122,9 +178,9 @@ To maintain a consistent mental model of the distributed system, agents must use
 
 ---
 
-## 6. Backend Development Rules (.NET)
+## 7. Backend Development Rules (.NET)
 
-### 6.1 Clean Architecture — MANDATORY
+### 7.1 Clean Architecture — MANDATORY
 
 Every microservice with business logic follows 4 layers. **Never shortcut this.**
 
@@ -137,7 +193,7 @@ Every microservice with business logic follows 4 layers. **Never shortcut this.*
 
 **Thin services** (Cart, Search, Media) may skip Domain/Application layers.
 
-### 6.2 C# 14.1 & .NET 10 Patterns
+### 7.2 C# 14.1 & .NET 10 Patterns
 
 ```csharp
 // ✅ Primary constructors for DI
@@ -163,7 +219,7 @@ public sealed record CreateOrderCommand(
     List<OrderItemDto> Items) : IRequest<Result<Guid>>;
 ```
 
-### 6.3 Minimal API Endpoints
+### 7.3 Minimal API Endpoints
 
 ```csharp
 // ✅ CORRECT — Grouped endpoints, OpenAPI, MediatR
@@ -193,7 +249,7 @@ public static class OrderEndpoints
 - ALWAYS tag with `.WithOpenApi()` and `.WithTags()`
 - ALWAYS use `Results.*` return types, never throw from endpoints
 
-### 6.4 Entity Framework Core
+### 7.4 Entity Framework Core
 
 ```csharp
 // ✅ DbContext implements IUnitOfWork
@@ -216,7 +272,7 @@ public sealed class OrderDbContext(DbContextOptions<OrderDbContext> options)
 - `AsNoTracking()` for all read queries
 - Each service has its own isolated database — NEVER share a DbContext
 
-### 6.5 MediatR Pipeline
+### 7.5 MediatR Pipeline
 
 Every microservice `Program.cs` MUST register:
 
@@ -234,7 +290,7 @@ builder.Services.AddValidatorsFromAssembly(typeof({ServiceName}Validator).Assemb
 
 Execution order: **Validation → Logging → Handler**
 
-### 6.6 Service Program.cs Template
+### 7.6 Service Program.cs Template
 
 Every microservice `Program.cs` MUST follow this structure:
 
@@ -270,7 +326,7 @@ app.Map{ServiceName}Endpoints();
 app.Run();
 ```
 
-### 6.7 Messaging & Sagas
+### 7.7 Messaging & Sagas
 
 - **Outbox Pattern**: ALWAYS use MassTransit Outbox for guaranteed delivery
 - **Sagas**: Orchestrate multi-service flows using `MassTransitStateMachine`
@@ -287,7 +343,7 @@ public record OrderSubmittedEvent(
     DateTime Timestamp);
 ```
 
-### 6.8 BuildingBlocks Rules
+### 7.8 BuildingBlocks Rules
 
 | ✅ ALLOWED | ❌ FORBIDDEN |
 |:---|:---|
@@ -299,7 +355,7 @@ public record OrderSubmittedEvent(
 
 > BuildingBlocks = **infrastructure glue + contracts**, NOT a central business library.
 
-### 6.9 Aspire AppHost
+### 7.9 Aspire AppHost
 
 Every new service MUST be registered in `src/Aspire/Marketplace.AppHost/Program.cs`:
 
@@ -317,7 +373,7 @@ app.MapDefaultEndpoints();      // in pipeline
 
 ---
 
-## 7. Frontend Development Rules (Angular)
+## 8. Frontend Development Rules (Angular)
 
 ### 7.1 Core Principles
 
@@ -459,7 +515,7 @@ src/web/src/app/
 
 ---
 
-## 8. Verification Protocol
+## 9. Verification Protocol
 
 ### 8.1 Before Every Commit
 

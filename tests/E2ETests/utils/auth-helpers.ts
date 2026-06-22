@@ -8,7 +8,7 @@ import type { BffUser } from './types';
 import { TIMEOUTS } from './constants';
 import { ensureStoreExists } from './store-helpers';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:4200';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:4201';
 
 /**
  * Logs in via the BFF endpoint and returns a new authenticated API context.

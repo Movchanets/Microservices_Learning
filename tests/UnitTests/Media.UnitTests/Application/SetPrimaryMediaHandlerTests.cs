@@ -45,6 +45,7 @@ public class SetPrimaryMediaHandlerTests
         {
             MediaItem.Create("img.jpg", "image/jpeg", "blob", "https://url", 100, MediaType.Image, null, null)
         };
+        mediaItems[0].Id = mediaItemId;
 
         _galleryRepo.Setup(r => r.GetByTargetAsync(targetId, "Product", It.IsAny<CancellationToken>()))
             .ReturnsAsync(entries);

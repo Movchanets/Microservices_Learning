@@ -7,6 +7,12 @@ using Ordering.Domain.ValueObjects;
 
 namespace Ordering.Domain.Aggregates;
 
+/// <summary>
+/// The Order aggregate root. Represents a buyer's purchase intent containing line items,
+/// shipping/billing addresses, and payment references. Orchestrates state transitions
+/// (Pending → Confirmed → Shipped → Completed / Cancelled) via domain events
+/// consumed by the Ordering saga for multi-service coordination.
+/// </summary>
 public sealed class Order : AggregateRoot
 {
     public string BuyerId
@@ -31,13 +37,19 @@ public sealed class Order : AggregateRoot
 
     public static Order Create(string buyerId, Address? shippingAddress = null, Guid? orderId = null)
     {
-        return new Order
+        var order = new Order
         {
-            Id = orderId ?? Guid.NewGuid(),
             BuyerId = buyerId,
             ShippingAddress = shippingAddress,
             CreatedAt = DateTime.UtcNow
         };
+
+        // Only set Id when explicitly provided (e.g., saga correlation ID).
+        // Otherwise EF Core generates Guid v7 on insert.
+        if (orderId.HasValue)
+            order.Id = orderId.Value;
+
+        return order;
     }
 
     public void AddItem(Guid productId, Guid skuId, string skuCode, string productName, decimal unitPrice, int quantity, Guid storeId)

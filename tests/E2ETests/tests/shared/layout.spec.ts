@@ -28,7 +28,7 @@ test.describe('Shared Layout: Header', () => {
 
   test('should navigate to home when clicking logo', async ({ page, catalogPage, header }) => {
     await test.step('Navigate to catalog page', async () => {
-      await catalogPage.goto('/catalog');
+      await catalogPage.goto();
       await catalogPage.waitForPageLoad();
     });
 
@@ -89,50 +89,6 @@ test.describe('Shared Layout: Header', () => {
       await homePage.cartDrawer.waitForOpen();
       await homePage.cartDrawer.close();
       await homePage.cartDrawer.waitForClose();
-    });
-  });
-});
-
-test.describe('Shared Layout: Footer', () => {
-
-  test('should display theme toggle button', async ({ homePage, footer }) => {
-    await test.step('Navigate to home page', async () => {
-      await homePage.goto();
-      await homePage.waitForPageLoad();
-    });
-
-    await test.step('Verify theme toggle is visible', async () => {
-      await expect(footer.themeToggle).toBeVisible();
-    });
-  });
-
-  test('should toggle theme via dropdown', async ({ homePage, footer, page }) => {
-    await test.step('Navigate to home page', async () => {
-      await homePage.goto();
-      await homePage.waitForPageLoad();
-    });
-
-    let hadDarkInitially: boolean;
-    await test.step('Get initial theme state', async () => {
-      hadDarkInitially = await page.locator('html').evaluate(
-        (el) => el.classList.contains('dark')
-      );
-    });
-
-    await test.step('Toggle theme', async () => {
-      await footer.themeToggle.click();
-      if (hadDarkInitially!) {
-        await page.getByRole('button', { name: /light/i }).click();
-      } else {
-        await page.getByRole('button', { name: /dark/i }).click();
-      }
-    });
-
-    await test.step('Verify theme changed', async () => {
-      await expect.poll(
-        () => page.locator('html').evaluate((el) => el.classList.contains('dark')),
-        { timeout: TIMEOUTS.quick }
-      ).toBe(!hadDarkInitially!);
     });
   });
 });

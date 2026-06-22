@@ -34,7 +34,13 @@ public sealed class CreateProductHandler(
             request.Tags,
             request.ImageUrl);
 
-        // 3. Save
+        // 3. Set variant axes if provided
+        if (request.VariantAxisIds != null && request.VariantAxisIds.Count > 0)
+        {
+            product.SetVariantAxes(request.VariantAxisIds);
+        }
+
+        // 4. Save
         productRepository.Add(product);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

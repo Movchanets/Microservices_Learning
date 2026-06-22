@@ -5,6 +5,10 @@ using MediatR;
 
 namespace Ordering.Application.Queries.ListOrdersBySeller;
 
+/// <summary>
+/// Handles ListOrdersBySellerQuery: retrieves all orders containing items from a specific store.
+/// Enables sellers to view orders that include their products.
+/// </summary>
 public sealed class ListOrdersBySellerHandler(
     IOrderRepository repository) : IRequestHandler<ListOrdersBySellerQuery, Result<List<OrderDto>>>
 {

@@ -25,8 +25,8 @@ export class CheckoutPage extends BasePage {
     this.correlationIdText = page.locator('p.font-mono');
   }
 
-  async goto() {
-    await this.page.goto('/checkout');
+  get url(): string {
+    return '/checkout';
   }
 
   async confirmOrder() {

@@ -1,21 +1,39 @@
-import { test, expect } from '../../fixtures/test-base';
+import { authTest as test, expect } from '../../fixtures/auth.fixture';
 import { TIMEOUTS } from '../../utils/constants';
+import {
+  ensureCategoryExists,
+  ensureProductExists,
+} from '../../utils/catalog-helpers';
+import { ensureStoreExists } from '../../utils/store-helpers';
 
 test.describe('Home Page', () => {
-
-  test('should display hero banner on load', async ({ page, homePage }) => {
-    await test.step('Navigate to home page', async () => {
-      await homePage.goto();
-    });
-
-    await test.step('Verify hero banner is visible', async () => {
-      await expect(homePage.heroBanner).toBeVisible();
-    });
+  test.beforeAll(async ({ sellerApi, sellerUser, adminApi }) => {
+    // Seed: store → category → product → SKU → activate → inventory
+    const uniqueId = Math.random().toString(36).substring(7).toUpperCase();
+    const store = await ensureStoreExists(
+      sellerApi, adminApi, sellerUser.id,
+      `Home Store ${uniqueId}`, 'E2E home-page test store'
+    );
+    const category = await ensureCategoryExists(adminApi, `Home Category ${uniqueId}`, 'Test category');
+    await ensureProductExists(
+      sellerApi,
+      {
+        name: `Home Product ${uniqueId}`,
+        description: 'Product for home-page E2E test',
+        categoryId: category.id,
+        storeId: store.id,
+        brand: 'TestBrand',
+        tags: ['e2e', 'home'],
+      },
+      { skuCode: `HOME-SKU-${uniqueId}`, price: 79.99, currency: 'USD' },
+      100
+    );
   });
 
   test('should display Shop by Category heading and category tiles', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Verify Shop by Category heading', async () => {
@@ -31,6 +49,7 @@ test.describe('Home Page', () => {
   test('should navigate to catalog when clicking a category tile', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Wait for category tiles to load', async () => {
@@ -46,20 +65,10 @@ test.describe('Home Page', () => {
     });
   });
 
-  test('should display deal of the day section when products exist', async ({ page, homePage }) => {
-    await test.step('Navigate to home page', async () => {
-      await homePage.goto();
-    });
-
-    await test.step('Verify Deal of the Day section', async () => {
-      await expect(homePage.dealOfTheDay).toBeVisible({ timeout: TIMEOUTS.element });
-      await expect(homePage.dealOfTheDay.getByText('Deal of the Day')).toBeVisible();
-    });
-  });
-
   test('should display featured products carousel', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Verify featured carousel is visible', async () => {
@@ -75,6 +84,7 @@ test.describe('Home Page', () => {
   test('should display new arrivals carousel', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Verify new arrivals carousel is visible', async () => {
@@ -85,6 +95,7 @@ test.describe('Home Page', () => {
   test('should navigate to product detail when clicking a featured product', async ({ page, homePage }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Wait for featured carousel', async () => {
@@ -104,6 +115,7 @@ test.describe('Home Page', () => {
   test('should have working header navigation on home page', async ({ page, homePage, header }) => {
     await test.step('Navigate to home page', async () => {
       await homePage.goto();
+      await page.reload();
     });
 
     await test.step('Verify header elements are visible', async () => {

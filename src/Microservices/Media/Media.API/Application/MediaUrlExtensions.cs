@@ -12,7 +12,7 @@ namespace Media.API.Application;
 ///   Thumbnail: /api/media/{mediaId}/thumbnail
 ///
 /// These are relative URLs — the BFF resolves them to absolute URLs
-/// using the gateway origin (e.g., http://localhost:5293).
+/// using the gateway origin (e.g., http://localhost:5390).
 /// </summary>
 public static class MediaUrlExtensions
 {

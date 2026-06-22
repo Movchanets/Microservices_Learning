@@ -8,7 +8,7 @@
 import { computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { SellerProductService } from './seller-product.service';
-import { SellerProduct, CreateProductRequest, UpdateProductRequest, AddSkuRequest } from './seller.models';
+import { SellerProduct, CreateProductRequest, UpdateProductRequest, AddSkuRequest, BulkAddSkuRequest, BulkAddSkuResult } from './seller.models';
 import { Sku } from '../catalog/catalog.models';
 import { StoreSettingsStore } from './store-settings.store';
 
@@ -118,6 +118,21 @@ export const SellerProductStore = signalStore(
           return sku;
         } catch {
           patchState(store, { error: 'Failed to add SKU' });
+          return null;
+        }
+      },
+
+      async bulkAddSku(productId: string, request: BulkAddSkuRequest): Promise<BulkAddSkuResult | null> {
+        patchState(store, { loading: true, error: null });
+        try {
+          const result = await productService.bulkAddSku(productId, request);
+          // Reload the product to get all SKUs with proper IDs
+          const product = await productService.getProductById(productId);
+          updateProductInState(productId, () => product);
+          patchState(store, { loading: false });
+          return result;
+        } catch {
+          patchState(store, { error: 'Failed to bulk add SKUs', loading: false });
           return null;
         }
       },

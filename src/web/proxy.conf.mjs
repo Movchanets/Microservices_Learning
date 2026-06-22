@@ -3,7 +3,7 @@ const gatewayUrl =
   process.env.services__api_gateway__http__0 ??
   process.env.services__api_gateway__https__0 ??
   process.env.services__api_gateway ??
-  'http://localhost:5293';
+  'http://localhost:5390';
 
 export default {
   '/api': {

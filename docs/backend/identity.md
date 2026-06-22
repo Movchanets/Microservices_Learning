@@ -12,11 +12,27 @@
 
 ## Key Domain Entities
 
-| Entity | Type | Key Properties |
+### Aggregate Root
+
+| Entity | Key Properties |
+|:---|:---|
+| `User` | Email (VO), PasswordHash (VO), FirstName, LastName, Role (flags enum), StoreId, CurrentRefreshToken, PasswordResetToken, PasswordResetTokenExpiresAt, IsActive, CreatedAt |
+
+### Value Objects
+
+| Value Object | Location | Notes |
 |:---|:---|:---|
-| `User` | Aggregate Root | Email (VO), PasswordHash (VO), FirstName, LastName, Role (flags enum), StoreId, CurrentRefreshToken, IsActive |
-| `SavedSearch` | Entity | UserId, Query, FiltersJson, PriceAlertEnabled |
-| `RefreshToken` | Value Object | Token, ExpiresAt |
+| `Email` | `Identity.Domain/ValueObjects/Email.cs` | Validated email wrapper |
+| `PasswordHash` | `Identity.Domain/ValueObjects/PasswordHash.cs` | Hashed password wrapper |
+| `RefreshToken` | `Identity.Domain/ValueObjects/RefreshToken.cs` | Token + ExpiresAt, owned by User |
+
+### Domain Events
+
+| Event | Raised By |
+|:---|:---|
+| `UserRegisteredEvent` | `User.Create()` |
+| `PasswordResetRequestedEvent` | `User.GeneratePasswordResetToken()` |
+| `UserRoleChangedEvent` | `User.AddRole()`, `User.RemoveRole()` |
 
 **User Roles** (bitwise flags): `Buyer`, `Seller`, `Admin` — users can hold multiple roles simultaneously.
 
@@ -29,7 +45,6 @@
 | `POST` | `/register` | `RegisterUserCommand` | Public |
 | `POST` | `/login` | `LoginUserCommand` | Public |
 | `POST` | `/refresh` | `RefreshTokenCommand` | Public |
-| `POST` | `/forgot-password` | `ForgotPasswordCommand` | Public |
 | `POST` | `/change-password` | `ChangePasswordCommand` | Authenticated |
 
 ### Users (`/api/identity/users`)
@@ -42,14 +57,6 @@
 | `DELETE` | `/{id}` | `DeactivateUserCommand` | Admin |
 | `PUT` | `/{id}/profile` | `UpdateProfileCommand` | Authenticated |
 
-### Saved Searches (`/api/identity/saved-searches`)
-
-| Method | Path | Handler | Auth |
-|:---|:---|:---|:---:|
-| `GET` | `/` | `GetSavedSearchesQuery` | Authenticated |
-| `POST` | `/` | `CreateSavedSearchCommand` | Authenticated |
-| `DELETE` | `/{id}` | `DeleteSavedSearchCommand` | Authenticated |
-
 ## Integration Events
 
 ### Consumed
@@ -57,14 +64,14 @@
 | Event | Consumer | Action |
 |:---|:---|:---|
 | `StoreCreatedIntegrationEvent` | `StoreCreatedConsumer` | Links StoreId to seller User |
-| `StoreVerifiedIntegrationEvent` | `StoreVerifiedConsumer` | Grants Seller role to user |
+| `StoreVerifiedIntegrationEvent` | `StoreVerifiedConsumer` | Adds Seller role to user + sets StoreId |
 
 ### Published
 
-| Event | Trigger |
-|:---|:---|
-| `UserRegisteredIntegrationEvent` | User.Create() domain event |
-| `PasswordResetRequestedIntegrationEvent` | User.GeneratePasswordResetToken() |
+| Event | Trigger | Notes |
+|:---|:---|:---|
+| `UserRegisteredIntegrationEvent` | `UserRegisteredEvent` domain event handler | Published via `UserRegisteredEventHandler` |
+| `PasswordResetRequestedIntegrationEvent` | `User.GeneratePasswordResetToken()` | Contract exists in SharedContracts, no handler yet |
 
 ## Current Status & Known Issues
 
@@ -72,3 +79,10 @@
 - ✅ Role management via bitwise flags (multi-role support)
 - ✅ MassTransit EF Outbox for reliable event publishing
 - ⚠️ No email delivery integration for password reset (event published but no consumer sends email)
+- ⚠️ `ForgotPasswordCommand` endpoint not yet implemented
+- ⚠️ `PasswordResetRequestedIntegrationEvent` has no domain-event-to-integration-event handler
+- ℹ️ `SavedSearch` entity planned but not yet implemented
+
+---
+
+*Last Updated: 2026-06-19*

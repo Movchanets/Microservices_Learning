@@ -14,6 +14,7 @@ public sealed class SearchDatabaseFixture : IAsyncLifetime
         .WithEnvironment("discovery.type", "single-node")
         .WithEnvironment("xpack.security.enabled", "false")
         .WithEnvironment("xpack.security.enrollment.enabled", "false")
+        .WithEnvironment("xpack.security.http.ssl.enabled", "false")
         .WithEnvironment("ES_JAVA_OPTS", "-Xms256m -Xmx256m")
         .WithPortBinding(9200, true)
         .WithWaitStrategy(Wait.ForUnixContainer()

@@ -6,6 +6,10 @@ using Ordering.Domain.Enumerations;
 
 namespace Ordering.Infrastructure.Messaging.Consumers;
 
+/// <summary>
+/// Updates the Order entity when OrderCompletedEvent arrives from the saga.
+/// Sets order status to Completed and publishes domain event for Notification service.
+/// </summary>
 public sealed class OrderCompletedProjectionConsumer(
     IOrderRepository repository,
     IUnitOfWork uow,

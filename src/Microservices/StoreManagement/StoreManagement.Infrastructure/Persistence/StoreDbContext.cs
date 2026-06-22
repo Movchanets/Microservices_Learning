@@ -5,6 +5,11 @@ using StoreManagement.Domain.Aggregates;
 
 namespace StoreManagement.Infrastructure.Persistence;
 
+/// <summary>
+/// EF Core DbContext for the StoreManagement bounded context.
+/// Manages Store aggregate roots that represent seller storefronts.
+/// Inherits from DomainEventsDbContext for automatic domain event dispatch.
+/// </summary>
 public sealed class StoreDbContext(
     DbContextOptions<StoreDbContext> options)
     : DomainEventsDbContext(options)

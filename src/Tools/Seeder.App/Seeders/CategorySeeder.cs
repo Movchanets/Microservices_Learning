@@ -46,7 +46,9 @@ public class CategorySeeder
         var request = new
         {
             category.Name,
-            category.Description,
+            Description = string.IsNullOrWhiteSpace(category.Description)
+                ? $"Rozetka: {category.Name}"
+                : category.Description,
             ParentCategoryId = category.ParentCategoryId
         };
 
@@ -84,4 +86,87 @@ public class CategorySeeder
             response.StatusCode, error);
         return new List<CategoryDto>();
     }
+
+    /// <summary>
+    /// Fetches existing attribute definitions for a category.
+    /// </summary>
+    public async Task<List<AttributeDefinitionResponse>> GetAttributeDefinitionsAsync(
+        Guid categoryId, CancellationToken ct)
+    {
+        var response = await _client.GetAsync(
+            $"/api/catalog/categories/{categoryId}/attributes", ct);
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<List<AttributeDefinitionResponse>>(
+                       cancellationToken: ct) ?? [];
+        }
+        return [];
+    }
+
+    /// <summary>
+    /// Ensures an attribute definition exists on a category.
+    /// Creates it if missing (matched by Key).
+    /// </summary>
+    public async Task EnsureAttributeDefinitionAsync(
+        Guid categoryId,
+        AttributeDefinitionModel attr,
+        string adminToken,
+        CancellationToken ct)
+    {
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", adminToken);
+
+        // Check if already exists
+        var existing = await GetAttributeDefinitionsAsync(categoryId, ct);
+        if (existing.Any(a => a.Key.Equals(attr.Key, StringComparison.OrdinalIgnoreCase)))
+        {
+            _logger.LogInformation("Attribute definition already exists: {Key} on category {CategoryId}",
+                attr.Key, categoryId);
+            return;
+        }
+
+        var request = new
+        {
+            attr.Key,
+            attr.DisplayName,
+            attr.Target,
+            ValueType = attr.IsVariantAxis ? 2 : attr.ValueType, // Force Select if variant axis
+            attr.IsFilterable,
+            attr.IsRequired,
+            attr.SortOrder,
+            attr.AllowedValues,
+            attr.IsVariantAxis
+        };
+
+        _logger.LogInformation(
+            "POST /api/catalog/categories/{CategoryId}/attributes — Key='{Key}', IsVariantAxis={IsVariantAxis}, ValueType={ValueType}, AllowedValues=[{Values}]",
+            categoryId, attr.Key, attr.IsVariantAxis, 
+            attr.IsVariantAxis ? 2 : attr.ValueType,
+            attr.AllowedValues != null ? string.Join(", ", attr.AllowedValues) : "null");
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/catalog/categories/{categoryId}/attributes", request, ct);
+
+        if (response.IsSuccessStatusCode)
+        {
+            _logger.LogInformation("Created attribute definition: {Key} (variantAxis={IsVariantAxis}) on category {CategoryId}",
+                attr.Key, attr.IsVariantAxis, categoryId);
+        }
+        else
+        {
+            var error = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogError(
+                "Failed to create attribute definition {Key} on category {CategoryId}: {StatusCode} - {Error}",
+                attr.Key, categoryId, response.StatusCode, error);
+        }
+    }
+}
+
+/// <summary>Attribute definition response from Catalog API.</summary>
+public record AttributeDefinitionResponse
+{
+    public Guid Id { get; set; }
+    public string Key { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public bool IsVariantAxis { get; set; }
 }

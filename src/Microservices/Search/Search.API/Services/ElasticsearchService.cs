@@ -5,6 +5,12 @@ using SearchRequest = Search.API.Models.SearchRequest;
 
 namespace Search.API.Services;
 
+/// <summary>
+/// Elasticsearch service implementing the ISearchService interface.
+/// Manages the "marketplace-products" index with support for faceted search,
+/// autocomplete suggestions, and category-aware filtering.
+/// Uses painless scripts for atomic partial updates (inventory, price changes).
+/// </summary>
 public sealed class ElasticsearchService(
     ElasticsearchClient client,
     ILogger<ElasticsearchService> logger)
@@ -86,6 +92,44 @@ public sealed class ElasticsearchService(
                 productId, response.DebugInformation);
     }
 
+    public async Task AddVariantAxisValueAsync(
+        Guid productId, string axisKey, string axisValue,
+        CancellationToken ct = default)
+    {
+        // Use script parameters to prevent injection. Values are passed as params, not interpolated.
+        var script = @"
+            if (ctx._source.variantAxes == null) {
+                ctx._source.variantAxes = [:];
+            }
+            if (!ctx._source.variantAxes.containsKey(params.axisKey)) {
+                ctx._source.variantAxes[params.axisKey] = [];
+            }
+            if (!ctx._source.variantAxes[params.axisKey].contains(params.axisValue)) {
+                ctx._source.variantAxes[params.axisKey].add(params.axisValue);
+            }";
+
+        var response = await client.UpdateAsync<ProductSearchDocument, object>(
+            IndexName,
+            productId.ToString(),
+            u => u
+                .RetryOnConflict(5)
+                .Script(new Elastic.Clients.Elasticsearch.Script
+                {
+                    Source = script,
+                    Params = new Dictionary<string, object>
+                    {
+                        { "axisKey", axisKey },
+                        { "axisValue", axisValue }
+                    }
+                }),
+            ct);
+
+        if (!response.IsValidResponse)
+            logger.LogWarning(
+                "Failed to add variant axis value for product {ProductId} ({Key}={Value}): {Error}",
+                productId, axisKey, axisValue, response.DebugInformation);
+    }
+
     public async Task DeleteProductAsync(Guid productId, CancellationToken ct = default)
     {
         var response = await client.DeleteAsync<ProductSearchDocument>(
@@ -136,11 +180,10 @@ public sealed class ElasticsearchService(
             productId.ToString(),
             u => u
                 .RetryOnConflict(5)
-                .Script(s =>
+                .Script(new Elastic.Clients.Elasticsearch.Script
                 {
-                    s.Source(script);
-                    if (parameters != null)
-                        s.Params(parameters);
+                    Source = script,
+                    Params = parameters != null ? new Dictionary<string, object>(parameters) : null
                 }),
             ct);
 
@@ -148,6 +191,15 @@ public sealed class ElasticsearchService(
             logger.LogWarning("Failed to update product {ProductId} with script: {Error}",
                 productId, response.DebugInformation);
     }
+
+    // ── Searchable Fields ────────────────────────────────────────
+
+    /// <summary>
+    /// Fields used in the MultiMatch full-text query with their boost weights.
+    /// Excludes 'description' to avoid false positives from scraped marketing noise
+    /// (e.g., "Apple Pay" in descriptions matching "apple" queries).
+    /// </summary>
+    internal static string[] GetSearchableFields() => ["name^3", "brand^2", "tags^2", "attributes.*^1"];
 
     // ── Query Building ────────────────────────────────────────────
 
@@ -188,27 +240,27 @@ public sealed class ElasticsearchService(
         if (!string.IsNullOrWhiteSpace(query))
             filters.Add(f => f.MultiMatch(mm => mm
                 .Query(query)
-                .Fields(Elastic.Clients.Elasticsearch.Fields.FromStrings(["name^3", "description", "tags^2"]))
+                .Fields(Elastic.Clients.Elasticsearch.Fields.FromStrings(GetSearchableFields()))
                 .Fuzziness(new Fuzziness("AUTO"))));
 
         if (categoryId.HasValue)
-            filters.Add(f => f.Term(t => t.Field("categoryId.keyword").Value(categoryId.Value.ToString())));
+            filters.Add(f => f.Term(t => t.Field(new Elastic.Clients.Elasticsearch.Field("categoryId.keyword")).Value(categoryId.Value.ToString())));
 
         // Price range overlap: product.MaxPrice >= priceMin AND product.MinPrice <= priceMax
         if (priceMin.HasValue)
-            filters.Add(f => f.Range(r => r.Number(nr => nr.Field(f => f.MaxPrice).Gte((double)priceMin.Value))));
+            filters.Add(f => f.Range(r => r.NumberRange(nr => nr.Field(f => f.MaxPrice).Gte((double)priceMin.Value))));
 
         if (priceMax.HasValue)
-            filters.Add(f => f.Range(r => r.Number(nr => nr.Field(f => f.MinPrice).Lte((double)priceMax.Value))));
+            filters.Add(f => f.Range(r => r.NumberRange(nr => nr.Field(f => f.MinPrice).Lte((double)priceMax.Value))));
 
         if (tags is { Count: > 0 })
             filters.Add(f => f.Terms(t => t.Field(f => f.Tags).Terms(new TermsQueryField(tags.Select(FieldValue.String).ToArray()))));
 
         if (!string.IsNullOrWhiteSpace(brand))
-            filters.Add(f => f.Term(t => t.Field("brand.keyword").Value(brand)));
+            filters.Add(f => f.Term(t => t.Field(new Elastic.Clients.Elasticsearch.Field("brand.keyword")).Value(brand)));
 
         if (minRating.HasValue)
-            filters.Add(f => f.Range(r => r.Number(nr => nr.Field(f => f.Rating).Gte(minRating.Value))));
+            filters.Add(f => f.Range(r => r.NumberRange(nr => nr.Field(f => f.Rating).Gte(minRating.Value))));
 
         if (inStock == true)
             filters.Add(f => f.Term(t => t.Field(f => f.InStock).Value(true)));

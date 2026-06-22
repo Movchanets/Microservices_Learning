@@ -56,6 +56,11 @@ export class CatalogPage extends BasePage {
     this.productCount = page.getByText(/\d+ product/i);
   }
 
+  get url(): string {
+    return '/catalog';
+  }
+
+
   // ── Actions ─────────────────────────────────────────────
 
   /** Type a query character-by-character (reliable for Angular ngModelChange) and wait for results. */

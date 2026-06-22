@@ -9,6 +9,7 @@
 | **Route Prefix** | `/stores` |
 | **Guard** | None (public) |
 | **Render Mode** | `RenderMode.Prerender` |
+| **Last Updated** | 2026-06-19 |
 
 ## Component Structure
 

@@ -5,6 +5,10 @@ using MediatR;
 
 namespace Ordering.Application.Queries.GetOrderById;
 
+/// <summary>
+/// Handles GetOrderByIdQuery: retrieves a single order by ID with its line items.
+/// Returns Failure if order not found.
+/// </summary>
 public sealed class GetOrderByIdHandler(
     IOrderRepository repository) : IRequestHandler<GetOrderByIdQuery, Result<OrderDto>>
 {

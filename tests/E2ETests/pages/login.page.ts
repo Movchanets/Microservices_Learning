@@ -19,6 +19,10 @@ export class LoginPage extends BasePage {
     this.errorMessage = page.locator('role=alert');
   }
 
+  get url(): string {
+    return '/auth/login';
+  }
+
   /** Fill email + password and submit the form. */
   async login(email: string, password: string) {
     await this.submitWithRetry(this.loginSubmitBtn, [

@@ -55,6 +55,8 @@ export interface ProductListResult {
   maxPrice: number;
   currency: string;
   skuCount: number;
+  defaultSkuId?: string;
+  defaultSkuCode?: string;
   categoryName?: string;
   status: string;
   imageUrl?: string;

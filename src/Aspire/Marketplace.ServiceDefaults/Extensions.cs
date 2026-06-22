@@ -124,7 +124,7 @@ public static class Extensions
     {
         // In non-development environments, health checks require additional security consideration.
         // See: https://aka.ms/dotnet/aspire/healthchecks
-        if (app.Environment.IsDevelopment())
+        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
         {
             // Readiness probe — all checks must pass
             app.MapHealthChecks(HealthEndpointPath)

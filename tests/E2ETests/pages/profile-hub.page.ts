@@ -78,9 +78,8 @@ export class ProfileHubPage extends BasePage {
 
   // ── Navigation ──────────────────────────────────────────
 
-  async goto() {
-    await this.page.goto('/profile');
-    await this.waitForPageLoad();
+  get url(): string {
+    return '/profile';
   }
 
   async navigateToOrders() {

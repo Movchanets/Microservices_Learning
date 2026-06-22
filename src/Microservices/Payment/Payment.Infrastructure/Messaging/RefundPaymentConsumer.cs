@@ -9,6 +9,11 @@ using Payment.Domain.Enumerations;
 
 namespace Payment.Infrastructure.Messaging;
 
+/// <summary>
+/// Consumes RefundPaymentIntegrationCommand from the Ordering saga's compensation path.
+/// Creates a Refund entity, reverses the original payment via the gateway,
+/// and publishes PaymentRefundedEvent.
+/// </summary>
 public sealed class RefundPaymentConsumer(
     ISender sender,
     IPaymentTransactionRepository transactionRepo,

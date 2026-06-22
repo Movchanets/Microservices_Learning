@@ -11,4 +11,5 @@ public sealed record CreateProductCommand(
     Guid StoreId,
     string? Brand = null,
     List<string>? Tags = null,
-    string? ImageUrl = null) : IRequest<Result<ProductDto>>;
+    string? ImageUrl = null,
+    List<Guid>? VariantAxisIds = null) : IRequest<Result<ProductDto>>;

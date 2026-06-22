@@ -4,6 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cart.Infrastructure.Data;
 
+/// <summary>
+/// EF Core DbContext for the Cart bounded context.
+/// Manages ShoppingCart, CartItem, and ProductPrice entities.
+/// ProductPrice is a local cache of Catalog pricing data, synced via integration events.
+/// </summary>
 public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(options)
 {
     public DbSet<ShoppingCart> ShoppingCarts => Set<ShoppingCart>();
@@ -17,7 +22,6 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
         builder.Entity<ShoppingCart>(b =>
         {
             b.HasKey(x => x.Id);
-            b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.BuyerId);
             b.HasIndex(x => x.BuyerId)
              .IsUnique()
@@ -29,17 +33,18 @@ public class CartDbContext(DbContextOptions<CartDbContext> options) : DbContext(
              .WithOne()
              .HasForeignKey(i => i.CartId)
              .OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(x => x.Items)
+             .UsePropertyAccessMode(PropertyAccessMode.Field);
         });
 
         builder.Entity<CartItem>(b =>
         {
             b.HasKey(x => x.Id);
-            b.Property(x => x.Id).ValueGeneratedNever();
             b.Property(x => x.CartId).IsRequired();
             b.Property(x => x.ProductId).IsRequired();
             b.Property(x => x.Price).HasPrecision(18, 2);
             b.Property(x => x.StoreId).IsRequired();
-            b.HasIndex(x => new { x.CartId, x.ProductId }).IsUnique();
+            b.HasIndex(x => new { x.CartId, x.ProductId, x.SkuId }).IsUnique();
         });
 
         builder.ApplyConfigurationsFromAssembly(typeof(CartDbContext).Assembly);

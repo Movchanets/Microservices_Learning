@@ -44,12 +44,27 @@ export interface AddSkuRequest {
 }
 
 export interface UpdateProductRequest {
-  name?: string;
-  description?: string;
-  categoryId?: string;
-  stockQuantity?: number;
+  name: string;
+  description: string;
+  categoryId: string;
+  brand?: string;
+  tags?: string[];
   imageUrl?: string;
-  isActive?: boolean;
+}
+
+export interface BulkAddSkuRequest {
+  variantCombinations: Record<string, string[]>;
+  basePrice?: number;
+  currency?: string;
+  excludedCombinations?: string[];
+  skuCodePrefix?: string;
+}
+
+export interface BulkAddSkuResult {
+  createdCount: number;
+  totalCombinations: number;
+  createdSkus: Sku[];
+  errors?: string[];
 }
 
 export interface StoreSettings {

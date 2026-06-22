@@ -30,6 +30,12 @@ public sealed class Product : AggregateRoot
     private readonly List<Sku> _skus = [];
     public IReadOnlyCollection<Sku> Skus => _skus.AsReadOnly();
 
+    private readonly List<ProductAttributeValue> _attributeValues = [];
+    public IReadOnlyCollection<ProductAttributeValue> AttributeValues => _attributeValues.AsReadOnly();
+
+    private readonly List<ProductVariantAxis> _variantAxes = [];
+    public IReadOnlyCollection<ProductVariantAxis> VariantAxes => _variantAxes.AsReadOnly();
+
     public DateTime CreatedAt { get; private init; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -64,6 +70,7 @@ public sealed class Product : AggregateRoot
 
         var product = new Product
         {
+            Id = Guid.CreateVersion7(),
             Name = name.Trim(),
             Description = description.Trim(),
             Brand = brand?.Trim(),
@@ -110,6 +117,7 @@ public sealed class Product : AggregateRoot
 
     /// <summary>
     /// Adds a new SKU (sellable variant) to this product.
+    /// Validates variant-axis uniqueness using this product's own VariantAxes.
     /// </summary>
     public Sku AddSku(
         string skuCode,
@@ -122,6 +130,10 @@ public sealed class Product : AggregateRoot
         var normalizedCode = skuCode.Trim().ToUpperInvariant();
         if (_skus.Any(s => s.SkuCode == normalizedCode && s.Status != SkuStatus.Deleted))
             throw new InvalidOperationException($"SKU '{normalizedCode}' already exists on this product");
+
+        // Validate variant-axis uniqueness using this product's own variant axes
+        if (_variantAxes.Count > 0)
+            ValidateSkuVariantUniqueness(typedAttributes ?? []);
 
         var sku = Sku.Create(Id, normalizedCode, price, typedAttributes, flexibleAttributes);
         _skus.Add(sku);
@@ -148,6 +160,93 @@ public sealed class Product : AggregateRoot
         sku.MarkDeleted();
 
         AddDomainEvent(new SkuDeletedDomainEvent(Id, sku.Id, sku.SkuCode));
+    }
+
+    // ── Variant Axis Management ──
+
+    /// <summary>
+    /// Adds a variant axis to this product, linking it to an AttributeDefinition.
+    /// </summary>
+    public void AddVariantAxis(Guid attributeDefinitionId, int sortOrder)
+    {
+        if (_variantAxes.Any(a => a.AttributeDefinitionId == attributeDefinitionId))
+            throw new InvalidOperationException(
+                $"Variant axis for attribute definition {attributeDefinitionId} already exists on product {Id}");
+
+        _variantAxes.Add(ProductVariantAxis.Create(Id, attributeDefinitionId, sortOrder));
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Removes a variant axis from this product.
+    /// </summary>
+    public void RemoveVariantAxis(Guid attributeDefinitionId)
+    {
+        var axis = _variantAxes.FirstOrDefault(a => a.AttributeDefinitionId == attributeDefinitionId)
+            ?? throw new InvalidOperationException(
+                $"Variant axis for attribute definition {attributeDefinitionId} not found on product {Id}");
+
+        _variantAxes.Remove(axis);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Replaces all variant axes with a new set. Used when updating the product's variant configuration.
+    /// </summary>
+    public void SetVariantAxes(IEnumerable<Guid> attributeDefinitionIds)
+    {
+        _variantAxes.Clear();
+        int order = 0;
+        foreach (var id in attributeDefinitionIds)
+        {
+            _variantAxes.Add(ProductVariantAxis.Create(Id, id, order++));
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Validates that no existing active SKU has the same combination of variant-axis attributes.
+    /// Prevents duplicate variants like (Color:Black, Storage:128GB) on the same product.
+    /// Resolves axis keys from this product's own VariantAxes collection.
+    /// </summary>
+    internal void ValidateSkuVariantUniqueness(
+        Dictionary<string, string> typedAttributes)
+    {
+        var activeSkus = _skus.Where(s => s.Status != SkuStatus.Deleted).ToList();
+        if (activeSkus.Count == 0) return;
+
+        var axisKeys = _variantAxes
+            .OrderBy(a => a.SortOrder)
+            .Select(a => a.AttributeDefinition?.Key)
+            .Where(k => !string.IsNullOrEmpty(k))
+            .Cast<string>()
+            .ToList();
+        if (axisKeys.Count == 0) return;
+
+        // Build the new SKU's variant signature
+        var newSignature = BuildVariantSignature(typedAttributes, axisKeys);
+
+        // Check against all existing active SKUs
+        foreach (var existingSku in activeSkus)
+        {
+            var existingSignature = BuildVariantSignature(existingSku.TypedAttributes, axisKeys);
+            if (newSignature == existingSignature)
+            {
+                var combo = string.Join(", ", axisKeys.Select(k =>
+                    $"{k}: {typedAttributes.GetValueOrDefault(k, "?")}"));
+                throw new InvalidOperationException(
+                    $"SKU with variant combination [{combo}] already exists on product '{Name}'");
+            }
+        }
+    }
+
+    private static string BuildVariantSignature(
+        Dictionary<string, string> attributes,
+        List<string> axisKeys)
+    {
+        return string.Join("|", axisKeys
+            .OrderBy(k => k)
+            .Select(k => $"{k}={attributes.GetValueOrDefault(k, "").ToUpperInvariant()}"));
     }
 
     /// <summary>
@@ -218,5 +317,29 @@ public sealed class Product : AggregateRoot
     {
         ImageUrl = imageUrl?.Trim();
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void AddOrUpdateAttributeValue(Guid attributeDefinitionId, string value)
+    {
+        var existing = _attributeValues.FirstOrDefault(a => a.AttributeDefinitionId == attributeDefinitionId);
+        if (existing is not null)
+        {
+            existing.UpdateValue(value);
+        }
+        else
+        {
+            _attributeValues.Add(ProductAttributeValue.Create(Id, attributeDefinitionId, value));
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RemoveAttributeValue(Guid attributeDefinitionId)
+    {
+        var existing = _attributeValues.FirstOrDefault(a => a.AttributeDefinitionId == attributeDefinitionId);
+        if (existing is not null)
+        {
+            _attributeValues.Remove(existing);
+            UpdatedAt = DateTime.UtcNow;
+        }
     }
 }

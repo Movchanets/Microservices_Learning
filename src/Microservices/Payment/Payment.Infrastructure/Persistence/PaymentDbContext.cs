@@ -5,6 +5,11 @@ using Payment.Domain.Aggregates;
 
 namespace Payment.Infrastructure.Persistence;
 
+/// <summary>
+/// EF Core DbContext for the Payment bounded context.
+/// Manages PaymentTransaction and Refund entities. Implements IUnitOfWork directly
+/// (not via DomainEventsDbContext) since Payment has no outbound domain events.
+/// </summary>
 public sealed class PaymentDbContext(DbContextOptions<PaymentDbContext> options)
     : DbContext(options), IUnitOfWork
 {

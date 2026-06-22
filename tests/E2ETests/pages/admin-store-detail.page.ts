@@ -28,6 +28,11 @@ export class AdminStoreDetailPage extends BasePage {
     this.rejectBtn = page.getByRole('button', { name: 'Reject Store' });
   }
 
+  get url(): string {
+    return '/admin';
+  }
+
+
   async getStoreInfo(term: string): Promise<string> {
     // Looks for the <dd> following the <dt> containing the term
     const dt = this.storeInfoList.locator('dt').filter({ hasText: term });

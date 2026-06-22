@@ -19,7 +19,7 @@ test.describe('Authentication: Login', () => {
     });
 
     await test.step('Login with the same credentials', async () => {
-      await loginPage.goto('/auth/login');
+      await loginPage.goto();
       await loginPage.login(email, password);
     });
 
@@ -34,14 +34,8 @@ test.describe('Authentication: Login', () => {
     const loginPage = new LoginPage(page);
 
     await test.step('Navigate to login page', async () => {
-      await loginPage.goto('/auth/login');
-      // Wait for Angular hydration — the form needs reactive bindings before fill works
-      await page.waitForLoadState('load');
+      await loginPage.goto();
       await expect(loginPage.emailInput).toBeVisible({ timeout: TIMEOUTS.element });
-      // Ensure Angular has hydrated: the button's [disabled] binding requires Angular to be running
-      await expect(loginPage.loginSubmitBtn).toBeAttached({ timeout: TIMEOUTS.element });
-      // Extra wait for Angular zoneless hydration to complete form setup
-      await page.waitForTimeout(500);
     });
 
     await test.step('Attempt login with invalid credentials', async () => {

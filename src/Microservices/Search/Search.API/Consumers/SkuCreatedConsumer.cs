@@ -6,7 +6,7 @@ namespace Search.API.Consumers;
 
 /// <summary>
 /// Handles SkuCreatedIntegrationEvent from Catalog.
-/// Updates the product's price range and SKU count in the search index.
+/// Updates the product's price range, SKU count, and variant axes in the search index.
 /// </summary>
 public sealed class SkuCreatedConsumer(
     ISearchService searchService,
@@ -19,10 +19,22 @@ public sealed class SkuCreatedConsumer(
         logger.LogInformation("Processing SkuCreatedEvent for SKU {SkuCode} on Product {ProductId}",
             msg.SkuCode, msg.ProductId);
 
+        // Update price range and SKU count
         await searchService.AddSkuToProductAsync(
             msg.ProductId, msg.Price, msg.Currency, context.CancellationToken);
 
-        logger.LogInformation("Updated price range for product {ProductId} from new SKU {SkuCode} ({Price} {Currency})",
-            msg.ProductId, msg.SkuCode, msg.Price, msg.Currency);
+        // Update variant axes from SKU's typed attributes
+        foreach (var (key, value) in msg.TypedAttributes)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                await searchService.AddVariantAxisValueAsync(
+                    msg.ProductId, key, value, context.CancellationToken);
+            }
+        }
+
+        logger.LogInformation(
+            "Updated price range and variant axes for product {ProductId} from new SKU {SkuCode}",
+            msg.ProductId, msg.SkuCode);
     }
 }

@@ -5,7 +5,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, map } from 'rxjs';
-import { SellerProduct, CreateProductRequest, UpdateProductRequest, AddSkuRequest } from './seller.models';
+import { SellerProduct, CreateProductRequest, UpdateProductRequest, AddSkuRequest, BulkAddSkuRequest, BulkAddSkuResult } from './seller.models';
 import { PagedResult, Sku } from '../catalog/catalog.models';
 
 @Injectable({ providedIn: 'root' })
@@ -54,6 +54,12 @@ export class SellerProductService {
   async changeSkuPrice(productId: string, skuId: string, price: number, currency: string): Promise<void> {
     return firstValueFrom(
       this.http.patch<void>(`${this.baseUrl}/${productId}/skus/${skuId}/price`, { price, currency })
+    );
+  }
+
+  async bulkAddSku(productId: string, request: BulkAddSkuRequest): Promise<BulkAddSkuResult> {
+    return firstValueFrom(
+      this.http.post<BulkAddSkuResult>(`${this.baseUrl}/${productId}/skus/bulk`, request)
     );
   }
 

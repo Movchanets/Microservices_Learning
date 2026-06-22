@@ -7,6 +7,10 @@ using Notification.Worker.Models;
 
 namespace Notification.Worker.Consumers;
 
+/// <summary>
+/// Consumes OrderStatusChangedEvent and pushes real-time updates to the buyer
+/// via SignalR. Sends to the buyer's group keyed by BuyerId.
+/// </summary>
 public sealed class OrderStatusChangedConsumer(
     IHubContext<NotificationHub> hubContext,
     ILogger<OrderStatusChangedConsumer> logger) : IConsumer<OrderStatusChangedEvent>

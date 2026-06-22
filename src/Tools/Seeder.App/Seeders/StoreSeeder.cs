@@ -86,4 +86,26 @@ public class StoreSeeder
             _logger.LogWarning("Failed to verify store {Name}: {StatusCode} - {Error}", store.Name, verifyResponse.StatusCode, error);
         }
     }
+
+    /// <summary>
+    /// Looks up a store ID by name from the StoreManagement API.
+    /// Uses the seller's auth token.
+    /// </summary>
+    public async Task<Guid?> GetStoreIdAsync(string storeName, string sellerToken, CancellationToken ct)
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sellerToken);
+
+        var response = await _client.GetAsync("/api/stores", ct);
+        if (response.IsSuccessStatusCode)
+        {
+            var stores = await response.Content.ReadFromJsonAsync<List<StoreDto>>(
+                cancellationToken: ct);
+            return stores?.FirstOrDefault(s => s.Name == storeName)?.Id;
+        }
+
+        var error = await response.Content.ReadAsStringAsync(ct);
+        _logger.LogWarning("Failed to fetch stores for ID lookup: {StatusCode} - {Error}",
+            response.StatusCode, error);
+        return null;
+    }
 }

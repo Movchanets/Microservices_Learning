@@ -91,7 +91,13 @@ public static class HealthEndpoints
         try
         {
             var http = httpClientFactory.CreateClient(serviceName);
-            var response = await http.GetAsync("/health", ct);
+            
+            // Enforce a strict 2-second timeout per probe so the aggregated health
+            // check returns 503 quickly instead of hanging for the default 100s.
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(2));
+
+            var response = await http.GetAsync("/health", cts.Token);
 
             return response.IsSuccessStatusCode
                 ? new ServiceHealthStatus("Healthy", (int)response.StatusCode, null)
@@ -104,6 +110,10 @@ public static class HealthEndpoints
         catch (TaskCanceledException)
         {
             return new ServiceHealthStatus("Unhealthy", null, "Request timed out");
+        }
+        catch (Exception ex)
+        {
+            return new ServiceHealthStatus("Unhealthy", null, ex.Message);
         }
     }
 

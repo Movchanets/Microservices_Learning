@@ -57,6 +57,7 @@ public class MediaSeeder
         List<string> imagePaths,
         string token,
         string targetType = "Product",
+        Guid? linkedProductId = null,
         CancellationToken ct = default)
     {
         var mediaIds = new List<Guid>();
@@ -71,7 +72,7 @@ public class MediaSeeder
             var fileName = ResolveFileName(path, i);
             var mediaId = await UploadSingleImageAsync(
                 productId, fileBytes, fileName, targetType,
-                isPrimary: i == 0, token, ct);
+                isPrimary: i == 0, token, ct, linkedProductId);
 
             if (mediaId.HasValue)
                 mediaIds.Add(mediaId.Value);
@@ -90,51 +91,37 @@ public class MediaSeeder
     public async Task UploadProductAndVariantGalleriesAsync(
         Guid productId,
         Dictionary<string, Guid> skuIds,
-        ProductModel product,
+        ScrapedBaseProduct product,
+        List<ScrapedProductVariant> variants,
         string token,
         CancellationToken ct = default)
     {
-        // ── Upload main product gallery ──────────────────────────
-        _logger.LogInformation(
-            "Gallery check for {Name}: Gallery={GalleryCount}, ImageUrl={ImageUrl}",
-            product.Name, product.Gallery?.Count ?? 0, product.ImageUrl ?? "(null)");
-
-        if (product.Gallery?.Count > 0)
-        {
-            _logger.LogInformation(
-                "Uploading {Count} images for product {Name} (targetId={ProductId})",
-                product.Gallery.Count, product.Name, productId);
-            await UploadProductGalleryAsync(productId, product.Gallery, token, "Product", ct);
-        }
-        else if (!string.IsNullOrEmpty(product.ImageUrl))
-        {
-            // Single image fallback — no gallery array, just the main ImageUrl
-            _logger.LogInformation(
-                "Uploading single image for product {Name} (targetId={ProductId})",
-                product.Name, productId);
-            await UploadProductGalleryAsync(productId, [product.ImageUrl], token, "Product", ct);
-        }
-
         // ── Upload variant SKU galleries ─────────────────────────
-        if (product.Variants == null) return;
-
-        foreach (var variant in product.Variants)
+        if (variants.Count > 0)
         {
-            var variantSku = $"ROZ-{variant.RozetkaCode}";
-            if (!skuIds.TryGetValue(variantSku, out var skuId))
-                continue;
-
-            var variantImages = variant.Gallery ?? [];
-            if (variantImages.Count == 0 && !string.IsNullOrEmpty(variant.ImageUrl))
-                variantImages = [variant.ImageUrl];
-
-            if (variantImages.Count > 0)
+            foreach (var variant in variants)
             {
-                _logger.LogInformation(
-                    "  Uploading {Count} images for variant {Name}",
-                    variantImages.Count, variant.Name);
-                await UploadProductGalleryAsync(skuId, variantImages, token, "SKU", ct);
+                var variantSku = ProductSeedData.NormalizeSku(variant.Sku);
+                if (!skuIds.TryGetValue(variantSku, out var skuId))
+                    continue;
+
+                var variantImages = variant.Images ?? [];
+                
+                if (variantImages.Count > 0)
+                {
+                    _logger.LogInformation(
+                        "  Uploading {Count} images for variant SKU {Sku}",
+                        variantImages.Count, variantSku);
+                    // Pass TargetType = "SKU" to hit the Media API upload endpoint.
+                    // Media.API uses TargetId for SkuId when TargetType is "SKU"
+                    // Pass linkedProductId so the event carries the parent product ID for Search index sync
+                    await UploadProductGalleryAsync(skuId, variantImages, token, "SKU", productId, ct);
+                }
             }
+        }
+        else
+        {
+            _logger.LogWarning("No variants found for product {Name} (targetId={ProductId}) to upload images.", product.Title, productId);
         }
     }
 
@@ -205,7 +192,8 @@ public class MediaSeeder
         string targetType,
         bool isPrimary,
         string token,
-        CancellationToken ct)
+        CancellationToken ct,
+        Guid? linkedProductId = null)
     {
         try
         {
@@ -217,6 +205,8 @@ public class MediaSeeder
             content.Add(new StringContent(targetId.ToString()), "targetId");
             content.Add(new StringContent(targetType), "targetType");
             content.Add(new StringContent(isPrimary.ToString().ToLower()), "isPrimary");
+            if (linkedProductId.HasValue)
+                content.Add(new StringContent(linkedProductId.Value.ToString()), "linkedProductId");
 
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/media/upload")
             {

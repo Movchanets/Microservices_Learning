@@ -117,7 +117,7 @@ describe('SellerProductService', () => {
 
   describe('updateProduct', () => {
     it('should PUT /api/catalog/products/{id}', async () => {
-      const request = { name: 'Updated Widget' };
+      const request = { name: 'Updated Widget', description: 'A widget', categoryId: 'cat-1' };
       const mockResponse = { id: 'prod-1', name: 'Updated Widget', skus: [] };
       const promise = service.updateProduct('prod-1', request);
 

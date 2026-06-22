@@ -67,4 +67,44 @@ public class OutboxIntegrationTests
         // but in this test fixture, we don't have the MassTransit background service running to consume the outbox,
         // so the message should remain in the database.
     }
+
+    [Fact]
+    public async Task SaveChangesAsync_WhenSkuAdded_ShouldPublishSkuCreatedIntegrationEvent()
+    {
+        // Arrange
+        using var scope = _fixture.CreateScope();
+        var context = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<Catalog.Infrastructure.Persistence.CatalogDbContext>(scope.ServiceProvider);
+        var repository = new ProductRepository(context);
+
+        var category = Category.Create("Media Category");
+        context.Categories.Add(category);
+        await context.SaveChangesAsync();
+
+        var storeId = Guid.NewGuid();
+        var product = Product.Create("Media Product", "Media Desc", category.Id, storeId);
+        
+        // Act: Add an SKU
+        var skuCode = "MEDIA-SKU-001";
+        product.AddSku(
+            skuCode,
+            Money.Create(99.99m, "USD"),
+            new Dictionary<string, string> { { "color", "red" } }
+        );
+
+        repository.Add(product);
+        await context.SaveChangesAsync();
+
+        // Assert: Verify SkuCreatedIntegrationEvent is in the Outbox
+        var outboxMessages = await context.Set<OutboxMessage>().ToListAsync();
+        
+        outboxMessages.Should().NotBeEmpty();
+        
+        // Outbox body contains serialized integration event, so we can verify if it contains the SKU code
+        // and event class name SkuCreatedIntegrationEvent
+        bool containsSkuCreatedEvent = outboxMessages.Any(m => 
+            m.Body.Contains("SkuCreatedIntegrationEvent") && 
+            m.Body.Contains(skuCode));
+
+        containsSkuCreatedEvent.Should().BeTrue("Because creating an SKU should publish a SkuCreatedIntegrationEvent to MassTransit outbox so Media service can create galleries for it.");
+    }
 }

@@ -33,8 +33,13 @@ export class SellerOrdersPage extends BasePage {
     this.cancelUpdateBtns = page.getByRole('button', { name: /cancel/i });
   }
 
-  async goto() {
-    await this.page.goto('/seller/dashboard');
+  get url(): string {
+    return '/seller';
+  }
+
+  /** Override: navigate to dashboard then click orders tab. */
+  override async goto(): Promise<void> {
+    await this.navigateTo('/seller/dashboard');
     const ordersTab = this.page.getByRole('link', { name: /orders/i });
     if (await ordersTab.isVisible()) {
       await ordersTab.click();

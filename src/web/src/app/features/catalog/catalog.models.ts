@@ -82,6 +82,42 @@ export interface Category {
 export type ProductStatus = 'Draft' | 'Active' | 'Inactive' | 'Deleted';
 
 /**
+ * Mirrors backend Catalog.Application.DTOs.VariantAxisDto
+ * A single variant axis (e.g., "Color" with values ["Black","White","Blue"]).
+ */
+export interface VariantAxis {
+  key: string;
+  displayName: string;
+  values: string[];
+}
+
+/**
+ * Mirrors backend Catalog.Application.DTOs.VariantOptionDto
+ * A single combination of variant values and its availability.
+ */
+export interface VariantOption {
+  combination: Record<string, string>;
+  skuId: string | null;
+  skuCode: string | null;
+  price: number | null;
+  currency: string | null;
+  imageUrl: string | null;
+  isAvailable: boolean;
+}
+
+/**
+ * Mirrors backend Catalog.Application.DTOs.VariantMatrixDto
+ * Variant matrix for a product — all possible SKU combinations
+ * based on variant-axis attribute definitions.
+ */
+export interface VariantMatrix {
+  productId: string;
+  productName: string;
+  axes: VariantAxis[];
+  options: VariantOption[];
+}
+
+/**
  * Gallery item from Media.API
  */
 export interface GalleryItem {
@@ -139,43 +175,4 @@ export interface ProductSearchParams {
   inStock?: boolean;
   page?: number;
   pageSize?: number;
-}
-
-/**
- * Mirrors backend Catalog.Application.DTOs.ReviewDto
- */
-export interface Review {
-  id: string;
-  userId: string;
-  userName: string;
-  rating: number;
-  title: string;
-  text: string;
-  isVerifiedPurchase: boolean;
-  photoUrls: string[];
-  helpfulCount: number;
-  notHelpfulCount: number;
-  sellerResponse: string | null;
-  sellerResponseDate: string | null;
-  createdAt: string;
-}
-
-/**
- * Mirrors backend Catalog.Application.DTOs.ReviewSummaryDto
- */
-export interface ReviewSummary {
-  averageRating: number;
-  totalReviews: number;
-  ratingDistribution: Partial<Record<number, number>>;
-}
-
-/**
- * Request payload for creating a review.
- * userId and userName are derived server-side from auth claims.
- */
-export interface CreateReviewRequest {
-  rating: number;
-  title: string;
-  text: string;
-  photoUrls?: string[];
 }

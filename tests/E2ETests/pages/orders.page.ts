@@ -20,8 +20,8 @@ export class OrdersPage extends BasePage {
     this.completedOrdersSection = page.locator('div').filter({ has: page.getByRole('heading', { name: 'Completed Orders' }) });
   }
 
-  async goto() {
-    await this.page.goto('/orders');
+  get url(): string {
+    return '/orders';
   }
 
   async viewOrderDetails(orderIdPart: string) {

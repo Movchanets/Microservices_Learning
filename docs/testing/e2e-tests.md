@@ -2,8 +2,8 @@
 
 **Project:** Marketplace Microservices
 **Framework:** Playwright (TypeScript)
-**Last Updated:** 2026-05-26
-**Total:** 13 spec files, ~55 tests
+**Last Updated:** 2026-06-20
+**Total:** 17 spec files, ~63 tests
 **Config:** `tests/E2ETests/playwright.config.ts`
 **Base URL:** `http://localhost:4201` (default)
 
@@ -26,6 +26,10 @@
 | 11 | `seller/seller-dashboard.spec.ts` | 4 | seller | ✅ Seller |
 | 12 | `seller/product-sku-crud.spec.ts` | 8 | seller | ✅ Seller/Admin |
 | 13 | `shared/layout.spec.ts` | 10 | shared | Mixed |
+| 14 | `shared/layout-auth.spec.ts` | 3 | shared | ✅ Buyer/Seller/Admin |
+| 15 | `buyer/variant-selection-flow.spec.ts` | 5 | buyer | ✅ Buyer |
+| 16 | `seller/product-creation-gallery.spec.ts` | 8 | seller | ✅ Seller/Admin |
+| 17 | `seller/laptop-variant-matrix.spec.ts` | 4 | seller | ✅ Seller/Admin |
 | | **Total** | **~63** | | |
 
 ---
@@ -164,7 +168,7 @@
 
 ## Deleted E2E Tests (21 files, ~94 tests)
 
-These were removed during flaky test cleanup. See [coverage.md](../../test_plans/coverage.md) for root causes.
+These were removed during flaky test cleanup.
 
 | Deleted File | Tests | Feature | Reason |
 |-------------|-------|---------|--------|
@@ -225,7 +229,80 @@ These were removed during flaky test cleanup. See [coverage.md](../../test_plans
 
 ---
 
-## Playwright Configuration
+## Coverage Gap Analysis (2026-06-20)
+
+### Tier 1: Navigation Only (heading visible, no functional coverage)
+
+These specs assert the page loads but don't test CRUD, form submission, or data display.
+
+| Feature | Spec | What's Tested |
+|---------|------|---------------|
+| store-settings | `seller-dashboard.spec.ts` | Navigate → heading visible |
+| product-list (seller) | `seller-dashboard.spec.ts` | Navigate → heading visible |
+| user-list (admin) | `admin-panel.spec.ts` | Navigate → table rows > 0 |
+| store-verification (admin) | `admin-panel.spec.ts` | Navigate → heading visible |
+
+### Tier 2: Had Functional E2E, Deleted (Flaky)
+
+21 spec files (~94 tests) were removed during flaky test cleanup. These features had real coverage and lost it.
+
+| Feature | Deleted Spec | Tests Lost | Root Cause |
+|---------|-------------|------------|------------|
+| register | `auth/register.spec.ts` | — | Never existed |
+| forgot-password | `auth/forgot-password.spec.ts` | 4 | Flaky timing |
+| cart-drawer | `cart/cart-drawer.spec.ts` | 5 | Drawer open/close race |
+| add-to-cart | `cart/add-to-cart.spec.ts` | 3 | Flaky fillStable timing |
+| checkout-edge-cases | `checkout/checkout-edge-cases.spec.ts` | 5 | Address form fill flaky |
+| inventory-management | `root/inventory-management.spec.ts` | 4 | Table load timing |
+| order-cancellation | `root/order-cancellation.spec.ts` | 5 | Dialog handler race |
+| seller-orders | `root/seller-orders.spec.ts` | 4 | Order status update flaky |
+| seller-product-crud | `seller/seller-product-crud.spec.ts` | 5 | Product form fill flaky |
+| seller-products | `seller/seller-products.spec.ts` | 3 | Product list load flaky |
+| store-settings-crud | `seller/store-settings-crud.spec.ts` | 4 | Settings form fill flaky |
+| admin-store-detail | `admin/admin-store-detail.spec.ts` | 2 | Store approval dialog flaky |
+| admin-user-management | `admin/admin-user-management.spec.ts` | 5 | Role change dialog flaky |
+| payment-refund | `root/payment-refund.spec.ts` | 5 | Refund dialog timing |
+| product-detail-enhanced | `root/product-detail-enhanced.spec.ts` | 6 | Buy box interaction flaky |
+| seller-order-correlation | `root/seller-order-correlation.spec.ts` | 2 | Correlation display flaky |
+| saga-aware-cancellation | `root/saga-aware-cancellation.spec.ts` | 3 | Saga completion wait |
+
+### Tier 3: Never Had E2E
+
+| Feature | Page Object | Notes |
+|---------|-------------|-------|
+| order-detail | `order-detail.page.ts` | Page object exists, no spec |
+| order-timeline | — | No page object, no spec |
+| category-attributes (admin) | — | No page object, no spec |
+| store-page | `store-page.page.ts` | Page object exists, no spec |
+| search results/facets | — | No spec (P2 in priorities) |
+
+### Tier 4: Partial Coverage (via variant-selection-flow)
+
+| Feature | What's Covered | What's Missing |
+|---------|---------------|----------------|
+| product-detail | Variant picker, price update, breadcrumb | Image gallery, specs table, reviews |
+| cart-page | Add item, verify quantity, navigate | Remove item, quantity change, empty cart |
+| checkout | Fill address, shipping, place order | Payment methods, coupon, edge cases |
+| checkout-status | `checkout-order-submitted` / `checkout-status-completed` asserted | Dedicated success page verification |
+
+### Page Objects Without Specs
+
+These page objects exist but have no spec file using them:
+
+| Page Object | Feature |
+|-------------|---------|
+| `register.page.ts` | auth/register |
+| `forgot-password.page.ts` | auth/forgot-password |
+| `order-detail.page.ts` | orders/order-detail |
+| `order-detail-enhanced.page.ts` | orders/order-detail |
+| `seller-orders.page.ts` | seller-dashboard/seller-orders |
+| `inventory.page.ts` | seller-dashboard/inventory-list |
+| `store-page.page.ts` | stores/store-page |
+| `admin-store-detail.page.ts` | admin/store-detail |
+| `checkout-enhanced.page.ts` | checkout/enhanced |
+| `product-detail-enhanced.page.ts` | catalog/product-detail-enhanced |
+
+---
 
 | Setting | Value |
 |---------|-------|

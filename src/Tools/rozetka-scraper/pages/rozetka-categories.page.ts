@@ -6,14 +6,17 @@
  */
 
 import { Page } from 'playwright';
+import { mapFilterNameToKey } from '../utils/rozetka-transformer';
 
 export interface CategoryNode {
   name: string;
   url: string;
   id: string;            // Extracted from URL (e.g., c80004)
   parentId?: string;
+  ParentCategoryName?: string;
   level: number;
   children: CategoryNode[];
+  AttributeDefinitions?: any[];
 }
 
 export class RozetkaCategoriesPage {
@@ -152,20 +155,130 @@ export class RozetkaCategoriesPage {
   }
 
   /**
-   * Build a category tree by scraping multiple levels
+   * Build a category tree by scraping multiple levels.
+   * Dynamically visits each subcategory page under fresh stealth contexts to extract its sidebar filters
+   * and build dynamic AttributeDefinitions mapping.
    */
   async buildCategoryTree(maxDepth = 2): Promise<CategoryNode[]> {
     const topCategories = await this.scrapeTopCategories();
 
     if (maxDepth < 1) return topCategories;
 
-    // Scrape subcategories for each top-level category
-    for (const cat of topCategories.slice(0, 10)) { // Limit to avoid too many requests
+    // Scrape subcategories for the first 4 top-level categories
+    for (const cat of topCategories.slice(0, 4)) {
+      const browser = this.page.context().browser()!;
+      
+      // Step 1: Navigating to the top portal page to get its subcategory links
+      const ctx1 = await createStealthContext(browser);
+      const page1 = await ctx1.newPage();
+      const catPage1 = new RozetkaCategoriesPage(page1);
+      
+      let rawSubcategories: CategoryNode[] = [];
       try {
-        cat.children = await this.scrapeSubcategories(cat.url);
-        await this.randomDelay(1000, 2000);
-      } catch {
-        // Skip failed categories
+        rawSubcategories = await catPage1.scrapeSubcategories(cat.url);
+      } catch (e) {
+        console.error(`⚠️ Failed to scrape subcategories list for ${cat.name}:`, e);
+      } finally {
+        await page1.close();
+        await ctx1.close();
+      }
+
+      // Limit to first 4 subcategories to stay extremely fast, focused, and block-free
+      cat.children = rawSubcategories.slice(0, 4);
+
+      // Step 2: Visit each subcategory's page to dynamically extract its real live sidebar filters!
+      for (const child of cat.children) {
+        const ctx2 = await createStealthContext(browser);
+        const page2 = await ctx2.newPage();
+        try {
+          console.log(`🔍 Dynamically scraping filters for subcategory: ${child.name} (${child.url})`);
+          await page2.goto(child.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          
+          // Wait for dynamic filters to hydrate in the DOM
+          try {
+            await page2.waitForSelector('details[data-testid="filter"]', { timeout: 10000 });
+          } catch {}
+          
+          await this.randomDelay(1000, 2000);
+
+          // Scrape filters from the page DOM sidebar
+          const filters = await page2.evaluate(() => {
+            const list: string[] = [];
+            document.querySelectorAll('details[data-testid="filter"]').forEach(el => {
+              const summary = el.querySelector('summary');
+              if (summary) {
+                const clone = summary.cloneNode(true) as HTMLElement;
+                clone.querySelectorAll('span.quantity, span[class*="quantity"], svg, use').forEach(q => q.remove());
+                const text = clone.textContent?.trim();
+                if (text && text.length > 2 && text.length < 50 &&
+                    !text.includes('Продавець') &&
+                    !text.includes('Ціна') &&
+                    !text.includes('Власникам') &&
+                    !text.includes('Програма') &&
+                    !text.includes('Доставка') &&
+                    !text.includes('Товари з акціями') &&
+                    !text.includes('Відгуки') &&
+                    !text.includes('Стан товару') &&
+                    !text.includes('Smart') &&
+                    !text.includes('Новинки') &&
+                    !text.includes('Готовий до відправлення')) {
+                  list.push(text);
+                }
+              }
+            });
+            return list;
+          });
+
+          console.log(`   Found live filters:`, filters);
+
+          child.ParentCategoryName = cat.name;
+          
+          // Map filters to AttributeDefinitions dynamically
+          const attrDefs = filters.map((fName: string, idx: number) => {
+            const key = mapFilterNameToKey(fName);
+            const isVariant = isVariantAxisFilter(fName);
+            return {
+              Key: key,
+              DisplayName: fName,
+              Target: isVariant ? 1 : 0,           // 0 = Product, 1 = Sku
+              ValueType: isSelectValueFilter(fName) ? 2 : 0, // 0 = Text, 2 = Select
+              IsFilterable: true,
+              IsRequired: false,
+              IsVariantAxis: isVariant,
+              SortOrder: idx + 1
+            };
+          });
+
+          // Always guarantee Brand is included
+          if (!attrDefs.some((a: any) => a.Key === 'brand')) {
+            attrDefs.unshift({
+              Key: 'brand',
+              DisplayName: 'Бренд',
+              Target: 0,
+              ValueType: 0,
+              IsFilterable: true,
+              IsRequired: true,
+              IsVariantAxis: false,
+              SortOrder: 1
+            });
+            // Re-index SortOrder
+            attrDefs.forEach((a: any, i: number) => a.SortOrder = i + 1);
+          }
+
+          child.AttributeDefinitions = attrDefs;
+
+        } catch (e) {
+          console.error(`⚠️ Failed to scrape live filters for ${child.name}:`, e);
+          // Standard fallback
+          child.ParentCategoryName = cat.name;
+          child.AttributeDefinitions = [
+            { Key: 'brand', DisplayName: 'Бренд', Target: 0, ValueType: 0, IsFilterable: true, IsRequired: true, SortOrder: 1 },
+            { Key: 'color', DisplayName: 'Колір', Target: 1, ValueType: 2, IsFilterable: true, IsRequired: true, IsVariantAxis: true, SortOrder: 2 }
+          ];
+        } finally {
+          await page2.close();
+          await ctx2.close();
+        }
       }
     }
 
@@ -173,22 +286,40 @@ export class RozetkaCategoriesPage {
   }
 
   /**
-   * Export category tree as flat list with parent references
+   * Export category tree as flat list with parent references and AttributeDefinitions.
    */
-  flattenTree(tree: CategoryNode[]): Array<{ name: string; url: string; id: string; parentId?: string; level: number }> {
-    const result: Array<{ name: string; url: string; id: string; parentId?: string; level: number }> = [];
+  flattenTree(tree: CategoryNode[]): Array<{
+    name: string;
+    url: string;
+    id: string;
+    parentId?: string;
+    ParentCategoryName?: string;
+    level: number;
+    AttributeDefinitions?: any[];
+  }> {
+    const result: Array<{
+      name: string;
+      url: string;
+      id: string;
+      parentId?: string;
+      ParentCategoryName?: string;
+      level: number;
+      AttributeDefinitions?: any[];
+    }> = [];
 
-    const walk = (nodes: CategoryNode[], parentId?: string) => {
+    const walk = (nodes: CategoryNode[], parentId?: string, ParentCategoryName?: string) => {
       for (const node of nodes) {
         result.push({
           name: node.name,
           url: node.url,
           id: node.id,
           parentId,
+          ParentCategoryName: node.ParentCategoryName || ParentCategoryName,
           level: node.level,
+          AttributeDefinitions: node.AttributeDefinitions,
         });
         if (node.children.length > 0) {
-          walk(node.children, node.id);
+          walk(node.children, node.id, node.name);
         }
       }
     };
@@ -201,4 +332,47 @@ export class RozetkaCategoriesPage {
     const delay = Math.floor(Math.random() * (max - min + 1)) + min;
     return new Promise(resolve => setTimeout(resolve, delay));
   }
+}
+
+// ── Helpers for Dynamic Filtering & Translation ──────────────────
+
+async function createStealthContext(browser: any) {
+  const ctx = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
+    viewport: { width: 1920, height: 1080 },
+    locale: 'uk-UA',
+    timezoneId: 'Europe/Kiev',
+    extraHTTPHeaders: {
+      'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.7',
+    },
+  });
+  await ctx.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+  });
+  return ctx;
+}
+
+function isVariantAxisFilter(fName: string): boolean {
+  const lower = fName.toLowerCase();
+  return lower.includes('колір') || 
+         lower.includes('color') || 
+         lower.includes('пам\'ять') || 
+         lower.includes('пам’ять') || 
+         lower.includes('ram') || 
+         lower.includes('озп') || 
+         lower.includes('розмір') || 
+         lower.includes('size');
+}
+
+function isSelectValueFilter(fName: string): boolean {
+  const lower = fName.toLowerCase();
+  return lower.includes('виробник') || 
+         lower.includes('бренд') || 
+         lower.includes('колір') || 
+         lower.includes('пам\'ять') || 
+         lower.includes('пам’ять') || 
+         lower.includes('ram') || 
+         lower.includes('екран') || 
+         lower.includes('процесор') || 
+         lower.includes('відеокарт');
 }

@@ -59,4 +59,44 @@ public sealed record AttributeDefinitionDto(
     bool IsFilterable,
     bool IsRequired,
     int SortOrder,
-    List<string> AllowedValues);
+    List<string> AllowedValues,
+    bool IsInherited = false);
+
+/// <summary>
+/// Result of a bulk SKU creation operation.
+/// </summary>
+public sealed record BulkAddSkuResultDto(
+    int CreatedCount,
+    int TotalCombinations,
+    List<SkuDto> CreatedSkus,
+    List<string>? Errors = null);
+
+/// <summary>
+/// Variant matrix for a product — shows all possible attribute combinations
+/// and which ones have active SKUs. Used by the frontend variant picker.
+/// </summary>
+public sealed record VariantMatrixDto(
+    Guid ProductId,
+    string ProductName,
+    List<VariantAxisDto> Axes,
+    List<VariantOptionDto> Options);
+
+/// <summary>
+/// A single variant axis (e.g., "Color" with values ["Black","White","Blue"]).
+/// </summary>
+public sealed record VariantAxisDto(
+    string Key,
+    string DisplayName,
+    List<string> Values);
+
+/// <summary>
+/// A single combination of variant values and its availability.
+/// </summary>
+public sealed record VariantOptionDto(
+    Dictionary<string, string> Combination,
+    Guid? SkuId,
+    string? SkuCode,
+    decimal? Price,
+    string? Currency,
+    string? ImageUrl,
+    bool IsAvailable);

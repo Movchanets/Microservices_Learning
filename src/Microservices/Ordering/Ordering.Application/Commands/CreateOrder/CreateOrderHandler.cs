@@ -6,6 +6,10 @@ using MediatR;
 
 namespace Ordering.Application.Commands.CreateOrder;
 
+/// <summary>
+/// Handles CreateOrderCommand: creates an Order aggregate root from cart items,
+/// persists it, and returns the order ID. The saga picks up via OrderSubmittedEvent.
+/// </summary>
 public sealed class CreateOrderHandler(
     IOrderRepository repository,
     IUnitOfWork uow) : IRequestHandler<CreateOrderCommand, Result<Guid>>

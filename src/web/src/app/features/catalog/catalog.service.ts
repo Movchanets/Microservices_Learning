@@ -9,6 +9,7 @@ import {
   ProductListParams,
   ProductSearchParams,
   SearchResult,
+  VariantMatrix,
 } from './catalog.models';
 import { buildParams } from '../../core/utils/http.utils';
 
@@ -43,9 +44,14 @@ export class CatalogService {
     return firstValueFrom(this.http.get<Product>(`/bff/catalog/products/${id}`));
   }
 
-  getRecommendations(productId: string): Promise<ProductListItem[]> {
+  /**
+   * Fetches the variant matrix for a product.
+   * Returns all possible SKU combinations based on variant-axis attribute definitions.
+   * Used by the variant picker to render color × storage grids.
+   */
+  getVariantMatrix(productId: string): Promise<VariantMatrix> {
     return firstValueFrom(
-      this.http.get<ProductListItem[]>(`/api/catalog/products/${productId}/recommendations`),
+      this.http.get<VariantMatrix>(`/api/catalog/products/${productId}/variant-matrix`),
     );
   }
 

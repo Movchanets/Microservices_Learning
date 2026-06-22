@@ -6,6 +6,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Cart.Infrastructure.Messaging.Consumers;
 
+/// <summary>
+/// Handles ProductDeletedEvent from Catalog.
+/// Removes all ProductPrice entries for the deleted product, preventing
+/// stale pricing data in the cart. Cart items referencing deleted products
+/// will fail validation at checkout time.
+/// </summary>
 public sealed class ProductDeletedConsumer(
     CartDbContext dbContext,
     ILogger<ProductDeletedConsumer> logger) : IConsumer<ProductDeletedEvent>

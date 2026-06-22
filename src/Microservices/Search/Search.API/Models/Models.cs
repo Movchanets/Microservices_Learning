@@ -21,6 +21,14 @@ public sealed class ProductSearchDocument
     // Richer faceting
     public string? Brand { get; init; }
     public Dictionary<string, string> Attributes { get; init; } = [];
+
+    /// <summary>
+    /// Variant axes and their available values for faceted search.
+    /// Example: { "color": ["Black","White","Blue"], "storage": ["128GB","256GB"] }
+    /// Populated from SKU TypedAttributes for variant-axis keys.
+    /// </summary>
+    public Dictionary<string, List<string>> VariantAxes { get; init; } = [];
+
     public double? Rating { get; init; }
     public int ReviewCount { get; init; }
     public bool InStock { get; init; }

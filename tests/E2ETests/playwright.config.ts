@@ -50,11 +50,12 @@ export default defineConfig({
       testIgnore: [
         /\/orders\/.*\.spec\.ts$/,
         /\/checkout\/.*\.spec\.ts$/,
-        /profile-hub\.spec\.ts$/,
+        /\/buyer\/.*\.spec\.ts$/,
+        /\/profile-hub\.spec\.ts$/,
         /\/seller\/.*\.spec\.ts$/,
         /\/admin\/.*\.spec\.ts$/,
         /\/auth\/profile\.spec\.ts$/,
-        /layout-auth\.spec\.ts$/,
+        /\/layout-auth\.spec\.ts$/,
       ],
     },
 
@@ -69,8 +70,9 @@ export default defineConfig({
       testMatch: [
         /\/orders\/.*\.spec\.ts$/,
         /\/checkout\/.*\.spec\.ts$/,
-        /profile-hub\.spec\.ts$/,
-        /layout-auth\.spec\.ts$/,
+        /\/buyer\/.*\.spec\.ts$/,
+        /\/profile-hub\.spec\.ts$/,
+        /\/layout-auth\.spec\.ts$/,
       ],
     },
 

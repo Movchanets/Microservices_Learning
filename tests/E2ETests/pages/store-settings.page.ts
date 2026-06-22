@@ -30,9 +30,8 @@ export class StoreSettingsPage extends BasePage {
     this.loadingSpinner = page.locator('[class*="animate-spin"]');
   }
 
-  async goto() {
-    await this.page.goto('/seller/settings');
-    await this.waitForPageLoad();
+  get url(): string {
+    return '/seller/settings';
   }
 
   async createStore(name: string, description: string) {

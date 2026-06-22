@@ -14,7 +14,17 @@
 
 | Entity | Type | Key Properties |
 |:---|:---|:---|
-| `InventoryItem` | Aggregate Root | SkuId (primary key), ProductId, StoreId, SkuCode, AvailableQuantity, ReservedQuantity, IsDeactivated, Version (optimistic concurrency) |
+| `InventoryItem` | Aggregate Root | Id (PK), SkuId (FK to Catalog SKU), ProductId, StoreId, SkuCode, AvailableQuantity, ReservedQuantity, IsDeactivated, Version (optimistic concurrency) |
+
+### Domain Methods
+
+| Method | Description |
+|:---|:---|
+| `Create(skuId, productId, skuCode, initialQuantity, storeId)` | Factory method — creates new inventory item |
+| `AddStock(quantity)` | Increases AvailableQuantity. Throws if deactivated. No domain event. |
+| `Reserve(quantity)` | Moves stock from Available → Reserved. Fires `StockReservedDomainEvent`. |
+| `Release(quantity)` | Returns reserved stock to Available. Fires `StockReleasedDomainEvent`. |
+| `Deactivate()` | Zeros AvailableQuantity, sets IsDeactivated. Idempotent. Called when SKU is deleted in Catalog. |
 
 ### Domain Events Raised
 
@@ -38,28 +48,32 @@
 
 ## Integration Events
 
-### Consumed
+### Consumed (Integration Commands)
 
-| Event | Consumer | Action |
+| Command | Consumer | Action |
 |:---|:---|:---|
-| `SkuCreatedIntegrationEvent` | `SkuCreatedConsumer` | Creates InventoryItem for new SKU |
+| `SkuCreatedIntegrationEvent` | `SkuCreatedConsumer` | Creates InventoryItem for new SKU (qty=0) |
 | `SkuDeletedEvent` | `SkuDeletedConsumer` | Deactivates InventoryItem (zeros AvailableQuantity, preserves Reserved) |
-| `ReserveInventoryEvent` | `ReserveInventoryConsumer` | Calls `Reserve()` on InventoryItem |
-| `CancelReservationEvent` | `CancelReservationConsumer` | Calls `Release()` on InventoryItem |
+| `ReserveInventoryCommand` | `ReserveInventoryConsumer` | Calls `Reserve()` on each item, publishes `InventoryReservedEvent` or `InventoryReservationFailedEvent` |
+| `CancelReservationCommand` | `CancelReservationConsumer` | Calls `Release()` on each item, publishes `InventoryReleasedEvent` |
 
-### Published (via Outbox)
+### Published (via MassTransit)
 
-| Event | Trigger |
-|:---|:---|
-| `InventoryReservedEvent` | StockReservedDomainEvent |
-| `InventoryReleasedEvent` | StockReleasedDomainEvent |
-| `InventoryReservationFailedEvent` | OutOfStockException during reservation |
+| Event | Trigger | Consumer |
+|:---|:---|:---|
+| `InventoryReservedEvent` | Successful reservation | Ordering Saga (advances to payment) |
+| `InventoryReleasedEvent` | Successful release | Ordering Saga (confirms compensation) |
+| `InventoryReservationFailedEvent` | OutOfStockException during reservation | Ordering Saga (triggers cancellation) |
 
 ## Current Status & Known Issues
 
 - ✅ SKU-aware: keyed by SkuId, not ProductId
 - ✅ `SkuDeletedConsumer` deactivates items correctly
 - ✅ Idempotent upsert endpoint for seeder/admin use
+- ✅ `Deactivate()` preserves ReservedQuantity for in-flight orders
 - 🟡 `AddStock()` does not fire domain event → Search index can't update InStock status
 - 🟡 Legacy `ProductCreatedConsumer` may create phantom records with placeholder SkuId (should be retired)
 - 🟡 ProductId unique index was removed (was blocking multi-SKU products)
+
+---
+*Last Updated: 2026-06-19*

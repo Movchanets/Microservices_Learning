@@ -12,12 +12,16 @@ public sealed class ProductRepository(CatalogDbContext context) : IProductReposi
         await context.Products
             .Include(p => p.Category)
             .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
+            .Include(p => p.VariantAxes)
+                .ThenInclude(va => va.AttributeDefinition)
             .FirstOrDefaultAsync(p => p.Id == id && p.Status != ProductStatus.Deleted, ct);
 
     public async Task<Product?> GetWithSkusAsync(Guid productId, CancellationToken ct = default) =>
         await context.Products
             .Include(p => p.Category)
             .Include(p => p.Skus.Where(s => s.Status != SkuStatus.Deleted))
+            .Include(p => p.VariantAxes)
+                .ThenInclude(va => va.AttributeDefinition)
             .FirstOrDefaultAsync(p => p.Id == productId && p.Status != ProductStatus.Deleted, ct);
 
     public async Task<Sku?> GetSkuByCodeAsync(string skuCode, CancellationToken ct = default)

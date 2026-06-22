@@ -3,6 +3,11 @@ using Payment.Domain.Enumerations;
 
 namespace Payment.Domain.Aggregates;
 
+/// <summary>
+/// The PaymentTransaction aggregate root. Records a payment attempt for an order.
+/// Tracks amount, currency, payment method, and status (Pending → Completed → Failed).
+/// The actual payment processing is delegated to an external gateway (mocked locally).
+/// </summary>
 public sealed class PaymentTransaction : AggregateRoot
 {
     public Guid OrderId { get; private set; }

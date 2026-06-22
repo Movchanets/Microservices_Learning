@@ -30,7 +30,7 @@ RabbitMQ ──► MassTransit Consumers ──► SignalR HubContext ──► 
 ### Message Format
 
 ```csharp
-record OrderUpdateMessage(Guid OrderId, string BuyerId, string Status, string? Notes, DateTime Timestamp);
+record OrderUpdateMessage(Guid OrderId, string BuyerId, string Status, string? Reason, DateTime Timestamp);
 ```
 
 ## Integration Events
@@ -55,3 +55,7 @@ None — Notification is a terminal consumer.
 - ⚠️ No email/SMS fallback for offline users
 - ⚠️ No notification persistence (missed if disconnected)
 - ⚠️ Scalar container failed to start (non-blocking, docs only)
+
+---
+
+*Last Updated: 2026-06-19*

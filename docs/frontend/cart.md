@@ -9,26 +9,34 @@
 | **Route Prefix** | `/cart` |
 | **Guard** | `authGuard` |
 | **Render Mode** | `RenderMode.Server` (SSR) |
+| **Last Updated** | 2026-06-19 |
 
 ## Component Structure
 
 ```
 cart/
 ├── cart.store.ts              # CartStore (root singleton)
-├── cart.service.ts            # HTTP service → BFF /api/cart
-├── cart.models.ts             # CartItemDetails type
+├── cart.store.spec.ts         # ✅ Tests
+├── cart.service.ts            # HTTP service → BFF /bff/cart + /api/cart
+├── cart.service.spec.ts       # ✅ Tests
+├── cart.models.ts             # CartItemDetails, ShoppingCart, CheckoutResponse
 ├── cart.routes.ts             # Default export routes
 ├── cart-page/
 │   ├── cart-page.ts           # CartPageComponent — full cart page
-│   ├── cart-page.spec.ts      # ✅ Tests
-│   └── mini-cart (in shared)  # MiniCartComponent — inline cart preview
+│   └── cart-page.spec.ts      # ✅ Tests
 └── components/
     └── mini-cart/
-        ├── mini-cart.ts       # MiniCartComponent — compact item list
+        ├── mini-cart.ts       # MiniCartComponent — compact item list (header badge)
         └── mini-cart.spec.ts  # ✅ Tests
 ```
 
-> **Note:** The `cart-drawer` component lives in `shared/components/cart-drawer/` (global overlay), not under this feature.
+## Models (`cart.models.ts`)
+
+| Type | Fields | Description |
+|:---|:---|:---|
+| `CartItemDetails` | `productId`, `skuId`, `skuCode`, `title`, `imageUrl \| null`, `quantity`, `price`, `lineTotal`, `storeId` | Single cart item with product details |
+| `ShoppingCart` | `buyerId \| null`, `cartId`, `items: CartItemDetails[]`, `totalPrice`, `totalItems` | Full cart response from API |
+| `CheckoutResponse` | `correlationId` | Checkout submission response |
 
 ## SignalStore State Management
 
@@ -45,9 +53,35 @@ cart/
 
 **Computed signals:** `totalItems`, `isEmpty`, `totalPrice`
 
-**Key methods:** `loadCart()`, `addToCart(productId, quantity)`, `updateQuantity(productId, quantity)`, `removeFromCart(productId)`, `checkout(address?)`, `showDrawer()`, `hideDrawer()`, `toggleDrawer()`, `clearAnonymousCart()`, `refreshAfterLogin()`
+**Key methods:**
+
+| Method | Signature | Description |
+|:---|:---|:---|
+| `loadCart()` | `async () => Promise<void>` | Fetch cart from BFF, handle anonymous/auth merge |
+| `addToCart()` | `async (productId, skuId, skuCode, quantity) => Promise<void>` | Add item, re-fetch enriched cart, open drawer |
+| `updateQuantity()` | `async (skuId, quantity) => Promise<void>` | Update qty; delegates to `removeFromCart` if ≤ 0 |
+| `removeFromCart()` | `async (skuId) => Promise<void>` | Remove item by skuId |
+| `checkout()` | `async (address?) => Promise<void>` | POST checkout, clear cart, set correlationId |
+| `showDrawer()` | `() => void` | Open cart drawer |
+| `hideDrawer()` | `() => void` | Close cart drawer |
+| `toggleDrawer()` | `() => void` | Toggle drawer visibility |
+| `clearAnonymousCart()` | `() => void` | Clear localStorage cartId + reset items |
+| `refreshAfterLogin()` | `async () => Promise<void>` | Re-load cart after login (triggers server-side merge) |
 
 **Hooks:** `onInit` — calls `loadCart()` in browser only (`isPlatformBrowser` check)
+
+## CartService (`cart.service.ts`)
+
+| Method | HTTP | Endpoint | Returns |
+|:---|:---|:---|:---|
+| `getCart()` | GET | `/bff/cart` | `ShoppingCart` |
+| `addItem()` | POST | `/api/cart/items` | `ShoppingCart` |
+| `updateItem()` | PUT | `/api/cart/items/{skuId}` | `ShoppingCart` |
+| `removeItem()` | DELETE | `/api/cart/items/{skuId}` | `ShoppingCart` |
+| `checkout()` | POST | `/api/cart/checkout` | `CheckoutResponse` |
+| `deleteCart()` | DELETE | `/api/cart` | `void` |
+
+> **Note:** `getCart()` uses the `/bff/cart` endpoint (enriched DTO with product details). Mutation endpoints (`add`, `update`, `remove`, `checkout`) use `/api/cart` (YARP proxied). All requests include `X-Cart-Id` header for anonymous cart identification.
 
 ## Key Routes
 
@@ -57,10 +91,10 @@ cart/
 
 ## Anonymous Cart Flow
 
-1. Anonymous user adds item → `CartService.addItem()` returns `cartId`
+1. Anonymous user adds item → `CartService.addItem()` returns `ShoppingCart` with `cartId`
 2. `cartId` persisted in `localStorage` via `CartService.setCartId()`
 3. Subsequent requests include `X-Cart-Id` header
-4. On login, `refreshAfterLogin()` → backend merges anonymous cart → response has `buyerId` → `clearCartId()` removes from `localStorage`
+4. On login, `refreshAfterLogin()` → `loadCart()` → backend merges anonymous cart → response has `buyerId` → `clearCartId()` removes from `localStorage`
 
 ## Test Coverage Status
 

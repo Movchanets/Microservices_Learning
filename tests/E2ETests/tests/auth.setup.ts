@@ -72,24 +72,24 @@ setup('authenticate seller', async ({ playwright }) => {
     'seller',
   );
 
-  // Promote to seller role
+  // Login as admin FIRST — needed to promote seller (endpoint requires Admin role)
+  const adminApi = await loginApi(playwright.request, users.adminUser.email, users.adminUser.password);
+
+  // Promote to seller role via admin context
   const seller = await getCurrentUser(sellerApi);
   try {
-    await promoteToSeller(sellerApi, seller.id);
+    await promoteToSeller(adminApi, seller.id);
     console.log(`[auth.setup] Promoted ${seller.email} to Seller`);
   } catch {
-    // Already seller
+    // Already seller (409)
   }
 
   // Re-login to get JWT with Seller role claim
   await sellerApi.dispose();
   const freshSellerApi = await loginApi(playwright.request, users.sellerUser.email, users.sellerUser.password);
 
-  // Login as admin to verify the store
-  const adminApi = await loginApi(playwright.request, users.adminUser.email, users.adminUser.password);
-
   // Ensure store exists and is verified
-  await ensureStoreExists(
+  const _store = await ensureStoreExists(
     freshSellerApi,
     adminApi,
     seller.id,

@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
-import { CurrencyPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { ProductListItem } from '../../catalog.models';
@@ -7,7 +7,7 @@ import { ProductListItem } from '../../catalog.models';
 @Component({
   selector: 'app-product-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyPipe, RouterLink, LucideAngularModule],
+  imports: [DecimalPipe, RouterLink, LucideAngularModule],
   template: `
     <div
       [attr.data-testid]="'product-card-' + product().id"
@@ -62,14 +62,14 @@ import { ProductListItem } from '../../catalog.models';
       <!-- Content -->
       <div class="flex flex-col flex-1">
         <h3
-          class="text-xl font-bold text-foreground font-lexend mb-1 line-clamp-2
+          class="text-xl font-bold text-foreground font-lexend mb-1 line-clamp-3
                    group-hover:text-primary transition-colors"
         >
           <a [routerLink]="['/catalog', product().id]">{{ product().name }}</a>
         </h3>
 
         <!-- SKU Count + Store -->
-        <p class="text-xs text-muted mb-4 font-mono flex items-center gap-2">
+        <p class="text-sm text-muted-foreground mb-4 font-mono flex items-center gap-2">
           @if (product().skuCount > 0) {
             <span>
               <lucide-icon name="Tag" class="w-3 h-3 inline mr-1"></lucide-icon>
@@ -96,7 +96,7 @@ import { ProductListItem } from '../../catalog.models';
           <div class="flex flex-col">
             @if (product().minPrice !== null) {
               <span class="text-2xl font-bold text-foreground font-lexend">
-                {{ product().minPrice! | currency: (product().currency ?? 'USD') : 'symbol' : '1.2-2' }}
+                ₴ {{ product().minPrice! | number: '1.2-2' }}
               </span>
             } @else {
               <span class="text-sm text-muted">Price unavailable</span>

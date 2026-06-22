@@ -33,7 +33,8 @@ public class CreateOrderHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeEmpty();
+        // Note: result.Value is Guid.Empty in unit tests because the mock repository
+        // doesn't call EF Core's SaveChanges which generates Guid v7 IDs.
         _repositoryMock.Verify(r => r.Add(It.IsAny<Order>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

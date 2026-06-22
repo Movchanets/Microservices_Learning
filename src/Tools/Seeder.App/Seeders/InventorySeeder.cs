@@ -16,25 +16,23 @@ public class InventorySeeder
         _logger = logger;
     }
 
-    public async Task EnsureInventoryStockedAsync(ProductModel product, string token, Guid storeId, Guid productId, CancellationToken ct)
+    public async Task EnsureInventoryStockedAsync(string sku, int quantity, string token, Guid storeId, Guid productId, CancellationToken ct)
     {
-        if (product.InitialStock <= 0) return;
-
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await _client.PutAsJsonAsync(
-            $"/api/inventory/items/{product.Sku}/stock",
-            new { Quantity = product.InitialStock, StoreId = storeId, ProductId = productId },
+            $"/api/inventory/items/{sku}/stock",
+            new { Quantity = quantity, StoreId = storeId, ProductId = productId },
             ct);
 
         if (response.IsSuccessStatusCode)
         {
-            _logger.LogInformation("Set stock for {Sku} to {Quantity}", product.Sku, product.InitialStock);
+            _logger.LogInformation("Set stock for {Sku} to {Quantity}", sku, quantity);
         }
         else
         {
             var error = await response.Content.ReadAsStringAsync(ct);
-            _logger.LogWarning("Failed to set stock for {Sku}: {StatusCode} - {Error}", product.Sku, response.StatusCode, error);
+            _logger.LogWarning("Failed to set stock for {Sku}: {StatusCode} - {Error}", sku, response.StatusCode, error);
         }
     }
 }

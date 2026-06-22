@@ -12,6 +12,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Catalog.Infrastructure;
 
+/// <summary>
+/// Registers Catalog infrastructure services: DbContext, repositories, unit of work,
+/// HTTP clients (Media.API), and MassTransit Outbox. Called from Catalog.API Program.cs.
+/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddCatalogInfrastructure(
@@ -34,7 +38,6 @@ public static class DependencyInjection
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IProductReadRepository, ProductReadRepository>();
-        services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CatalogDbContext>());
 
         // Ordering API client for inter-service communication

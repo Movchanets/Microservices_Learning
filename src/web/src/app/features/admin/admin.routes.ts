@@ -29,6 +29,10 @@ export default [
         path: 'stores/:id',
         loadComponent: () => import('./store-detail/store-detail').then(c => c.StoreDetailComponent),
       },
+      {
+        path: 'attributes',
+        loadComponent: () => import('./category-attributes/category-attributes').then(c => c.CategoryAttributesComponent),
+      },
     ],
   },
 ] as Routes;

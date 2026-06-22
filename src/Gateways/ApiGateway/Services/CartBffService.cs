@@ -71,6 +71,8 @@ public sealed class CartBffService(
 
             return new CartItemDetailsDto(
                 item.ProductId,
+                item.SkuId,
+                item.SkuCode,
                 product?.Name ?? "Unknown Product",
                 product?.ImageUrl,
                 item.Quantity,

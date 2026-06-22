@@ -32,7 +32,7 @@ Angular SPA ──► Gateway (Cookie + CSRF) ──► YARP ──► Microserv
 | `/api/stores/*` | `store-api` |
 | `/api/media/*` | `media-api` |
 | `/api/payments/*` | `payment-api` |
-| `/hubs/*` | `notification-worker` |
+| `/hubs/*` | `notification-api` |
 
 ## BFF Endpoints
 
@@ -50,6 +50,8 @@ Angular SPA ──► Gateway (Cookie + CSRF) ──► YARP ──► Microserv
 | `GET` | `/bff/catalog/products/{id}` | Product + gallery (parallel fetch) | Public |
 | `GET` | `/bff/catalog/skus/{skuId}` | SKU + gallery (parallel fetch) | Public |
 | `GET` | `/bff/catalog/skus/{skuId}/gallery` | SKU gallery only | Public |
+| `GET` | `/bff/health` | Aggregated health check (probes all services) | Public |
+| `GET` | `/bff/health/{serviceName}` | Single service health check | Public |
 
 ## Auth Flow
 
@@ -102,3 +104,7 @@ UseAuthorization()       → Role/policy checks
 - ✅ ProductBffService — parallel catalog + gallery fetch
 - ⚠️ Angular dev server may exit if Gateway is down (dependency)
 - ⚠️ Scalar container failed to start (API docs, non-blocking)
+
+---
+
+*Last Updated: 2026-06-19*

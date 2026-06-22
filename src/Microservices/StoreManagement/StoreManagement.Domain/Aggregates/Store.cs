@@ -4,6 +4,11 @@ using StoreManagement.Domain.Events;
 
 namespace StoreManagement.Domain.Aggregates;
 
+/// <summary>
+/// The Store aggregate root. Represents a seller's storefront on the marketplace.
+/// Tracks verification status (Pending → Verified / Rejected) and holds store metadata
+/// (name, description, logo). Sellers must have a verified store before listing products.
+/// </summary>
 public sealed class Store : AggregateRoot
 {
     public string SellerId { get; private set; } = string.Empty;
@@ -19,7 +24,7 @@ public sealed class Store : AggregateRoot
     // EF Core constructor
     private Store() { }
 
-    public static Store Create(string sellerId, string name, string description, Guid? id = null)
+    public static Store Create(string sellerId, string name, string description)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sellerId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -27,7 +32,6 @@ public sealed class Store : AggregateRoot
 
         var store = new Store
         {
-            Id = id ?? Guid.NewGuid(),
             SellerId = sellerId.Trim(),
             Name = name.Trim(),
             Description = description.Trim(),

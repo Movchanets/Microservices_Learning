@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.3.4">
+<Project Sdk="Aspire.AppHost.Sdk/13.4.5">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,16 +6,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>8f737dc8-94ac-4ac5-8c89-3e88e37256d7</UserSecretsId>
+    <RestoreEnablePackagePruning>false</RestoreEnablePackagePruning>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.Elasticsearch" Version="13.3.0" />
-    <PackageReference Include="Aspire.Hosting.NodeJs" Version="9.5.2" />
-    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.3.4" />
-    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.3.4" />
-    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="13.3.4" />
-    <PackageReference Include="Aspire.Hosting.Redis" Version="13.3.4" />
-    <PackageReference Include="Scalar.Aspire" Version="0.9.34" />
+    <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.4.5" />
+    <PackageReference Include="Fractions" Version="7.3.0" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.4.5" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.4.5" />
+    <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="13.4.5" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="13.4.5" />
+    <PackageReference Include="Scalar.Aspire" Version="0.10.4" />
   </ItemGroup>
 
   <ItemGroup>
